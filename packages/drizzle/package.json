@@ -1,0 +1,20 @@
+{
+    "name": "@repo/drizzle",
+    "type": "module",
+    "scripts": {
+      "dev": "tsc --watch",
+      "build": "tsc"
+    },
+    "types": "index.ts",
+    "files": [
+      "index.ts"
+    ],
+    "dependencies": {
+        "drizzle-orm": "^0.35.3",
+        "mysql2": "^3.11.3"
+    },
+    "devDependencies": {
+      "@repo/typescript-config": "workspace:*",
+      "typescript": "latest"
+    }
+  }
