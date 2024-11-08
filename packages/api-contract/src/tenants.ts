@@ -1,9 +1,25 @@
-import { Tenant } from "@repo/drizzle/src/schema/tenant";
-import { createInsertSchema, createSelectSchema } from "drizzle-zod";
-import { initContract } from "@ts-rest/core"
+import { insertTenantSchema, selectTenantSchema } from "@repo/drizzle/src/schema/tenant";
+import { insertUserSchema, selectUserSchema } from "@repo/drizzle/src/schema/users";
+import { initContract } from "@ts-rest/core";
+import { z } from "zod";
 
 
-export const selectTenantSchema = createSelectSchema(Tenant);
-export const insertTenantSchema = createInsertSchema(Tenant).omit({ id: true, createdAt: true, updatedAt: true })
+const c = initContract();
 
-const c = initContract 
+export const tenantsContract = c.router({
+  create: {
+    method: 'POST',
+    path: '/tenants',
+    responses: {
+        201: z.object({
+          tenant: selectTenantSchema,
+          adminUser: selectUserSchema.omit({ password: true })
+        })
+      },
+    body: z.object({
+      tenant: insertTenantSchema,
+      adminUser: insertUserSchema
+    }).required({ tenant: true, adminUser: true }),
+    summary: 'Create a new tenant with an admin user'
+  }
+});

@@ -36,12 +36,10 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { useToast } from '@/components/ui/use-toast';
 
 import { z } from 'zod';
-import { insertAssetPropertySchema, patchAssetPropertySchema, selectAssetPropertySchema } from '@/server/db/schema/settings';
-import { useAddProperty, useDeleteProperty, useProperties, useUpdateProperty } from './useSettings';
 
-type AssetProperty = z.infer<typeof selectAssetPropertySchema>;
-type InsertAssetProperty = z.infer<typeof insertAssetPropertySchema>;
-type PatchAssetProperty = z.infer<typeof patchAssetPropertySchema>;
+import { useAddProperty, useDeleteProperty, useProperties, useUpdateProperty } from '../../lib/api/useSettings';
+import { AssetProperty, InsertAssetProperty,  insertAssetPropertySchema, PatchAssetProperty } from '@repo/drizzle/src/schema';
+
 
 
 export default function Properties() {
@@ -62,10 +60,10 @@ export default function Properties() {
     try {
       if (editingProperty) {
         const patchData: PatchAssetProperty = {
-          name: data.name,
-          propertyType: data.propertyType,
+          ...editingProperty,
+          ...data,
         };
-        await updatePropertyMutation.mutateAsync({ id: editingProperty.id, data: patchData });
+        await updatePropertyMutation.mutateAsync(patchData);
         toast({ description: 'Asset was updated successfully' });
         setEditingProperty(null);
       } else {

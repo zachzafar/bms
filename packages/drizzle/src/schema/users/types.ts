@@ -1,6 +1,5 @@
 import { createInsertSchema, createSelectSchema } from "drizzle-zod";
-import { User } from "@repo/drizzle/src/schema";
-import { initContract } from "@ts-rest/core";
+import { User } from ".";
 import { z } from "zod";
 
 export const selectUserSchema = createSelectSchema(User);
@@ -16,9 +15,3 @@ export const insertUserSchema = createInsertSchema(User, {
 
 export type InsertUser = z.infer<typeof insertUserSchema>
 export type SelectUser = z.infer<typeof selectUserSchema>
-
-const c = initContract();
-
-export const contract = c.router({
-    
-})

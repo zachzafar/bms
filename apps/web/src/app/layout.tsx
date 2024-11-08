@@ -3,6 +3,7 @@ import { Inter } from 'next/font/google';
 import './globals.css';
 import { Package2Icon } from 'lucide-react';
 import { Toaster } from '@/components/ui/toaster';
+import TanstackProvider from '@/providers/tanstack';
 
 const inter = Inter({ subsets: ['latin'] });
 
@@ -16,6 +17,9 @@ export default function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+
+
+
   return (
     <html lang='en'>
       <body className={inter.className}>
@@ -55,7 +59,9 @@ export default function RootLayout({
               </a>
             </nav>
           </header>
+          <TanstackProvider>
           {children}
+          </TanstackProvider>
         </div>
         <Toaster />
       </body>
