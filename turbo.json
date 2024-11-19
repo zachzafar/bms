@@ -13,6 +13,15 @@
     "dev": {
       "cache": false,
       "persistent": true
+    },
+    "web#build": {
+      "dependsOn": [],
+      "inputs": ["$TURBO_DEFAULT$", ".env*"],
+      "outputs": [".next/**", "!.next/cache/**"]
+    },
+    "web#dev": {
+      "cache": false,
+      "persistent": true
     }
   }
 }
