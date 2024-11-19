@@ -1,3 +1,5 @@
+'use client'
+
 import { Button } from '@/components/ui/button';
 import {
   Table,
@@ -16,39 +18,40 @@ import {
   DialogTrigger,
 } from '@/components/ui/dialog';
 import { PlusIcon, Pencil } from 'lucide-react';
-import { getAssets } from '@/lib/db';
+
 import AddAssetForm from './AddAssetForm';
+import { useState } from 'react';
 
 export default async function AssetsPage() {
-  const assets = await getAssets();
+
 
   // AI code
-  // const [assets, setAssets] = useState([
-  //   {
-  //     id: 1,
-  //     name: 'Toyota Camry',
-  //     type: 'Car',
-  //     subgroup: 'Sedan',
-  //     status: 'Available',
-  //     requiresApproval: false,
-  //   },
-  //   {
-  //     id: 2,
-  //     name: 'Beachfront Villa',
-  //     type: 'Property',
-  //     subgroup: 'Beachfront',
-  //     status: 'Occupied',
-  //     requiresApproval: true,
-  //   },
-  //   {
-  //     id: 3,
-  //     name: 'Professional Camera',
-  //     type: 'Equipment',
-  //     subgroup: 'Photography',
-  //     status: 'Maintenance',
-  //     requiresApproval: false,
-  //   },
-  // ]);
+  const [assets, setAssets] = useState([
+    {
+      id: 1,
+      name: 'Toyota Camry',
+      type: 'Car',
+      subgroup: 'Sedan',
+      status: 'Available',
+      requiresApproval: false,
+    },
+    {
+      id: 2,
+      name: 'Beachfront Villa',
+      type: 'Property',
+      subgroup: 'Beachfront',
+      status: 'Occupied',
+      requiresApproval: true,
+    },
+    {
+      id: 3,
+      name: 'Professional Camera',
+      type: 'Equipment',
+      subgroup: 'Photography',
+      status: 'Maintenance',
+      requiresApproval: false,
+    },
+  ]);
 
   return (
     <main className='flex flex-1 flex-col gap-4 p-4 md:gap-8 md:p-6'>
