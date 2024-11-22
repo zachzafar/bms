@@ -1,3 +1,11 @@
+# Starting the appplication
+
+Run the following command for development
+```
+docker-compose -f docker-compose.dev.yml up --build
+
+```
+
 # Turborepo starter
 
 This is an official starter Turborepo.
