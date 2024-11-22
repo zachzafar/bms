@@ -7,7 +7,7 @@ WORKDIR /app
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml turbo.json ./
 
 # Install dependencies
-RUN npm install -g pnpm turbo
+RUN npm install -g pnpm turbo typescript next @nestjs/cli
 RUN pnpm install
 
 # Copy only the Web app and shared packages
