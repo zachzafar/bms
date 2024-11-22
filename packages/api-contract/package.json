@@ -1,19 +1,25 @@
+
 {
-    "name": "@repo/api-contract",
-    "type": "module",
-    "scripts": {
-      "dev": "tsc --watch",
-      "build": "tsc"
+  "name": "@repo/api-contract",
+  "type":"commonjs",
+  "scripts": {
+    "dev": "tsc --watch",
+    "build": "tsc"
+  },
+  "exports": {
+    ".": {
+      "types": "./src/index.d.ts",
+      "require": "./dist/index.js",
+      "import": "./dist/index.js"
     },
-    "types": "index.ts",
-    "files": [
-      "index.ts"
-    ],
+    "./*": "./src/*" 
+  },
+  "main": "./dist/index.js",
+  "types": "./src/index.d.ts",
     "dependencies": {
-        "@repo/drizzle": "workspace:*",
+
         "@ts-rest/core": "^3.51.0",
-        "zod": "^3.23.8",
-        "drizzle-zod": "^0.5.1"
+        "zod": "^3.23.8"
     },
     "devDependencies": {
       "@repo/typescript-config": "workspace:*",

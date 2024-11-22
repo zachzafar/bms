@@ -1,7 +1,6 @@
 import { sql } from "drizzle-orm";
 import { datetime, mysqlTable, serial, timestamp, uniqueIndex, varchar } from "drizzle-orm/mysql-core";
 
-export * from './types'
 
 
 // User Model

@@ -1,12 +1,12 @@
 // tenants.service.ts
 import { Inject, Injectable } from '@nestjs/common';
 import { DrizzleAsyncProvider } from '../drizzle/drizzle.provider';
-import * as schema from '@repo/drizzle/src/schema';
-import * as bcrypt from 'bcrypt';
+import * as schema from '../drizzle/schema';
+import * as bcrypt from 'bcryptjs';
 import { v4 as uuidv4 } from 'uuid';
-import { MySql2Database } from '@repo/drizzle';
-import { InsertTenant, SelectTenant } from '@repo/drizzle/src/schema/tenant';
-import { InsertUser, SelectUser} from '@repo/api-contract/src/users';
+import { MySql2Database } from 'drizzle-orm/mysql2';
+import { InsertTenant, SelectTenant,InsertUser, SelectUser} from '@repo/api-contract';
+
 
 @Injectable()
 export class TenantsService {

@@ -14,7 +14,7 @@ import { Form, FormField, FormItem, FormLabel, FormMessage } from '@/components/
 import { Checkbox } from '@/components/ui/checkbox';
 import { z } from 'zod';
 import { useAddAssetType, useDeleteAssetType, useAssetTypes, useUpdateAssetType, useProperties } from '@/lib/api/useSettings';
-import { AssetTypeWithProperties, assetTypeWithPropertiesSchema } from '@repo/drizzle/src/schema';
+import { AssetTypeWithProperties, assetTypeWithPropertiesSchema } from '@repo/api-contract';
 
 
 

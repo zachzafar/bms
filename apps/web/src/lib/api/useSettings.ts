@@ -1,10 +1,9 @@
 // useProperties.ts
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { delay, mockApiService } from './mock';
-import { AssetProperty, AssetTypeWithProperties, InsertAssetProperty, InsertAssetType, PatchAssetProperty, PatchAssetType } from '@repo/drizzle/src/schema/settings';
-import { AssetType } from '@repo/drizzle/src/schema/settings/types';
+import { AssetProperty, AssetTypeWithProperties, InsertAssetProperty, InsertAssetType, PatchAssetProperty, PatchAssetType } from '@repo/api-contract';
 import { mockAssetTypes } from './mock/settings/data';
-import { create } from 'domain';
+
 
 // Fetch all properties
 export const useProperties = () => {
@@ -72,7 +71,7 @@ export const useAddAssetType = () => {
         createdAt: new Date(), 
         updatedAt: null,
         description: null,
-        bookingFormId: null,
+        bookingFormId: undefined,
 
       };
       mockAssetTypes.push(assetType);

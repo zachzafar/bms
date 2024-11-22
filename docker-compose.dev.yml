@@ -6,7 +6,7 @@ services:
       context: .
       dockerfile: Dockerfile.api.dev
     ports:
-      - "4000:3005"
+      - "3005:3005"
     volumes:
       - ./apps/api:/app/apps/api
       - ./packages/shared:/app/packages/shared
@@ -14,11 +14,11 @@ services:
     environment:
       NODE_ENV: development
       DATABASE_HOST: mysql
-      DATABASE_PORT: 3307
+      DATABASE_PORT: 3306
       DATABASE_USER: root
       DATABASE_PASSWORD: rootpassword
       DATABASE_NAME: mydatabase
-      DATABASE_URL: mysql://root:rootpassword@mysql:3307/mydatabase
+      DATABASE_URL: mysql://root:rootpassword@mysql:3306/mydatabase
     depends_on:
       - mysql
 
@@ -34,12 +34,12 @@ services:
       - ./node_modules:/app/node_modules
     environment:
       NODE_ENV: development
-      API_URL: http://localhost:4000
+      API_URL: http://localhost:3005
 
   mysql:
     image: mysql:8.0
     ports:
-      - "3307:3307"
+      - "3306:3306"
     environment:
       MYSQL_ROOT_PASSWORD: rootpassword
       MYSQL_DATABASE: mydatabase

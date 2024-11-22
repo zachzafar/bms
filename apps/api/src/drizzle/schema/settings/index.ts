@@ -2,7 +2,6 @@ import { relations, sql } from "drizzle-orm";
 import { mysqlTable, serial, varchar, text, json, timestamp, index, int, uniqueIndex, boolean } from "drizzle-orm/mysql-core";
 import { Tenant } from "../tenant";
 
-export * from './types'
 
 export const Category = mysqlTable("category", {
     id: serial("id").primaryKey(),

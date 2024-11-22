@@ -38,7 +38,7 @@ import { useToast } from '@/components/ui/use-toast';
 import { z } from 'zod';
 
 import { useAddProperty, useDeleteProperty, useProperties, useUpdateProperty } from '../../lib/api/useSettings';
-import { AssetProperty, InsertAssetProperty,  insertAssetPropertySchema, PatchAssetProperty } from '@repo/drizzle/src/schema';
+import { AssetProperty, InsertAssetProperty,  insertAssetPropertySchema, PatchAssetProperty } from '@repo/api-contract';
 
 
 

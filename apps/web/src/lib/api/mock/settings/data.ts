@@ -1,4 +1,4 @@
-import { AssetProperty, AssetType, AssetTypeWithProperties } from "@repo/drizzle/src/schema/settings/types";
+import { AssetProperty, AssetType, AssetTypeWithProperties } from "@repo/api-contract";
 
 
 export const mockProperties: AssetProperty[] = [
@@ -8,7 +8,7 @@ export const mockProperties: AssetProperty[] = [
         propertyType: 'number',
         createdAt: new Date('2023-01-01'),
         updatedAt: new Date('2023-01-01'),
-        tenantId: null
+        tenantId: undefined
     },
     {
         id: 2,
@@ -16,7 +16,7 @@ export const mockProperties: AssetProperty[] = [
         propertyType: 'string',
         createdAt: new Date('2023-01-02'),
         updatedAt: new Date('2023-01-02'),
-        tenantId: null
+        tenantId: undefined
     },
     {
         id: 3,
@@ -24,8 +24,8 @@ export const mockProperties: AssetProperty[] = [
         propertyType: 'boolean',
         createdAt: new Date('2023-01-03'),
         updatedAt: new Date('2023-01-03'),
-        tenantId: null
-    },
+        tenantId: undefined
+    }
   ];
 
 
@@ -36,7 +36,7 @@ export const mockProperties: AssetProperty[] = [
         createdAt: new Date(),
         updatedAt: null,
         description: null,
-        bookingFormId: null
+        bookingFormId: undefined
     },
     {
         id: 2, name: 'Building', schema: [{ propertyId: 3, isRequired: true }, { propertyId: 4, isRequired: true }],
@@ -44,6 +44,6 @@ export const mockProperties: AssetProperty[] = [
         createdAt: new Date(),
         updatedAt: null,
         description: null,
-        bookingFormId: null
+        bookingFormId: undefined
     },
   ];

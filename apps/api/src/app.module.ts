@@ -7,9 +7,13 @@ import { AuthModule } from './auth/auth.module';
 import { UsersModule } from './users/users.module';
 import { RegisterModule } from './register/register.module';
 import { TenantModule } from './tenant/tenant.module';
+import { ConfigModule } from '@nestjs/config';
 
 @Module({
-  imports: [DrizzleModule, SchemaDesignModule, AuthModule, UsersModule, RegisterModule, TenantModule],
+  imports: [DrizzleModule, SchemaDesignModule, AuthModule, UsersModule, RegisterModule, TenantModule,ConfigModule.forRoot({
+    isGlobal: true, // Makes ConfigService globally available
+    envFilePath: '.env', // Path to your environment file
+  }),],
   controllers: [AppController],
   providers: [AppService],
 })

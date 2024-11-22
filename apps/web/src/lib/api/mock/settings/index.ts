@@ -1,6 +1,6 @@
 import { delay } from '..';
 import { mockProperties } from './data';
-import { AssetProperty, InsertAssetProperty, PatchAssetProperty } from '@repo/drizzle/src/schema';
+import { AssetProperty, InsertAssetProperty, PatchAssetProperty } from '@repo/api-contract'
 
 
 
@@ -17,7 +17,7 @@ export const mockPropertiesService = {
           id: Math.max(...mockProperties.map(p => p.id)) + 1,
           createdAt: new Date(),
           updatedAt: new Date(),
-          tenantId: newProperty.tenantId ?? null,
+          tenantId: newProperty.tenantId ,
         };
         mockProperties.push(property);
         return property;

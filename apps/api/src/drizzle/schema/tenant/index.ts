@@ -4,9 +4,6 @@ import { Asset } from "../asset";
 import { AssetType, assetProperty, Category, GroupType, BookingForm } from "../settings";
 import { User } from "../users";
 
-
-export * from './types'
-
 // Tenant Model
 export const Tenant = mysqlTable("tenant", {
     id: varchar("id", { length: 36 }).primaryKey(),
