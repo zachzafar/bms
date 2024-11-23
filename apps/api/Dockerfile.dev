@@ -1,0 +1,28 @@
+ARG NODE_VERSION=18.18.0
+
+# Alpine base image
+FROM node:${NODE_VERSION}-alpine AS base
+RUN apk update && apk add --no-cache libc6-compat bash
+RUN npm install -g pnpm turbo
+RUN pnpm config set store-dir ~/.pnpm-store
+
+# Prepare the application
+FROM base AS dev
+WORKDIR /app
+
+# Copy project files into the container
+COPY . .
+
+RUN pnpm install --frozen-lockfile
+
+
+# Set environment variables
+ARG PROJECT=api
+ARG PORT=3001
+ENV PORT=${PORT}
+ENV NODE_ENV=development
+WORKDIR /app/apps/${PROJECT}
+EXPOSE ${PORT}
+
+# Start the app in development mode
+CMD ["pnpm", "dev"]
