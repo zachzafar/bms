@@ -35,6 +35,7 @@ services:
     environment:
       MYSQL_ROOT_PASSWORD: rootpassword # Root password for the database
       MYSQL_DATABASE: mydatabase # Initialize the database
+      MYSQL_ROOT_HOST: '%'
     volumes:
       - db_data:/var/lib/mysql # Persist database data
 
