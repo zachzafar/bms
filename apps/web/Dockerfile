@@ -1,46 +1,59 @@
-FROM node:alpine AS base
+ARG NODE_VERSION=18.18.0
 
-FROM base AS builder
+# Alpine image
+FROM node:${NODE_VERSION}-alpine AS alpine
+RUN apk update
+RUN apk add --no-cache libc6-compat
 
-# Install libc6-compat if needed
-RUN apk update && apk add --no-cache libc6-compat
+# Setup pnpm and turbo on the alpine base
+FROM alpine as base
+RUN npm install pnpm turbo --global
+RUN pnpm config set store-dir ~/.pnpm-store
+
+# Prune projects
+FROM base AS pruner
+ARG PROJECT=web
+
 WORKDIR /app
-
-# Install pnpm globally
-RUN corepack enable && corepack prepare pnpm@latest --activate
-
-
-# Install turbo globally using pnpm
-RUN npm install -g turbo
-
 COPY . .
-RUN turbo prune --scope=web --docker
-
-# Add lockfile and package.json's of isolated subworkspace
-FROM base AS installer
-WORKDIR /app
-
-# Install dependencies (as they change less often)
-COPY --from=builder /app/out/json/ .
-COPY --from=builder /app/out/pnpm-lock.yaml ./pnpm-lock.yaml
-RUN pnpm install --frozen-lockfile
+RUN turbo prune --scope=${PROJECT} --docker
 
 # Build the project
-COPY --from=builder /app/out/full/ .
-RUN pnpm turbo run build --filter=web...
+FROM base AS builder
+ARG PROJECT=web
 
-FROM base AS runner
 WORKDIR /app
 
-# Don't run production as root
+# Copy lockfile and package.json's of isolated subworkspace
+COPY --from=pruner /app/out/pnpm-lock.yaml ./pnpm-lock.yaml
+COPY --from=pruner /app/out/pnpm-workspace.yaml ./pnpm-workspace.yaml
+COPY --from=pruner /app/out/json/ .
+
+# First install the dependencies (as they change less often)
+RUN --mount=type=cache,id=pnpm,target=~/.pnpm-store pnpm install --frozen-lockfile
+
+# Copy source code of isolated subworkspace
+COPY --from=pruner /app/out/full/ .
+
+RUN turbo build --filter=${PROJECT}
+RUN --mount=type=cache,id=pnpm,target=~/.pnpm-store pnpm prune --prod --no-optional
+RUN rm -rf ./**/*/src
+
+# Final image
+FROM alpine AS runner
+ARG PROJECT=web
+
 RUN addgroup --system --gid 1001 nodejs
-RUN adduser --system --uid 1001 nextjs
-USER nextjs
+RUN adduser --system --uid 1001 nodejs
+USER nodejs
 
-# Automatically leverage output traces to reduce image size
-# https://nextjs.org/docs/advanced-features/output-file-tracing
-COPY --from=installer --chown=nextjs:nodejs /app/apps/web/.next/standalone ./
-COPY --from=installer --chown=nextjs:nodejs /app/apps/web/.next/static ./apps/web/.next/static
-COPY --from=installer --chown=nextjs:nodejs /app/apps/web/public ./apps/web/public
+WORKDIR /app
+COPY --from=builder --chown=nodejs:nodejs /app .
+WORKDIR /app/apps/${PROJECT}
 
-CMD node apps/web/server.js
+ARG PORT=8080
+ENV PORT=${PORT}
+ENV NODE_ENV=production
+EXPOSE ${PORT}
+
+CMD node dist/main

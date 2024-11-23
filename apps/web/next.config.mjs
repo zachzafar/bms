@@ -1,9 +1,10 @@
-import withTM from 'next-transpile-modules';
+
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
   swcMinify: true,
+  transpilePackages: ['@repo/api-contract'],
 };
 
-export default withTM(['@repo/api-contract'])(nextConfig);
+export default nextConfig
