@@ -1,8 +1,18 @@
 # Starting the appplication
 
-Run the following command for development
+Run the following command for development make sure you have pnpm installed
+
+Step 1 Provision the db with docker
 ```
-docker-compose -f docker-compose.dev.yml up --build
+docker-compose -f dockercompose.db.yml up --build
+
+```
+
+Step 2. Install dependencies and run project
+
+```
+pnpm install
+pnpm dev
 
 ```
 

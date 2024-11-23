@@ -6,7 +6,7 @@ import { contract } from '@repo/api-contract';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
-
+  //
   const document = generateOpenApi(contract, {
     info: {
       title: 'Posts API',
@@ -16,6 +16,6 @@ async function bootstrap() {
 
   SwaggerModule.setup('api-docs', app, document);
 
-  await app.listen(process.env.PORT ?? 3005);
+  await app.listen(process.env.PORT ?? 3001);
 }
 bootstrap();
