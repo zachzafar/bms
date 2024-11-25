@@ -7,7 +7,6 @@ import Categories from './Categories';
 import BookingForms from './BookingForms';
 import Groups from './Groups';
 import GroupTypes from './GroupTypes';
-import { getProperties } from '@/lib/db';
 import Properties from './Properties';
 import { useState } from 'react';
 
@@ -29,7 +28,7 @@ export default function Settings() {
           <TabsTrigger value='groups'>Groups</TabsTrigger>
         </TabsList>
         <TabsContent value='asset-types'>
-          <AssetTypes isActive={activeTab === 'asset-types'} />
+          <AssetTypes />
         </TabsContent>
         <TabsContent value='properties'>
           <Properties />

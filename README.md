@@ -1,8 +1,10 @@
 # Starting the appplication
 
-Run the following command for development make sure you have pnpm installed
 
-Step 1 Provision the db with docker
+
+Run the following command for development make sure you have pnpm and turbo installed
+
+Step 1 Provision the db with docker (or download MYSQL instead)
 ```
 docker-compose -f dockercompose.db.yml up --build
 

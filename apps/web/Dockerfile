@@ -1,59 +1,54 @@
-ARG NODE_VERSION=18.18.0
-
-# Alpine image
-FROM node:${NODE_VERSION}-alpine AS alpine
-RUN apk update
+# Builder
+FROM node:alpine AS builder
 RUN apk add --no-cache libc6-compat
-
-# Setup pnpm and turbo on the alpine base
-FROM alpine as base
-RUN npm install pnpm turbo --global
-RUN pnpm config set store-dir ~/.pnpm-store
-
-# Prune projects
-FROM base AS pruner
-ARG PROJECT=web
+RUN apk update
 
 WORKDIR /app
+RUN yarn global add turbo
 COPY . .
-RUN turbo prune --scope=${PROJECT} --docker
+RUN turbo prune --scope=web --docker
 
-# Build the project
-FROM base AS builder
-ARG PROJECT=web
+# Installer
+FROM node:alpine AS installer
+RUN apk add --no-cache libc6-compat
+RUN apk update
 
 WORKDIR /app
+RUN yarn global add pnpm
+RUN yarn global add turbo
 
-# Copy lockfile and package.json's of isolated subworkspace
-COPY --from=pruner /app/out/pnpm-lock.yaml ./pnpm-lock.yaml
-COPY --from=pruner /app/out/pnpm-workspace.yaml ./pnpm-workspace.yaml
-COPY --from=pruner /app/out/json/ .
+COPY --from=builder /app/out/json/ .
+COPY --from=builder /app/out/pnpm-lock.yaml ./pnpm-lock.yaml
+COPY --from=builder /app/out/pnpm-workspace.yaml ./pnpm-workspace.yaml
+RUN pnpm install
 
-# First install the dependencies (as they change less often)
-RUN --mount=type=cache,id=pnpm,target=~/.pnpm-store pnpm install --frozen-lockfile
+COPY --from=builder /app/out/full/ .
+COPY turbo.json turbo.json
 
-# Copy source code of isolated subworkspace
-COPY --from=pruner /app/out/full/ .
+# Uncomment and use build args to enable remote caching
+# ARG TURBO_TEAM
+# ENV TURBO_TEAM=$TURBO_TEAM
 
-RUN turbo build --filter=${PROJECT}
-RUN --mount=type=cache,id=pnpm,target=~/.pnpm-store pnpm prune --prod --no-optional
-RUN rm -rf ./**/*/src
+# ARG TURBO_TOKEN
+# ENV TURBO_TOKEN=$TURBO_TOKEN
 
-# Final image
-FROM alpine AS runner
-ARG PROJECT=web
+RUN turbo build --filter=web...
+
+# Runner
+FROM node:alpine AS runner
+WORKDIR /app
 
 RUN addgroup --system --gid 1001 nodejs
-RUN adduser --system --uid 1001 nodejs
-USER nodejs
+RUN adduser --system --uid 1001 nextjs
+USER nextjs
 
-WORKDIR /app
-COPY --from=builder --chown=nodejs:nodejs /app .
-WORKDIR /app/apps/${PROJECT}
+COPY --from=installer /app/apps/web/next.config.js .
+COPY --from=installer /app/apps/web/package.json .
 
-ARG PORT=8080
-ENV PORT=${PORT}
-ENV NODE_ENV=production
-EXPOSE ${PORT}
+# Automatically leverage output traces to reduce image size
+# https://nextjs.org/docs/advanced-features/output-file-tracing
+# COPY --from=installer --chown=nextjs:nodejs /app/apps/web/.next/standalone ./
+# COPY --from=installer --chown=nextjs:nodejs /app/apps/web/.next/static ./apps/web/.next/static
+# COPY --from=installer --chown=nextjs:nodejs /app/apps/web/public ./apps/web/public
 
-CMD node dist/main
+CMD node apps/web/server.js
