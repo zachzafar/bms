@@ -1,5 +1,8 @@
-import { sql } from "drizzle-orm";
+import { relations, sql } from "drizzle-orm";
 import { mysqlTable, varchar, datetime, json, decimal, text, timestamp, int, index, serial } from "drizzle-orm/mysql-core";
+import { Customer, User } from "../users";
+import { Asset } from "../asset";
+import { Tenant } from "../tenant";
 
 
 
@@ -14,14 +17,26 @@ export const Booking = mysqlTable("booking", {
     message: text("message"),
     createdAt: timestamp('createdAt').notNull().defaultNow(),
     updatedAt: timestamp('updatedAt', { mode: 'string' }),
+    tenantId: varchar("tenant_id", { length: 255 }).notNull(),
     assetId: int("asset_id").notNull(),
     customerId: varchar("customer_id", { length: 255 }).notNull(),
-    ownerId: varchar("owner_id", { length: 255 }),
-    bookingFormId: varchar("booking_form_id", { length: 255 }).notNull(),
+    
 }, (table) => ({
     assetIdx: index("asset_idx").on(table.assetId),
     customerIdx: index("customer_idx").on(table.customerId),
-    ownerIdx: index("owner_idx").on(table.ownerId),
-    bookingFormIdx: index("booking_form_idx").on(table.bookingFormId),
 }));
 
+export const BookingRelations = relations(Booking, ({ one }) => ({
+    customer: one(Customer, {
+        fields: [Booking.customerId],
+        references: [Customer.id],
+    }),
+    asset: one(Asset, {
+            fields: [Booking.assetId],
+            references: [Asset.id],
+    }),
+    tenant: one(Tenant, {
+        fields: [Booking.tenantId],
+        references: [Tenant.id],
+    })
+}))

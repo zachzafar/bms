@@ -1,5 +1,7 @@
-import { sql } from "drizzle-orm";
-import { datetime, mysqlTable, serial, timestamp, uniqueIndex, varchar } from "drizzle-orm/mysql-core";
+import { relations, sql } from "drizzle-orm";
+import { datetime, foreignKey,mysqlEnum, mysqlTable, serial, timestamp, uniqueIndex, varchar } from "drizzle-orm/mysql-core";
+import { Tenant } from "../tenant";
+import { Asset } from "../asset";
 
 
 
@@ -10,14 +12,23 @@ export const User = mysqlTable("user", {
     email: varchar("email", { length: 255 }).notNull(),
     password: varchar("password", { length: 255 }).notNull(),
     tenantId: varchar("tenant_id", { length: 255 }).notNull(),
-    role: varchar("role", { length: 50 }).notNull(),  // Enum as string
+    role: mysqlEnum(['ADMIN','SYSADMIN',"STAFF","OWNER","CUSTOMER"]).notNull(),  // Enum as string
     createdAt: timestamp('createdAt', {mode: 'string'}).notNull().defaultNow(),
     updatedAt: timestamp('updatedAt', {mode: 'string'}).notNull().onUpdateNow()
 }, (table) => ({
     emailUniqueIdx: uniqueIndex("email_unique").on(table.email),
 }));
 
-
+export const userRelations = relations(User, ({ one }) => ({
+    tenant: one(Tenant, {
+        fields: [User.tenantId], // User table's foreign key
+        references: [Tenant.id], // Tenant table's primary key
+    }),
+    customer: one(Customer, {
+        fields: [User.id],
+        references: [Customer.userId],
+    })
+}));
 
 // Customer Model
 export const Customer = mysqlTable("customer", {
@@ -27,6 +38,7 @@ export const Customer = mysqlTable("customer", {
     email: varchar("email", { length: 255 }).notNull(),
     phone: varchar("phone", { length: 255 }),
     address: varchar("address", { length: 255 }),
+    tenantId: varchar("tenant_id", { length: 255 }).notNull(),
     dateOfBirth: datetime("date_of_birth"),
     createdAt: timestamp('createdAt').notNull().defaultNow(),
     updatedAt: timestamp('updatedAt', { mode: 'string' }),
@@ -34,6 +46,17 @@ export const Customer = mysqlTable("customer", {
 }, (table) => ({
     emailUniqueIdx: uniqueIndex("email_unique").on(table.email),
     userIdUniqueIdx: uniqueIndex("user_id_unique").on(table.userId),
+}));
+
+export const customerRelations = relations(Customer, ({ one }) => ({
+    tenant: one(Tenant, {
+        fields: [Customer.tenantId],
+        references: [Tenant.id],
+    }),
+    user: one(User, {
+        fields: [Customer.userId],
+        references: [User.id],
+    }),
 }));
 
 // Owner Model
@@ -44,6 +67,7 @@ export const Owner = mysqlTable("owner", {
     email: varchar("email", { length: 255 }).notNull(),
     phone: varchar("phone", { length: 255 }),
     address: varchar("address", { length: 255 }),
+    tenantId: varchar("tenant_id", { length: 255 }).notNull(),
     companyName: varchar("company_name", { length: 255 }),
     taxId: varchar("tax_id", { length: 255 }),
     createdAt: timestamp('createdAt').notNull().defaultNow(),
@@ -53,3 +77,15 @@ export const Owner = mysqlTable("owner", {
     emailUniqueIdx: uniqueIndex("email_unique").on(table.email),
     userIdUniqueIdx: uniqueIndex("user_id_unique").on(table.userId),
 }));
+
+export const ownerRelations = relations(Owner, ({ one, many }) => ({
+    tenant: one(Tenant, {
+        fields: [Owner.tenantId],
+        references: [Tenant.id],
+    }),
+    user: one(User, {
+        fields: [Owner.userId],
+        references: [User.id],
+    }),
+    assets: many(Asset)
+}))

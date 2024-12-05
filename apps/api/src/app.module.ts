@@ -5,12 +5,10 @@ import { DrizzleModule } from './drizzle/drizzle.module';
 import { SchemaDesignModule } from './schema-design/schema-design.module';
 import { AuthModule } from './auth/auth.module';
 import { UsersModule } from './users/users.module';
-import { RegisterModule } from './register/register.module';
-import { TenantModule } from './tenant/tenant.module';
 import { ConfigModule } from '@nestjs/config';
 
 @Module({
-  imports: [DrizzleModule, SchemaDesignModule, AuthModule, UsersModule, RegisterModule, TenantModule,ConfigModule.forRoot({
+  imports: [DrizzleModule, SchemaDesignModule, AuthModule, UsersModule,ConfigModule.forRoot({
     isGlobal: true, // Makes ConfigService globally available
     envFilePath: '.env', // Path to your environment file
   }),],

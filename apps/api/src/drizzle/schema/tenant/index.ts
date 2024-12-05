@@ -1,8 +1,10 @@
 import { relations, sql } from "drizzle-orm";
 import { mysqlTable, varchar, timestamp, uniqueIndex } from "drizzle-orm/mysql-core";
-import { Asset } from "../asset";
-import { AssetType, assetProperty, Category, GroupType, BookingForm } from "../settings";
-import { User } from "../users";
+import { Asset, AssetHasProperties } from "../asset";
+import { AssetType, assetProperty, Category, GroupType, BookingForm, AssetTypeHasProperties } from "../settings";
+import { Customer, Owner, User } from "../users";
+import { MaintenanceTask } from "../maintenance";
+import { File } from "../file";
 
 // Tenant Model
 export const Tenant = mysqlTable("tenant", {
@@ -25,4 +27,10 @@ export const TenantRelations = relations(Tenant, ({ one, many }) => ({
     groupTypes: many(GroupType),
     bookingForms: many(BookingForm),
     assets: many(Asset),
+    customers: many(Customer),
+    owners: many(Owner),
+    maintenance: many(MaintenanceTask),
+    assetTypeHasProperties: many(AssetTypeHasProperties),
+    file: many(File),
+    assetHasProperties: many(AssetHasProperties)
 }));
