@@ -2,7 +2,7 @@ import { Inject, Injectable, UnauthorizedException } from '@nestjs/common';
 import { InsertTenant, InsertUser, SelectTenant, SelectUser } from '@repo/api-contract';
 import { MySql2Database } from 'drizzle-orm/mysql2';
 import { DrizzleAsyncProvider } from 'src/drizzle/drizzle.provider';
-import * as schema from '../drizzle/schema';
+import * as schema from '@repo/api-contract';
 import { JwtService } from '@nestjs/jwt';
 import { hash, verify } from 'argon2';
 import { v4 as uuidv4 } from 'uuid';
@@ -22,7 +22,7 @@ export class AuthService {
         @Inject(DrizzleAsyncProvider) private db: MySql2Database<typeof schema>
       ) {}
     
-      async createTenantWithAdmin(tenantData: InsertTenant, userData: InsertUser): Promise<{ tenant: SelectTenant; adminUser: Omit<SelectUser, "password">; }> {
+      async createTenantWithAdmin(tenantData: InsertTenant, userData: Omit<InsertUser,"tenantId" | "role">): Promise<{ tenant: SelectTenant; adminUser: Omit<SelectUser, "password">; }> {
         const tenantId = uuidv4();
             const userId = uuidv4();
     
@@ -62,7 +62,7 @@ export class AuthService {
       async login(email: string, password: string): Promise<{ user: Omit<SelectUser, "password">; tenant:SelectTenant ;accessToken: string; refreshToken: string }> {
         const userWithTenant = await this.db.query.User.findMany({
             where: (user, { eq }) => eq(user.email, email),
-            with: {
+          with: {
                 tenant: true, // Include the related tenant data
             },
         });
@@ -79,23 +79,24 @@ export class AuthService {
         
         const tenant = userWithTenant.map((item) => item.tenant).filter(Boolean)[0]
 
-        const isValid = await verify(password, user[0].password);
-    
+        const isValid = await verify(user.password,password);
+        console.log("made it past here")
         if (!isValid) {
           throw new UnauthorizedException('Invalid email or password');
         }
 
     
-        const { accessToken, refreshToken } = await this.generateTokens(user[0].id);
-
+        const { accessToken, refreshToken } = await this.generateTokens(user.id);
+          console.log("made it past generating tokens")
         const hashedToken = await hash(refreshToken);
         await this.db.insert(schema.refreshTokens).values({
-            userId: user[0].id,
+            userId: user.id,
             refreshToken: hashedToken,
         });
+        console.log("made it past inserting refresh token")
     
         return {
-          user: user[0] ,
+          user ,
           tenant,
           accessToken,
           refreshToken,
@@ -151,7 +152,7 @@ export class AuthService {
         return currentUser;
       }
 
-      async refreshToken(user: InsertUser) {
+      async refreshToken(user: Omit<SelectUser,"password" | "createdAt" | "updatedAt" | "email" >) {
         const { accessToken, refreshToken } = await this.generateTokens(user.id);
     
         const hashedToken = await hash(refreshToken);

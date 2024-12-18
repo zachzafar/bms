@@ -1,0 +1,27 @@
+{
+  "version": "7",
+  "dialect": "mysql",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "5",
+      "when": 1733771308791,
+      "tag": "0000_demonic_patriot",
+      "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "5",
+      "when": 1733919305995,
+      "tag": "0001_strange_kabuki",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "5",
+      "when": 1734445416473,
+      "tag": "0002_wealthy_sunspot",
+      "breakpoints": true
+    }
+  ]
+}

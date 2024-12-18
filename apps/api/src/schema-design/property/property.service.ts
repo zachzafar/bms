@@ -1,7 +1,7 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { DrizzleAsyncProvider } from 'src/drizzle/drizzle.provider';
 import { MySql2Database } from 'drizzle-orm/mysql2';
-import * as schema from '../../drizzle/schema';
+import * as schema from '@repo/api-contract/src/database-schema';
 @Injectable()
 export class PropertyService {
     constructor(

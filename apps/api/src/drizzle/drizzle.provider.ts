@@ -2,7 +2,7 @@ import { drizzle } from 'drizzle-orm/mysql2';
 import  mysql from 'mysql2/promise';
 import { ConfigService } from '@nestjs/config';
 import { MySql2Database } from 'drizzle-orm/mysql2';
-import * as schema from './schema';
+import * as schema from '@repo/api-contract';
 export const DrizzleAsyncProvider = 'DrizzleAsyncProvider';
 import { Provider } from '@nestjs/common';
 

@@ -6,9 +6,8 @@ import { RefreshAuthGuard } from './guards/refresh-auth/refresh-auth.guard';
 import { LocalAuthGuard } from './guards/local-auth/local-auth.guard';
 import { Public } from './decorators/public.decorator';
 
-console.log('contract', contract);
 
-@Controller('auth')
+@Controller()
 export class AuthController {
     constructor(private authService: AuthService) {}
 

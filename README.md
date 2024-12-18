@@ -10,12 +10,20 @@ docker-compose -f dockercompose.db.yml up --build
 
 ```
 
-Step 2. Install dependencies and run project
+Step 2. Install dependencies and push migrations to db
+
+```
+npx drizzle-kit push
+```
 
 ```
 pnpm install
-pnpm dev
+```
 
+Step 3. Run application
+
+```
+pnpm dev
 ```
 
 # Turborepo starter
