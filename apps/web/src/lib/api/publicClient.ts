@@ -7,7 +7,7 @@ import { getSession } from "./session";
 const baseUrl = 'http://localhost:3001';
 
 export const client = initTsrReactQuery(contract,{
-    baseUrl
+    baseUrl: 'http://localhost:3001'
 })
 
 
@@ -61,7 +61,6 @@ export const authClient = initTsrReactQuery(contract, {
     baseUrl,
     baseHeaders: {
         'Content-Type': 'application/json',
-        "Authorization": `Bearer ${(await getSession())?.accessToken || ''}`
       },
       api: async ({ path, method, headers, body }) => {
         try {
