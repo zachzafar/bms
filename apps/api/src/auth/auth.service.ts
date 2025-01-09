@@ -1,4 +1,4 @@
-import { Inject, Injectable, UnauthorizedException } from '@nestjs/common';
+import { Inject, Injectable, Logger, UnauthorizedException } from '@nestjs/common';
 import { InsertTenant, InsertUser, SelectTenant, SelectUser } from '@repo/api-contract';
 import { MySql2Database } from 'drizzle-orm/mysql2';
 import { DrizzleAsyncProvider } from 'src/drizzle/drizzle.provider';
@@ -14,6 +14,8 @@ import { eq } from 'drizzle-orm';
 
 @Injectable()
 export class AuthService {
+    private readonly loggger = new Logger(AuthService.name);
+
     constructor(
         private readonly jwtService: JwtService,
         private readonly userService: UsersService,
@@ -80,20 +82,20 @@ export class AuthService {
         const tenant = userWithTenant.map((item) => item.tenant).filter(Boolean)[0]
 
         const isValid = await verify(user.password,password);
-        console.log("made it past here")
+        
         if (!isValid) {
           throw new UnauthorizedException('Invalid email or password');
         }
 
     
         const { accessToken, refreshToken } = await this.generateTokens(user.id);
-          console.log("made it past generating tokens")
+        
         const hashedToken = await hash(refreshToken);
         await this.db.insert(schema.refreshTokens).values({
             userId: user.id,
             refreshToken: hashedToken,
         });
-        console.log("made it past inserting refresh token")
+   
     
         return {
           user ,
@@ -103,7 +105,9 @@ export class AuthService {
         };
       }
 
-      async logout(authorization: string) {}
+      async logout(userId: string ) {
+        this.db.update(schema.refreshTokens).set({ revoked: true }).where(eq(schema.refreshTokens.userId, userId));
+      }
 
       async validateLocalUser(email: string, password: string) {
         const user = await this.userService.findByEmail(email);
@@ -134,7 +138,9 @@ export class AuthService {
         const refreshTokenMatched = await verify(token.refreshToken, refreshToken);
 
         if (!refreshTokenMatched) {
+          await this.logout(userId);
           throw new UnauthorizedException('Invalid refresh token');
+
         }
     
         const { exp } = this.jwtService.decode(refreshToken) as { exp: number };
@@ -142,11 +148,9 @@ export class AuthService {
       
         if (isExpired) {
           // Execute the desired function when the token is expired
-         await  this.db.update(schema.refreshTokens).set({ revoked: true }).where(eq(schema.refreshTokens.userId, userId));
+         await  this.logout(userId);
           throw new UnauthorizedException('Refresh Token Expired!');
         }
-      
-
       
         const currentUser = { id: userId };
         return currentUser;

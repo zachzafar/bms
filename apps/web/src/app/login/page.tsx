@@ -9,7 +9,8 @@ import { Form, FormField, FormItem, FormLabel, FormMessage } from '@/components/
 import { useToast } from '@/components/ui/use-toast';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { client } from '@/lib/api/publicClient';
-import { useRouter } from 'next/router';
+import { useRouter } from 'next/navigation';
+import { createSession, Session } from '@/lib/api/session';
 
 const loginSchema = z.object({
   email: z.string().email('Invalid email address'),
@@ -21,7 +22,7 @@ type LoginFormData = z.infer<typeof loginSchema>;
 export default function LoginPage() {
   const { toast } = useToast();
   const router = useRouter();
-  const loginMutation = client.auth.login.useMutation();
+  const { mutate, isPending } = client.auth.login.useMutation();
 
   const form = useForm<LoginFormData>({
     resolver: zodResolver(loginSchema),
@@ -30,23 +31,39 @@ export default function LoginPage() {
   const { handleSubmit } = form;
 
   const onSubmit = async (data: LoginFormData) => {
-    try {
+
       console.log('data', data);
-      await loginMutation.mutateAsync({
+      mutate({
         body: {
           email: data.email,
           password: data.password,
         }
-      });
+      },{
+        onSuccess: async (response) => {
+          console.log('response', response);
+      if (response.status !== 200) throw new Error('Invalid response');
+
+      const session: Session = {
+      user: response.body.user,
+      accessToken: response.body.token,
+      refreshToken: response.body.refreshToken,
+      };
+
+      await createSession(session)
+      console.log('session', session);
       toast({ description: 'Logged in successfully' });
       router.push('/dashboard');
       // Redirect to dashboard
-    } catch (error) {
-      toast({
-        description: `Error occurred: ${error instanceof Error ? error.message : 'Unknown error'}`,
-        variant: 'destructive',
+        },
+        onError: (error) => {
+          console.error('error', error);
+          toast({
+            description: `Error occurred: ${error instanceof Error ? error.message : 'Unknown error'}`,
+            variant: 'destructive',
+          });
+        }
       });
-    }
+      
   };
 
   return (
@@ -77,8 +94,8 @@ export default function LoginPage() {
                 </FormItem>
               )}
             />
-            <Button type="submit" className="w-full" disabled={loginMutation.isPending}>
-              {loginMutation.isPending ? 'Logging in...' : 'Log In'}
+            <Button type="submit" className="w-full" disabled={isPending}>
+              {isPending ? 'Logging in...' : 'Log In'}
             </Button>
           </form>
         </Form>

@@ -2,6 +2,8 @@ import { Inter } from 'next/font/google';
 
 import { Package2Icon } from 'lucide-react';
 import { Toaster } from '@/components/ui/toaster';
+import { Button } from '@/components/ui/button';
+import Logout from '@/components/custom/Logout';
 
 
 const inter = Inter({ subsets: ['latin'] });
@@ -11,8 +13,6 @@ export default function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-
-
 
   return (
     <html lang='en'>
@@ -51,6 +51,9 @@ export default function RootLayout({
               <a className='text-gray-500 dark:text-gray-400' href='/settings'>
                 Settings
               </a>
+              <div className='flex-end'>
+              <Logout/>
+              </div>
             </nav>
           </header>
           {children}

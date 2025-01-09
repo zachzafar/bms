@@ -4,6 +4,7 @@ import { jwtVerify, SignJWT } from "jose";
 
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
+import { NextRequest } from "next/server";
 
 
 export type Session = {
@@ -17,7 +18,8 @@ export type Session = {
   refreshToken: string;
 };
 
-const secretKey = process.env.SESSION_SECRET_KEY!;
+
+const secretKey = process.env.SESSION_SECRET_KEY;
 const encodedKey = new TextEncoder().encode(secretKey);
 
 export async function createSession(payload: Session) {
@@ -38,6 +40,28 @@ export async function createSession(payload: Session) {
     sameSite: "lax",
     path: "/",
   });
+}
+
+export async function getSessionFromRequest(req: NextRequest) {
+  const cookie = req.cookies.get("session")?.value
+  if (!cookie) return null;
+
+
+  try {
+    const { payload } = await jwtVerify(
+      cookie,
+      encodedKey,
+      {
+        algorithms: ["HS256"],
+      }
+    );
+    console.log("payload", payload)
+
+    return payload as Session;
+  } catch (err) {
+    console.error("Failed to verify the session", err);
+    return null
+  }
 }
 
 export async function getSession() {

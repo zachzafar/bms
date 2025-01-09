@@ -1,15 +1,13 @@
-import { initClient } from "@ts-rest/core";
 import { contract } from "@repo/api-contract";
 import { initTsrReactQuery } from "@ts-rest/react-query/v5";
-import  axios from 'axios';
+import  axios, { AxiosError, AxiosResponse, isAxiosError, Method } from 'axios';
 import { memoizedRefreshToken } from "./refreshToken";
-import { get } from "http";
 import { getSession } from "./session";
 
-
+const baseUrl = 'http://localhost:3001';
 
 export const client = initTsrReactQuery(contract,{
-    baseUrl: 'http://localhost:3001',
+    baseUrl
 })
 
 
@@ -20,11 +18,11 @@ const axiosInstance = axios.create({
 axiosInstance.interceptors.request.use(
     async (config) => {
       const session = await getSession();
-  
+      console.log('session', session)
       if (session) {
         config.headers = new axios.AxiosHeaders({
           ...config.headers,
-          authorization: `Bearer ${session.accessToken}`,
+          Authorization: `Bearer ${session.accessToken}`,
         });
       }
   
@@ -48,7 +46,7 @@ axiosInstance.interceptors.response.use(
        
           config.headers = new axios.AxiosHeaders({
             ...config.headers,
-            authorization: `Bearer ${result.accessToken}`,
+            Authorization: `Bearer ${result.accessToken}`,
           });
         
   
@@ -60,6 +58,40 @@ axiosInstance.interceptors.response.use(
 
 
 export const authClient = initTsrReactQuery(contract, {
-    baseUrl: 'http://localhost:3001',
-    axiosInstance
-})
+    baseUrl,
+    baseHeaders: {
+        'Content-Type': 'application/json',
+        "Authorization": `Bearer ${(await getSession())?.accessToken || ''}`
+      },
+      api: async ({ path, method, headers, body }) => {
+        try {
+          const result = await axiosInstance.request({
+            method: method as Method,
+            url: `${baseUrl}/${path}`,
+            headers,
+            data: body,
+          });
+
+          const headersObj = new Headers();
+      Object.entries(result.headers).forEach(([key, value]) => {
+        if (value) headersObj.append(key, value.toString());
+      });
+
+          return { status: result.status, body: result.data, headers: headersObj };
+        } catch (e: Error | AxiosError | any) {
+          if (isAxiosError(e)) {
+            const error = e as AxiosError;
+            const response = error.response as AxiosResponse;
+
+            const headersObj = new Headers();
+            Object.entries(response.headers).forEach(([key, value]) => {
+            if (value) headersObj.append(key, value.toString());
+            });
+
+
+            return { status: response.status, body: response.data, headers: headersObj };
+          }
+          throw e;
+        }
+      },
+});

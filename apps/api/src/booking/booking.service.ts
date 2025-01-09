@@ -1,19 +1,28 @@
-import { ConflictException, Inject, Injectable, NotFoundException } from '@nestjs/common';
+import { ConflictException, forwardRef, Inject, Injectable, NotFoundException } from '@nestjs/common';
 import { MySql2Database } from 'drizzle-orm/mysql2';
 import * as schema from '@repo/api-contract';
 import { DrizzleAsyncProvider } from 'src/drizzle/drizzle.provider';
 import type { InsertBooking, UpdateBooking, SelectBooking } from '@repo/api-contract';
 import { eq } from 'drizzle-orm';
+import { MaintenanceService } from 'src/maintenance/maintenance.service';
 
 @Injectable()
 export class BookingService {
-    constructor(@Inject(DrizzleAsyncProvider) private db: MySql2Database<typeof schema>) {}
+    constructor(
+        @Inject(DrizzleAsyncProvider) private db: MySql2Database<typeof schema>,
+        @Inject(forwardRef(() => MaintenanceService)) private readonly maintenanceService: MaintenanceService,
+    ) {}
 
     async createBooking(booking: InsertBooking) {
-        const isAvailable = await this.checkAvailability(booking.assetId, booking.startDate, booking.endDate);
-        if (!isAvailable) {
+        const {  available } = await this.checkAvailability(booking.assetId, booking.startDate, booking.endDate);
+        const { available: maintenanceAvailable } = await this.maintenanceService.checkAvailability(booking.assetId, booking.startDate, booking.endDate);
+        
+        
+        if (!available || !maintenanceAvailable) {
           throw new ConflictException('The asset is not available for the selected dates.');
         }
+
+
         const newBookingId = await this.db.insert(schema.Booking).values(booking).$returningId().execute();
         return await this.getBooking(newBookingId[0].id);
     }

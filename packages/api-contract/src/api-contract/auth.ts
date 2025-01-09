@@ -65,7 +65,7 @@ export const authContract = c.router({
         headers: z.object({
             user: SelectUserSchema,
             Authorization: z.string().regex(/^Bearer .+$/, 'Must be a Bearer token'),
-          }),
+          }).optional(),
         responses: {
             204: z.object({
               message: z.string()

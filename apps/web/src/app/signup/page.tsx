@@ -9,7 +9,7 @@ import { Form, FormField, FormItem, FormLabel, FormMessage } from '@/components/
 import { useToast } from '@/components/ui/use-toast';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { client } from '@/lib/api/publicClient';
-import { useRouter } from 'next/router';
+import { useRouter } from 'next/navigation';
 
 const signupSchema = z.object({
   name: z.string().min(1, 'Name is required'),
@@ -48,7 +48,7 @@ export default function SignupPage() {
         }}
       })
       toast({ description: 'Account created successfully' });
-      router.push('/dashboard');
+      router.push('/login');
     } catch (error) {
       toast({
         description: `Error occurred: ${error instanceof Error ? error.message : 'Unknown error'}`,
