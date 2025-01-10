@@ -61,11 +61,9 @@ export const authContract = c.router({
     logout: {
         method: 'POST',
         path: '/logout',
-        body: null,
-        headers: z.object({
-            user: SelectUserSchema,
-            Authorization: z.string().regex(/^Bearer .+$/, 'Must be a Bearer token'),
-          }).optional(),
+        body: z.object({
+          refreshToken: z.string().max(255)
+        }),
         responses: {
             204: z.object({
               message: z.string()

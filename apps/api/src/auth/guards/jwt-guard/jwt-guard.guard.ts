@@ -1,4 +1,4 @@
-import { CanActivate, ExecutionContext, Injectable } from '@nestjs/common';
+import { BadRequestException, CanActivate, ExecutionContext, Injectable, Logger, UnauthorizedException } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import { AuthGuard } from '@nestjs/passport';
 import { Observable } from 'rxjs';
@@ -6,6 +6,7 @@ import { IS_PUBLIC_KEY } from 'src/auth/decorators/public.decorator';
 
 @Injectable()
 export class JwtGuardGuard extends AuthGuard('jwt') {
+  private readonly logger = new Logger(AuthGuard.name);
 
   constructor(private reflector: Reflector) {
     super();
@@ -26,7 +27,30 @@ export class JwtGuardGuard extends AuthGuard('jwt') {
       return true; // Allow access to Swagger documentation
     }
 
+    this.logger.log('Checking JWT authentication');
 
     return super.canActivate(context);
+  }
+
+  handleRequest(err, user, info, context) {
+    if (err) {
+      this.logger.error('Error during JWT authentication', err);
+      throw err;
+    }
+      if (info) {
+        this.logger.warn(`JWT authentication info: ${info}`);
+        if (info.name === 'TokenExpiredError') {
+          throw new UnauthorizedException('JWT token has expired');
+        } else {
+          throw new BadRequestException('Invalid JWT token');
+        }
+      }
+    if (!user) {
+      throw new UnauthorizedException('No user found');
+      this.logger.warn('No user found during JWT authentication');
+    }
+
+    this.logger.log('JWT authentication successful');
+    return user;
   }
 }

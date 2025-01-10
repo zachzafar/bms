@@ -105,8 +105,8 @@ export class AuthService {
         };
       }
 
-      async logout(userId: string ) {
-        this.db.update(schema.refreshTokens).set({ revoked: true }).where(eq(schema.refreshTokens.userId, userId));
+      async logout(refreshToken: string ) {
+        this.db.update(schema.refreshTokens).set({ revoked: true }).where(eq(schema.refreshTokens.refreshToken, refreshToken));
       }
 
       async validateLocalUser(email: string, password: string) {

@@ -7,7 +7,7 @@ import { getSession } from "./session";
 const baseUrl = 'http://localhost:3001';
 
 export const client = initTsrReactQuery(contract,{
-    baseUrl: 'http://localhost:3001'
+    baseUrl
 })
 
 
@@ -59,14 +59,11 @@ axiosInstance.interceptors.response.use(
 
 export const authClient = initTsrReactQuery(contract, {
     baseUrl,
-    baseHeaders: {
-        'Content-Type': 'application/json',
-      },
       api: async ({ path, method, headers, body }) => {
         try {
           const result = await axiosInstance.request({
             method: method as Method,
-            url: `${baseUrl}/${path}`,
+            url: path,
             headers,
             data: body,
           });

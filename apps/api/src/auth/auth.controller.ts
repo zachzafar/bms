@@ -50,8 +50,8 @@ export class AuthController {
 
     @TsRestHandler(contract.auth.logout)
     async logout(): Promise<ReturnType<typeof tsRestHandler>> {
-        return tsRestHandler(contract.auth.logout, async ({ headers }) => {
-            await this.authService.logout(headers.user.id);
+        return tsRestHandler(contract.auth.logout, async ({ body }) => {
+            await this.authService.logout(body.refreshToken);
             return { status: 204, body: { message: 'Logged out' } };
         });
     }
