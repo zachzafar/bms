@@ -29,7 +29,7 @@ export default function RootLayout({
             <div className="flex justify-start lg:w-0 lg:flex-1">
               <span className="text-2xl font-bold">BookingOS</span>
             </div>
-            <div className="flex items-center gap-4">
+            <nav className="flex items-center gap-4">
               <Link 
                 href="/login" 
                 className="text-sm font-medium text-gray-500 hover:text-gray-900"
@@ -39,7 +39,7 @@ export default function RootLayout({
               <Button asChild>
                 <Link href="/signup">Start Free Trial</Link>
               </Button>
-            </div>
+            </nav>
           </div>
         </div>
       </header>

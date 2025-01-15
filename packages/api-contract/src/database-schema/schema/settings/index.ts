@@ -31,7 +31,7 @@ export const CategoryRelations = relations(Category, ({ one }) => ({
 
 // GroupType Model
 export const GroupType = mysqlTable("group_type", {
-    id: serial("id").primaryKey(),
+    id: serial("id").primaryKey().notNull(),
     name: varchar("name", { length: 255 }).notNull(),
     tenantId: varchar("tenant_id", { length: 255 }),
     createdAt: timestamp('createdAt').notNull().defaultNow(),
@@ -48,7 +48,7 @@ export const GroupTypeRelations = relations(GroupType, ({ one, many }) => ({
 
 // Group Model
 export const Group = mysqlTable("group", {
-    id: serial("id").primaryKey(),
+    id: serial("id").primaryKey().notNull(),
     name: varchar("name", { length: 255 }).notNull(),
     description: text("description"),
     tenantId: varchar("tenant_id", { length: 255 }).notNull(),
@@ -58,6 +58,15 @@ export const Group = mysqlTable("group", {
 }, (table) => ({
     groupTypeIdx: index("group_type_idx").on(table.groupTypeId),
 }));
+
+export const InsertGroupSchema = createInsertSchema(Group);
+export const SelectGroupSchema = createInsertSchema(Group).required( { id: true });
+export const UpdateGroupSchema = InsertGroupSchema.partial();
+
+export type InsertGroup = z.infer<typeof InsertGroupSchema>;
+export type SelectGroup = z.infer<typeof SelectGroupSchema>;
+export type UpdateGroup = z.infer<typeof UpdateGroupSchema>;
+
 
 export const GroupRelations = relations(Group, ({ one }) => ({
     groupType: one(GroupType, {
@@ -80,6 +89,14 @@ export const AssetType = mysqlTable("asset_type", {
     nameUniqueIdx: uniqueIndex("name_unique").on(table.name),
     bookingFormUniqueIdx: uniqueIndex("booking_form_unique").on(table.bookingFormId),
 }));
+
+export const InsertAssetTypeSchema = createInsertSchema(AssetType);
+export const SelectAssetTypeSchema = createInsertSchema(AssetType);
+export const UpdateAssetTypeSchema = InsertAssetTypeSchema.partial();
+
+export type InsertAssetType = z.infer<typeof InsertAssetTypeSchema>;
+export type SelectAssetType = z.infer<typeof SelectAssetTypeSchema>;
+export type UpdateAssetType = z.infer<typeof UpdateAssetTypeSchema>;
 
 export const AssetTypeRelations = relations(AssetType, ({ one, many }) => ({
     tenant: one(Tenant, {

@@ -1,43 +1,70 @@
-// import { z } from "zod";
+import { initContract } from "@ts-rest/core";
 
-// // Insert Schema
-// export const insertAssetTypeSchema = z.object({
-//     name: z.string().max(255),
-//     description: z.string().nullable(),
-//     bookingFormId: z.string().max(255).optional(),
-//     tenantId: z.string().max(255),
-//     schema: z.array(z.object({
-//         propertyId: z.number(),
-//         isRequired: z.boolean(),
-//     }))
-// });
+import { z } from "zod";
+import { InsertAssetTypeSchema, SelectAssetTypeSchema, UpdateAssetTypeSchema } from "../../database-schema";
 
-// // Select Schema
-// export const selectAssetTypeSchema = insertAssetTypeSchema.extend({
-//     id: z.number(),
-//     createdAt: z.date(),
-//     updatedAt: z.date().nullable(),
-// });
+const c = initContract();
 
-// // Patch Schema
-// export const patchAssetTypeSchema = selectAssetTypeSchema.partial().required({
-//     id: true,
-// }).extend({
-//     schema: z.array(z.object({
-//         propertyId: z.number(),
-//         isRequired: z.boolean(),
-//     })),
-// }).omit({ createdAt: true, updatedAt: true });
-
-// // Schema for AssetType with Properties
-// export const assetTypeWithPropertiesSchema = selectAssetTypeSchema.extend({
-//     schema: z.array(z.object({
-//         propertyId: z.number(),
-//         isRequired: z.boolean(),
-//     })),
-// });
-
-// export type AssetTypeWithProperties = z.infer<typeof assetTypeWithPropertiesSchema>;
-// export type InsertAssetType = z.infer<typeof insertAssetTypeSchema>;
-// export type AssetType = z.infer<typeof selectAssetTypeSchema>;
-// export type PatchAssetType = z.infer<typeof patchAssetTypeSchema>;
+export const assetTypeContract = c.router({
+    createAssetType: {
+        method: 'POST',
+        path: '/asset-type',
+        body: z.object({
+            assetType: InsertAssetTypeSchema
+        }),
+        responses: {
+            201: z.object({
+                assetType: SelectAssetTypeSchema
+            })
+        },
+        summary: 'Create a new asset type'
+    },
+    getAssetTypes: {
+        method: 'GET',
+        path: '/asset-type',
+        responses: {
+            200: z.array(SelectAssetTypeSchema)
+        },
+        summary: 'Get all asset types'
+    },
+    getAssetType: {
+        method: 'GET',
+        path: '/asset-type/:id',
+        responses: {
+            200: SelectAssetTypeSchema,
+            404: z.object({
+                message: z.string()
+            })
+        },
+        pathParams: z.object({
+            id: z.number()
+        }),
+        summary: 'Get asset type by id'
+    },
+    updateAssetType: {
+        method: 'PUT',
+        path: '/asset-type/:id',
+        body: z.object({
+            assetType: UpdateAssetTypeSchema
+        }),
+        responses: {
+            200: SelectAssetTypeSchema
+        },
+        pathParams: z.object({
+            id: z.number()
+        }),
+        summary: 'Update asset type by id'
+    },
+    deleteAssetType: {
+        method: 'DELETE',
+        path: '/asset-type/:id',
+        responses: {
+            200: z.object({
+                message: z.string()
+            })
+        },
+        pathParams: z.object({
+            id: z.number()
+        }),
+        summary: 'Delete asset type by id'}
+})

@@ -23,7 +23,7 @@ import AddAssetForm from './AddAssetForm';
 import { useState } from 'react';
 import { authClient } from '@/lib/api/publicClient';
 
-export default async function AssetsPage() {
+export default function AssetsPage() {
     const { data: assets } = authClient.assets.getAssets.useQuery({
         queryKey: ['assets']
     });
@@ -65,13 +65,13 @@ export default async function AssetsPage() {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {assets.map((asset) => (
+            {assets?.status === 200 ? assets.body.map((asset) => (
               <TableRow key={asset.id}>
                 <TableCell className='font-medium'>{asset.id}</TableCell>
                 <TableCell>{asset.name}</TableCell>
-                <TableCell>{asset.type}</TableCell>
-                <TableCell>{asset.subgroup}</TableCell>
-                <TableCell>{asset.status}</TableCell>
+                <TableCell>{asset.assetTypeId}</TableCell>
+                <TableCell>{asset.groupId}</TableCell>
+                <TableCell>{asset.available}</TableCell>
                 <TableCell>{asset.requiresApproval ? 'Yes' : 'No'}</TableCell>
                 <TableCell className='text-right'>
                   <Button variant='ghost' size='sm'>
@@ -80,7 +80,7 @@ export default async function AssetsPage() {
                   </Button>
                 </TableCell>
               </TableRow>
-            ))}
+            )): <TableRow><TableCell colSpan={7}>No assets found</TableCell></TableRow>}
           </TableBody>
         </Table>
       </div>

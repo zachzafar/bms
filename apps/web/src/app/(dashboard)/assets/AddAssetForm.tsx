@@ -5,7 +5,9 @@ import { FormField, FormItem, FormLabel } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
-import { AssetSchema, AssetSchemaInputs } from '@/lib/schemas';
+import { authClient } from '@/lib/api/publicClient';
+import { ASSET_TYPE_QUERY_KEY, GROUPS_QUERY_KEY } from '@/lib/api/queryKeys';
+
 import { zodResolver } from '@hookform/resolvers/zod';
 import {
   Select,
@@ -14,153 +16,138 @@ import {
   SelectContent,
   SelectItem,
 } from '@radix-ui/react-select';
+import { InsertAsset, InsertAssetSchema } from '@repo/api-contract';
 
 import React, { useEffect, useState } from 'react';
-import { Form, SubmitHandler, useForm, useFormState } from 'react-hook-form';
+import { Controller, Form, SubmitHandler, useForm, useFormState } from 'react-hook-form';
 
 function AddAssetForm() {
-  const form = useForm<AssetSchemaInputs>({
-    resolver: zodResolver(AssetSchema),
+  const { mutate, isPending } = authClient.assets.createAsset.useMutation();
+  const { data: assetTypes } = authClient.settings.assetType.getAssetTypes.useQuery({ queryKey: ASSET_TYPE_QUERY_KEY});
+  const { data: assetGroups } = authClient.settings.group.getGroups.useQuery({ queryKey: GROUPS_QUERY_KEY});
+
+
+  const form = useForm<InsertAsset>({
+    resolver: zodResolver(InsertAssetSchema),
   });
 
   const { handleSubmit, control } = form;
   const { isSubmitting } = useFormState({ control });
 
-  const processform: SubmitHandler<AssetSchemaInputs> = async (data) => {};
-
-  // AI code
-
-  const [assetTypes, setAssetTypes] = useState([
-    { id: 1, name: 'Car', subgroups: ['Sedan', 'SUV', 'Sports Car'] },
-    {
-      id: 2,
-      name: 'Property',
-      subgroups: ['Apartment', 'House', 'Beachfront'],
-    },
-    { id: 3, name: 'Equipment', subgroups: ['Photography', 'Audio', 'Video'] },
-  ]);
-
-  const [newAsset, setNewAsset] = useState({
-    name: '',
-    type: '',
-    subgroup: '',
-    status: 'Available',
-    requiresApproval: false,
-  });
-
-  const [selectedAssetType, setSelectedAssetType] = useState(null);
-
-  useEffect(() => {
-    if (selectedAssetType) {
-      setNewAsset((prev) => ({ ...prev, subgroup: '' }));
-    }
-  }, [selectedAssetType]);
-
-  const handleAddAsset = (e) => {
-    e.preventDefault();
-    const id = assets.length + 1;
-    setAssets([...assets, { id, ...newAsset }]);
-    setNewAsset({
-      name: '',
-      type: '',
-      subgroup: '',
-      status: 'Available',
-      requiresApproval: false,
-    });
+  const processform: SubmitHandler<InsertAsset> = async (data: InsertAsset) => {
+      mutate({
+        body: data,
+      },{
+          onSuccess: (response) => {
+              console.log('response', response);
+          }
+      })
   };
 
+ 
   return (
     <Form {...form}>
-      <form onSubmit={handleSubmit(processform)} className='space-y-4'>
-        <div className='space-y-2'>
+      <form onSubmit={handleSubmit(processform)} className="space-y-4">
+        <FormField
+          control={control}
+          name="name"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel htmlFor="asset-name">Asset Name</FormLabel>
+              <Input id="asset-name" placeholder="Enter asset name" {...field} />
+            </FormItem>
+          )}
+        />
+
+        <FormField
+          control={control}
+          name="assetTypeId"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel htmlFor="asset-type">Asset Type</FormLabel>
+              <Select onValueChange={(value) => field.onChange(Number(value))} value={field.value?.toString()}>
+                <SelectTrigger id="asset-type">
+                  <SelectValue placeholder="Select asset type" />
+                </SelectTrigger>
+                <SelectContent>
+                  {assetTypes?.status === 200 ? assetTypes.body.map((type) => (
+                    <SelectItem key={type.id} value={type.name}>
+                      {type.name}
+                    </SelectItem>
+                  )): <SelectItem value="No Asset Types Found">No Asset Types Found</SelectItem>}
+                </SelectContent>
+              </Select>
+            </FormItem>
+          )}
+        />
+
+       
           <FormField
+            control={control}
+            name="groupId"
             render={({ field }) => (
               <FormItem>
-                <FormLabel htmlFor='asset-name'>Asset Name</FormLabel>
-                <Input
-                  id='asset-name'
-                  placeholder='Enter asset name'
-                  {...field}
-                />
+                <FormLabel htmlFor="asset-subgroup">Subgroup</FormLabel>
+                <Select onValueChange={(value) => field.onChange(Number(value))} value={field.value?.toString()}>
+                  <SelectTrigger id="asset-subgroup">
+                    <SelectValue placeholder="Select subgroup" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {assetGroups?.status === 200 ?  assetGroups.body.map((group) => (
+                      <SelectItem key={group.id} value={group.id?.toString()}>
+                        {group.name}
+                      </SelectItem>)): <SelectItem value="No Subgroups Found">No Subgroups Found</SelectItem>}
+                  </SelectContent>
+                </Select>
               </FormItem>
             )}
-            name={'name'}
           />
-        </div>
-        <div className='space-y-2'>
-          <Label htmlFor='asset-type'>Asset Type</Label>
-          <Select
-            value={newAsset.type}
-            onValueChange={(value) => {
-              setNewAsset({ ...newAsset, type: value, subgroup: '' });
-              setSelectedAssetType(
-                assetTypes.find((type) => type.name === value)
-              );
-            }}
-          >
-            <SelectTrigger id='asset-type'>
-              <SelectValue placeholder='Select asset type' />
-            </SelectTrigger>
-            <SelectContent>
-              {assetTypes.map((type) => (
-                <SelectItem key={type.id} value={type.name}>
-                  {type.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-        {selectedAssetType && (
-          <div className='space-y-2'>
-            <Label htmlFor='asset-subgroup'>Subgroup</Label>
-            <Select
-              value={newAsset.subgroup}
-              onValueChange={(value) =>
-                setNewAsset({ ...newAsset, subgroup: value })
-              }
-            >
-              <SelectTrigger id='asset-subgroup'>
-                <SelectValue placeholder='Select subgroup' />
-              </SelectTrigger>
-              <SelectContent>
-                {selectedAssetType.subgroups.map((subgroup) => (
-                  <SelectItem key={subgroup} value={subgroup}>
-                    {subgroup}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-        )}
-        <div className='space-y-2'>
-          <Label htmlFor='asset-status'>Status</Label>
-          <Select
-            value={newAsset.status}
-            onValueChange={(value) =>
-              setNewAsset({ ...newAsset, status: value })
-            }
-          >
-            <SelectTrigger id='asset-status'>
-              <SelectValue placeholder='Select status' />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value='Available'>Available</SelectItem>
-              <SelectItem value='In Use'>In Use</SelectItem>
-              <SelectItem value='Maintenance'>Maintenance</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-        <div className='flex items-center space-x-2'>
-          <Switch
-            id='requires-approval'
-            checked={newAsset.requiresApproval}
-            onCheckedChange={(checked) =>
-              setNewAsset({ ...newAsset, requiresApproval: checked })
-            }
-          />
-          <Label htmlFor='requires-approval'>Requires Approval</Label>
-        </div>
-        <Button type='submit'>Add Asset</Button>
+       
+
+        <FormField
+          control={control}
+          name="available"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel htmlFor="asset-status">Status</FormLabel>
+              <Controller
+                name="available"
+                control={control}
+                render={({ field }) => (
+                  <Switch
+                    id="asset-status"
+                    checked={field.value}
+                    onCheckedChange={field.onChange}
+                  />
+                )}/>
+                </FormItem>
+          )}
+        />
+
+        <FormField
+          control={control}
+          name="requiresApproval"
+          render={({ field }) => (
+            <FormItem className="flex flex-row items-center space-x-2">
+              <FormLabel htmlFor="requires-approval">Requires Approval</FormLabel>
+              <Controller
+                name="requiresApproval"
+                control={control}
+                render={({ field }) => (
+                  <Switch
+                    id="requires-approval"
+                    checked={field.value}
+                    onCheckedChange={field.onChange}
+                  />
+                )}
+              />
+            </FormItem>
+          )}
+        />
+
+        <Button type="submit" disabled={isPending}>
+          {isPending ? 'Adding Asset...' : 'Add Asset'}
+        </Button>
       </form>
     </Form>
   );
