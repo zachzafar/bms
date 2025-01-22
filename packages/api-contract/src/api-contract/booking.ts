@@ -2,10 +2,17 @@ import { initContract } from "@ts-rest/core";
 
 import { z } from "zod";
 
-import { InsertBookingSchema, SelectBookingSchema, UpdateBookingSchema } from "../database-schema";
+import { Customer, InsertBookingSchema, SelectAssetSchema, SelectBookingSchema, SelectCustomerSchema, UpdateBookingSchema } from "../database-schema";
 
 
 const c = initContract();
+
+export const ExtendedSelectBookingSchema = SelectBookingSchema.extend({
+    asset: SelectAssetSchema,
+    customer: SelectCustomerSchema
+})
+
+export type ExtendedSelectBooking = z.infer<typeof ExtendedSelectBookingSchema>
 
 export const bookingContract = c.router({
     createBooking : {
@@ -22,10 +29,9 @@ export const bookingContract = c.router({
         method: 'GET',
         path: '/booking',
         responses: {
-            200: z.array(SelectBookingSchema)
+            200: z.array(ExtendedSelectBookingSchema)
         },
         query: z.object({
-            
             search: z.string().optional(),
         }),
         summary: 'Get all bookings'
@@ -34,7 +40,7 @@ export const bookingContract = c.router({
         method: 'GET',
         path: '/booking/:id',
         responses: {
-            200: SelectBookingSchema,
+            200: ExtendedSelectBookingSchema,
             404: z.undefined()
         },
         pathParams: z.object({
@@ -42,6 +48,17 @@ export const bookingContract = c.router({
         }),
         summary: 'Get a booking by id'
     }, 
+    cancelBooking: {
+        method: 'GET',
+        path: '/booking/:id',
+        responses: {
+            204: z.undefined()
+        },
+        pathParams: z.object({
+            id: z.number()
+        }),
+        summary: 'Delete a booking by id'
+    },
     updateBooking: {
         method: 'PUT',
         path: '/booking/:id',
@@ -53,16 +70,6 @@ export const bookingContract = c.router({
         }),
         body: UpdateBookingSchema,
         summary: 'Update a booking by id'
-    }, 
-    deleteBooking: {
-        method: 'DELETE',
-        path: '/booking/:id',
-        responses: {
-            204: z.undefined()
-        },
-        pathParams: z.object({
-            id: z.number()
-        }),
-        summary: 'Delete a booking by id'
     }
+    
 })

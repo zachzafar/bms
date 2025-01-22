@@ -7,7 +7,7 @@ import { contract } from '@repo/api-contract';
 export class GroupController {
     constructor(private groupService: GroupService){}
 
-    @TsRestHandler(contract.settings.)
+    @TsRestHandler(contract.settings.group.getGroups)
     async getGroups(): Promise<ReturnType<typeof tsRestHandler>> {
         return tsRestHandler(contract.settings.group.getGroups, async () => {
             const groups = await this.groupService.getGroups();
@@ -29,7 +29,7 @@ export class GroupController {
     @TsRestHandler(contract.settings.group.createGroup)
     async createGroup(): Promise<ReturnType<typeof tsRestHandler>> {
         return tsRestHandler(contract.settings.group.createGroup, async ({ body }) => {
-            const group = await this.groupService.createGroup(body);
+            const group = await this.groupService.createGroup(body.group);
 
             if (!group) {
                 return { status: 500, body: { message: 'Error creating group' } };
@@ -42,7 +42,7 @@ export class GroupController {
     @TsRestHandler(contract.settings.group.updateGroup)
     async updateGroup(): Promise<ReturnType<typeof tsRestHandler>> {
         return tsRestHandler(contract.settings.group.updateGroup, async ({ params, body }) => {
-            const group = await this.groupService.updateGroup(params.id, body);
+            const group = await this.groupService.updateGroup(params.id, body.group);
 
             if (!group) {
                 return { status: 500, body: { message: 'Error updating group' } };

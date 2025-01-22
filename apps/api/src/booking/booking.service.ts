@@ -5,6 +5,7 @@ import { DrizzleAsyncProvider } from 'src/drizzle/drizzle.provider';
 import type { InsertBooking, UpdateBooking, SelectBooking } from '@repo/api-contract';
 import { eq } from 'drizzle-orm';
 import { MaintenanceService } from 'src/maintenance/maintenance.service';
+import { ExtendedSelectBooking } from '@repo/api-contract/src/api-contract/booking';
 
 @Injectable()
 export class BookingService {
@@ -27,12 +28,24 @@ export class BookingService {
         return await this.getBooking(newBookingId[0].id);
     }
 
-    async getBooking(bookingId: number) {
-        const booking = await this.db.query.Booking.findFirst({ where: (booking, { eq }) => eq(booking.id, bookingId) });
+    async getBooking(bookingId: number): Promise<ExtendedSelectBooking> {
+      const booking = await this.db
+      .select()
+      .from(schema.Booking)
+      .innerJoin(schema.Asset, eq(schema.Booking.assetId,schema.Asset.id))
+      .innerJoin(schema.Customer, eq(schema.Booking.customerId,schema.Customer.id))
+      .where(eq(schema.Booking.id,bookingId))
+      .execute()
+      .then(rows => rows[0]);
+       // const booking = await this.db.query.Booking.findFirst({ where: (booking, { eq }) => eq(booking.id, bookingId)})
     if (!booking) {
       throw new NotFoundException('Booking not found');
     }
-    return booking;
+    return {
+      ...booking.booking,
+      asset: booking.asset,
+      customer: booking.customer
+    }
     }
 
     async getBookingsByAssetId(assetId: number,period?: { startDate: Date, endDate: Date }) {
@@ -41,7 +54,19 @@ export class BookingService {
     }
 
     async getBookings() {
-        return await this.db.query.Booking.findMany();
+         const bookings = await this.db
+        .select()
+        .from(schema.Booking)
+        .innerJoin(schema.Asset, eq(schema.Booking.assetId,schema.Asset.id))
+        .innerJoin(schema.Customer, eq(schema.Booking.customerId,schema.Customer.id))
+        .execute()
+        
+
+        return bookings.map(booking => ({
+            ...booking.booking,
+            asset: booking.asset,
+            customer: booking.customer
+          }));
     }
 
     async updateBooking(booking: UpdateBooking) {

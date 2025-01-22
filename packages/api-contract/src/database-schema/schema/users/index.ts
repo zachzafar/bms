@@ -56,6 +56,14 @@ export const Customer = mysqlTable("customer", {
     userIdUniqueIdx: uniqueIndex("user_id_unique").on(table.userId),
 }));
 
+export const InsertCustomerSchema = createInsertSchema(Customer);
+export const SelectCustomerSchema = createSelectSchema(Customer);
+export const UpdateCustomerSchema = InsertCustomerSchema.partial().required({ id: true, tenantId: true, firstName: true, lastName: true, email: true, phone: true, address: true, dateOfBirth: true, userId: true });
+
+export type InsertCustomer = z.infer<typeof InsertCustomerSchema>;
+export type SelectCustomer = z.infer<typeof SelectCustomerSchema>;
+export type UpdateCustomer = z.infer<typeof UpdateCustomerSchema>;
+
 export const customerRelations = relations(Customer, ({ one }) => ({
     tenant: one(Tenant, {
         fields: [Customer.tenantId],

@@ -40,9 +40,9 @@ export class BookingController {
         });
     }
 
-    @TsRestHandler(contract.booking.deleteBooking)
+    @TsRestHandler(contract.booking.cancelBooking)
     async deleteBooking(): Promise<ReturnType<typeof tsRestHandler>> {
-        return tsRestHandler(contract.booking.deleteBooking, async ({ params }) => {
+        return tsRestHandler(contract.booking.cancelBooking, async ({ params }) => {
             await this.bookingService.deleteBooking(params.id);
             return { status: 204, body: undefined};
         });

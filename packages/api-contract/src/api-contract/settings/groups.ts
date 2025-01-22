@@ -14,9 +14,7 @@ export const groupsContract = c.router({
             group: InsertGroupSchema
         }),
         responses: {
-            201: z.object({
-                group: SelectGroupSchema
-            }),
+            201:  SelectGroupSchema,
             500: z.object({
                 message: z.string()
             }),

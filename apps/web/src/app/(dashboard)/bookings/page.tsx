@@ -28,81 +28,44 @@ import {
 } from '@/components/ui/dialog';
 import { Package2Icon, SearchIcon, FilterIcon } from 'lucide-react';
 import { Label } from '@/components/ui/label';
+import { authClient } from '@/lib/api/publicClient';
+import { BOOKINGS_QUERY_KEY } from '@/lib/api/queryKeys';
+import { ExtendedSelectBooking } from '@repo/api-contract/src/api-contract/booking';
+
 
 export default function Component() {
-  const [bookings, setBookings] = useState([
-    {
-      id: 1,
-      assetName: 'Toyota Camry',
-      assetType: 'Car',
-      customerName: 'John Doe',
-      startDate: '2023-07-15',
-      endDate: '2023-07-20',
-      status: 'Active',
-    },
-    {
-      id: 2,
-      assetName: 'Deluxe Suite',
-      assetType: 'Room',
-      customerName: 'Jane Smith',
-      startDate: '2023-07-18',
-      endDate: '2023-07-25',
-      status: 'Upcoming',
-    },
-    {
-      id: 3,
-      assetName: 'Projector',
-      assetType: 'Equipment',
-      customerName: 'Bob Johnson',
-      startDate: '2023-07-16',
-      endDate: '2023-07-17',
-      status: 'Completed',
-    },
-    {
-      id: 4,
-      assetName: 'Honda Civic',
-      assetType: 'Car',
-      customerName: 'Alice Brown',
-      startDate: '2023-07-20',
-      endDate: '2023-07-22',
-      status: 'Upcoming',
-    },
-    {
-      id: 5,
-      assetName: 'Conference Room A',
-      assetType: 'Room',
-      customerName: 'Charlie Davis',
-      startDate: '2023-07-19',
-      endDate: '2023-07-19',
-      status: 'Active',
-    },
-  ]);
+  // const { mutate } = authClient.booking.
+  const { data: bookings } = authClient.booking.getBookings.useQuery({
+    queryKey: BOOKINGS_QUERY_KEY,
+  })
+
+  
 
   const [searchTerm, setSearchTerm] = useState('');
   const [filterType, setFilterType] = useState('All');
   const [filterStatus, setFilterStatus] = useState('All');
   const [sortBy, setSortBy] = useState('startDate');
   const [sortOrder, setSortOrder] = useState('asc');
-  const [selectedBooking, setSelectedBooking] = useState(null);
+  const [selectedBooking, setSelectedBooking] = useState<ExtendedSelectBooking>();
 
-  const filteredBookings = bookings
-    .filter(
-      (booking) =>
-        (searchTerm === '' ||
-          booking.assetName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          booking.customerName
-            .toLowerCase()
-            .includes(searchTerm.toLowerCase())) &&
-        (filterType === 'All' || booking.assetType === filterType) &&
-        (filterStatus === 'All' || booking.status === filterStatus)
-    )
-    .sort((a, b) => {
-      if (a[sortBy] < b[sortBy]) return sortOrder === 'asc' ? -1 : 1;
-      if (a[sortBy] > b[sortBy]) return sortOrder === 'asc' ? 1 : -1;
-      return 0;
-    });
+  // const filteredBookings = bookings?.status === 200 ?
+  //   bookings.body.filter(
+  //     (booking) =>
+  //       (searchTerm === '' ||
+  //         booking.assetName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+  //         booking.customerName
+  //           .toLowerCase()
+  //           .includes(searchTerm.toLowerCase())) &&
+  //       (filterType === 'All' || booking.assetType === filterType) &&
+  //       (filterStatus === 'All' || booking.status === filterStatus)
+  //   )
+  //   // .sort((a, b) => {
+  //   //   if (a[sortBy] < b[sortBy]) return sortOrder === 'asc' ? -1 : 1;
+  //   //   if (a[sortBy] > b[sortBy]) return sortOrder === 'asc' ? 1 : -1;
+  //   //   return 0;
+  //   // }) : [];
 
-  const handleSort = (column) => {
+  const handleSort = (column: any) => {
     if (sortBy === column) {
       setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc');
     } else {
@@ -111,12 +74,8 @@ export default function Component() {
     }
   };
 
-  const handleCancel = (id) => {
-    setBookings(
-      bookings.map((booking) =>
-        booking.id === id ? { ...booking, status: 'Cancelled' } : booking
-      )
-    );
+  const handleCancel = (id: number) => {
+     
   };
 
   return (
@@ -218,14 +177,14 @@ export default function Component() {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {filteredBookings.map((booking) => (
+            {bookings?.status === 200 ? bookings.body.map((booking) => (
               <TableRow key={booking.id}>
                 <TableCell className='font-medium'>{booking.id}</TableCell>
-                <TableCell>{booking.assetName}</TableCell>
-                <TableCell>{booking.assetType}</TableCell>
-                <TableCell>{booking.customerName}</TableCell>
-                <TableCell>{booking.startDate}</TableCell>
-                <TableCell>{booking.endDate}</TableCell>
+                <TableCell>{booking.asset.name}</TableCell>
+                <TableCell>{booking.asset.assetTypeId}</TableCell>
+                <TableCell>{booking.customer.firstName + " " + booking.customer.lastName}</TableCell>
+                <TableCell>{booking.startDate.toDateString()}</TableCell>
+                <TableCell>{booking.endDate.toDateString()}</TableCell>
                 <TableCell>{booking.status}</TableCell>
                 <TableCell>
                   <div className='flex items-center gap-2'>
@@ -251,31 +210,31 @@ export default function Component() {
                             <div className='grid grid-cols-4 items-center gap-4'>
                               <Label className='text-right'>Asset:</Label>
                               <div className='col-span-3'>
-                                {selectedBooking.assetName}
+                                {selectedBooking.asset.name}
                               </div>
                             </div>
                             <div className='grid grid-cols-4 items-center gap-4'>
                               <Label className='text-right'>Type:</Label>
                               <div className='col-span-3'>
-                                {selectedBooking.assetType}
+                                {selectedBooking.asset.assetTypeId}
                               </div>
                             </div>
                             <div className='grid grid-cols-4 items-center gap-4'>
                               <Label className='text-right'>Customer:</Label>
                               <div className='col-span-3'>
-                                {selectedBooking.customerName}
+                                {selectedBooking.customer.firstName + " " + selectedBooking.customer.lastName}
                               </div>
                             </div>
                             <div className='grid grid-cols-4 items-center gap-4'>
                               <Label className='text-right'>Start Date:</Label>
                               <div className='col-span-3'>
-                                {selectedBooking.startDate}
+                                {selectedBooking.startDate.toDateString()}
                               </div>
                             </div>
                             <div className='grid grid-cols-4 items-center gap-4'>
                               <Label className='text-right'>End Date:</Label>
                               <div className='col-span-3'>
-                                {selectedBooking.endDate}
+                                {selectedBooking.endDate.toDateString()}
                               </div>
                             </div>
                             <div className='grid grid-cols-4 items-center gap-4'>
@@ -301,7 +260,7 @@ export default function Component() {
                   </div>
                 </TableCell>
               </TableRow>
-            ))}
+            )) : <TableRow><TableCell colSpan={8}>No bookings found</TableCell></TableRow>}
           </TableBody>
         </Table>
       </div>
