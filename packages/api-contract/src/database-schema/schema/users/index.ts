@@ -38,6 +38,25 @@ export const SelectUserSchema = createSelectSchema(User);
 export type InsertUser = z.infer<typeof InsertUserSchema>
 export type SelectUser = z.infer<typeof SelectUserSchema>
 
+export const TenantHasUsers = mysqlTable("tenant_has_users", {
+    id: serial("id").primaryKey(),
+    tenantId: varchar("tenant_id", { length: 255 }).notNull(),
+    userId: varchar("user_id", { length: 255 }).notNull(),
+}, (table) => ({
+    tenantIdx: uniqueIndex("tenant_idx").on(table.tenantId, table.userId),
+}));
+
+export const TenantHasUsersRelations = relations(TenantHasUsers, ({ one }) => ({
+    tenant: one(Tenant, {
+        fields: [TenantHasUsers.tenantId],
+        references: [Tenant.id],
+    }),
+    user: one(User, {
+        fields: [TenantHasUsers.userId],
+        references: [User.id],
+    }),
+}));
+
 // Customer Model
 export const Customer = mysqlTable("customer", {
     id: serial("id").primaryKey(),
