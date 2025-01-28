@@ -6,7 +6,7 @@ Run the following command for development make sure you have pnpm and turbo inst
 
 Step 1 Provision the db with docker (or download MYSQL instead)
 ```
-docker-compose -f dockercompose.db.yml up --build
+docker-compose -f docker-compose.db.yml up --build
 
 ```
 
