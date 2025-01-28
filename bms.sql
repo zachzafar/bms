@@ -16,49 +16,6 @@
 /*!40111 SET @OLD_SQL_NOTES=@@SQL_NOTES, SQL_NOTES=0 */;
 
 --
--- Table structure for table `__drizzle_migrations`
---
-
-DROP TABLE IF EXISTS `__drizzle_migrations`;
-/*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
-CREATE TABLE `__drizzle_migrations` (
-  `id` bigint unsigned NOT NULL AUTO_INCREMENT,
-  `hash` text NOT NULL,
-  `created_at` bigint DEFAULT NULL,
-  PRIMARY KEY (`id`),
-  UNIQUE KEY `id` (`id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
-/*!40101 SET character_set_client = @saved_cs_client */;
-
---
--- Table structure for table `asset`
---
-
-DROP TABLE IF EXISTS `asset`;
-/*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
-CREATE TABLE `asset` (
-  `id` bigint unsigned NOT NULL AUTO_INCREMENT,
-  `name` varchar(255) NOT NULL,
-  `description` text,
-  `available` tinyint(1) NOT NULL DEFAULT '1',
-  `requires_approval` tinyint(1) NOT NULL DEFAULT '0',
-  `asset_type_id` int DEFAULT NULL,
-  `group_id` int DEFAULT NULL,
-  `owner_id` varchar(255) DEFAULT NULL,
-  `tenant_id` varchar(255) NOT NULL,
-  `createdAt` timestamp NOT NULL DEFAULT (now()),
-  `updated_at` timestamp NULL DEFAULT NULL,
-  PRIMARY KEY (`id`),
-  UNIQUE KEY `id` (`id`),
-  KEY `asset_type_idx` (`asset_type_id`),
-  KEY `group_idx` (`group_id`),
-  KEY `owner_idx` (`owner_id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
-/*!40101 SET character_set_client = @saved_cs_client */;
-
---
 -- Table structure for table `asset_has_properties`
 --
 
@@ -67,28 +24,29 @@ DROP TABLE IF EXISTS `asset_has_properties`;
 /*!50503 SET character_set_client = utf8mb4 */;
 CREATE TABLE `asset_has_properties` (
   `id` bigint unsigned NOT NULL AUTO_INCREMENT,
-  `tenant_id` varchar(255) DEFAULT NULL,
-  `asset_id` int NOT NULL,
-  `asset_property_id` int NOT NULL,
+  `asset_id` bigint unsigned NOT NULL,
+  `asset_property_id` bigint unsigned NOT NULL,
   `value` varchar(255) NOT NULL,
   PRIMARY KEY (`id`),
   UNIQUE KEY `id` (`id`),
-  UNIQUE KEY `asset_property_unique` (`asset_id`,`asset_property_id`)
+  UNIQUE KEY `asset_property_unique` (`asset_id`,`asset_property_id`),
+  KEY `asset_has_properties_asset_property_id_asset_properties_id_fk` (`asset_property_id`),
+  CONSTRAINT `asset_has_properties_asset_id_assets_id_fk` FOREIGN KEY (`asset_id`) REFERENCES `assets` (`id`),
+  CONSTRAINT `asset_has_properties_asset_property_id_asset_properties_id_fk` FOREIGN KEY (`asset_property_id`) REFERENCES `asset_properties` (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
--- Table structure for table `asset_property`
+-- Table structure for table `asset_properties`
 --
 
-DROP TABLE IF EXISTS `asset_property`;
+DROP TABLE IF EXISTS `asset_properties`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!50503 SET character_set_client = utf8mb4 */;
-CREATE TABLE `asset_property` (
+CREATE TABLE `asset_properties` (
   `id` bigint unsigned NOT NULL AUTO_INCREMENT,
   `name` varchar(255) NOT NULL,
   `property_type` varchar(255) NOT NULL,
-  `tenant_id` varchar(255) DEFAULT NULL,
   `createdAt` timestamp NOT NULL DEFAULT (now()),
   `updatedAt` timestamp NULL DEFAULT NULL,
   PRIMARY KEY (`id`),
@@ -108,52 +66,87 @@ CREATE TABLE `asset_type` (
   `id` bigint unsigned NOT NULL AUTO_INCREMENT,
   `name` varchar(255) NOT NULL,
   `description` text,
-  `booking_form_id` varchar(255) DEFAULT NULL,
-  `tenant_id` varchar(255) NOT NULL,
+  `booking_form_id` bigint unsigned DEFAULT NULL,
   `createdAt` timestamp NOT NULL DEFAULT (now()),
   `updatedAt` timestamp NULL DEFAULT NULL,
   PRIMARY KEY (`id`),
   UNIQUE KEY `id` (`id`),
   UNIQUE KEY `name_unique` (`name`),
-  UNIQUE KEY `booking_form_unique` (`booking_form_id`)
+  UNIQUE KEY `booking_form_unique` (`booking_form_id`),
+  CONSTRAINT `asset_type_booking_form_id_booking_forms_id_fk` FOREIGN KEY (`booking_form_id`) REFERENCES `booking_forms` (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
--- Table structure for table `asset_type_has_properties`
+-- Table structure for table `asset_type_propertys`
 --
 
-DROP TABLE IF EXISTS `asset_type_has_properties`;
+DROP TABLE IF EXISTS `asset_type_propertys`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!50503 SET character_set_client = utf8mb4 */;
-CREATE TABLE `asset_type_has_properties` (
+CREATE TABLE `asset_type_propertys` (
   `id` bigint unsigned NOT NULL AUTO_INCREMENT,
-  `asset_type_id` int NOT NULL,
-  `tenant_id` varchar(255) DEFAULT NULL,
-  `asset_property_id` int NOT NULL,
+  `asset_type_id` bigint unsigned NOT NULL,
+  `asset_property_id` bigint unsigned NOT NULL,
   `required` tinyint(1) NOT NULL DEFAULT '0',
   PRIMARY KEY (`id`),
   UNIQUE KEY `id` (`id`),
-  UNIQUE KEY `asset_type_property_unique` (`asset_type_id`,`asset_property_id`)
+  UNIQUE KEY `asset_type_property_unique` (`asset_type_id`,`asset_property_id`),
+  KEY `asset_type_propertys_asset_property_id_asset_properties_id_fk` (`asset_property_id`),
+  CONSTRAINT `asset_type_propertys_asset_property_id_asset_properties_id_fk` FOREIGN KEY (`asset_property_id`) REFERENCES `asset_properties` (`id`) ON DELETE CASCADE,
+  CONSTRAINT `asset_type_propertys_asset_type_id_asset_type_id_fk` FOREIGN KEY (`asset_type_id`) REFERENCES `asset_type` (`id`) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
--- Table structure for table `availability`
+-- Table structure for table `assets`
 --
 
-DROP TABLE IF EXISTS `availability`;
+DROP TABLE IF EXISTS `assets`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!50503 SET character_set_client = utf8mb4 */;
-CREATE TABLE `availability` (
+CREATE TABLE `assets` (
   `id` bigint unsigned NOT NULL AUTO_INCREMENT,
-  `asset_id` int NOT NULL,
+  `name` varchar(255) NOT NULL,
+  `description` text,
+  `available` tinyint(1) NOT NULL DEFAULT '1',
+  `requires_approval` tinyint(1) NOT NULL DEFAULT '0',
+  `asset_type_id` bigint unsigned DEFAULT NULL,
+  `group_id` bigint unsigned DEFAULT NULL,
+  `owner_id` bigint unsigned DEFAULT NULL,
+  `tenant_id` varchar(255) NOT NULL,
+  `createdAt` timestamp NOT NULL DEFAULT (now()),
+  `updated_at` timestamp NULL DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `id` (`id`),
+  KEY `assets_tenant_id_tenants_id_fk` (`tenant_id`),
+  KEY `asset_type_idx` (`asset_type_id`),
+  KEY `group_idx` (`group_id`),
+  KEY `owner_idx` (`owner_id`),
+  CONSTRAINT `assets_asset_type_id_asset_type_id_fk` FOREIGN KEY (`asset_type_id`) REFERENCES `asset_type` (`id`),
+  CONSTRAINT `assets_group_id_group_id_fk` FOREIGN KEY (`group_id`) REFERENCES `group` (`id`),
+  CONSTRAINT `assets_owner_id_owners_id_fk` FOREIGN KEY (`owner_id`) REFERENCES `owners` (`id`),
+  CONSTRAINT `assets_tenant_id_tenants_id_fk` FOREIGN KEY (`tenant_id`) REFERENCES `tenants` (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Table structure for table `availabilities`
+--
+
+DROP TABLE IF EXISTS `availabilities`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `availabilities` (
+  `id` bigint unsigned NOT NULL AUTO_INCREMENT,
+  `asset_id` bigint unsigned NOT NULL,
   `date` int NOT NULL,
   `price` decimal(1,0) DEFAULT NULL,
   `available` tinyint(1) NOT NULL,
   PRIMARY KEY (`id`),
   UNIQUE KEY `id` (`id`),
-  KEY `asset_idx` (`asset_id`)
+  KEY `asset_idx` (`asset_id`),
+  CONSTRAINT `availabilities_asset_id_assets_id_fk` FOREIGN KEY (`asset_id`) REFERENCES `assets` (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
@@ -173,53 +166,14 @@ CREATE TABLE `booking` (
   `message` text,
   `createdAt` timestamp NOT NULL DEFAULT (now()),
   `updated_at` timestamp NULL DEFAULT NULL,
-  `tenant_id` varchar(255) NOT NULL,
-  `asset_id` int NOT NULL,
-  `customer_id` varchar(255) NOT NULL,
+  `asset_id` bigint unsigned NOT NULL,
+  `customer_id` bigint unsigned NOT NULL,
   PRIMARY KEY (`id`),
   UNIQUE KEY `id` (`id`),
   KEY `asset_idx` (`asset_id`),
-  KEY `customer_idx` (`customer_id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
-/*!40101 SET character_set_client = @saved_cs_client */;
-
---
--- Table structure for table `booking_form`
---
-
-DROP TABLE IF EXISTS `booking_form`;
-/*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
-CREATE TABLE `booking_form` (
-  `id` bigint unsigned NOT NULL AUTO_INCREMENT,
-  `name` varchar(255) NOT NULL,
-  `description` text,
-  `createdAt` timestamp NOT NULL DEFAULT (now()),
-  `updated_at` timestamp NULL DEFAULT NULL,
-  `asset_type_id` int DEFAULT NULL,
-  `tenant_id` varchar(255) DEFAULT NULL,
-  PRIMARY KEY (`id`),
-  UNIQUE KEY `id` (`id`),
-  KEY `asset_type_idx` (`asset_type_id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
-/*!40101 SET character_set_client = @saved_cs_client */;
-
---
--- Table structure for table `booking_form_field`
---
-
-DROP TABLE IF EXISTS `booking_form_field`;
-/*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
-CREATE TABLE `booking_form_field` (
-  `id` bigint unsigned NOT NULL AUTO_INCREMENT,
-  `form_id` int NOT NULL,
-  `name` varchar(255) NOT NULL,
-  `type` varchar(50) NOT NULL,
-  `required` tinyint(1) NOT NULL,
-  PRIMARY KEY (`id`),
-  UNIQUE KEY `id` (`id`),
-  KEY `form_idx` (`form_id`)
+  KEY `customer_idx` (`customer_id`),
+  CONSTRAINT `booking_asset_id_assets_id_fk` FOREIGN KEY (`asset_id`) REFERENCES `assets` (`id`),
+  CONSTRAINT `booking_customer_id_customers_id_fk` FOREIGN KEY (`customer_id`) REFERENCES `customers` (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
@@ -232,13 +186,53 @@ DROP TABLE IF EXISTS `booking_form_field_value`;
 /*!50503 SET character_set_client = utf8mb4 */;
 CREATE TABLE `booking_form_field_value` (
   `id` bigint unsigned NOT NULL AUTO_INCREMENT,
-  `booking_id` int NOT NULL,
-  `form_field_id` int NOT NULL,
+  `booking_id` bigint unsigned NOT NULL,
+  `form_field_id` bigint unsigned NOT NULL,
   `value` text NOT NULL,
   PRIMARY KEY (`id`),
   UNIQUE KEY `id` (`id`),
   KEY `booking_idx` (`booking_id`),
-  KEY `form_field_idx` (`form_field_id`)
+  KEY `form_field_idx` (`form_field_id`),
+  CONSTRAINT `booking_form_field_value_booking_id_booking_id_fk` FOREIGN KEY (`booking_id`) REFERENCES `booking` (`id`),
+  CONSTRAINT `booking_form_field_value_form_field_id_booking_form_fields_id_fk` FOREIGN KEY (`form_field_id`) REFERENCES `booking_form_fields` (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Table structure for table `booking_form_fields`
+--
+
+DROP TABLE IF EXISTS `booking_form_fields`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `booking_form_fields` (
+  `id` bigint unsigned NOT NULL AUTO_INCREMENT,
+  `form_id` bigint unsigned NOT NULL,
+  `name` varchar(255) NOT NULL,
+  `type` varchar(50) NOT NULL,
+  `required` tinyint(1) NOT NULL,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `id` (`id`),
+  KEY `form_idx` (`form_id`),
+  CONSTRAINT `booking_form_fields_form_id_booking_forms_id_fk` FOREIGN KEY (`form_id`) REFERENCES `booking_forms` (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Table structure for table `booking_forms`
+--
+
+DROP TABLE IF EXISTS `booking_forms`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `booking_forms` (
+  `id` bigint unsigned NOT NULL AUTO_INCREMENT,
+  `name` varchar(255) NOT NULL,
+  `description` text,
+  `createdAt` timestamp NOT NULL DEFAULT (now()),
+  `updated_at` timestamp NULL DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `id` (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
@@ -253,63 +247,60 @@ CREATE TABLE `category` (
   `id` bigint unsigned NOT NULL AUTO_INCREMENT,
   `name` varchar(255) NOT NULL,
   `description` text,
-  `asset_type_id` varchar(255) DEFAULT NULL,
-  `tenant_id` varchar(255) DEFAULT NULL,
+  `asset_type_id` bigint unsigned DEFAULT NULL,
   `createdAt` timestamp NOT NULL DEFAULT (now()),
   `updated_at` timestamp NULL DEFAULT NULL,
   PRIMARY KEY (`id`),
   UNIQUE KEY `id` (`id`),
-  KEY `asset_type_idx` (`asset_type_id`)
+  KEY `asset_type_idx` (`asset_type_id`),
+  CONSTRAINT `category_asset_type_id_asset_type_id_fk` FOREIGN KEY (`asset_type_id`) REFERENCES `asset_type` (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
--- Table structure for table `customer`
+-- Table structure for table `customers`
 --
 
-DROP TABLE IF EXISTS `customer`;
+DROP TABLE IF EXISTS `customers`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!50503 SET character_set_client = utf8mb4 */;
-CREATE TABLE `customer` (
+CREATE TABLE `customers` (
   `id` bigint unsigned NOT NULL AUTO_INCREMENT,
-  `first_name` varchar(255) NOT NULL,
-  `last_name` varchar(255) NOT NULL,
-  `email` varchar(255) NOT NULL,
   `phone` varchar(255) DEFAULT NULL,
   `address` varchar(255) DEFAULT NULL,
-  `tenant_id` varchar(255) NOT NULL,
   `date_of_birth` datetime DEFAULT NULL,
   `createdAt` timestamp NOT NULL DEFAULT (now()),
   `updated_at` timestamp NULL DEFAULT NULL,
   `user_id` varchar(255) NOT NULL,
   PRIMARY KEY (`id`),
   UNIQUE KEY `id` (`id`),
-  UNIQUE KEY `email_unique` (`email`),
-  UNIQUE KEY `user_id_unique` (`user_id`)
+  UNIQUE KEY `user_id_unique` (`user_id`),
+  CONSTRAINT `customers_user_id_users_id_fk` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
--- Table structure for table `file`
+-- Table structure for table `files`
 --
 
-DROP TABLE IF EXISTS `file`;
+DROP TABLE IF EXISTS `files`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!50503 SET character_set_client = utf8mb4 */;
-CREATE TABLE `file` (
+CREATE TABLE `files` (
   `id` bigint unsigned NOT NULL AUTO_INCREMENT,
   `file_name` varchar(255) NOT NULL,
   `file_url` varchar(255) NOT NULL,
   `file_type` varchar(255) NOT NULL,
   `file_size` int NOT NULL,
   `createdAt` timestamp NOT NULL DEFAULT (now()),
-  `asset_id` int DEFAULT NULL,
-  `tenant_id` varchar(255) DEFAULT NULL,
-  `maintenance_task_id` int DEFAULT NULL,
+  `asset_id` bigint unsigned DEFAULT NULL,
+  `maintenance_task_id` bigint unsigned DEFAULT NULL,
   PRIMARY KEY (`id`),
   UNIQUE KEY `id` (`id`),
   KEY `asset_idx` (`asset_id`),
-  KEY `maintenance_task_idx` (`maintenance_task_id`)
+  KEY `maintenance_task_idx` (`maintenance_task_id`),
+  CONSTRAINT `files_asset_id_assets_id_fk` FOREIGN KEY (`asset_id`) REFERENCES `assets` (`id`),
+  CONSTRAINT `files_maintenance_task_id_maintenance_tasks_id_fk` FOREIGN KEY (`maintenance_task_id`) REFERENCES `maintenance_tasks` (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
@@ -324,13 +315,13 @@ CREATE TABLE `group` (
   `id` bigint unsigned NOT NULL AUTO_INCREMENT,
   `name` varchar(255) NOT NULL,
   `description` text,
-  `tenant_id` varchar(255) NOT NULL,
-  `group_type_id` int NOT NULL,
+  `group_type_id` bigint unsigned NOT NULL,
   `createdAt` timestamp NOT NULL DEFAULT (now()),
   `updated_at` timestamp NULL DEFAULT NULL,
   PRIMARY KEY (`id`),
   UNIQUE KEY `id` (`id`),
-  KEY `group_type_idx` (`group_type_id`)
+  KEY `group_type_idx` (`group_type_id`),
+  CONSTRAINT `group_group_type_id_group_type_id_fk` FOREIGN KEY (`group_type_id`) REFERENCES `group_type` (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
@@ -344,7 +335,6 @@ DROP TABLE IF EXISTS `group_type`;
 CREATE TABLE `group_type` (
   `id` bigint unsigned NOT NULL AUTO_INCREMENT,
   `name` varchar(255) NOT NULL,
-  `tenant_id` varchar(255) DEFAULT NULL,
   `createdAt` timestamp NOT NULL DEFAULT (now()),
   `updatedAt` timestamp NULL DEFAULT NULL,
   PRIMARY KEY (`id`),
@@ -353,13 +343,13 @@ CREATE TABLE `group_type` (
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
--- Table structure for table `maintenance_task`
+-- Table structure for table `maintenance_tasks`
 --
 
-DROP TABLE IF EXISTS `maintenance_task`;
+DROP TABLE IF EXISTS `maintenance_tasks`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!50503 SET character_set_client = utf8mb4 */;
-CREATE TABLE `maintenance_task` (
+CREATE TABLE `maintenance_tasks` (
   `id` bigint unsigned NOT NULL AUTO_INCREMENT,
   `title` varchar(255) NOT NULL,
   `description` text NOT NULL,
@@ -367,31 +357,27 @@ CREATE TABLE `maintenance_task` (
   `priority` varchar(255) DEFAULT NULL,
   `start_date` datetime NOT NULL,
   `end_date` datetime DEFAULT NULL,
-  `tenant_id` varchar(255) DEFAULT NULL,
-  `asset_id` int NOT NULL,
+  `asset_id` bigint unsigned NOT NULL,
   `createdAt` timestamp NOT NULL DEFAULT (now()),
   `updated_at` timestamp NULL DEFAULT NULL,
   PRIMARY KEY (`id`),
   UNIQUE KEY `id` (`id`),
-  KEY `asset_idx` (`asset_id`)
+  KEY `asset_idx` (`asset_id`),
+  CONSTRAINT `maintenance_tasks_asset_id_assets_id_fk` FOREIGN KEY (`asset_id`) REFERENCES `assets` (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
--- Table structure for table `owner`
+-- Table structure for table `owners`
 --
 
-DROP TABLE IF EXISTS `owner`;
+DROP TABLE IF EXISTS `owners`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!50503 SET character_set_client = utf8mb4 */;
-CREATE TABLE `owner` (
+CREATE TABLE `owners` (
   `id` bigint unsigned NOT NULL AUTO_INCREMENT,
-  `first_name` varchar(255) NOT NULL,
-  `last_name` varchar(255) NOT NULL,
-  `email` varchar(255) NOT NULL,
   `phone` varchar(255) DEFAULT NULL,
   `address` varchar(255) DEFAULT NULL,
-  `tenant_id` varchar(255) NOT NULL,
   `company_name` varchar(255) DEFAULT NULL,
   `tax_id` varchar(255) DEFAULT NULL,
   `createdAt` timestamp NOT NULL DEFAULT (now()),
@@ -399,8 +385,8 @@ CREATE TABLE `owner` (
   `user_id` varchar(255) NOT NULL,
   PRIMARY KEY (`id`),
   UNIQUE KEY `id` (`id`),
-  UNIQUE KEY `email_unique` (`email`),
-  UNIQUE KEY `user_id_unique` (`user_id`)
+  UNIQUE KEY `user_id_unique` (`user_id`),
+  CONSTRAINT `owners_user_id_users_id_fk` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
@@ -413,34 +399,17 @@ DROP TABLE IF EXISTS `refresh_tokens`;
 /*!50503 SET character_set_client = utf8mb4 */;
 CREATE TABLE `refresh_tokens` (
   `id` bigint unsigned NOT NULL AUTO_INCREMENT,
-  `user_id` varchar(36) DEFAULT NULL,
+  `user_id` varchar(36) NOT NULL,
   `hashed_token` varchar(255) NOT NULL,
   `device_info` varchar(255) DEFAULT NULL,
   `ip_address` varchar(45) DEFAULT NULL,
   `revoked` tinyint(1) DEFAULT '0',
-  `tenant_id` varchar(36) DEFAULT NULL,
   `createdAt` timestamp NOT NULL DEFAULT (now()),
   `updated_at` timestamp NULL DEFAULT NULL,
   PRIMARY KEY (`id`),
-  UNIQUE KEY `id` (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=6 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
-/*!40101 SET character_set_client = @saved_cs_client */;
-
---
--- Table structure for table `tenant`
---
-
-DROP TABLE IF EXISTS `tenant`;
-/*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
-CREATE TABLE `tenant` (
-  `id` varchar(36) NOT NULL DEFAULT 'uuid()',
-  `name` varchar(255) NOT NULL,
-  `subdomain` varchar(255) NOT NULL,
-  `createdAt` timestamp NOT NULL DEFAULT (now()),
-  `updatedAt` timestamp NULL DEFAULT (now()) ON UPDATE CURRENT_TIMESTAMP,
-  PRIMARY KEY (`id`),
-  UNIQUE KEY `subdomain_unique` (`subdomain`)
+  UNIQUE KEY `id` (`id`),
+  KEY `refresh_tokens_user_id_users_id_fk` (`user_id`),
+  CONSTRAINT `refresh_tokens_user_id_users_id_fk` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
@@ -457,23 +426,43 @@ CREATE TABLE `tenant_has_users` (
   `user_id` varchar(255) NOT NULL,
   PRIMARY KEY (`id`),
   UNIQUE KEY `id` (`id`),
-  UNIQUE KEY `tenant_idx` (`tenant_id`,`user_id`)
+  UNIQUE KEY `tenant_idx` (`tenant_id`,`user_id`),
+  KEY `tenant_has_users_user_id_users_id_fk` (`user_id`),
+  CONSTRAINT `tenant_has_users_tenant_id_tenants_id_fk` FOREIGN KEY (`tenant_id`) REFERENCES `tenants` (`id`),
+  CONSTRAINT `tenant_has_users_user_id_users_id_fk` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
--- Table structure for table `user`
+-- Table structure for table `tenants`
 --
 
-DROP TABLE IF EXISTS `user`;
+DROP TABLE IF EXISTS `tenants`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!50503 SET character_set_client = utf8mb4 */;
-CREATE TABLE `user` (
+CREATE TABLE `tenants` (
+  `id` varchar(36) NOT NULL DEFAULT 'uuid()',
+  `name` varchar(255) NOT NULL,
+  `subdomain` varchar(255) NOT NULL,
+  `createdAt` timestamp NOT NULL DEFAULT (now()),
+  `updatedAt` timestamp NULL DEFAULT (now()) ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `subdomain_unique` (`subdomain`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Table structure for table `users`
+--
+
+DROP TABLE IF EXISTS `users`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `users` (
   `id` varchar(36) NOT NULL DEFAULT 'uuid()',
   `name` varchar(255) NOT NULL,
   `email` varchar(255) NOT NULL,
   `password` varchar(255) NOT NULL,
-  `tenant_id` varchar(255) NOT NULL,
   `role` enum('ADMIN','SYSADMIN','STAFF','OWNER','CUSTOMER') NOT NULL,
   `createdAt` timestamp NULL DEFAULT (now()),
   `updated_at` timestamp NULL DEFAULT NULL,
@@ -491,4 +480,4 @@ CREATE TABLE `user` (
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2025-01-23 15:53:58
+-- Dump completed on 2025-01-28 15:06:02

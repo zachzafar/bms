@@ -1,6 +1,5 @@
 import { relations, sql } from "drizzle-orm";
-import { mysqlTable, serial, varchar, text, json, timestamp, index, int, uniqueIndex, boolean } from "drizzle-orm/mysql-core";
-import { Tenant } from "../tenant";
+import { mysqlTable, serial, varchar, text, json, timestamp, index, int, uniqueIndex, boolean, bigint } from "drizzle-orm/mysql-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
@@ -10,8 +9,7 @@ export const Category = mysqlTable("category", {
     id: serial("id").primaryKey(),
     name: varchar("name", { length: 255 }).notNull(),
     description: text("description"),
-    assetTypeId: varchar("asset_type_id", { length: 255 }),
-    tenantId: varchar("tenant_id", { length: 255 }),
+    assetTypeId: bigint("asset_type_id", { mode: 'bigint', unsigned: true}).references(() => AssetType.id),
     createdAt: timestamp('createdAt').notNull().defaultNow(),
     updatedAt: timestamp('updated_at', { mode: 'date', }).$onUpdate(() => new Date()),
 }, (table) => ({
@@ -19,10 +17,6 @@ export const Category = mysqlTable("category", {
 }));
 
 export const CategoryRelations = relations(Category, ({ one }) => ({
-    tenant: one(Tenant, {
-        fields: [Category.tenantId],
-        references: [Tenant.id],
-    }),
     assetType: one(AssetType, {
         fields: [Category.assetTypeId],
         references: [AssetType.id],
@@ -33,16 +27,11 @@ export const CategoryRelations = relations(Category, ({ one }) => ({
 export const GroupType = mysqlTable("group_type", {
     id: serial("id").primaryKey().notNull(),
     name: varchar("name", { length: 255 }).notNull(),
-    tenantId: varchar("tenant_id", { length: 255 }),
     createdAt: timestamp('createdAt').notNull().defaultNow(),
     updatedAt: timestamp('updatedAt'),
 });
 
 export const GroupTypeRelations = relations(GroupType, ({ one, many }) => ({
-    tenant: one(Tenant, {
-        fields: [GroupType.tenantId],
-        references: [Tenant.id],
-    }),
     groups: many(Group)
 }));
 
@@ -51,8 +40,7 @@ export const Group = mysqlTable("group", {
     id: serial("id").primaryKey().notNull(),
     name: varchar("name", { length: 255 }).notNull(),
     description: text("description"),
-    tenantId: varchar("tenant_id", { length: 255 }).notNull(),
-    groupTypeId: int("group_type_id").notNull(),
+    groupTypeId: bigint("group_type_id", { mode: 'bigint', unsigned: true}).notNull().references(() => GroupType.id),
     createdAt: timestamp('createdAt').notNull().defaultNow(),
     updatedAt: timestamp('updated_at', { mode: 'date', }).$onUpdate(() => new Date()),
 }, (table) => ({
@@ -81,8 +69,7 @@ export const AssetType = mysqlTable("asset_type", {
     id: serial("id").primaryKey().notNull(),
     name: varchar("name", { length: 255 }).notNull(),
     description: text("description"),
-    bookingFormId: varchar("booking_form_id", { length: 255 }),
-    tenantId: varchar("tenant_id", { length: 255 }).notNull(),
+    bookingFormId: bigint("booking_form_id", { mode: 'bigint', unsigned: true}).references(() => BookingForm.id),
     createdAt: timestamp('createdAt').notNull().defaultNow(),
     updatedAt: timestamp('updatedAt'),
 }, (table) => ({
@@ -99,40 +86,28 @@ export type SelectAssetType = z.infer<typeof SelectAssetTypeSchema>;
 export type UpdateAssetType = z.infer<typeof UpdateAssetTypeSchema>;
 
 export const AssetTypeRelations = relations(AssetType, ({ one, many }) => ({
-    tenant: one(Tenant, {
-        fields: [AssetType.tenantId],
-        references: [Tenant.id],
-    }),
     assetTypeHasProperties: many(AssetTypeHasProperties),
 }));
 
 
 // AssetProperty Model
-export const assetProperty = mysqlTable("asset_property", {
+export const assetProperty = mysqlTable("asset_properties", {
     id: serial("id").primaryKey(),
     name: varchar("name", { length: 255 }).notNull(),
     propertyType: varchar("property_type", { length: 255 }).notNull(),
-    tenantId: varchar("tenant_id", { length: 255 }),
     createdAt: timestamp('createdAt').notNull().defaultNow(),
     updatedAt: timestamp('updatedAt'),
 }, (table) => ({
     nameUniqueIdx: uniqueIndex("name_unique").on(table.name),
 }));
 
-export const AssetPropertyRelations = relations(assetProperty, ({ one }) => ({
-    tenant: one(Tenant, {
-        fields: [assetProperty.tenantId],
-        references: [Tenant.id],
-    }),
-}));
 
 
 // AssetTypeHasProperties Model
-export const AssetTypeHasProperties = mysqlTable("asset_type_has_properties", {
+export const AssetTypeHasProperties = mysqlTable("asset_type_propertys", {
     id: serial("id").primaryKey(),
-    assetTypeId: int("asset_type_id").notNull(),
-    tenantId: varchar("tenant_id", { length: 255 }),
-    assetPropertyId: int("asset_property_id").notNull(),
+    assetTypeId: bigint("asset_type_id", { mode: 'bigint', unsigned: true}).notNull().references(() => AssetType.id, { onDelete: 'cascade' }),
+    assetPropertyId: bigint("asset_property_id", { mode: 'bigint', unsigned: true}).notNull().references(() => assetProperty.id, { onDelete: 'cascade' }),
     required: boolean("required").default(false).notNull(),
 }, (table) => ({
     assetTypePropertyUniqueIdx: uniqueIndex("asset_type_property_unique").on(table.assetTypeId, table.assetPropertyId),
@@ -147,25 +122,17 @@ export const AssetTypeHasPropertiesRelations = relations(AssetTypeHasProperties,
         fields: [AssetTypeHasProperties.assetPropertyId],
         references: [assetProperty.id],
     }),
-    tenant: one(Tenant, {
-        fields: [AssetTypeHasProperties.tenantId],
-        references: [Tenant.id],
-    })
 }));
 
 
 // BookingForm Model
-export const BookingForm = mysqlTable("booking_form", {
+export const BookingForm = mysqlTable("booking_forms", {
     id: serial("id").primaryKey(),
     name: varchar("name", { length: 255 }).notNull(),
     description: text("description"),
     createdAt: timestamp('createdAt').notNull().defaultNow(),
     updatedAt: timestamp('updated_at', { mode: 'date', }).$onUpdate(() => new Date()),
-    assetTypeId: int("asset_type_id"),
-    tenantId: varchar("tenant_id", { length: 255 }),
-}, (table) => ({
-    assetTypeIdx: index("asset_type_idx").on(table.assetTypeId),
-}));
+});
 
 export const InsertBookingFormSchema = createInsertSchema(BookingForm);
 export const SelectBookingFormSchema = createInsertSchema(BookingForm);
@@ -175,9 +142,9 @@ export type InsertBookingForm = z.infer<typeof InsertBookingFormSchema>;
 export type SelectBookingForm = z.infer<typeof SelectBookingFormSchema>;
 export type UpdateBookingForm = z.infer<typeof UpdateBookingFormSchema>;
 
-export const BookingFormField = mysqlTable("booking_form_field", {
+export const BookingFormField = mysqlTable("booking_form_fields", {
     id: serial("id").primaryKey(),
-    formId: int("form_id").notNull(),
+    formId: bigint("form_id",{ mode: 'bigint', unsigned: true}).notNull().references(() => BookingForm.id),
     name: varchar("name", { length: 255 }).notNull(),
     type: varchar("type", { length: 50 }).notNull(),
     required: boolean("required").notNull(),
@@ -201,14 +168,6 @@ export const BookingFormFieldRelations = relations(BookingFormField, ({ one }) =
 }))
 
 export const BookingFormRelations = relations(BookingForm, ({ one }) => ({
-    tenant: one(Tenant, {
-        fields: [BookingForm.tenantId],
-        references: [Tenant.id],
-    }),
-    assetType: one(AssetType, {
-        fields: [BookingForm.assetTypeId],
-        references: [AssetType.id],
-    }),
     fields: one(BookingFormField),
 }));
 

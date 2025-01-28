@@ -1,24 +1,22 @@
 import { relations } from "drizzle-orm";
-import { mysqlTable, serial, varchar, text, int, timestamp, index, uniqueIndex, boolean, mysqlEnum } from "drizzle-orm/mysql-core";
+import { mysqlTable, serial, varchar, text, int, timestamp, index, uniqueIndex, boolean, mysqlEnum, bigint } from "drizzle-orm/mysql-core";
 import { AssetType, Group, assetProperty } from "../settings";
 import { Tenant } from "../tenant";
 import { Owner, User } from "../users";
 import { createSelectSchema } from "drizzle-zod";
 import { z } from "zod";
 
-
-
 // Asset Model
-export const Asset = mysqlTable("asset", {
+export const Asset = mysqlTable("assets", {
     id: serial("id").primaryKey(),
     name: varchar("name", { length: 255 }).notNull(),
     description: text("description"),
     available: boolean("available").default(true).notNull(),
     requiresApproval: boolean("requires_approval").default(false).notNull(),
-    assetTypeId: int("asset_type_id"),
-    groupId: int("group_id"),
-    ownerId: varchar("owner_id", { length: 255 }),
-    tenantId: varchar("tenant_id", { length: 255 }).notNull(),
+    assetTypeId: bigint("asset_type_id", { mode: 'bigint', unsigned: true}).references(() => AssetType.id),
+    groupId: bigint("group_id",{ mode: 'bigint', unsigned: true}).references(() => Group.id),
+    ownerId: bigint("owner_id",{mode: 'bigint', unsigned: true}).references(() => Owner.id),
+    tenantId: varchar("tenant_id", { length: 255 }).notNull().references(() => Tenant.id),
     createdAt: timestamp('createdAt').notNull().defaultNow(),
     updatedAt: timestamp('updated_at', { mode: 'date', }).$onUpdate(() => new Date()),
 }, (table) => ({
@@ -58,9 +56,8 @@ export const AssetRelations = relations(Asset, ({ one, many }) => ({
 // AssetHasProperties Model
 export const AssetHasProperties = mysqlTable("asset_has_properties", {
     id: serial("id").primaryKey(),
-    tenantId: varchar("tenant_id", { length: 255 }),
-    assetId: int("asset_id").notNull(),
-    assetPropertyId: int("asset_property_id").notNull(),
+    assetId: bigint("asset_id", { mode: 'bigint', unsigned: true}).notNull().references(() => Asset.id),
+    assetPropertyId: bigint("asset_property_id", { mode: 'bigint', unsigned: true}).notNull().references(() => assetProperty.id),
     value: varchar("value", { length: 255 }).notNull(),
 }, (table) => ({
     assetPropertyUniqueIdx: uniqueIndex("asset_property_unique").on(table.assetId, table.assetPropertyId),
@@ -74,10 +71,6 @@ export const AssetHasPropertiesRelations = relations(AssetHasProperties, ({ one 
     assetProperty: one(assetProperty, {
         fields: [AssetHasProperties.assetPropertyId],
         references: [assetProperty.id],
-    }),
-    tenant: one(Tenant, {
-        fields: [AssetHasProperties.tenantId],
-        references: [Tenant.id],
     }),
 })
 )

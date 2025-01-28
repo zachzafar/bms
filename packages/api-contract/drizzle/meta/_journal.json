@@ -5,29 +5,8 @@
     {
       "idx": 0,
       "version": "5",
-      "when": 1733771308791,
-      "tag": "0000_demonic_patriot",
-      "breakpoints": true
-    },
-    {
-      "idx": 1,
-      "version": "5",
-      "when": 1733919305995,
-      "tag": "0001_strange_kabuki",
-      "breakpoints": true
-    },
-    {
-      "idx": 2,
-      "version": "5",
-      "when": 1734445416473,
-      "tag": "0002_wealthy_sunspot",
-      "breakpoints": true
-    },
-    {
-      "idx": 3,
-      "version": "5",
-      "when": 1737660869465,
-      "tag": "0003_superb_arclight",
+      "when": 1738083972298,
+      "tag": "0000_illegal_black_cat",
       "breakpoints": true
     }
   ]

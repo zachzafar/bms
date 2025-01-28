@@ -1,11 +1,10 @@
 import { relations, sql } from "drizzle-orm";
-import { mysqlTable, varchar, datetime, json, decimal, text, timestamp, int, index, serial, boolean } from "drizzle-orm/mysql-core";
+import { mysqlTable, varchar, datetime, json, decimal, text, timestamp, int, index, serial, boolean, bigint } from "drizzle-orm/mysql-core";
 import { Customer, User } from "../users";
 import { Asset } from "../asset";
-import { Tenant } from "../tenant";
-import { create } from "domain";
 import { createInsertSchema, createSelectSchema } from "drizzle-zod";
 import { z } from "zod";
+import { BookingFormField } from "../settings";
 
 
 
@@ -19,9 +18,8 @@ export const Booking = mysqlTable("booking", {
     message: text("message"),
     createdAt: timestamp('createdAt').notNull().defaultNow(),
     updatedAt: timestamp('updated_at', { mode: 'date', }).$onUpdate(() => new Date()),
-    tenantId: varchar("tenant_id", { length: 255 }).notNull(),
-    assetId: int("asset_id").notNull(),
-    customerId: varchar("customer_id", { length: 255 }).notNull(),
+    assetId: bigint("asset_id", { mode: 'bigint', unsigned: true}).notNull().references(() => Asset.id),
+    customerId: bigint("customer_id", { mode: 'bigint', unsigned: true}).notNull().references(() => Customer.id),
     
 }, (table) => ({
     assetIdx: index("asset_idx").on(table.assetId),
@@ -31,7 +29,7 @@ export const Booking = mysqlTable("booking", {
 export const InsertBookingSchema = createInsertSchema(Booking);
 export const SelectBookingSchema = createSelectSchema(Booking);
 
-export const UpdateBookingSchema = InsertBookingSchema.partial().required({ id: true, tenantId: true, startDate: true, endDate: true, status: true, totalPrice: true, assetId: true, customerId: true });
+export const UpdateBookingSchema = InsertBookingSchema.partial().required({ id: true, startDate: true, endDate: true, status: true, totalPrice: true, assetId: true, customerId: true });
 
 export type InsertBooking = z.infer<typeof InsertBookingSchema>;
 export type SelectBooking = z.infer<typeof SelectBookingSchema>;
@@ -40,8 +38,8 @@ export type UpdateBooking = z.infer<typeof UpdateBookingSchema>;
 
 export const BookingFormFieldValue = mysqlTable("booking_form_field_value", {
     id: serial("id").primaryKey(),
-    bookingId: int("booking_id").notNull(),
-    formFieldId: int("form_field_id").notNull(),
+    bookingId: bigint("booking_id", { mode: 'bigint', unsigned: true}).notNull().references(() => Booking.id),
+    formFieldId: bigint("form_field_id", { mode: 'bigint', unsigned: true}).notNull().references(() => BookingFormField.id),
     value: text("value").notNull(),
 }, (table) => ({
     bookingIdx: index("booking_idx").on(table.bookingId),
@@ -57,16 +55,12 @@ export const BookingRelations = relations(Booking, ({ one }) => ({
             fields: [Booking.assetId],
             references: [Asset.id],
     }),
-    tenant: one(Tenant, {
-        fields: [Booking.tenantId],
-        references: [Tenant.id],
-    })
 }))
 
 
-export const Availability = mysqlTable("availability", {
+export const Availability = mysqlTable("availabilities", {
     id: serial("id").primaryKey(),
-    assetId: int("asset_id").notNull(),
+    assetId: bigint("asset_id", { mode: 'bigint', unsigned: true}).notNull().references(() => Asset.id),
     date: int("date").notNull(),
     price: decimal({ precision: 1 }),
     available: boolean("available").notNull(),

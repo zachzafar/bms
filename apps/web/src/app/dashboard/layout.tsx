@@ -2,7 +2,6 @@ import { Inter } from 'next/font/google';
 
 import { Package2Icon } from 'lucide-react';
 import { Toaster } from '@/components/ui/toaster';
-import { Button } from '@/components/ui/button';
 import Logout from '@/components/custom/Logout';
 
 
@@ -30,25 +29,25 @@ export default function RootLayout({
               <a className='text-gray-500 dark:text-gray-400' href='/dashboard'>
                 Dashboard
               </a>
-              <a className='text-gray-500 dark:text-gray-400' href='/bookings'>
+              <a className='text-gray-500 dark:text-gray-400' href='/dashboard/bookings'>
                 Bookings
               </a>
               <a
                 className='text-gray-500 dark:text-gray-400'
-                href='/maintenance'
+                href='/dashboard/maintenance'
               >
                 Maintenance
               </a>
-              <a className='text-gray-500 dark:text-gray-400' href='/assets'>
+              <a className='text-gray-500 dark:text-gray-400' href='/dashboard/assets'>
                 Assets
               </a>
-              <a className='text-gray-500 dark:text-gray-400' href='/reports'>
+              <a className='text-gray-500 dark:text-gray-400' href='/dashboard/reports'>
                 Reports
               </a>
-              <a className='text-gray-500 dark:text-gray-400' href='/users'>
+              <a className='text-gray-500 dark:text-gray-400' href='/dashboard/users'>
                 Users
               </a>
-              <a className='text-gray-500 dark:text-gray-400' href='/settings'>
+              <a className='text-gray-500 dark:text-gray-400' href='/dashboard/settings'>
                 Settings
               </a>
               <div className='flex-end'>

@@ -9,7 +9,7 @@ import { createInsertSchema, createSelectSchema } from "drizzle-zod";
 import { z } from "zod";
 
 // Tenant Model
-export const Tenant = mysqlTable("tenant", {
+export const Tenant = mysqlTable("tenants", {
     id: varchar("id", { length: 36 }).primaryKey().default("uuid()"),
     name: varchar("name", { length: 255 }).notNull(),
     subdomain: varchar("subdomain", { length: 255 }).notNull(),
@@ -26,19 +26,8 @@ export type InsertTenant = z.infer<typeof InsertTenantSchema>
 export type SelectTenant = z.infer<typeof SelectTenantSchema>
 
 
+
 // Relationships using Drizzle's relations function
 export const TenantRelations = relations(Tenant, ({ one, many }) => ({
-    users: many(User),
-    assetTypes: many(AssetType),
-    assetProperties: many(assetProperty),
-    categories: many(Category),
-    groupTypes: many(GroupType),
-    bookingForms: many(BookingForm),
     assets: many(Asset),
-    customers: many(Customer),
-    owners: many(Owner),
-    maintenance: many(MaintenanceTask),
-    assetTypeHasProperties: many(AssetTypeHasProperties),
-    file: many(File),
-    assetHasProperties: many(AssetHasProperties)
 }));
