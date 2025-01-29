@@ -39,8 +39,12 @@ export class AuthService {
             ...userData,
             id: userId,
             password: hashedPassword,
-            tenantId,
             role: 'ADMIN',
+          })
+
+          await tx.insert(schema.TenantHasUsers).values({
+            tenantId,
+            userId
           })
          
             return {
@@ -61,45 +65,44 @@ export class AuthService {
         }
       }
 
-      async login(email: string, password: string): Promise<{ user: Omit<SelectUser, "password">; tenant:SelectTenant ;accessToken: string; refreshToken: string }> {
-        const userWithTenant = await this.db.query.User.findMany({
-            where: (user, { eq }) => eq(user.email, email),
-          with: {
-                tenant: true, // Include the related tenant data
-            },
-        });
-        if (userWithTenant.length === 0) {
-            throw new UnauthorizedException('Invalid email or password');
-        }
+      async login(email: string, password: string): Promise<{ user: Omit<SelectUser, "password">; tenants:string[] ;accessToken: string; refreshToken: string }> {
 
+         let  user_ = await this.db.query.User.findFirst({ where: (user,{eq}) => eq(user.email, email )})
         
-        
-        const user = userWithTenant.map((item) => {
-            const { tenant, ...user } = item; // Destructure to separate user and tenant
-            return user;
-        })[0]
-        
-        const tenant = userWithTenant.map((item) => item.tenant).filter(Boolean)[0]
+         if (!user_) {
+          throw new UnauthorizedException('Invalid email or password');
+      }
+      
+      
 
-        const isValid = await verify(user.password,password);
+        let tenants = await this.db.select().from(schema.TenantHasUsers).where(eq(schema.TenantHasUsers.userId,user_.id))
+
+
+        const tenantIds = tenants.map((tenant) => tenant.tenantId);
+
+        // let tenant = await this.db.query.Tenant.findMany({ where: (tenant,{eq}) => eq(tenant.id, tenants[0].tenantId) });
+
+        const isValid = await verify(user_.password,password);
         
         if (!isValid) {
           throw new UnauthorizedException('Invalid email or password');
         }
 
     
-        const { accessToken, refreshToken } = await this.generateTokens(user.id);
+        const { accessToken, refreshToken } = await this.generateTokens(user_.id);
         
         const hashedToken = await hash(refreshToken);
         await this.db.insert(schema.refreshTokens).values({
-            userId: user.id,
+            userId: user_.id,
             refreshToken: hashedToken,
         });
    
+        const { password: _, ...user } = user_;
+
     
         return {
-          user ,
-          tenant,
+          user,
+          tenants: tenantIds, 
           accessToken,
           refreshToken,
         };
@@ -167,11 +170,10 @@ export class AuthService {
         });
     
         const user_ = await this.db.query.User.findMany({ where: (user,{eq}) => eq(user.id, user.id) });
-        const tenant = await this.db.query.Tenant.findMany({ where: (tenant,{eq}) => eq(tenant.id, user_[0].tenantId) });
+        // const tenant = await this.db.query.Tenant.findMany({ where: (tenant,{eq}) => eq(tenant.id, user_[0].tenantId) });
     
         return {
           user: user_[0],
-          tenant: tenant[0],
           accessToken,
           refreshToken,
         };

@@ -2,8 +2,8 @@ import { ConflictException, forwardRef, Inject, Injectable, NotFoundException } 
 import { MySql2Database } from 'drizzle-orm/mysql2';
 import * as schema from '@repo/api-contract';
 import { DrizzleAsyncProvider } from 'src/drizzle/drizzle.provider';
-import type { InsertBooking, UpdateBooking, SelectBooking } from '@repo/api-contract';
-import { eq } from 'drizzle-orm';
+import { type InsertBooking, type UpdateBooking, type SelectBooking, Availability } from '@repo/api-contract';
+import { and, between, eq, sql, sum } from 'drizzle-orm';
 import { MaintenanceService } from 'src/maintenance/maintenance.service';
 import { ExtendedSelectBooking } from '@repo/api-contract/src/api-contract/booking';
 
@@ -14,12 +14,15 @@ export class BookingService {
         @Inject(forwardRef(() => MaintenanceService)) private readonly maintenanceService: MaintenanceService,
     ) {}
 
+
+
+
     async createBooking(booking: InsertBooking) {
         const {  available } = await this.checkAvailability(booking.assetId, booking.startDate, booking.endDate);
-        const { available: maintenanceAvailable } = await this.maintenanceService.checkAvailability(booking.assetId, booking.startDate, booking.endDate);
+       
         
         
-        if (!available || !maintenanceAvailable) {
+        if (!available) {
           throw new ConflictException('The asset is not available for the selected dates.');
         }
 
@@ -43,12 +46,12 @@ export class BookingService {
     }
     return {
       ...booking.booking,
-      asset: booking.asset,
-      customer: booking.customer
+      asset: booking.assets,
+      customer: booking.customers
     }
     }
 
-    async getBookingsByAssetId(assetId: number,period?: { startDate: Date, endDate: Date }) {
+    async getBookingsByAssetId(assetId: bigint,period?: { startDate: Date, endDate: Date }) {
         
         return await this.db.query.Booking.findMany({ where: (booking, { eq, and, gte, lte,or }) => period ? and(eq(booking.assetId, assetId),or(gte(booking.startDate,period.endDate),lte(booking.endDate,period.endDate))) : eq(booking.assetId, assetId) });
     }
@@ -64,8 +67,8 @@ export class BookingService {
 
         return bookings.map(booking => ({
             ...booking.booking,
-            asset: booking.asset,
-            customer: booking.customer
+            asset: booking.assets,
+            customer: booking.customers
           }));
     }
 
@@ -90,7 +93,7 @@ export class BookingService {
     await this.db.delete(schema.Booking).where(eq(schema.Booking.id, bookingId)).execute();
     }
 
-    async checkAvailability(assetId: number,startDate: Date, endDate: Date, bookingId?: number): Promise<{ available: boolean, conflictingBookings:SelectBooking[] }> {
+    async checkAvailability(assetId: bigint,startDate: Date, endDate: Date, bookingId?: number): Promise<{ available: boolean, conflictingBookings:SelectBooking[] }> {
 
         const conflictingBookings = await this.db.query.Booking.findMany({
             where: (booking, { and, eq, not, or, lte, gte }) =>
@@ -111,4 +114,42 @@ export class BookingService {
         
         return { available: true, conflictingBookings: [] };
     }
+
+    // async  calculatePrice(assetId: number, startDate: string, endDate: string): Promise<number> {
+    //   const result = await db
+    //     .select({ total: coalesce(sum(availability.price), 0) })
+    //     .from(availability)
+    //     .where(
+    //       and(
+    //         eq(availability.assetId, assetId),
+    //         between(sql`${startDate}`, availability.startDate, availability.endDate)
+    //       )
+    //     );
+    
+    //   return result[0]?.total ?? 0;
+    // }
+
+    // async checkAvailability(assetId: number, startDate: string, endDate: string): Promise<boolean> {
+    //   const result = await db.select({ exists: sql`1` })
+    //     .from(availability)
+    //     .where(
+    //       and(
+    //         eq(availability.assetId, assetId),
+    //         eq(availability.isAvailable, false),
+    //         sql`(start_date, end_date) OVERLAPS (${startDate}, ${endDate})`
+    //       )
+    //     );
+    
+    //   return result.length === 0; // Returns TRUE if the asset is available
+    // }
+
+    //  async addAvailabilityException(assetId: bigint, startDate: string, endDate: string, price: number, isAvailable: boolean) {
+    //   await this.db.insert(Availability).values({
+    //     assetId,
+    //     startDate,
+    //     endDate,
+    //     price,
+    //     available: isAvailable
+    //   });
+    // }
 }

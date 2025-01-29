@@ -18,7 +18,7 @@ export const authContract = c.router({
           },
         body: z.object({
           tenant: InsertTenantSchema,
-          adminUser: InsertUserSchema.omit({ tenantId: true, role: true })
+          adminUser: InsertUserSchema.omit({ role: true })
         }).required({ tenant: true, adminUser: true }),
         summary: 'Create a new tenant with an admin user'
     },
@@ -30,7 +30,7 @@ export const authContract = c.router({
               token: z.string(),
               refreshToken: z.string(),
                 user: SelectUserSchema.omit({ password: true}),
-                tenant: SelectTenantSchema
+                tenants: z.array(z.string())
             })
           },
         body: z.object({
@@ -50,7 +50,6 @@ export const authContract = c.router({
               token: z.string(),
               refreshToken: z.string(),
                 user: SelectUserSchema.omit({ password: true}),
-                tenant: SelectTenantSchema
             })
           },
         body: z.object({

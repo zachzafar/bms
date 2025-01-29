@@ -32,7 +32,7 @@ export class MaintenanceService {
         return await this.db.query.MaintenanceTask.findFirst({ where: (maintenance, { eq }) => eq(maintenance.id, id) });
     }
 
-    async getMaintenancesByAssetId(assetId: number, period?: { startDate: Date; endDate: Date; }) {
+    async getMaintenancesByAssetId(assetId: bigint, period?: { startDate: Date; endDate: Date; }) {
         return await this.db.query.MaintenanceTask.findMany({ where: (maintenance, { eq, and, gte, lte,or }) =>  period ? and(or(gte(maintenance.startDate,period?.endDate),lte(maintenance.endDate,period?.startDate)),or(gte(maintenance.startDate,period?.endDate),lte(maintenance.endDate,period?.startDate))):  eq(maintenance.assetId, assetId) });
 
     }
@@ -58,7 +58,7 @@ export class MaintenanceService {
         this.db.delete(schema.MaintenanceTask).where(eq(schema.MaintenanceTask.id,id)).execute();
     }
 
-    async checkAvailability(assetId: number, start: Date, end: Date) {
+    async checkAvailability(assetId: bigint, start: Date, end: Date) {
         const conflictingMaintenance =   await this.getMaintenancesByAssetId(assetId, { startDate: start, endDate: end });  
         return { available :  conflictingMaintenance.length === 0,  maintenance: conflictingMaintenance };    
     }

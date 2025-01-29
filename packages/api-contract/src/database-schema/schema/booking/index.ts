@@ -1,5 +1,5 @@
 import { relations, sql } from "drizzle-orm";
-import { mysqlTable, varchar, datetime, json, decimal, text, timestamp, int, index, serial, boolean, bigint } from "drizzle-orm/mysql-core";
+import { mysqlTable, varchar, datetime, json, decimal, text, timestamp, int, index, serial, boolean, bigint, date } from "drizzle-orm/mysql-core";
 import { Customer, User } from "../users";
 import { Asset } from "../asset";
 import { createInsertSchema, createSelectSchema } from "drizzle-zod";
@@ -61,8 +61,9 @@ export const BookingRelations = relations(Booking, ({ one }) => ({
 export const Availability = mysqlTable("availabilities", {
     id: serial("id").primaryKey(),
     assetId: bigint("asset_id", { mode: 'bigint', unsigned: true}).notNull().references(() => Asset.id),
-    date: int("date").notNull(),
-    price: decimal({ precision: 1 }),
+    startDate: date("start_date").notNull(),
+    endDate: date("end_date").notNull(),
+    price: decimal("price", { precision: 10, scale: 2 }),
     available: boolean("available").notNull(),
 }, (table) => ({
     assetIdx: index("asset_idx").on(table.assetId),

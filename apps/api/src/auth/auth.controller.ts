@@ -30,9 +30,9 @@ export class AuthController {
     async login(): Promise<ReturnType<typeof tsRestHandler>> {
         this.logger.log('User login attempt');
         return tsRestHandler(contract.auth.login, async ({ body }) => {
-            const { user, accessToken, refreshToken,tenant } = await this.authService.login(body.email, body.password);
+            const { user, accessToken, refreshToken,tenants } = await this.authService.login(body.email, body.password);
             this.logger.log(`User logged in with email: ${user.email}`);
-            return { status: 200, body: { user, token:accessToken,refreshToken, tenant } };
+            return { status: 200, body: { user, token:accessToken,refreshToken, tenants } };
         });
     }
 
@@ -42,9 +42,9 @@ export class AuthController {
     async refreshToken(): Promise<ReturnType<typeof tsRestHandler>> {
         this.logger.log('Refreshing token');
         return tsRestHandler(contract.auth.refreshToken, async ({ headers }) => {
-            const { user, accessToken, refreshToken, tenant } = await this.authService.refreshToken(headers.user);
+            const { user, accessToken, refreshToken } = await this.authService.refreshToken(headers.user);
             this.logger.log(`Token refreshed for user ID: ${user.id}`);
-            return { status: 200, body: { user, token:accessToken,refreshToken,tenant } };
+            return { status: 200, body: { user, token:accessToken,refreshToken } };
         });
     }
 

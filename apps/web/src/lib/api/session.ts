@@ -12,7 +12,6 @@ export type Session = {
     id: string;
     name: string;
     role: 'ADMIN' | 'SYSADMIN' | "STAFF" | "OWNER" | "CUSTOMER"
-    tenantId: string;
   };
   accessToken: string;
   refreshToken: string;
