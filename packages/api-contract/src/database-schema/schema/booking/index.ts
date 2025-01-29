@@ -69,10 +69,24 @@ export const Availability = mysqlTable("availabilities", {
     assetIdx: index("asset_idx").on(table.assetId),
 }));
 
+export const InsertAvailabilitySchema = createInsertSchema(Availability)
+export const SelectAvailabilitySchema = createSelectSchema(Availability)
+export const UpdateAvailabilitySchema = InsertAvailabilitySchema.partial()
+
+export type InsertAvailability = z.infer<typeof InsertAvailabilitySchema>
+export type SelectAvailability = z.infer<typeof SelectAvailabilitySchema>
+export type UpdateAvailability = z.infer<typeof UpdateAvailabilitySchema>
+
 export const AvailabilityRelations = relations(Availability, ({ one }) => ({
     asset: one(Asset, {
         fields: [Availability.assetId],
         references: [Asset.id],
     })
 }))
+
+export const BookedDates = mysqlTable("booked_dates", {
+    id: serial("id").primaryKey(), // Unique ID for the booked date
+    assetId: int("asset_id").notNull().references(() => Asset.id, { onDelete: "cascade" }),
+    date: date("date").notNull(),
+  });
 

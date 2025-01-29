@@ -18,9 +18,9 @@ export class MaintenanceService {
     async createMaintenance(body: InsertMaintenanceTask) {
         if (body.endDate) {
             const { available } = await this.checkAvailability(body.assetId, body.startDate, body.endDate);
-            const { available: bookingAvailable } = await this.bookingService.checkAvailability(body.assetId, body.startDate, body.endDate);
+           
 
-            if (!available || !bookingAvailable) {
+            if (!available) {
             throw new ConflictException('The asset is not available for the selected dates.');
          }
         }
