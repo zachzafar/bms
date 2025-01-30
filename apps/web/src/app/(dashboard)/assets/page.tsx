@@ -20,7 +20,7 @@ import {
 import { PlusIcon, Pencil } from 'lucide-react';
 
 import AddAssetForm from './AddAssetForm';
-import { useState } from 'react';
+
 import { authClient } from '@/lib/api/publicClient';
 
 export default function AssetsPage() {
@@ -28,8 +28,7 @@ export default function AssetsPage() {
         queryKey: ['assets']
     });
 
-
-
+    console.log("Assets",assets);
   return (
     <main className='flex flex-1 flex-col gap-4 p-4 md:gap-8 md:p-6'>
       <div className='flex items-center'>

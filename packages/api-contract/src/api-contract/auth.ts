@@ -43,10 +43,10 @@ export const authContract = c.router({
         method: 'POST',
         path: '/refresh',
         headers: z.object({
-          user: SelectUserSchema.omit({ password: true,email: true, createdAt: true, updatedAt: true })
+          user: z.string().optional(),
         }),
         responses: {
-            200: z.object({
+            201: z.object({
               token: z.string(),
               refreshToken: z.string(),
                 user: SelectUserSchema.omit({ password: true}),
@@ -86,7 +86,4 @@ export const authContract = c.router({
               }),
         summary: 'Create a new user'
     }
-
-
-
 })

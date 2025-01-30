@@ -8,31 +8,35 @@ import { deleteSession, getSession, updateTokens } from "./session";
 const refreshTokenFn = async () => {
     
     const currentSession =  await getSession()
-
+    console.log("checking session:", currentSession)
     if (currentSession === null) return null;
-  
+   
     try {
+      console.log("refreshing token")
       const response = await client.auth.refreshToken.mutate({
         headers: {
-          user: currentSession.user,
+          user: ''
         },
         body: {
             refresh: currentSession.refreshToken,
         }
       })
-  
-      if (response.status !== 200) {
+      
+      console.log("Status", response.status)
+
+      if (response.status !== 201) {
         deleteSession();
         return null;
       }
 
-
+      console.log("updating tokens")
      await updateTokens({ accessToken: response.body.token, refreshToken: response.body.refreshToken });
 
      return { accessToken: response.body.token, refreshToken: response.body.refreshToken };
   
       
     } catch (error) {
+      console.log("error refreshing token, deleting session", error)
       deleteSession();
     }
   };

@@ -1,4 +1,4 @@
-import { Controller, Logger, UseGuards } from '@nestjs/common';
+import { Controller, Logger, UseGuards, Post, Request } from '@nestjs/common';
 import { contract } from '@repo/api-contract';
 import { TsRestHandler, tsRestHandler } from '@ts-rest/nest';
 import { AuthService } from './auth.service';
@@ -38,15 +38,14 @@ export class AuthController {
 
     @Public()
     @UseGuards(RefreshAuthGuard)
-    @TsRestHandler(contract.auth.refreshToken)
-    async refreshToken(): Promise<ReturnType<typeof tsRestHandler>> {
-        this.logger.log('Refreshing token');
-        return tsRestHandler(contract.auth.refreshToken, async ({ headers }) => {
-            const { user, accessToken, refreshToken } = await this.authService.refreshToken(headers.user);
+    @Post('refresh')
+    async refreshToken(@Request() req) {
+        console.log("User",req.user)
+        const { user, accessToken, refreshToken } = await this.authService.refreshToken(req.user.id);
             this.logger.log(`Token refreshed for user ID: ${user.id}`);
             return { status: 200, body: { user, token:accessToken,refreshToken } };
-        });
     }
+
 
     @TsRestHandler(contract.auth.logout)
     async logout(): Promise<ReturnType<typeof tsRestHandler>> {

@@ -9,7 +9,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { ConfigType } from '@nestjs/config';
 import refreshConfig from './config/refresh.config';
 import { UsersService } from 'src/users/users.service';
-import { eq } from 'drizzle-orm';
+import { eq,and, desc } from 'drizzle-orm';
 
 
 @Injectable()
@@ -129,23 +129,22 @@ export class AuthService {
       }
 
       async validateRefreshToken(userId:string,refreshToken:string){
-
-        const token = await this.db.query.refreshTokens.findFirst({
-            where: (token, { and, eq }) => and(eq(token.userId, userId), eq(token.refreshToken, refreshToken), eq(token.revoked, false)),
-        });
-
-        if (!token) {
+        console.log("looking for refresh token")
+        
+        const tokens = await this.db.select().from(schema.refreshTokens).where(eq(schema.refreshTokens.userId, userId)).orderBy(desc(schema.refreshTokens.createdAt)).limit(1).execute();
+        console.log("found token: ", tokens[0])
+        if (tokens.length === 0) {
           throw new UnauthorizedException('Invalid refresh token');
         }
-
-        const refreshTokenMatched = await verify(token.refreshToken, refreshToken);
-
+        console.log("found token now verifying...")
+        const refreshTokenMatched = await verify(tokens[0].refreshToken, refreshToken);
+        
         if (!refreshTokenMatched) {
           await this.logout(userId);
           throw new UnauthorizedException('Invalid refresh token');
 
         }
-    
+        console.log("refresh token matched")
         const { exp } = this.jwtService.decode(refreshToken) as { exp: number };
         const isExpired = Date.now() >= exp * 1000;
       
@@ -154,18 +153,18 @@ export class AuthService {
          await  this.logout(userId);
           throw new UnauthorizedException('Refresh Token Expired!');
         }
-      
+        console.log("returning user")
         const currentUser = { id: userId };
         return currentUser;
       }
 
-      async refreshToken(user: Omit<SelectUser,"password" | "createdAt" | "updatedAt" | "email" >) {
-        const { accessToken, refreshToken } = await this.generateTokens(user.id);
+      async refreshToken(userId: string) {
+        const { accessToken, refreshToken } = await this.generateTokens(userId);
     
         const hashedToken = await hash(refreshToken);
-        await this.db.update(schema.refreshTokens).set({ revoked: true }).where( eq(schema.refreshTokens.userId, user.id));
+        await this.db.update(schema.refreshTokens).set({ revoked: true }).where( eq(schema.refreshTokens.userId, userId));
         await this.db.insert(schema.refreshTokens).values({
-            userId: user.id,
+            userId,
             refreshToken: hashedToken,
         });
     

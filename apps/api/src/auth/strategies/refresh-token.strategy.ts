@@ -1,4 +1,4 @@
-import { Inject, Injectable } from '@nestjs/common';
+import { Inject, Injectable, Logger } from '@nestjs/common';
 import { PassportStrategy } from '@nestjs/passport';
 import { ExtractJwt, Strategy } from 'passport-jwt';
 import { ConfigType } from '@nestjs/config';
@@ -23,7 +23,9 @@ export class RefreshStrategy extends PassportStrategy(Strategy, 'refresh-jwt') {
   }
  
   validate(req: Request, payload: AuthJwtPayload) {
+    console.log('Validating refresh token',payload.sub,req.body.refresh);
     const userId = payload.sub;
+    
     const refreshToken = req.body.refresh;
 
     return this.authService.validateRefreshToken(userId, refreshToken);

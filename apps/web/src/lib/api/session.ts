@@ -65,6 +65,7 @@ export async function getSessionFromRequest(req: NextRequest) {
 
 export async function getSession() {
   const cookie = cookies().get("session")?.value;
+  console.log("cookie: ", cookie)
   if (!cookie) return null;
 
   try {
@@ -75,7 +76,7 @@ export async function getSession() {
         algorithms: ["HS256"],
       }
     );
-
+    console.log("payload", payload)
     return payload as Session;
   } catch (err) {
     console.error("Failed to verify the session", err);
