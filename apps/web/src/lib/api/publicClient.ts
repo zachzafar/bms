@@ -4,7 +4,7 @@ import  axios, { AxiosError, AxiosResponse, isAxiosError, Method } from 'axios';
 import { memoizedRefreshToken } from "./refreshToken";
 import { getSession } from "./session";
 
-const baseUrl = 'http://localhost:3001';
+export const baseUrl = 'http://localhost:3001';
 
 export const client = initTsrReactQuery(contract,{
     baseUrl
@@ -18,7 +18,7 @@ const axiosInstance = axios.create({
 axiosInstance.interceptors.request.use(
     async (config) => {
       const session = await getSession();
-      console.log('session', session)
+      console.log('session:', session)
       if (session) {
         config.headers = new axios.AxiosHeaders({
           ...config.headers,
@@ -42,7 +42,8 @@ axiosInstance.interceptors.response.use(
         if (!result) {
           return Promise.reject(error);
         }
-  
+        
+        console.log("Tokens",result)
        
           config.headers = new axios.AxiosHeaders({
             ...config.headers,
@@ -72,6 +73,8 @@ export const authClient = initTsrReactQuery(contract, {
       Object.entries(result.headers).forEach(([key, value]) => {
         if (value) headersObj.append(key, value.toString());
       });
+
+      console.log("Headers:", headersObj)
 
           return { status: result.status, body: result.data, headers: headersObj };
         } catch (e: Error | AxiosError | any) {

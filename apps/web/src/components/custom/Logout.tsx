@@ -11,8 +11,7 @@ export default function Logout() {
     const { mutate, isPending } = authClient.auth.logout.useMutation();
     const session = useSession();
     const router = useRouter();
-
-    console.log('session', session);
+    
   return (
     <Button onClick={() => mutate({
       body: {

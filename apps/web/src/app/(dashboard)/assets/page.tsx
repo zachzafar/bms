@@ -23,12 +23,31 @@ import AddAssetForm from './AddAssetForm';
 
 import { authClient } from '@/lib/api/publicClient';
 
+type Assets = {
+  status: 200;
+  body: {
+      description: string | null;
+      id: number;
+      name: string;
+      createdAt: Date;
+      updatedAt: Date | null;
+      available: boolean;
+      requiresApproval: boolean;
+      assetTypeId: bigint | null;
+      groupId: bigint | null;
+      ownerId: bigint | null;
+      tenantId: string;
+  }[];
+  headers: Headers;
+} | undefined
+
 export default function AssetsPage() {
     const { data: assets } = authClient.assets.getAssets.useQuery({
         queryKey: ['assets']
     });
 
     console.log("Assets",assets);
+
   return (
     <main className='flex flex-1 flex-col gap-4 p-4 md:gap-8 md:p-6'>
       <div className='flex items-center'>

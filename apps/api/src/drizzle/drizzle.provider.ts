@@ -17,7 +17,6 @@ export const drizzleProvider: Provider[] = [
     provide: DrizzleAsyncProvider,
     inject: [ConfigService],
     useFactory: async (configService: ConfigService) => {
-      console.log(configService.get<string>('DATABASE_HOST'));
       
       const connectionOptions: mysql.ConnectionOptions = {
         host: configService.get<string>('DATABASE_HOST'),

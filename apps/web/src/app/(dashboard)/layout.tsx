@@ -1,11 +1,8 @@
 import { Inter } from 'next/font/google';
 
 import { Package2Icon } from 'lucide-react';
-import { Toaster } from '@/components/ui/toaster';
+;
 import Logout from '@/components/custom/Logout';
-
-
-const inter = Inter({ subsets: ['latin'] });
 
 export default function RootLayout({
   children,
@@ -14,9 +11,7 @@ export default function RootLayout({
 }>) {
 
   return (
-    <html lang='en'>
-      <body className={inter.className}>
-        <div className='flex flex-col min-h-screen'>
+    <>
           <header className='flex items-center h-16 px-4 border-b shrink-0 md:px-6'>
             <nav className='flex-col hidden gap-6 text-lg font-medium md:flex md:flex-row md:items-center md:gap-5 md:text-sm lg:gap-6'>
               <a
@@ -29,25 +24,25 @@ export default function RootLayout({
               <a className='text-gray-500 dark:text-gray-400' href='/dashboard'>
                 Dashboard
               </a>
-              <a className='text-gray-500 dark:text-gray-400' href='/dashboard/bookings'>
+              <a className='text-gray-500 dark:text-gray-400' href='/bookings'>
                 Bookings
               </a>
               <a
                 className='text-gray-500 dark:text-gray-400'
-                href='/dashboard/maintenance'
+                href='/maintenance'
               >
                 Maintenance
               </a>
-              <a className='text-gray-500 dark:text-gray-400' href='/dashboard/assets'>
+              <a className='text-gray-500 dark:text-gray-400' href='/assets'>
                 Assets
               </a>
-              <a className='text-gray-500 dark:text-gray-400' href='/dashboard/reports'>
+              <a className='text-gray-500 dark:text-gray-400' href='/reports'>
                 Reports
               </a>
-              <a className='text-gray-500 dark:text-gray-400' href='/dashboard/users'>
+              <a className='text-gray-500 dark:text-gray-400' href='/users'>
                 Users
               </a>
-              <a className='text-gray-500 dark:text-gray-400' href='/dashboard/settings'>
+              <a className='text-gray-500 dark:text-gray-400' href='/settings'>
                 Settings
               </a>
               <div className='flex-end'>
@@ -56,9 +51,6 @@ export default function RootLayout({
             </nav>
           </header>
           {children}
-        </div>
-        <Toaster />
-      </body>
-    </html>
+          </>
   );
 }

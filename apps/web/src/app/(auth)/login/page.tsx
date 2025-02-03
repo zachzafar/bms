@@ -50,7 +50,7 @@ export default function LoginPage() {
       };
 
       await createSession(session)
-      console.log('session', session);
+      console.log('Newly created session:', session);
       toast({ description: 'Logged in successfully' });
       router.push('/dashboard');
       // Redirect to dashboard

@@ -8,13 +8,13 @@ export async function middleware(req: NextRequest) {
 //   if (protectedRoutes.some((route) => req.nextUrl.pathname.startsWith(route))) {
 //     return authMiddleware(req);
 //   }
-  console.log('middleware executed')
+
 
    const session = await getSessionFromRequest(req);
     if (!session) {
       const url = req.nextUrl.clone()
         url.pathname = '/login'
-        console.log(url.toString())
+    
         return NextResponse.redirect(url)
     }
 

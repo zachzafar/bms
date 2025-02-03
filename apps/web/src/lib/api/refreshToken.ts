@@ -1,7 +1,7 @@
 import mem from "mem";
 import { client } from "./publicClient";
 import { deleteSession, getSession, updateTokens } from "./session";
-
+import axios from "axios";
 
 
 
@@ -13,26 +13,26 @@ const refreshTokenFn = async () => {
    
     try {
       console.log("refreshing token")
-      const response = await client.auth.refreshToken.mutate({
-        headers: {
-          user: ''
-        },
-        body: {
-            refresh: currentSession.refreshToken,
+      const response = await axios.request({
+        method: "POST",
+        url: "http://localhost:3001" + "/refresh",
+        data: {
+          refresh: currentSession.refreshToken
         }
       })
+
       
       console.log("Status", response.status)
-
+      console.log("response data:", response.data)
       if (response.status !== 201) {
         deleteSession();
         return null;
       }
 
-      console.log("updating tokens")
-     await updateTokens({ accessToken: response.body.token, refreshToken: response.body.refreshToken });
-
-     return { accessToken: response.body.token, refreshToken: response.body.refreshToken };
+      console.log("updating tokens:", response.data)
+     await updateTokens({ accessToken: response.data.body.token, refreshToken: response.data.body.refreshToken });
+      console.log("returning tokens")
+     return { accessToken: response.data.token, refreshToken: response.data.refreshToken };
   
       
     } catch (error) {

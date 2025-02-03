@@ -95,4 +95,4 @@ const testData = {
 };
 const result = dynamicSchema.safeParse(testData);
 
-console.log(result);
+
