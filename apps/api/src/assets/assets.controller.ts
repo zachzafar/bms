@@ -31,7 +31,7 @@ export class AssetsController {
     @TsRestHandler(contract.assets.createAsset)
     async createAsset(): Promise<ReturnType<typeof tsRestHandler>> {
         return tsRestHandler(contract.assets.createAsset, async ({ body }) => {
-            const asset = await this.assetService.createAsset(body);
+            const asset = await this.assetService.createAsset({...body.asset,tenantId: body.tenant});
 
             if (!asset) {
                 return { status: 500, body: { message: 'Error updating asset' } };

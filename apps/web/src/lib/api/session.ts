@@ -15,6 +15,7 @@ export type Session = {
   };
   accessToken: string;
   refreshToken: string;
+  tenants: string[]
 };
 
 
@@ -114,6 +115,7 @@ export async function updateTokens({
     user: {
       ...payload.user,
     },
+    tenants: payload.tenants,
     accessToken,
     refreshToken,
   };

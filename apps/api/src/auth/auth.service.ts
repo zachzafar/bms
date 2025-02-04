@@ -34,7 +34,7 @@ export class AuthService {
     
     
            
-          const hashedPassword = await hash(userData.password);
+        const hashedPassword = await hash(userData.password);
           await tx.insert(schema.User).values({
             ...userData,
             id: userId,

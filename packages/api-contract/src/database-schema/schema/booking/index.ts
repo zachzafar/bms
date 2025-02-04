@@ -20,7 +20,6 @@ export const Booking = mysqlTable("booking", {
     updatedAt: timestamp('updated_at', { mode: 'date', }).$onUpdate(() => new Date()),
     assetId: bigint("asset_id", { mode: 'bigint', unsigned: true}).notNull().references(() => Asset.id),
     customerId: bigint("customer_id", { mode: 'bigint', unsigned: true}).notNull().references(() => Customer.id),
-    
 }, (table) => ({
     assetIdx: index("asset_idx").on(table.assetId),
     customerIdx: index("customer_idx").on(table.customerId),
@@ -84,9 +83,12 @@ export const AvailabilityRelations = relations(Availability, ({ one }) => ({
     })
 }))
 
-export const BookedDates = mysqlTable("booked_dates", {
-    id: serial("id").primaryKey(), // Unique ID for the booked date
-    assetId: int("asset_id").notNull().references(() => Asset.id, { onDelete: "cascade" }),
-    date: date("date").notNull(),
-  });
+// export const BookedDates = mysqlTable("booked_dates", {
+//     id: serial("id").primaryKey(), // Unique ID for the booked date
+//     assetId: int("asset_id").notNull().references(() => Asset.id, { onDelete: "cascade" }),
+//     startDate: date("start_date").notNull(),
+//     endDate: date("end_date").notNull(),
+//   }, (table) => ({
+//     assetIdx: index("asset_idx").on(table.assetId)
+//   }));
 

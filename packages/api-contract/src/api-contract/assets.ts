@@ -14,7 +14,10 @@ export const assetsContract = c.router({
             201: SelectAssetSchema,
           
         },
-        body: InsertAssetSchema,
+        body: z.object({
+            tenant: z.string(),     
+            asset: InsertAssetSchema.omit({ tenantId: true})
+        }),
         summary: 'Create a new asset'
     },
     getAssets: {

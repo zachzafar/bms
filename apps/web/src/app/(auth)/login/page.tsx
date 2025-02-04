@@ -47,6 +47,7 @@ export default function LoginPage() {
       user: response.body.user,
       accessToken: response.body.token,
       refreshToken: response.body.refreshToken,
+      tenants: response.body.tenants
       };
 
       await createSession(session)

@@ -5,8 +5,10 @@ import { FormField, FormItem, FormLabel } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
+import { TableBody } from '@/components/ui/table';
 import { authClient } from '@/lib/api/publicClient';
 import { ASSET_TYPE_QUERY_KEY, GROUPS_QUERY_KEY } from '@/lib/api/queryKeys';
+import { useSession } from '@/lib/api/useSession';
 
 import { zodResolver } from '@hookform/resolvers/zod';
 import {
@@ -22,6 +24,7 @@ import React, { useEffect, useState } from 'react';
 import { Controller, Form, SubmitHandler, useForm, useFormState } from 'react-hook-form';
 
 function AddAssetForm() {
+  const session = useSession()
   const { mutate, isPending } = authClient.assets.createAsset.useMutation();
   const { data: assetTypes } = authClient.settings.assetType.getAssetTypes.useQuery({ queryKey: ASSET_TYPE_QUERY_KEY});
   const { data: assetGroups } = authClient.settings.group.getGroups.useQuery({ queryKey: GROUPS_QUERY_KEY});
@@ -34,14 +37,16 @@ function AddAssetForm() {
   const { handleSubmit, control } = form;
   const { isSubmitting } = useFormState({ control });
 
-  const processform: SubmitHandler<InsertAsset> = async (data: InsertAsset) => {
+  const processform: SubmitHandler<InsertAsset> = async (data: Omit<InsertAsset,"tenantId">) => {
+    if (session)
       mutate({
-        body: data,
+        body: { asset: data, tenant: session?.tenants[0]}
       },{
           onSuccess: (response) => {
               console.log('response', response);
           }
       })
+      
   };
 
  
@@ -145,7 +150,7 @@ function AddAssetForm() {
           )}
         />
 
-        <Button type="submit" disabled={isPending}>
+        <Button type="submit" disabled={isPending || session == undefined}>
           {isPending ? 'Adding Asset...' : 'Add Asset'}
         </Button>
       </form>

@@ -182,7 +182,7 @@ export default function Component() {
                 <TableCell className='font-medium'>{booking.id}</TableCell>
                 <TableCell>{booking.asset.name}</TableCell>
                 <TableCell>{booking.asset.assetTypeId}</TableCell>
-                <TableCell>{booking.customer.firstName + " " + booking.customer.lastName}</TableCell>
+                <TableCell>{booking.customer.id}</TableCell>
                 <TableCell>{booking.startDate.toDateString()}</TableCell>
                 <TableCell>{booking.endDate.toDateString()}</TableCell>
                 <TableCell>{booking.status}</TableCell>
@@ -222,7 +222,7 @@ export default function Component() {
                             <div className='grid grid-cols-4 items-center gap-4'>
                               <Label className='text-right'>Customer:</Label>
                               <div className='col-span-3'>
-                                {selectedBooking.customer.firstName + " " + selectedBooking.customer.lastName}
+                                {selectedBooking.customer.id}
                               </div>
                             </div>
                             <div className='grid grid-cols-4 items-center gap-4'>
