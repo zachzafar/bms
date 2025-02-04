@@ -1,6 +1,8 @@
 import { relations, sql } from "drizzle-orm";
-import { mysqlTable, serial, varchar, text, json, timestamp, index, int, uniqueIndex, boolean, bigint } from "drizzle-orm/mysql-core";
+import { mysqlTable, serial, varchar, text, json, timestamp, index, int, uniqueIndex, boolean, bigint,mysqlEnum } from "drizzle-orm/mysql-core";
 import { createInsertSchema } from "drizzle-zod";
+import { Tenant } from "../tenant";
+import {GroupHasAssets} from "../asset";
 import { z } from "zod";
 
 
@@ -9,7 +11,7 @@ export const Category = mysqlTable("category", {
     id: serial("id").primaryKey(),
     name: varchar("name", { length: 255 }).notNull(),
     description: text("description"),
-    assetTypeId: bigint("asset_type_id", { mode: 'bigint', unsigned: true}).references(() => AssetType.id),
+    assetTypeId: bigint("asset_type_id", { mode: 'bigint', unsigned: true}).references(() => AssetType.id).notNull(),
     createdAt: timestamp('createdAt').notNull().defaultNow(),
     updatedAt: timestamp('updated_at', { mode: 'date', }).$onUpdate(() => new Date()),
 }, (table) => ({
@@ -29,10 +31,12 @@ export const GroupType = mysqlTable("group_type", {
     name: varchar("name", { length: 255 }).notNull(),
     createdAt: timestamp('createdAt').notNull().defaultNow(),
     updatedAt: timestamp('updatedAt'),
+    tenantId: varchar("tenant_id", { length: 255 }).notNull().references(() => Tenant.id),
 });
 
 export const GroupTypeRelations = relations(GroupType, ({ one, many }) => ({
-    groups: many(Group)
+    groups: many(Group),
+    tenant: one(Tenant),
 }));
 
 // Group Model
@@ -61,6 +65,7 @@ export const GroupRelations = relations(Group, ({ one }) => ({
         fields: [Group.groupTypeId],
         references: [GroupType.id],
     }),
+   groupHasAssets: one(GroupHasAssets),
 }));
 
 
@@ -69,12 +74,11 @@ export const AssetType = mysqlTable("asset_type", {
     id: serial("id").primaryKey().notNull(),
     name: varchar("name", { length: 255 }).notNull(),
     description: text("description"),
-    bookingFormId: bigint("booking_form_id", { mode: 'bigint', unsigned: true}).references(() => BookingForm.id),
     createdAt: timestamp('createdAt').notNull().defaultNow(),
     updatedAt: timestamp('updatedAt'),
+    tenantId: varchar("tenant_id", { length: 255 }).notNull().references(() => Tenant.id),
 }, (table) => ({
     nameUniqueIdx: uniqueIndex("name_unique").on(table.name),
-    bookingFormUniqueIdx: uniqueIndex("booking_form_unique").on(table.bookingFormId),
 }));
 
 export const InsertAssetTypeSchema = createInsertSchema(AssetType);
@@ -93,12 +97,26 @@ export const AssetTypeRelations = relations(AssetType, ({ one, many }) => ({
 // AssetProperty Model
 export const assetProperty = mysqlTable("asset_properties", {
     id: serial("id").primaryKey(),
-    name: varchar("name", { length: 255 }).notNull(),
-    propertyType: varchar("property_type", { length: 255 }).notNull(),
+    name: varchar("name", { length: 255 }).notNull().unique(),
+    propertyType: mysqlEnum(['number','string','textbox']).notNull(),
+    tenantId: varchar("tenant_id", { length: 255 }).notNull().references(() => Tenant.id),
     createdAt: timestamp('createdAt').notNull().defaultNow(),
     updatedAt: timestamp('updatedAt'),
 }, (table) => ({
     nameUniqueIdx: uniqueIndex("name_unique").on(table.name),
+}));
+
+export const InsertAssetPropertySchema = createInsertSchema(assetProperty);
+export const SelectAssetPropertySchema = createInsertSchema(assetProperty);
+export const UpdateAssetPropertySchema = InsertAssetPropertySchema.partial();
+
+export type InsertAssetProperty = z.infer<typeof InsertAssetPropertySchema>;
+export type SelectAssetProperty = z.infer<typeof SelectAssetPropertySchema>;
+export type UpdateAssetProperty = z.infer<typeof UpdateAssetPropertySchema>;
+
+export const AssetPropertyRelations = relations(assetProperty, ({ one }) => ({
+    assetTypeHasProperties: one(AssetTypeHasProperties),
+    tenant: one(Tenant),
 }));
 
 
@@ -132,6 +150,7 @@ export const BookingForm = mysqlTable("booking_forms", {
     description: text("description"),
     createdAt: timestamp('createdAt').notNull().defaultNow(),
     updatedAt: timestamp('updated_at', { mode: 'date', }).$onUpdate(() => new Date()),
+    tenantId: varchar("tenant_id", { length: 255 }).notNull().references(() => Tenant.id),
 });
 
 export const InsertBookingFormSchema = createInsertSchema(BookingForm);

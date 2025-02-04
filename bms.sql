@@ -46,12 +46,16 @@ DROP TABLE IF EXISTS `asset_properties`;
 CREATE TABLE `asset_properties` (
   `id` bigint unsigned NOT NULL AUTO_INCREMENT,
   `name` varchar(255) NOT NULL,
-  `property_type` varchar(255) NOT NULL,
+  `propertyType` enum('number','string','textbox') NOT NULL,
   `createdAt` timestamp NOT NULL DEFAULT (now()),
   `updatedAt` timestamp NULL DEFAULT NULL,
+  `tenant_id` varchar(255) NOT NULL,
   PRIMARY KEY (`id`),
   UNIQUE KEY `id` (`id`),
-  UNIQUE KEY `name_unique` (`name`)
+  UNIQUE KEY `asset_properties_name_unique` (`name`),
+  UNIQUE KEY `name_unique` (`name`),
+  KEY `asset_properties_tenant_id_tenants_id_fk` (`tenant_id`),
+  CONSTRAINT `asset_properties_tenant_id_tenants_id_fk` FOREIGN KEY (`tenant_id`) REFERENCES `tenants` (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
@@ -66,14 +70,14 @@ CREATE TABLE `asset_type` (
   `id` bigint unsigned NOT NULL AUTO_INCREMENT,
   `name` varchar(255) NOT NULL,
   `description` text,
-  `booking_form_id` bigint unsigned DEFAULT NULL,
   `createdAt` timestamp NOT NULL DEFAULT (now()),
   `updatedAt` timestamp NULL DEFAULT NULL,
+  `tenant_id` varchar(255) NOT NULL,
   PRIMARY KEY (`id`),
   UNIQUE KEY `id` (`id`),
   UNIQUE KEY `name_unique` (`name`),
-  UNIQUE KEY `booking_form_unique` (`booking_form_id`),
-  CONSTRAINT `asset_type_booking_form_id_booking_forms_id_fk` FOREIGN KEY (`booking_form_id`) REFERENCES `booking_forms` (`id`)
+  KEY `asset_type_tenant_id_tenants_id_fk` (`tenant_id`),
+  CONSTRAINT `asset_type_tenant_id_tenants_id_fk` FOREIGN KEY (`tenant_id`) REFERENCES `tenants` (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
@@ -112,7 +116,7 @@ CREATE TABLE `assets` (
   `available` tinyint(1) NOT NULL DEFAULT '1',
   `requires_approval` tinyint(1) NOT NULL DEFAULT '0',
   `asset_type_id` bigint unsigned DEFAULT NULL,
-  `group_id` bigint unsigned DEFAULT NULL,
+  `booking_form_id` bigint unsigned DEFAULT NULL,
   `owner_id` bigint unsigned DEFAULT NULL,
   `tenant_id` varchar(255) NOT NULL,
   `createdAt` timestamp NOT NULL DEFAULT (now()),
@@ -121,10 +125,10 @@ CREATE TABLE `assets` (
   UNIQUE KEY `id` (`id`),
   KEY `assets_tenant_id_tenants_id_fk` (`tenant_id`),
   KEY `asset_type_idx` (`asset_type_id`),
-  KEY `group_idx` (`group_id`),
+  KEY `booking_form_idx` (`booking_form_id`),
   KEY `owner_idx` (`owner_id`),
   CONSTRAINT `assets_asset_type_id_asset_type_id_fk` FOREIGN KEY (`asset_type_id`) REFERENCES `asset_type` (`id`),
-  CONSTRAINT `assets_group_id_group_id_fk` FOREIGN KEY (`group_id`) REFERENCES `group` (`id`),
+  CONSTRAINT `assets_booking_form_id_booking_forms_id_fk` FOREIGN KEY (`booking_form_id`) REFERENCES `booking_forms` (`id`),
   CONSTRAINT `assets_owner_id_owners_id_fk` FOREIGN KEY (`owner_id`) REFERENCES `owners` (`id`),
   CONSTRAINT `assets_tenant_id_tenants_id_fk` FOREIGN KEY (`tenant_id`) REFERENCES `tenants` (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
@@ -140,8 +144,9 @@ DROP TABLE IF EXISTS `availabilities`;
 CREATE TABLE `availabilities` (
   `id` bigint unsigned NOT NULL AUTO_INCREMENT,
   `asset_id` bigint unsigned NOT NULL,
-  `date` int NOT NULL,
-  `price` decimal(1,0) DEFAULT NULL,
+  `start_date` date NOT NULL,
+  `end_date` date NOT NULL,
+  `price` decimal(10,2) DEFAULT NULL,
   `available` tinyint(1) NOT NULL,
   PRIMARY KEY (`id`),
   UNIQUE KEY `id` (`id`),
@@ -163,7 +168,6 @@ CREATE TABLE `booking` (
   `end_date` datetime NOT NULL,
   `status` varchar(255) NOT NULL,
   `totalPrice` decimal(1,0) DEFAULT NULL,
-  `message` text,
   `createdAt` timestamp NOT NULL DEFAULT (now()),
   `updated_at` timestamp NULL DEFAULT NULL,
   `asset_id` bigint unsigned NOT NULL,
@@ -231,8 +235,11 @@ CREATE TABLE `booking_forms` (
   `description` text,
   `createdAt` timestamp NOT NULL DEFAULT (now()),
   `updated_at` timestamp NULL DEFAULT NULL,
+  `tenant_id` varchar(255) NOT NULL,
   PRIMARY KEY (`id`),
-  UNIQUE KEY `id` (`id`)
+  UNIQUE KEY `id` (`id`),
+  KEY `booking_forms_tenant_id_tenants_id_fk` (`tenant_id`),
+  CONSTRAINT `booking_forms_tenant_id_tenants_id_fk` FOREIGN KEY (`tenant_id`) REFERENCES `tenants` (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
@@ -247,7 +254,7 @@ CREATE TABLE `category` (
   `id` bigint unsigned NOT NULL AUTO_INCREMENT,
   `name` varchar(255) NOT NULL,
   `description` text,
-  `asset_type_id` bigint unsigned DEFAULT NULL,
+  `asset_type_id` bigint unsigned NOT NULL,
   `createdAt` timestamp NOT NULL DEFAULT (now()),
   `updated_at` timestamp NULL DEFAULT NULL,
   PRIMARY KEY (`id`),
@@ -326,6 +333,26 @@ CREATE TABLE `group` (
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
+-- Table structure for table `group_has_assets`
+--
+
+DROP TABLE IF EXISTS `group_has_assets`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `group_has_assets` (
+  `id` bigint unsigned NOT NULL AUTO_INCREMENT,
+  `group_id` bigint unsigned NOT NULL,
+  `asset_id` bigint unsigned NOT NULL,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `id` (`id`),
+  KEY `group_idx` (`group_id`),
+  KEY `asset_idx` (`asset_id`),
+  CONSTRAINT `group_has_assets_asset_id_assets_id_fk` FOREIGN KEY (`asset_id`) REFERENCES `assets` (`id`),
+  CONSTRAINT `group_has_assets_group_id_group_id_fk` FOREIGN KEY (`group_id`) REFERENCES `group` (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
 -- Table structure for table `group_type`
 --
 
@@ -337,8 +364,11 @@ CREATE TABLE `group_type` (
   `name` varchar(255) NOT NULL,
   `createdAt` timestamp NOT NULL DEFAULT (now()),
   `updatedAt` timestamp NULL DEFAULT NULL,
+  `tenant_id` varchar(255) NOT NULL,
   PRIMARY KEY (`id`),
-  UNIQUE KEY `id` (`id`)
+  UNIQUE KEY `id` (`id`),
+  KEY `group_type_tenant_id_tenants_id_fk` (`tenant_id`),
+  CONSTRAINT `group_type_tenant_id_tenants_id_fk` FOREIGN KEY (`tenant_id`) REFERENCES `tenants` (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
@@ -467,6 +497,7 @@ CREATE TABLE `users` (
   `createdAt` timestamp NULL DEFAULT (now()),
   `updated_at` timestamp NULL DEFAULT NULL,
   PRIMARY KEY (`id`),
+  UNIQUE KEY `users_email_unique` (`email`),
   UNIQUE KEY `email_unique` (`email`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
@@ -480,4 +511,4 @@ CREATE TABLE `users` (
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2025-01-28 15:06:02
+-- Dump completed on 2025-02-04 16:28:43

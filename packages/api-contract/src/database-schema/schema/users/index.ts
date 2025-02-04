@@ -11,7 +11,7 @@ import { z } from "zod";
 export const User = mysqlTable("users", {
     id: varchar("id", { length: 36 }).primaryKey().default("uuid()"),
     name: varchar("name", { length: 255 }).notNull(),
-    email: varchar("email", { length: 255 }).notNull(),
+    email: varchar("email", { length: 255 }).notNull().unique(),
     password: varchar("password", { length: 255 }).notNull(),
     role: mysqlEnum(['ADMIN','SYSADMIN',"STAFF","OWNER","CUSTOMER"]).notNull(),  // Enum as string
     createdAt: timestamp('createdAt', {mode: 'string'}).defaultNow(),
@@ -40,6 +40,12 @@ export const TenantHasUsers = mysqlTable("tenant_has_users", {
 }, (table) => ({
     tenantIdx: uniqueIndex("tenant_idx").on(table.tenantId, table.userId),
 }));
+
+export const InsertTenantHasUsersSchema = createInsertSchema(TenantHasUsers);
+export const SelectTenantHasUsersSchema = createSelectSchema(TenantHasUsers)
+
+export type InsertTenantHasUsers = z.infer<typeof InsertTenantHasUsersSchema>
+export type SelectTenantHasUsers = z.infer<typeof SelectTenantHasUsersSchema>
 
 export const TenantHasUsersRelations = relations(TenantHasUsers, ({ one }) => ({
     tenant: one(Tenant, {

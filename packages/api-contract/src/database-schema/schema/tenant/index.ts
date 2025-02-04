@@ -1,10 +1,7 @@
-import { relations, sql } from "drizzle-orm";
+import { relations} from "drizzle-orm";
 import { mysqlTable, varchar, timestamp, uniqueIndex } from "drizzle-orm/mysql-core";
-import { Asset, AssetHasProperties } from "../asset";
-import { AssetType, assetProperty, Category, GroupType, BookingForm, AssetTypeHasProperties } from "../settings";
-import { Customer, Owner, User } from "../users";
-import { MaintenanceTask } from "../maintenance";
-import { File } from "../file";
+import { Asset } from "../asset";
+import { AssetType, assetProperty, GroupType, BookingForm } from "../settings";
 import { createInsertSchema, createSelectSchema } from "drizzle-zod";
 import { z } from "zod";
 
@@ -30,4 +27,8 @@ export type SelectTenant = z.infer<typeof SelectTenantSchema>
 // Relationships using Drizzle's relations function
 export const TenantRelations = relations(Tenant, ({ one, many }) => ({
     assets: many(Asset),
+    forms: many(BookingForm),
+    assetTypes: many(AssetType),
+    assetProperties: many(assetProperty),
+    groupTypes: many(GroupType),
 }));

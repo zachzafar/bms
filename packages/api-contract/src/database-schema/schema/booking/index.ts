@@ -15,7 +15,6 @@ export const Booking = mysqlTable("booking", {
     endDate: datetime("end_date").notNull(),
     status: varchar("status", { length: 255 }).notNull(),
     totalPrice: decimal({ precision: 1 }),
-    message: text("message"),
     createdAt: timestamp('createdAt').notNull().defaultNow(),
     updatedAt: timestamp('updated_at', { mode: 'date', }).$onUpdate(() => new Date()),
     assetId: bigint("asset_id", { mode: 'bigint', unsigned: true}).notNull().references(() => Asset.id),
@@ -83,12 +82,4 @@ export const AvailabilityRelations = relations(Availability, ({ one }) => ({
     })
 }))
 
-// export const BookedDates = mysqlTable("booked_dates", {
-//     id: serial("id").primaryKey(), // Unique ID for the booked date
-//     assetId: int("asset_id").notNull().references(() => Asset.id, { onDelete: "cascade" }),
-//     startDate: date("start_date").notNull(),
-//     endDate: date("end_date").notNull(),
-//   }, (table) => ({
-//     assetIdx: index("asset_idx").on(table.assetId)
-//   }));
 
