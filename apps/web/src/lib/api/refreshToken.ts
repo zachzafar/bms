@@ -1,16 +1,20 @@
+'use server';
+
 import mem from "mem";
 import { client } from "./publicClient";
 import { deleteSession, getSession, updateTokens } from "./session";
 import axios from "axios";
-
+import { redirect } from 'next/navigation';
 
 
 const refreshTokenFn = async () => {
     
     const currentSession =  await getSession()
-    console.log("checking session:", currentSession)
-    if (currentSession === null) return null;
-   
+
+    if (currentSession === null) {
+      redirect("/login");
+      return null;
+    }
     try {
       console.log("refreshing token")
       const response = await axios.request({
@@ -26,6 +30,7 @@ const refreshTokenFn = async () => {
       console.log("response data:", response.data)
       if (response.status !== 201) {
         deleteSession();
+        redirect("/login");
         return null;
       }
 
@@ -38,6 +43,8 @@ const refreshTokenFn = async () => {
     } catch (error) {
       console.log("error refreshing token, deleting session", error)
       deleteSession();
+      redirect("/login");
+      return null
     }
   };
   

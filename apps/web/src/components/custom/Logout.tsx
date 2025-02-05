@@ -9,21 +9,21 @@ import { deleteSession } from '@/lib/api/session';
 
 export default function Logout() {
     const { mutate, isPending } = authClient.auth.logout.useMutation();
-    const session = useSession();
+    const {session, loading} = useSession();
     const router = useRouter();
     
   return (
-    <Button onClick={() => mutate({
+    <Button disabled={isPending || loading} onClick={() => session ? mutate({
       body: {
-        refreshToken: session?.refreshToken as string
+        refreshToken: session.refreshToken
       }
     },{
-        onSuccess:  (response) => {
+        onSuccess:  async (response) => {
             console.log('response', response);
-            deleteSession();
+            await deleteSession();
             router.push('/login');
         }
-    })}>
+    }): null}>
                 Logout
     </Button>
   )

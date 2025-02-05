@@ -9,7 +9,6 @@ export const refreshTokens = mysqlTable('refresh_tokens', {
     refreshToken: varchar('hashed_token', {length: 255}).notNull(), 
     deviceInfo: varchar('device_info', { length: 255}), 
     ipAddress: varchar('ip_address', {length: 45}),
-    revoked: boolean('revoked').default(false),    
     createdAt: timestamp('createdAt', {mode: 'string'}).notNull().defaultNow(),
     updatedAt: timestamp('updated_at', { mode: 'date', }).$onUpdate(() => new Date()),
 });
