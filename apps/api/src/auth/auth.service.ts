@@ -108,8 +108,8 @@ export class AuthService {
         };
       }
 
-      async logout(refreshToken: string ) {
-        this.db.delete(schema.refreshTokens).where(eq(schema.refreshTokens.refreshToken, refreshToken));
+      async logout(userId: string ) {
+       const rows = await this.db.delete(schema.refreshTokens).where(eq(schema.refreshTokens.userId, userId));
       }
 
       async validateLocalUser(email: string, password: string) {
@@ -162,11 +162,10 @@ export class AuthService {
         const { accessToken, refreshToken } = await this.generateTokens(userId);
     
         const hashedToken = await hash(refreshToken);
-        await this.db.update(schema.refreshTokens).set({ refreshToken: hashedToken,}).where( eq(schema.refreshTokens.userId, userId));
 
+        await this.db.update(schema.refreshTokens).set({ refreshToken: hashedToken,}).where( eq(schema.refreshTokens.userId, userId));
     
         const user_ = await this.db.query.User.findMany({ where: (user,{eq}) => eq(user.id, user.id) });
-        // const tenant = await this.db.query.Tenant.findMany({ where: (tenant,{eq}) => eq(tenant.id, user_[0].tenantId) });
     
         return {
           user: user_[0],
