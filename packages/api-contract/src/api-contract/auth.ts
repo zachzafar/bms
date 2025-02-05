@@ -61,7 +61,7 @@ export const authContract = c.router({
         method: 'POST',
         path: '/logout',
         body: z.object({
-          refreshToken: z.string().max(255)
+          userId: z.string().max(255)
         }),
         responses: {
             204: z.object({

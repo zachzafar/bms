@@ -36,7 +36,10 @@ export const GroupType = mysqlTable("group_type", {
 
 export const GroupTypeRelations = relations(GroupType, ({ one, many }) => ({
     groups: many(Group),
-    tenant: one(Tenant),
+    tenant: one(Tenant,{
+        fields: [GroupType.tenantId],
+        references: [Tenant.id]
+    }),
 }));
 
 // Group Model
@@ -91,6 +94,10 @@ export type UpdateAssetType = z.infer<typeof UpdateAssetTypeSchema>;
 
 export const AssetTypeRelations = relations(AssetType, ({ one, many }) => ({
     assetTypeHasProperties: many(AssetTypeHasProperties),
+    tenant: one(Tenant,{
+        fields: [AssetType.tenantId],
+        references: [Tenant.id]
+    })
 }));
 
 
@@ -116,7 +123,10 @@ export type UpdateAssetProperty = z.infer<typeof UpdateAssetPropertySchema>;
 
 export const AssetPropertyRelations = relations(assetProperty, ({ one }) => ({
     assetTypeHasProperties: one(AssetTypeHasProperties),
-    tenant: one(Tenant),
+    tenant: one(Tenant,{
+        fields: [assetProperty.tenantId],
+        references: [Tenant.id]
+    }),
 }));
 
 
@@ -186,8 +196,12 @@ export const BookingFormFieldRelations = relations(BookingFormField, ({ one }) =
     }),
 }))
 
-export const BookingFormRelations = relations(BookingForm, ({ one }) => ({
-    fields: one(BookingFormField),
+export const BookingFormRelations = relations(BookingForm, ({ one,many }) => ({
+    fields: many(BookingFormField),
+    tenant: one(Tenant,{
+        fields:[BookingForm.tenantId],
+        references: [Tenant.id]
+    })
 }));
 
 

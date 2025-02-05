@@ -15,11 +15,10 @@ export default function Logout() {
   return (
     <Button disabled={isPending || loading} onClick={() => session ? mutate({
       body: {
-        refreshToken: session.refreshToken
+        userId: session.user.id
       }
     },{
         onSuccess:  async (response) => {
-            console.log('response', response);
             await deleteSession();
             router.push('/login');
         }
