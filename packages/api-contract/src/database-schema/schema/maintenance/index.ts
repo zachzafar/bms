@@ -7,14 +7,14 @@ import { z } from "zod";
 
 // MaintenanceTask Model
 export const MaintenanceTask = mysqlTable("maintenance_tasks", {
-    id: serial("id").primaryKey(),
+    id: varchar("id", { length: 36 }).primaryKey().default("uuid()"),
     title: varchar("title", { length: 255 }).notNull(),
     description: text("description").notNull(),
     status: varchar("status", { length: 255 }).notNull(),
     priority: varchar("priority", { length: 255 }),
     startDate: datetime("start_date").notNull(),
     endDate: datetime("end_date"),
-    assetId: bigint("asset_id", { mode: 'bigint', unsigned: true}).notNull().references(() => Asset.id),
+    assetId: varchar("asset_id", { length: 255 }).notNull().references(() => Asset.id),
     createdAt: timestamp('createdAt').notNull().defaultNow(),
     updatedAt: timestamp('updated_at', { mode: 'date', }).$onUpdate(() => new Date()),
 }, (table) => ({

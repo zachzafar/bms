@@ -1,7 +1,7 @@
 'use client';
 
 import { Button } from '@/components/ui/button';
-import { FormField, FormItem, FormLabel } from '@/components/ui/form';
+import { FormField, FormItem, FormLabel,Form } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
@@ -20,22 +20,22 @@ import {
 } from '@radix-ui/react-select';
 import { InsertAsset, InsertAssetSchema } from '@repo/api-contract';
 
-import React, { useEffect, useState } from 'react';
-import { Controller, Form, SubmitHandler, useForm, useFormState } from 'react-hook-form';
+import { Controller, SubmitHandler, useForm, useFormState } from 'react-hook-form';
 
 function AddAssetForm() {
-  const session = useSession()
+  const {session} = useSession()
   const { mutate, isPending } = authClient.assets.createAsset.useMutation();
   const { data: assetTypes } = authClient.settings.assetType.getAssetTypes.useQuery({ queryKey: ASSET_TYPE_QUERY_KEY});
   const { data: assetGroups } = authClient.settings.group.getGroups.useQuery({ queryKey: GROUPS_QUERY_KEY});
+  // const { data: bookingForms } = authClient.settings.form.createForm
 
 
   const form = useForm<InsertAsset>({
     resolver: zodResolver(InsertAssetSchema),
   });
 
-  const { handleSubmit, control } = form;
-  const { isSubmitting } = useFormState({ control });
+  
+  const { isSubmitting } = useFormState({ control: form.control });
 
   const processform: SubmitHandler<InsertAsset> = async (data: Omit<InsertAsset,"tenantId">) => {
     if (session)
@@ -52,9 +52,9 @@ function AddAssetForm() {
  
   return (
     <Form {...form}>
-      <form onSubmit={handleSubmit(processform)} className="space-y-4">
+      <form onSubmit={form.handleSubmit(processform)} className="space-y-4">
         <FormField
-          control={control}
+          control={form.control}
           name="name"
           render={({ field }) => (
             <FormItem>
@@ -65,7 +65,7 @@ function AddAssetForm() {
         />
 
         <FormField
-          control={control}
+          control={form.control}
           name="assetTypeId"
           render={({ field }) => (
             <FormItem>
@@ -88,8 +88,8 @@ function AddAssetForm() {
 
        
           <FormField
-            control={control}
-            name="groupId"
+            control={form.control}
+            name="bookingFormId"
             render={({ field }) => (
               <FormItem>
                 <FormLabel htmlFor="asset-subgroup">Subgroup</FormLabel>
@@ -110,14 +110,14 @@ function AddAssetForm() {
        
 
         <FormField
-          control={control}
+          control={form.control}
           name="available"
           render={({ field }) => (
             <FormItem>
               <FormLabel htmlFor="asset-status">Status</FormLabel>
               <Controller
                 name="available"
-                control={control}
+                control={form.control}
                 render={({ field }) => (
                   <Switch
                     id="asset-status"
@@ -130,14 +130,14 @@ function AddAssetForm() {
         />
 
         <FormField
-          control={control}
+          control={form.control}
           name="requiresApproval"
           render={({ field }) => (
             <FormItem className="flex flex-row items-center space-x-2">
               <FormLabel htmlFor="requires-approval">Requires Approval</FormLabel>
               <Controller
                 name="requiresApproval"
-                control={control}
+                control={form.control}
                 render={({ field }) => (
                   <Switch
                     id="requires-approval"

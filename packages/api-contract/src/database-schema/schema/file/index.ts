@@ -13,18 +13,12 @@ export const File = mysqlTable("files", {
     fileType: varchar("file_type", { length: 255 }).notNull(),
     fileSize: int("file_size").notNull(),
     uploadedAt: timestamp('createdAt').notNull().defaultNow(),
-    assetId: bigint("asset_id",{mode: 'bigint', unsigned: true}).references(() => Asset.id),
-    maintenanceTaskId: bigint("maintenance_task_id", { mode: 'bigint', unsigned: true}).references(() => MaintenanceTask.id),
+    maintenanceTaskId: varchar("maintenance_id", { length: 255 }).notNull().references(() => MaintenanceTask.id),
 }, (table) => ({
-    assetIdx: index("asset_idx").on(table.assetId),
     maintenanceTaskIdx: index("maintenance_task_idx").on(table.maintenanceTaskId),
 }));
 
 export const FileRelations = relations(File, ({ one }) => ({
-    asset: one(Asset, {
-        fields: [File.assetId],
-        references: [Asset.id],
-    }),
     maintenanceTask: one(MaintenanceTask, {
         fields: [File.maintenanceTaskId],
         references: [MaintenanceTask.id],
