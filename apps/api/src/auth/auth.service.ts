@@ -39,7 +39,6 @@ export class AuthService {
             ...userData,
             id: userId,
             password: hashedPassword,
-            role: 'ADMIN',
           })
 
           await tx.insert(schema.TenantHasUsers).values({
@@ -119,13 +118,13 @@ export class AuthService {
     if (!isPasswordMatched)
       throw new UnauthorizedException('Invalid Credentials!');
 
-    return { id: user.id, name: user.name, role: user.role };
+    return { id: user.id, name: user.name, };
       }
 
       async validateJwtUser(userId: string) {
         const user = await this.userService.findOne(userId);
         if (!user) throw new UnauthorizedException('User not found!');
-        return { id: user.id, name: user.name, role: user.role };
+        return { id: user.id, name: user.name};
       }
 
       async validateRefreshToken(userId:string,refreshToken:string){
