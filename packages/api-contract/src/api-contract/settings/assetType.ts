@@ -14,7 +14,7 @@ export const assetTypeContract = c.router({
         }),
         responses: {
             201: z.object({
-                assetType: SelectAssetTypeSchema
+                id: z.number(),
             })
         },
         summary: 'Create a new asset type'

@@ -4,10 +4,11 @@ import { Asset } from "../asset";
 import { createInsertSchema, createSelectSchema } from "drizzle-zod";
 import { z } from "zod";
 import { Booking } from "../booking";
+import { v4 as uuid } from "uuid";
 
 // User Model
 export const User = mysqlTable("users", {
-    id: varchar("id", { length: 36 }).primaryKey().default("uuid()"),
+    id: varchar("id", { length: 36 }).primaryKey().$default(() => uuid()),
     name: varchar("name", { length: 255 }).notNull(),
     email: varchar("email", { length: 255 }).notNull().unique(),
     password: varchar("password", { length: 255 }).notNull(), // Enum as string
@@ -26,8 +27,8 @@ export const userRelations = relations(User, ({ one,many }) => ({
         fields: [User.id],
         references: [Owner.userId],
     }),
-    roles: many(Roles),
-    assets: many(Asset),
+    userToRoles: many(UserHasRoles),
+    usersToAssets: many(UserHasAssets),
 }));
 
 export const InsertUserSchema = createInsertSchema(User);
@@ -48,6 +49,17 @@ export const SelectUserHasBookingsSchema = createSelectSchema(UserHasBookings);
 export type InsertUserHasBookings = z.infer<typeof InsertUserHasBookingsSchema>
 export type SelectUserHasBookings = z.infer<typeof SelectUserHasBookingsSchema>
 
+export const UserHasBookingsRelations = relations(UserHasBookings, ({ one }) => ({
+    one: one(User,{
+        fields: [UserHasBookings.userId],
+        references: [User.id]
+    }),
+    booking: one(Booking,{
+        fields: [UserHasBookings.bookingId],
+        references: [Booking.id]
+    })
+}))
+
 export const UserHasAssets = mysqlTable("user_has_assets",{
     id: serial("id").primaryKey(),
     userId: varchar("user_id", {length: 255}).notNull().references(() => User.id).notNull(),
@@ -60,6 +72,16 @@ export const SelectUserHasAssetsSchema = createSelectSchema(UserHasAssets);
 export type InsertUserHasAssets = z.infer<typeof InsertUserHasAssetsSchema>
 export type SelectUserHasAssets = z.infer<typeof SelectUserHasAssetsSchema>
 
+export const UserHasAssetsRelations = relations(UserHasAssets, ({ one }) => ({
+    one: one(User,{
+        fields: [UserHasAssets.userId],
+        references: [User.id]
+    }),
+    asset: one(Asset,{
+        fields: [UserHasAssets.assetId],
+        references: [Asset.id]
+    })
+}))
 
 // Customer Model
 export const Customer = mysqlTable("customer_details", {
@@ -124,10 +146,10 @@ export const SelectRoleSchema = createSelectSchema(Roles);
 export type InsertRole = z.infer<typeof InsertRoleSchema>
 export type SelectRole = z.infer<typeof SelectRoleSchema>
 
-export const RoleRelations = relations(Roles, ({ one,many }) => ({
-    permissions: many(Permissions),
-    users: many(User),
-}))
+export const RoleRelations = relations(Roles, ({ many }) => ({
+    rolesToPermissions: many(RoleHasPermissions),
+    usersToRoles: many(UserHasRoles),
+}));
 
 
 export const UserHasRoles = mysqlTable("user_has_roles",{
@@ -142,10 +164,21 @@ export const SelectUserHasRolesSchema = createSelectSchema(UserHasRoles);
 export type InsertUserHasRoles = z.infer<typeof InsertUserHasRolesSchema>
 export type SelectUserHasRoles = z.infer<typeof SelectUserHasRolesSchema>
 
+export const UserHasRolesRelations = relations(UserHasRoles, ({ one }) => ({
+    role: one(Roles,{
+        fields: [UserHasRoles.roleId],
+        references: [Roles.id]
+    }),
+    user: one(User,{
+        fields: [UserHasRoles.userId],
+        references: [User.id]
+    })
+}))
+
 
 export const RoleHasPermissions = mysqlTable("role_has_permissions",{
     id: serial("id").primaryKey(),
-    roleId: bigint("asset_type_id", { mode: 'bigint', unsigned: true}).references(() => Roles.id).notNull(),
+    roleId: bigint("role_id", { mode: 'bigint', unsigned: true}).references(() => Roles.id).notNull(),
     permissionId: bigint("permission_id", { mode: 'bigint', unsigned: true}).references(() => Permissions.id).notNull()
 })
 
@@ -155,6 +188,16 @@ export const SelectRoleHasPermissionsSchema = createSelectSchema(RoleHasPermissi
 export type InsertRoleHasPermissions = z.infer<typeof InsertRoleHasPermissionsSchema>
 export type SelectRoleHasPermissions = z.infer<typeof SelectRoleHasPermissionsSchema>
 
+export const RoleHasPermissionsRelations = relations(RoleHasPermissions, ({ one }) => ({
+    role: one(Roles,{
+        fields: [RoleHasPermissions.roleId],
+        references: [Roles.id]
+    }),
+    permission: one(Permissions,{
+        fields: [RoleHasPermissions.permissionId],
+        references: [Permissions.id]
+    })
+}))
 
 export const Permissions = mysqlTable("permissions", {
     id: serial("id").primaryKey(),
@@ -169,5 +212,5 @@ export type InsertPermission = z.infer<typeof InsertPermissionSchema>
 export type SelectPermission = z.infer<typeof SelectPermissionSchema>
 
 export const PermissionRelations = relations(Permissions, ({ many }) => ({
-    roles: many(Roles)
+    rolesToPermissions: many(RoleHasPermissions)
 }))

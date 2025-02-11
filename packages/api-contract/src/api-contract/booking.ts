@@ -8,8 +8,8 @@ import { Customer, InsertBookingSchema, SelectAssetSchema, SelectBookingSchema, 
 const c = initContract();
 
 export const ExtendedSelectBookingSchema = SelectBookingSchema.extend({
-    asset: SelectAssetSchema,
-    customer: SelectCustomerSchema
+    customer: SelectCustomerSchema,
+    asset: SelectAssetSchema
 })
 
 export type ExtendedSelectBooking = z.infer<typeof ExtendedSelectBookingSchema>
@@ -19,7 +19,9 @@ export const bookingContract = c.router({
         method: 'POST',
         path: '/booking',
         responses: {
-            201: SelectBookingSchema,
+            201: z.object({
+                id: z.string(),
+            })
           
         },
         body: InsertBookingSchema,
@@ -44,7 +46,7 @@ export const bookingContract = c.router({
             404: z.undefined()
         },
         pathParams: z.object({
-            id: z.number()
+            id: z.string()
         }),
         summary: 'Get a booking by id'
     }, 
@@ -55,7 +57,7 @@ export const bookingContract = c.router({
             204: z.undefined()
         },
         pathParams: z.object({
-            id: z.number()
+            id: z.string()
         }),
         summary: 'Delete a booking by id'
     },
@@ -66,7 +68,7 @@ export const bookingContract = c.router({
             200: SelectBookingSchema
         },
         pathParams: z.object({
-            id: z.number()
+            id: z.string()
         }),
         body: UpdateBookingSchema,
         summary: 'Update a booking by id'

@@ -1,4 +1,4 @@
-import { Inject, Injectable, Logger, UnauthorizedException } from '@nestjs/common';
+import { Inject, Injectable, InternalServerErrorException, Logger, UnauthorizedException } from '@nestjs/common';
 import { InsertTenant, InsertUser, SelectTenant, SelectUser } from '@repo/api-contract';
 import { MySql2Database } from 'drizzle-orm/mysql2';
 import { DrizzleAsyncProvider } from 'src/drizzle/drizzle.provider';
@@ -24,43 +24,38 @@ export class AuthService {
         @Inject(DrizzleAsyncProvider) private db: MySql2Database<typeof schema>
       ) {}
     
-      async createTenantWithAdmin(tenantData: InsertTenant, userData: Omit<InsertUser,"tenantId" | "role">): Promise<{ tenant: SelectTenant; adminUser: Omit<SelectUser, "password">; }> {
-        const tenantId = uuidv4();
-            const userId = uuidv4();
+      async createTenantWithAdmin(tenantData: InsertTenant, userData: Omit<InsertUser,"tenantId" | "role">): Promise<{ tenantId: string; userId: string; }> {
+        let tenantId:string = ""
+        let userId:string = ""
     
+        try {
         await this.db.transaction(async (tx) => {
-            
-            await tx.insert(schema.Tenant).values({...tenantData, id: tenantId});
-    
-    
-           
+        
+        let result = await tx.insert(schema.Tenant).values({...tenantData}).$returningId()
+        tenantId = result[0].id;
         const hashedPassword = await hash(userData.password);
-          await tx.insert(schema.User).values({
+        this.loggger.log('Creating a user');
+         result = await tx.insert(schema.User).values({
             ...userData,
-            id: userId,
             password: hashedPassword,
-          })
-
+          }).$returningId()
+          userId = result[0].id;
+        
+          this.loggger.log('Creating a tenant user relationship');
           await tx.insert(schema.TenantHasUsers).values({
             tenantId,
             userId
           })
-         
-            return {
-                tenant: { ...tenantData, id: tenantId },
-                adminUser: { ...userData, id: userId, tenantId},
-            };
-        
-    
+
         });
-    
-        let user_ = await this.db.query.User.findMany({ where: (user,{eq}) => eq(user.id, userId) });
-        const tenant = await this.db.query.Tenant.findMany({ where: (tenant,{eq}) => eq(tenant.id, tenantId) });
-    
-         const  {password ,...user  } = user_[0];
+      } catch (error) {
+        throw new InternalServerErrorException(`Error occured while creating tenant: ${error}`,);
+      }
+
+
         return {
-          adminUser: user,
-          tenant: tenant[0],
+          userId,
+          tenantId,
         }
       }
 

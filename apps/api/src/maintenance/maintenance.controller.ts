@@ -12,11 +12,9 @@ export class MaintenanceController {
     @TsRestHandler(contract.maintenance.createMaintenance)
     async createMaintenance(): Promise<ReturnType<typeof tsRestHandler>> {
         return tsRestHandler(contract.maintenance.createMaintenance, async ({ body }) => {
-            const maintenance = await this.maintenanceService.createMaintenance(body);
-            if (!maintenance) {
-                return { status: 500, body: { message: 'Error creating maintenance' } };
-            }
-            return { status: 201, body: maintenance };
+            const id = await this.maintenanceService.createMaintenance(body);
+
+            return { status: 201, body: {id} };
         });
     }
 

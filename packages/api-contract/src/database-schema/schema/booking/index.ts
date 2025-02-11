@@ -1,16 +1,17 @@
 import { relations, sql } from "drizzle-orm";
 import { mysqlTable, varchar, datetime, json, decimal, text, timestamp, int, index, serial, boolean, bigint, date } from "drizzle-orm/mysql-core";
-import { Customer, User } from "../users";
+import { Customer, User, UserHasBookings } from "../users";
 import { Asset } from "../asset";
 import { createInsertSchema, createSelectSchema } from "drizzle-zod";
 import { z } from "zod";
 import { BookingFormField } from "../settings";
+import { v4 as uuid } from "uuid";
 
 
 
 // Booking Model
 export const Booking = mysqlTable("booking", {
-    id: varchar("id", { length: 36 }).primaryKey().default("uuid()"),
+    id: varchar("id", { length: 36 }).primaryKey().$default(uuid),
     startDate: datetime("start_date").notNull(),
     endDate: datetime("end_date").notNull(),
     status: varchar("status", { length: 255 }).notNull(),
@@ -43,7 +44,7 @@ export const BookingFormFieldValue = mysqlTable("booking_form_field_value", {
 }));
 
 export const BookingRelations = relations(Booking, ({ one,many }) => ({
-    customer: many(Customer),
+    user: many(UserHasBookings),
     asset: one(Asset, {
             fields: [Booking.assetId],
             references: [Asset.id],

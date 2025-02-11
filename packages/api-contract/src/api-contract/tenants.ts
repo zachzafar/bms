@@ -27,8 +27,8 @@ export const tenantsContract = c.router({
     path: '/tenant',
     responses: {
         201: z.object({
-          tenant: SelectTenantSchema,
-          adminUser: SelectUserSchema.omit({ password: true })
+          tenantId: z.string(),
+          adminUserId: z.string()
         })
       },
     body: z.object({

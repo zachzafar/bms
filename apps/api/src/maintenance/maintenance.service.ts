@@ -12,28 +12,23 @@ export class MaintenanceService {
 
     constructor(
         @Inject(DrizzleAsyncProvider) private db: MySql2Database<typeof schema>,
-        @Inject(forwardRef(() => BookingService)) private readonly bookingService: BookingService,
     ){ }
 
     async createMaintenance(body: InsertMaintenanceTask) {
-        if (body.endDate) {
-            const { available } = await this.checkAvailability(body.assetId, body.startDate, body.endDate);
-           
-
-            if (!available) {
-            throw new ConflictException('The asset is not available for the selected dates.');
-         }
+        try{
+           let result =  await this.db.insert(schema.MaintenanceTask).values(body).$returningId();
+           return result[0].id;
+        } catch (e) {
+            throw new ConflictException('Error occured while creating maintenance');
         }
-
-        const result = await this.db.insert(schema.MaintenanceTask).values(body).$returningId().execute();
-        return await this.getMaintenance(result[0].id);
     }
-    async getMaintenance(id: number) {
+
+    async getMaintenance(id: string) {
         return await this.db.query.MaintenanceTask.findFirst({ where: (maintenance, { eq }) => eq(maintenance.id, id) });
     }
 
-    async getMaintenancesByAssetId(assetId: bigint, period?: { startDate: Date; endDate: Date; }) {
-        return await this.db.query.MaintenanceTask.findMany({ where: (maintenance, { eq, and, gte, lte,or }) =>  period ? and(or(gte(maintenance.startDate,period?.endDate),lte(maintenance.endDate,period?.startDate)),or(gte(maintenance.startDate,period?.endDate),lte(maintenance.endDate,period?.startDate))):  eq(maintenance.assetId, assetId) });
+    async getMaintenancesByAssetId(assetId: string) {
+        return await this.db.query.MaintenanceTask.findMany({ where: (maintenance, { eq }) =>   eq(maintenance.assetId, assetId) });
 
     }
 
@@ -45,21 +40,16 @@ export class MaintenanceService {
         if (!existingMaintenance) {
             throw new ConflictException('Maintenance not found');
         }
-        if (body.endDate) {
-            const isAvailable = await this.checkAvailability(body.assetId, body.startDate, body.endDate);
-            if (!isAvailable) {
-                throw new ConflictException('The asset is not available for the selected dates.');
-            }
-        }
+
         await this.db.update(schema.MaintenanceTask).set(body).where(eq(schema.MaintenanceTask.id, body.id)).execute();
         return await this.getMaintenance(body.id);
     }
-    async deleteMaintenance(id: number) {
+    async deleteMaintenance(id: string) {
         this.db.delete(schema.MaintenanceTask).where(eq(schema.MaintenanceTask.id,id)).execute();
     }
 
-    async checkAvailability(assetId: bigint, start: Date, end: Date) {
-        const conflictingMaintenance =   await this.getMaintenancesByAssetId(assetId, { startDate: start, endDate: end });  
+    async checkAvailability(assetId: string) {
+        const conflictingMaintenance =   await this.getMaintenancesByAssetId(assetId);  
         return { available :  conflictingMaintenance.length === 0,  maintenance: conflictingMaintenance };    
     }
 }

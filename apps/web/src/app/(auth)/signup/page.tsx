@@ -33,7 +33,7 @@ export default function SignupPage() {
   const { handleSubmit } = form;
 
   const onSubmit = async (data: UserRegistration) => {
-    console.log('data', data);
+
     try {
       const response = await signupMutation.mutateAsync({
         body: {

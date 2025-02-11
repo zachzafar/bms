@@ -5,10 +5,11 @@ import { AssetType, assetProperty, BookingForm } from "../settings";
 import { createInsertSchema, createSelectSchema } from "drizzle-zod";
 import { z } from "zod";
 import { User } from "../users";
+import { v4 as uuid } from "uuid";
 
 // Tenant Model
 export const Tenant = mysqlTable("tenants", {
-    id: varchar("id", { length: 36 }).primaryKey().default("uuid()"),
+    id: varchar("id", { length: 36 }).primaryKey().$default(() => uuid()),
     name: varchar("name", { length: 255 }).notNull(),
     subdomain: varchar("subdomain", { length: 255 }).notNull(),
     createdAt: timestamp('createdAt',{mode: 'string'}).notNull().defaultNow(),
@@ -48,7 +49,7 @@ export const TenantTeamRelations = relations(TenantTeams, ({ one ,many}) => ({
         fields: [TenantTeams.tenantId],
         references: [Tenant.id],
     }),
-    assets: many(Asset)
+    tenantTeamToAsset: many(TenantTeamHasAssets)
 }))
 
 
@@ -77,6 +78,16 @@ export const SelectTenantTeamHasAssetsSchema = createSelectSchema(TenantTeamHasA
 export type InsertTenantTeamHasAssets = z.infer<typeof InsertTenantTeamHasAssetsSchema>
 export type SelectTenantTeamHasAssets = z.infer<typeof SelectTenantTeamHasAssetsSchema>
 
+export const TenantTeamHasAssetsRelations = relations(TenantTeamHasAssets, ({ one }) => ({
+    team: one(TenantTeams, {
+        fields: [TenantTeamHasAssets.teamId],
+        references: [TenantTeams.id]
+    }),
+    asset: one(Asset, {
+        fields: [TenantTeamHasAssets.assetId],
+        references: [Asset.id]
+    })
+}))
 
 export const TenantHasUsers = mysqlTable("tenant_has_users", {
     id: serial("id").primaryKey(),

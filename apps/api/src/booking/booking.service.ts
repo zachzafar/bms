@@ -27,16 +27,23 @@ export class BookingService {
         }
 
 
-        const newBookingId = await this.db.insert(schema.Booking).values(booking).$returningId().execute();
-        return await this.getBooking(newBookingId[0].id);
+       try{
+        const result = await this.db.insert(schema.Booking).values(booking).$returningId()
+
+        return result[0].id
+       } catch (e) {
+        throw new ConflictException('Error occured while creating booking');
+       }
     }
 
-    async getBooking(bookingId: number): Promise<ExtendedSelectBooking> {
+    async getBooking(bookingId: string): Promise<ExtendedSelectBooking> {
       const booking = await this.db
       .select()
-      .from(schema.Booking)
+      .from(schema.UserHasBookings)
+      .innerJoin(schema.User, eq(schema.UserHasBookings.userId,schema.User.id))
+      .innerJoin(schema.Booking, eq(schema.UserHasBookings.bookingId,schema.Booking.id))
       .innerJoin(schema.Asset, eq(schema.Booking.assetId,schema.Asset.id))
-      .innerJoin(schema.Customer, eq(schema.Booking.customerId,schema.Customer.id))
+      .innerJoin(schema.Customer, eq(schema.Customer.userId,schema.User.id))
       .where(eq(schema.Booking.id,bookingId))
       .execute()
       .then(rows => rows[0]);
@@ -46,29 +53,31 @@ export class BookingService {
     }
     return {
       ...booking.booking,
+      customer: booking.customer_details,
       asset: booking.assets,
-      customer: booking.customers
     }
     }
 
-    async getBookingsByAssetId(assetId: bigint,period?: { startDate: Date, endDate: Date }) {
+    async getBookingsByAssetId(assetId: string,period?: { startDate: Date, endDate: Date }) {
         
         return await this.db.query.Booking.findMany({ where: (booking, { eq, and, gte, lte,or }) => period ? and(eq(booking.assetId, assetId),or(gte(booking.startDate,period.endDate),lte(booking.endDate,period.endDate))) : eq(booking.assetId, assetId) });
     }
 
     async getBookings() {
          const bookings = await this.db
-        .select()
-        .from(schema.Booking)
-        .innerJoin(schema.Asset, eq(schema.Booking.assetId,schema.Asset.id))
-        .innerJoin(schema.Customer, eq(schema.Booking.customerId,schema.Customer.id))
-        .execute()
+         .select()
+         .from(schema.UserHasBookings)
+         .innerJoin(schema.User, eq(schema.UserHasBookings.userId,schema.User.id))
+         .innerJoin(schema.Booking, eq(schema.UserHasBookings.bookingId,schema.Booking.id))
+         .innerJoin(schema.Asset, eq(schema.Booking.assetId,schema.Asset.id))
+         .innerJoin(schema.Customer, eq(schema.Customer.userId,schema.User.id))
+         .execute()
         
 
         return bookings.map(booking => ({
             ...booking.booking,
+            customer: booking.customer_details,
             asset: booking.assets,
-            customer: booking.customers
           }));
     }
 
@@ -85,7 +94,7 @@ export class BookingService {
     return  this.getBooking(booking.id);
     }
 
-    async deleteBooking(bookingId: number) {
+    async deleteBooking(bookingId: string) {
         const existingBooking = await this.getBooking(bookingId);
     if (!existingBooking) {
       throw new NotFoundException('Booking not found');
@@ -115,7 +124,7 @@ export class BookingService {
     //     return { available: true, conflictingBookings: [] };
     // }
 
-    async  calculatePrice(assetId: bigint, startDate: string, endDate: string): Promise<number> {
+    async  calculatePrice(assetId: string, startDate: string, endDate: string): Promise<number> {
       const result = await this.db
   .select({ total: sum(schema.Availability.price) })
   .from(schema.Availability)
@@ -129,7 +138,7 @@ export class BookingService {
       return Number(result[0]?.total) ?? 0;
     }
 
-    async checkAvailability(assetId: bigint, startDate: Date, endDate: Date): Promise<boolean> {
+    async checkAvailability(assetId: string, startDate: Date, endDate: Date): Promise<boolean> {
       const result = await this.db.select({ exists: sql`1` })
         .from(schema.Availability)
         .where(
@@ -139,11 +148,18 @@ export class BookingService {
             sql`(start_date, end_date) OVERLAPS (${startDate}, ${endDate})`
           )
         );
+
+      const bookings = await this.db.select().from(schema.Booking).where(
+        and(
+          eq(schema.Booking.assetId, assetId),
+          sql`(start_date, end_date) OVERLAPS (${startDate}, ${endDate})`
+        )
+      )
     
-      return result.length === 0; // Returns TRUE if the asset is available
+      return result.length === 0 && bookings.length == 0; // Returns TRUE if the asset is available
     }
 
-     async addAvailabilityException(assetId: bigint, startDate: Date, endDate:Date , isAvailable: boolean,price: string) {
+     async addAvailabilityException(assetId: string, startDate: Date, endDate:Date , isAvailable: boolean,price: string) {
       const availabilityException: InsertAvailability = {
         startDate,
         endDate,

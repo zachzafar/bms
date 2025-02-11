@@ -18,12 +18,9 @@ export class AssetTypeController {
     @TsRestHandler(contract.settings.assetType.createAssetType)
     async createAssetType(): Promise<ReturnType<typeof tsRestHandler>> {
         return tsRestHandler(contract.settings.assetType.createAssetType, async ({ body }) => {
-            const assetType = await this.assetTypeService.createAssetType(body.assetType);
+            const id = await this.assetTypeService.createAssetType(body.assetType);
 
-            if (!assetType) {
-                return { status: 500, body: { message: 'Error creating asset type' } };
-            }
-            return { status: 201, body: { assetType } };
+            return { status: 201, body: { id } };
         });
     }
 

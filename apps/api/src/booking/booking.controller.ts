@@ -11,8 +11,8 @@ export class BookingController {
     @TsRestHandler(contract.booking.createBooking)
     async createBooking(): Promise<ReturnType<typeof tsRestHandler>> {
         return tsRestHandler(contract.booking.createBooking, async ({ body }) => {
-            const booking = await this.bookingService.createBooking(body);
-            return { status: 201, body: booking  };
+             const id = await this.bookingService.createBooking(body);
+            return { status: 201, body: { id } };
         });
     }
 

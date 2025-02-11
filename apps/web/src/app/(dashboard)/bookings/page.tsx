@@ -74,7 +74,7 @@ export default function Component() {
     }
   };
 
-  const handleCancel = (id: number) => {
+  const handleCancel = (id: string) => {
      
   };
 

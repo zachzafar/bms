@@ -12,13 +12,13 @@ export const authContract = c.router({
         path: '/tenant',
         responses: {
             201: z.object({
-              tenant: InsertTenantSchema,
-              adminUser: InsertUserSchema.omit({ password: true })
+              tenantId: z.string(),
+              userId: z.string()
             })
           },
         body: z.object({
           tenant: InsertTenantSchema,
-          adminUser: InsertUserSchema.omit({ role: true })
+          adminUser: InsertUserSchema
         }).required({ tenant: true, adminUser: true }),
         summary: 'Create a new tenant with an admin user'
     },

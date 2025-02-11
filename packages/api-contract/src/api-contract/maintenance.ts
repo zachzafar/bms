@@ -13,7 +13,9 @@ export const maintenanceContract = c.router({
         path: '/maintenance',
         body: InsertMaintenanceTaskSchema,
         responses: {
-            201: SelectMaintenanceTaskSchema
+            201: z.object({
+                id: z.string(),
+            })
         },
         summary: 'Create a new maintenance task'
     },
@@ -36,7 +38,7 @@ export const maintenanceContract = c.router({
             404: z.undefined()
         },
         pathParams: z.object({
-            id: z.number()
+            id: z.string()
         }),
         summary: 'Get a maintenance task by id'
     },
@@ -47,7 +49,7 @@ export const maintenanceContract = c.router({
             200: SelectMaintenanceTaskSchema
         },
         pathParams: z.object({
-            id: z.number()
+            id: z.string()
         }),
         body: UpdateMaintenanceTaskSchema,
         summary: 'Update a maintenance task by id'
@@ -59,7 +61,7 @@ export const maintenanceContract = c.router({
             204: z.undefined()
         },
         pathParams: z.object({
-            id: z.number()
+            id: z.string()
         }),
         summary: 'Delete a maintenance task by id'
     }

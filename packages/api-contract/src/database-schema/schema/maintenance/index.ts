@@ -4,10 +4,11 @@ import { Asset } from "../asset";
 import { Tenant } from "../tenant";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
+import { v4 as uuid } from "uuid";
 
 // MaintenanceTask Model
 export const MaintenanceTask = mysqlTable("maintenance_tasks", {
-    id: varchar("id", { length: 36 }).primaryKey().default("uuid()"),
+    id: varchar("id", { length: 36 }).primaryKey().$default(() => uuid()),
     title: varchar("title", { length: 255 }).notNull(),
     description: text("description").notNull(),
     status: varchar("status", { length: 255 }).notNull(),

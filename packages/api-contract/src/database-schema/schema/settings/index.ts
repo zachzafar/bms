@@ -4,7 +4,7 @@ import { createInsertSchema, createSelectSchema,  } from "drizzle-zod";
 import { Tenant } from "../tenant";
 
 import { z } from "zod";
-import { Asset } from "../asset";
+import { Asset, AssetHasBookingForms, AssetHasTags } from "../asset";
 
 
 
@@ -17,13 +17,13 @@ export const Tags = mysqlTable("tags", {
 });
 
 export const InsertTagSchema = createInsertSchema(Tags)
-export const SelectAssetSchema = createSelectSchema(Tags)
+export const SelectTagSchema = createSelectSchema(Tags)
 
 export type InsertTag = z.infer<typeof InsertTagSchema>;
-export type SelectTag = z.infer<typeof SelectAssetSchema>;
+export type SelectTag = z.infer<typeof SelectTagSchema>;
 
 export const TagsRelations = relations(Tags, ({ many }) => ({
-    asset: many(Asset)
+    asset: many(AssetHasTags)
 }));
 
 
@@ -131,7 +131,8 @@ export const BookingFormRelations = relations(BookingForm, ({ one,many }) => ({
     tenant: one(Tenant,{
         fields:[BookingForm.tenantId],
         references: [Tenant.id]
-    })
+    }),
+    assetsToForms: many(AssetHasBookingForms)
 }));
 
 export const BookingFormField = mysqlTable("booking_form_fields", {

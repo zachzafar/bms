@@ -23,7 +23,7 @@ export class AssetTypeService {
     async createAssetType(data: InsertAssetType) {
         const newAssetTypeId = await this.db.insert(schema.AssetType).values(data).$returningId().execute();
         
-        return this.getAssetType(newAssetTypeId[0].id);
+        return newAssetTypeId[0].id;
     }
 
     async updateAssetType(id: number, data: UpdateAssetType) {

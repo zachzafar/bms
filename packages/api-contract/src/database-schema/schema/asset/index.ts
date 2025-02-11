@@ -1,14 +1,15 @@
 import { relations } from "drizzle-orm";
 import { mysqlTable, serial, varchar, text, int, timestamp, index, uniqueIndex, boolean, bigint } from "drizzle-orm/mysql-core";
 import { AssetType,assetProperty, BookingForm, Tags } from "../settings";
-import { Tenant } from "../tenant";
-import { Owner, User } from "../users";
+import { Tenant, TenantTeamHasAssets } from "../tenant";
+import { Owner, User, UserHasAssets } from "../users";
 import { createSelectSchema } from "drizzle-zod";
 import { z } from "zod";
+import { v4 as uuid } from "uuid";
 
 // Asset Model
 export const Asset = mysqlTable("assets", {
-    id: varchar("id", { length: 36 }).primaryKey().default("uuid()"),
+    id: varchar("id", { length: 36 }).primaryKey().$default(() => uuid()),
     name: varchar("name", { length: 255 }).notNull(),
     description: text("description"),
     available: boolean("available").default(true).notNull(),
@@ -42,23 +43,29 @@ export const AssetRelations = relations(Asset, ({ one, many }) => ({
         fields: [Asset.assetTypeId],
         references: [AssetType.id],
     }),
-    bookingForm: one(BookingForm, {
-        fields: [Asset.bookingFormId],
-        references: [BookingForm.id],
-    }),
-    user: many(User),
-    tags: many(Tags),
-    bookingForms: many(BookingForm),
+    user: many(UserHasAssets),
+    tags: many(AssetHasTags),
+    bookingForms: many(AssetHasBookingForms),
     assetImages: many(AssetImages),
     properties: many(AssetHasProperties),
+    tenantTeamToAsset: many(TenantTeamHasAssets)
 })
 )
+
 
 export const AssetImages = mysqlTable("asset_images",{
     id: serial("id").primaryKey(),
     assetId: varchar("tenant_id", { length: 255 }).notNull().references(() => Asset.id),
     filePath: varchar("tenant_id", { length: 255 }).notNull()
 })
+
+
+export const AssetImagesRelations = relations(AssetImages, ({ one }) => ({
+    asset: one(Asset, {
+        fields: [AssetImages.assetId],
+        references: [Asset.id],
+    }),
+}))
 
 // AssetHasProperties Model
 export const AssetHasProperties = mysqlTable("asset_has_properties", {
@@ -87,9 +94,31 @@ export const AssetHasTags = mysqlTable("asset_has_tags",{
     assetId: varchar("asset_id", {length: 255}).notNull().references(() => Asset.id)
 })
 
+export const AssetHasTagsRelations = relations(AssetHasTags, ({ one }) => ({
+    asset: one(Asset, {
+        fields: [AssetHasTags.assetId],
+        references: [Asset.id],
+    }),
+    tag: one(Tags, {
+        fields: [AssetHasTags.tagId],
+        references: [Tags.id],
+    }),
+}))
+
 export const AssetHasBookingForms = mysqlTable("asset_has_booking_forms", {
     id: serial("id").primaryKey(),
     assetId: varchar("tenant_id", { length: 255 }).notNull().references(() => Asset.id),
     bookingFormId: bigint("booking_form_id",{mode: 'bigint', unsigned: true}).references(() => BookingForm.id)
 })
+
+export const AssetHasBookingFormsRelations = relations(AssetHasBookingForms, ({ one }) => ({
+    asset: one(Asset, {
+        fields: [AssetHasBookingForms.assetId],
+        references: [Asset.id],
+    }),
+    bookingForm: one(BookingForm, {
+        fields: [AssetHasBookingForms.bookingFormId],
+        references: [BookingForm.id],
+    }),
+}))
 

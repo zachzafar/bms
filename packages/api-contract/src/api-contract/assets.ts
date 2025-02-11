@@ -11,8 +11,10 @@ export const assetsContract = c.router({
         method: 'POST',
         path: '/asset',
         responses: {
-            201: SelectAssetSchema,
-          
+            201: z.object({
+                id: z.string(),
+            })
+            
         },
         body: z.object({
             tenant: z.string(),     
@@ -40,7 +42,7 @@ export const assetsContract = c.router({
             404: z.undefined()
         },
         pathParams: z.object({
-            id: z.number()
+            id: z.string()
         }),
         summary: 'Get an asset by id'
     },
@@ -51,7 +53,7 @@ export const assetsContract = c.router({
             200: SelectAssetSchema
         },
         pathParams: z.object({
-            id: z.number()
+            id: z.string()
         }),
         body: InsertAssetSchema.partial(),
         summary: 'Update an asset by id'
@@ -63,7 +65,7 @@ export const assetsContract = c.router({
             204: z.undefined()
         },
         pathParams: z.object({
-            id: z.number()
+            id: z.string()
         }),
         summary: 'Delete an asset by id'
     }

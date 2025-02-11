@@ -76,7 +76,6 @@ export default function AssetsPage() {
               <TableHead className='w-[100px]'>ID</TableHead>
               <TableHead>Name</TableHead>
               <TableHead>Type</TableHead>
-              <TableHead>Subgroup</TableHead>
               <TableHead>Status</TableHead>
               <TableHead>Requires Approval</TableHead>
               <TableHead className='text-right'>Actions</TableHead>
@@ -88,7 +87,6 @@ export default function AssetsPage() {
                 <TableCell className='font-medium'>{asset.id}</TableCell>
                 <TableCell>{asset.name}</TableCell>
                 <TableCell>{asset.assetTypeId}</TableCell>
-                <TableCell>{asset.groupId}</TableCell>
                 <TableCell>{asset.available}</TableCell>
                 <TableCell>{asset.requiresApproval ? 'Yes' : 'No'}</TableCell>
                 <TableCell className='text-right'>

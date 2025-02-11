@@ -26,7 +26,6 @@ function AddAssetForm() {
   const {session} = useSession()
   const { mutate, isPending } = authClient.assets.createAsset.useMutation();
   const { data: assetTypes } = authClient.settings.assetType.getAssetTypes.useQuery({ queryKey: ASSET_TYPE_QUERY_KEY});
-  const { data: assetGroups } = authClient.settings.group.getGroups.useQuery({ queryKey: GROUPS_QUERY_KEY});
   // const { data: bookingForms } = authClient.settings.form.createForm
 
 
@@ -87,7 +86,7 @@ function AddAssetForm() {
         />
 
        
-          <FormField
+          {/* <FormField
             control={form.control}
             name="bookingFormId"
             render={({ field }) => (
@@ -106,7 +105,7 @@ function AddAssetForm() {
                 </Select>
               </FormItem>
             )}
-          />
+          /> */}
        
 
         <FormField
