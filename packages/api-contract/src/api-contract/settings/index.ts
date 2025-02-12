@@ -9,3 +9,6 @@ export const settingsContract = c.router({
     form: formsContract,
     assetType: assetTypeContract,
 })
+
+export * from './forms';
+export * from './assetType';

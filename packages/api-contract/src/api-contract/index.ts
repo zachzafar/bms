@@ -5,6 +5,7 @@ import { settingsContract } from './settings';
 import { bookingContract } from './booking';
 import { maintenanceContract } from './maintenance';
 
+
 const c = initContract();
 
 
@@ -15,3 +16,9 @@ export const contract = c.router({
   booking: bookingContract,
   maintenance: maintenanceContract,
 });
+
+export * from './auth';
+export * from './assets';
+export * from './settings';
+export * from './booking';
+export * from './maintenance';

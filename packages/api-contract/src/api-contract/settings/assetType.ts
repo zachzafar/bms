@@ -1,17 +1,34 @@
 import { initContract } from "@ts-rest/core";
 
 import { z } from "zod";
-import { InsertAssetTypeSchema, SelectAssetTypeSchema, UpdateAssetTypeSchema } from "../../database-schema";
+import { Asset, InsertAssetPropertySchema, InsertAssetTypeSchema, SelectAssetPropertySchema, SelectAssetTypeSchema, UpdateAssetTypeSchema } from "../../database-schema";
 
 const c = initContract();
+
+export const AssetTypeWithPropertiesSchema = z.object({
+    assetType: InsertAssetTypeSchema,
+    properties: z.object({
+        existingProperies: z.array(z.number()),
+        newProperties: z.array(InsertAssetPropertySchema)
+}).optional()
+})
+
+export const SelectAssetTypeWithPropertiesSchema = z.object({
+    assetType: SelectAssetTypeSchema,
+    properties: z.object({
+        existingProperies: z.array(z.number()),
+        newProperties: z.array(InsertAssetPropertySchema)
+}).optional()
+})
+
+export type SelectAssetTypeWithProperties = z.infer<typeof SelectAssetTypeWithPropertiesSchema>
+export type AssetTypeWithProperties = z.infer<typeof AssetTypeWithPropertiesSchema>
 
 export const assetTypeContract = c.router({
     createAssetType: {
         method: 'POST',
         path: '/asset-type',
-        body: z.object({
-            assetType: InsertAssetTypeSchema
-        }),
+        body: AssetTypeWithPropertiesSchema,
         responses: {
             201: z.object({
                 id: z.number(),
@@ -31,7 +48,10 @@ export const assetTypeContract = c.router({
         method: 'GET',
         path: '/asset-type/:id',
         responses: {
-            200: SelectAssetTypeSchema,
+            200: z.object({
+                assetType: SelectAssetTypeSchema,
+                properties: z.array(SelectAssetPropertySchema)
+            }),
             404: z.object({
                 message: z.string()
             })
@@ -45,10 +65,14 @@ export const assetTypeContract = c.router({
         method: 'PUT',
         path: '/asset-type/:id',
         body: z.object({
-            assetType: UpdateAssetTypeSchema
-        }),
+            assetType: UpdateAssetTypeSchema,
+            properties: z.object({
+                existingProperies: z.array(z.number()),
+                newProperties: z.array(InsertAssetPropertySchema)
+        }).optional()
+    }),
         responses: {
-            200: SelectAssetTypeSchema
+            200: z.null()
         },
         pathParams: z.object({
             id: z.number()
@@ -66,5 +90,15 @@ export const assetTypeContract = c.router({
         pathParams: z.object({
             id: z.number()
         }),
-        summary: 'Delete asset type by id'}
+        summary: 'Delete asset type by id'
+    },
+    getProperties: {
+        method: 'GET',
+        path: '/properties',
+        responses: {
+            200: z.array(SelectAssetPropertySchema)
+        },
+        summary: 'Get all asset properties'
+    },
+
 })

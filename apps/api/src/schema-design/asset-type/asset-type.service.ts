@@ -1,4 +1,4 @@
-import { Inject, Injectable } from '@nestjs/common';
+import { Inject, Injectable, NotFoundException } from '@nestjs/common';
 import { MySql2Database } from 'drizzle-orm/mysql2';
 import { DrizzleAsyncProvider } from 'src/drizzle/drizzle.provider';
 import * as schema from '@repo/api-contract';
@@ -17,7 +17,29 @@ export class AssetTypeService {
     }
 
     async getAssetType(id: number) {
-        return this.db.query.AssetType.findFirst({ where: (assetType, { eq }) => eq(assetType.id, id) });
+        const assetType = await this.db.query.AssetType.findFirst({ where: (assetType, { eq }) => eq(assetType.id, id), with: { assetTypeHasProperties: { with: { assetProperty: true}}, } });
+
+        if (!assetType) {
+            throw new NotFoundException('Asset type not found');
+        }
+        const {
+            description,
+            tenantId,
+            name,
+            createdAt,
+            updatedAt,
+            assetTypeHasProperties,
+          } = assetType || {};
+       
+        return {
+            description,
+            tenantId,
+            id,
+            name,
+            createdAt,
+            updatedAt,
+            properties: assetTypeHasProperties?.map((relation) => relation.assetProperty) ?? []
+        }
     }
 
     async createAssetType(data: InsertAssetType) {

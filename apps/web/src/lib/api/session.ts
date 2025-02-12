@@ -11,7 +11,6 @@ export type Session = {
   user: {
     id: string;
     name: string;
-    role: 'ADMIN' | 'SYSADMIN' | "STAFF" | "OWNER" | "CUSTOMER"
   };
   accessToken: string;
   refreshToken: string;

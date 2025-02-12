@@ -5,8 +5,6 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import AssetTypes from './AssetTypes';
 import Categories from './Categories';
 import BookingForms from './BookingForms';
-
-import Properties from './Properties';
 import { useState } from 'react';
 
 export default function Settings() {
@@ -20,15 +18,11 @@ export default function Settings() {
       <Tabs value={activeTab} onValueChange={setActiveTab} className='w-full'>
         <TabsList>
           <TabsTrigger value='asset-types'>Asset Types</TabsTrigger>
-          <TabsTrigger value='properties'>Properties</TabsTrigger>
           <TabsTrigger value='tags'>Tags</TabsTrigger>
           <TabsTrigger value='booking-forms'>Booking Forms</TabsTrigger>
         </TabsList>
         <TabsContent value='asset-types'>
           <AssetTypes />
-        </TabsContent>
-        <TabsContent value='properties'>
-          <Properties />
         </TabsContent>
         <TabsContent value='tags'>
           <Categories />

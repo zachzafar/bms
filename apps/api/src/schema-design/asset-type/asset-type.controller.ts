@@ -31,7 +31,10 @@ export class AssetTypeController {
             if (!assetType) {
                 return { status: 404, body: { message: 'Asset type not found' }};
             }
-            return { status: 200, body: assetType };
+            const { properties, ...assetTypeData } = assetType
+    
+           
+            return { status: 200, body: { assetType: assetTypeData, properties} };
         });
     }
 
@@ -42,7 +45,8 @@ export class AssetTypeController {
             if (!assetType) {
                 return { status: 500, body: { message: 'Error updating asset type' } };
             }
-            return { status: 200, body: assetType };
+         
+            return { status: 200, body: null};
         });
     }
 
