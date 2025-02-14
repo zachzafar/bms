@@ -9,7 +9,7 @@ import {
     SidebarMenuItem,
     SidebarFooter,
   } from "@/components/ui/sidebar"
-import { Home, Box, Calendar, Clipboard,Cog, Settings } from "lucide-react"
+import { Home, Box, Calendar, Clipboard,Cog, Settings, User2 } from "lucide-react"
 import Logout from "./Logout"
 
 
@@ -40,6 +40,11 @@ const items = [
         title: "Reports",
         url: "/reports",
         icon: Clipboard,
+      },
+      {
+        title:"Users",
+        url:"/users",
+        icon: User2
       },
     {
       title: "Settings",
