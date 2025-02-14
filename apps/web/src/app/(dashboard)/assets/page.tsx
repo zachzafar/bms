@@ -22,34 +22,17 @@ import { PlusIcon, Pencil } from 'lucide-react';
 import AddAssetForm from './AddAssetForm';
 
 import { authClient } from '@/lib/api/publicClient';
+import { SelectAsset } from '@repo/api-contract';
 
-type Assets = {
-  status: 200;
-  body: {
-      description: string | null;
-      id: number;
-      name: string;
-      createdAt: Date;
-      updatedAt: Date | null;
-      available: boolean;
-      requiresApproval: boolean;
-      assetTypeId: bigint | null;
-      groupId: bigint | null;
-      ownerId: bigint | null;
-      tenantId: string;
-  }[];
-  headers: Headers;
-} | undefined
 
 export default function AssetsPage() {
     const { data: assets } = authClient.assets.getAssets.useQuery({
         queryKey: ['assets']
     });
 
-    console.log("Assets",assets);
 
   return (
-    <main className='flex flex-1 flex-col gap-4 p-4 md:gap-8 md:p-6'>
+    <>
       <div className='flex items-center'>
         <h1 className='font-semibold text-lg md:text-2xl'>Assets</h1>
         <Dialog>
@@ -83,23 +66,33 @@ export default function AssetsPage() {
           </TableHeader>
           <TableBody>
             {assets?.status === 200 ? assets.body.map((asset) => (
-              <TableRow key={asset.id}>
-                <TableCell className='font-medium'>{asset.id}</TableCell>
-                <TableCell>{asset.name}</TableCell>
-                <TableCell>{asset.assetTypeId}</TableCell>
-                <TableCell>{asset.available}</TableCell>
-                <TableCell>{asset.requiresApproval ? 'Yes' : 'No'}</TableCell>
-                <TableCell className='text-right'>
-                  <Button variant='ghost' size='sm'>
-                    <Pencil className='mr-2 h-4 w-4' />
-                    Edit
-                  </Button>
-                </TableCell>
-              </TableRow>
+              <Row asset={asset}/>
             )): <TableRow><TableCell colSpan={7}>No assets found</TableCell></TableRow>}
           </TableBody>
         </Table>
       </div>
-    </main>
+    </>
+  );
+}
+
+
+const Row = ({ asset }: { asset: SelectAsset }) => {
+  const { data: status, isLoading: statusIsLoading } = authClient.booking.getAssetStatus.useQuery({
+    queryKey: ['asset-status', asset.id], queryData: { params: { id: asset.id }, query: { start: new Date(), end: new Date() } }
+  });
+  return (
+    <TableRow key={asset.id}>
+      <TableCell>{asset.id}</TableCell>
+      <TableCell>{asset.name}</TableCell>
+      <TableCell>{asset.assetTypeId}</TableCell>
+      <TableCell>{statusIsLoading ? "Loading Status..." : status?.body.status}</TableCell>
+      <TableCell>{asset.requiresApproval ? 'Yes' : 'No'}</TableCell>
+      <TableCell>
+        <Button variant='ghost' size='sm'>
+          <Pencil className='mr-2 h-4 w-4' />
+          Edit
+        </Button>
+      </TableCell>
+    </TableRow>
   );
 }

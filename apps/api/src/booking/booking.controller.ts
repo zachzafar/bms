@@ -47,4 +47,12 @@ export class BookingController {
             return { status: 204, body: undefined};
         });
     }
+
+    @TsRestHandler(contract.booking.getAssetStatus)
+    async getAssetStatus(): Promise<ReturnType<typeof tsRestHandler>> {
+        return tsRestHandler(contract.booking.getAssetStatus, async ({ params, query }) => {
+            const status = await this.bookingService.checkAvailability(params.id,query.start,query.end);
+            return { status: 200, body:{ status }};
+        });
+    }
 }

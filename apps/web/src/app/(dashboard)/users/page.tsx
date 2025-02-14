@@ -160,7 +160,7 @@ export default function Component() {
   const paginate = (pageNumber: SetStateAction<number>) => setCurrentPage(pageNumber);
 
   return (
-    <main className='flex-1'>
+    <>
       <div className='container mx-auto py-10'>
         <h1 className='text-3xl font-bold mb-8'>User Management</h1>
 
@@ -466,6 +466,6 @@ export default function Component() {
           </CardContent>
         </Card>
       </div>
-    </main>
+    </>
   );
 }

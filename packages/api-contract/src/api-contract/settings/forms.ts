@@ -20,5 +20,28 @@ export const formsContract = c.router({
             })
         },
         summary: 'Create a new form'
-    }
+    },
+    getForms: {
+        method: 'GET',
+        path: '/form',
+        responses: {
+            200: z.array(SelectBookingFormSchema)
+        },
+        summary: 'Get all forms'
+    },
+    getForm: {
+        method: 'GET',
+        path: '/form/:id',
+        responses: {
+            200: z.object({
+                form: SelectBookingFormSchema,
+                fields: z.array(SelectBookingFormSchema)
+            }),
+            404: z.undefined()
+        },
+        pathParams: z.object({
+            id: z.string()
+        }),
+        summary: 'Get a form by id'
+    },
 })

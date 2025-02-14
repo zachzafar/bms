@@ -1,23 +1,16 @@
 'use client';
 
 import { Button } from '@/components/ui/button';
-import { FormField, FormItem, FormLabel,Form } from '@/components/ui/form';
+import { FormField, FormItem, FormLabel,Form, FormControl, FormDescription, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
-import { TableBody } from '@/components/ui/table';
 import { authClient } from '@/lib/api/publicClient';
-import { ASSET_TYPE_QUERY_KEY, GROUPS_QUERY_KEY } from '@/lib/api/queryKeys';
+import { ASSET_TYPE_QUERY_KEY, FORMS_QUERY_KEY } from '@/lib/api/queryKeys';
 import { useSession } from '@/lib/api/useSession';
 
 import { zodResolver } from '@hookform/resolvers/zod';
-import {
-  Select,
-  SelectTrigger,
-  SelectValue,
-  SelectContent,
-  SelectItem,
-} from '@radix-ui/react-select';
+
 import { InsertAsset, InsertAssetSchema } from '@repo/api-contract';
 
 import { Controller, SubmitHandler, useForm, useFormState } from 'react-hook-form';
@@ -26,13 +19,12 @@ function AddAssetForm() {
   const {session} = useSession()
   const { mutate, isPending } = authClient.assets.createAsset.useMutation();
   const { data: assetTypes } = authClient.settings.assetType.getAssetTypes.useQuery({ queryKey: ASSET_TYPE_QUERY_KEY});
-  // const { data: bookingForms } = authClient.settings.form.createForm
+  const { data: bookingForms } = authClient.settings.form.getForms.useQuery({ queryKey: FORMS_QUERY_KEY });
 
 
   const form = useForm<InsertAsset>({
     resolver: zodResolver(InsertAssetSchema),
   });
-
   
   const { isSubmitting } = useFormState({ control: form.control });
 
@@ -70,17 +62,23 @@ function AddAssetForm() {
             <FormItem>
               <FormLabel htmlFor="asset-type">Asset Type</FormLabel>
               <Select onValueChange={(value) => field.onChange(Number(value))} value={field.value?.toString()}>
+                <FormControl>
                 <SelectTrigger id="asset-type">
                   <SelectValue placeholder="Select asset type" />
                 </SelectTrigger>
+                </FormControl>
                 <SelectContent>
                   {assetTypes?.status === 200 ? assetTypes.body.map((type) => (
-                    <SelectItem key={type.id} value={type.name}>
+                    <SelectItem key={type.name} value={type.id?.toString()}>
                       {type.name}
                     </SelectItem>
                   )): <SelectItem value="No Asset Types Found">No Asset Types Found</SelectItem>}
                 </SelectContent>
               </Select>
+              <FormDescription>
+                Set the way your asset should be described
+              </FormDescription>
+              <FormMessage />
             </FormItem>
           )}
         />
@@ -107,26 +105,6 @@ function AddAssetForm() {
             )}
           /> */}
        
-
-        <FormField
-          control={form.control}
-          name="available"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel htmlFor="asset-status">Status</FormLabel>
-              <Controller
-                name="available"
-                control={form.control}
-                render={({ field }) => (
-                  <Switch
-                    id="asset-status"
-                    checked={field.value}
-                    onCheckedChange={field.onChange}
-                  />
-                )}/>
-                </FormItem>
-          )}
-        />
 
         <FormField
           control={form.control}

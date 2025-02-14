@@ -12,7 +12,6 @@ import { useForm, useFieldArray } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Form, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Checkbox } from '@/components/ui/checkbox';
-import { z } from 'zod';
 import { authClient } from '@/lib/api/publicClient';
 import { ASSET_TYPE_QUERY_KEY, PROPERTIES_QUERY_KEY } from '@/lib/api/queryKeys';
 import { AssetTypeWithProperties, AssetTypeWithPropertiesSchema, SelectAssetTypeWithProperties } from '@repo/api-contract';

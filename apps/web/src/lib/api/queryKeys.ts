@@ -4,3 +4,4 @@ export const BOOKINGS_QUERY_KEY = ['bookings'];
 export const ASSETS_QUERY_KEY = ['assets'];
 export const USERS_QUERY_KEY = ['users'];
 export const PROPERTIES_QUERY_KEY = ['properties'];
+export const FORMS_QUERY_KEY = ['forms'];

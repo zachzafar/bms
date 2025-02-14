@@ -3,7 +3,7 @@ import { MySql2Database } from 'drizzle-orm/mysql2';
 import * as schema from '@repo/api-contract';
 import { DrizzleAsyncProvider } from 'src/drizzle/drizzle.provider';
 import { type InsertBooking, type UpdateBooking, type SelectBooking, Availability, InsertAvailability } from '@repo/api-contract';
-import { and, between, eq, sql, sum } from 'drizzle-orm';
+import { and, between, eq, gte, lte, sql, sum } from 'drizzle-orm';
 import { MaintenanceService } from 'src/maintenance/maintenance.service';
 import { ExtendedSelectBooking } from '@repo/api-contract/src/api-contract/booking';
 
@@ -18,11 +18,11 @@ export class BookingService {
 
 
     async createBooking(booking: InsertBooking) {
-        const   available  = await this.checkAvailability(booking.assetId, booking.startDate, booking.endDate);
+        const status  = await this.checkAvailability(booking.assetId, booking.startDate, booking.endDate);
        
         
         
-        if (!available) {
+        if (status !== 'Available') {
           throw new ConflictException('The asset is not available for the selected dates.');
         }
 
@@ -86,8 +86,8 @@ export class BookingService {
     if (!existingBooking) {
       throw new NotFoundException('Booking not found');
     }
-    const isAvailable = await this.checkAvailability(existingBooking.assetId, booking.startDate, booking.endDate);
-    if (!isAvailable) {
+    const status = await this.checkAvailability(existingBooking.assetId, booking.startDate, booking.endDate);
+    if (status !== 'Available') {
       throw new ConflictException('The asset is not available for the selected dates.');
     }
     await this.db.update(schema.Booking).set(booking).where(eq(schema.Booking.id, booking.id)).execute();
@@ -138,14 +138,17 @@ export class BookingService {
       return Number(result[0]?.total) ?? 0;
     }
 
-    async checkAvailability(assetId: string, startDate: Date, endDate: Date): Promise<boolean> {
-      const result = await this.db.select({ exists: sql`1` })
+    async checkAvailability(assetId: string, startDate: Date, endDate: Date): Promise<"Unavailable"| "Available" | "Booked"> {
+      type STATUS = "Unavailable" | "Available" | "Booked"; 
+
+      const result = await this.db.select()
         .from(schema.Availability)
         .where(
           and(
             eq(schema.Availability.assetId, assetId),
             eq(schema.Availability.available, false),
-            sql`(start_date, end_date) OVERLAPS (${startDate}, ${endDate})`
+            lte(schema.Availability.startDate, endDate), // start_date <= your_end_date
+            gte(schema.Availability.endDate, startDate)
           )
         );
 
@@ -155,8 +158,10 @@ export class BookingService {
           sql`(start_date, end_date) OVERLAPS (${startDate}, ${endDate})`
         )
       )
-    
-      return result.length === 0 && bookings.length == 0; // Returns TRUE if the asset is available
+
+      let status:STATUS = result.length > 0 ? "Unavailable" : "Available";
+          status = bookings.length > 0 ? "Booked" : status;
+      return status 
     }
 
      async addAvailabilityException(assetId: string, startDate: Date, endDate:Date , isAvailable: boolean,price: string) {

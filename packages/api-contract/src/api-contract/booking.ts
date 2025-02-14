@@ -72,6 +72,23 @@ export const bookingContract = c.router({
         }),
         body: UpdateBookingSchema,
         summary: 'Update a booking by id'
+    },
+    getAssetStatus: {
+        method: 'GET',
+        path: '/booking/asset-status/:id',
+        responses: {
+            200:z.object({
+                status: z.enum(["Available", "Booked", "Unavailable"]),
+            })
+        },
+        query: z.object({
+            start: z.date(),
+            end: z.date()
+        }),
+        pathParams: z.object({
+            id: z.string()
+        }),
+        summary: 'Get asset status by id'
     }
     
 })
