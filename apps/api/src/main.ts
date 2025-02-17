@@ -6,12 +6,13 @@ import { contract } from '@repo/api-contract';
 import { JwtGuardGuard } from './auth/guards/jwt-guard/jwt-guard.guard';
 import { Reflector } from '@nestjs/core';
 import { Logger } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
   
   app.enableCors({
-    origin: ['http://localhost:3000','http://147.182.188.77'],
+    origin: process.env.CORS_ORIGIN,
     methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
     credentials: true,
   });
