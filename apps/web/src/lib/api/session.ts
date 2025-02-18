@@ -26,6 +26,8 @@ export async function createSession(payload: Session) {
     Date.now() + 7 * 24 * 60 * 60 * 1000
   );
 
+
+
   const session = await new SignJWT(payload)
     .setProtectedHeader({ alg: "HS256" })
     .setIssuedAt()
@@ -34,10 +36,11 @@ export async function createSession(payload: Session) {
 
   cookies().set("session", session, {
     httpOnly: true,
-    secure: true,
+    secure: process.env.SECURE === "true",
     expires: expiredAt,
     sameSite: "lax",
     path: "/",
+    domain: process.env.NEXT_PUBLIC_URL ?? "localhost",
   });
 }
 
