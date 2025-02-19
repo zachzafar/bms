@@ -11,6 +11,10 @@ node_modules
 .env.development.local
 .env.test.local
 
+
+# Allow only env.production
+!env.production
+
 # Testing
 coverage
 

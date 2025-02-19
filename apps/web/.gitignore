@@ -26,7 +26,10 @@ yarn-debug.log*
 yarn-error.log*
 
 # env files (can opt-in for commiting if needed)
-.env*
+
+
+# Allow only env.production
+!env.production
 
 # vercel
 .vercel
