@@ -25,7 +25,7 @@ export async function createSession(payload: Session) {
   const expiredAt = new Date(
     Date.now() + 7 * 24 * 60 * 60 * 1000
   );
-
+  
 
 
   const session = await new SignJWT(payload)
@@ -40,7 +40,7 @@ export async function createSession(payload: Session) {
     expires: expiredAt,
     sameSite: "lax",
     path: "/",
-    domain: process.env.NEXT_PUBLIC_URL ?? "localhost",
+    domain: process.env.DOMAIN,
   });
 }
 

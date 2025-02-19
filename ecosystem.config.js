@@ -13,7 +13,7 @@ module.exports = {
           DATABASE_PASSWORD:"rootpassword",
           DATABASE_NAME:"mydatabase",
           DATABASE_URL:"mysql://root:rootpassword@localhost:3306/mydatabase",
-          CORS_ORIGIN:"http://147.182.188.77/api",
+          CORS_ORIGIN:"https://www.bookos.xyz",
           REFRESH_JWT_SECRET:"3fb3b3c67fb2b966540d4f0033cdc6035dda30cd41083f176625008d7f2a2768382bc888aeb1a88ed95f2e90b0c9e0c8cdf2b7b872db95376d7c0ee472a25f61",
           REFRESH_JWT_EXPIRES_IN:"1d",
           JWT_EXPIRES_IN:"5m",
@@ -28,9 +28,8 @@ module.exports = {
         env: {
           NODE_ENV: 'production',
           SESSION_SECRET_KEY:'8ac41fcacd17dac40d0240c2198519c29e3a07c6ee846d93b37d9a755beabbb9db26d2e7eeb15c6eeb401e193cca0e6c38c07a0cedfdfbead7c90d47eea977cb',
-          NEXT_PUBLIC_API_URL:'http://147.182.188.77/api',
-          NEXT_PUBLIC_URL:'http://147.182.188.77',
-          SECURE: 'false',
+          SECURE: 'true',
+          DOMAIN: 'https://www.bookos.xyz'
         },
       },
     ],

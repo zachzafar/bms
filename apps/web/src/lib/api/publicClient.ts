@@ -4,9 +4,8 @@ import  axios, { AxiosError, AxiosResponse, isAxiosError, Method } from 'axios';
 import { memoizedRefreshToken } from "./refreshToken";
 import { getSession } from "./session";
 
-export const baseUrl = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3001';
+export const baseUrl = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3001'
 
-console.log('baseUrl:', baseUrl)
 
 export const client = initTsrReactQuery(contract,{
     baseUrl
