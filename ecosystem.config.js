@@ -29,7 +29,7 @@ module.exports = {
           NODE_ENV: 'production',
           SESSION_SECRET_KEY:'8ac41fcacd17dac40d0240c2198519c29e3a07c6ee846d93b37d9a755beabbb9db26d2e7eeb15c6eeb401e193cca0e6c38c07a0cedfdfbead7c90d47eea977cb',
           SECURE: 'true',
-          DOMAIN: 'https://www.bookos.xyz'
+          DOMAIN: 'bookos.xyz'
         },
       },
     ],
