@@ -7,7 +7,7 @@ export const DrizzleAsyncProvider = 'DrizzleAsyncProvider';
 import { Provider } from '@nestjs/common';
 
 export const init = async (connectionString: string) => {
-  const connection = await mysql.createConnection(connectionString);
+  const connection =  mysql.createPool(connectionString);
 
     return drizzle(connection, { schema, mode: 'default' }) as MySql2Database<typeof schema>;
 }
@@ -18,14 +18,19 @@ export const drizzleProvider: Provider[] = [
     inject: [ConfigService],
     useFactory: async (configService: ConfigService) => {
       
-      const connectionOptions: mysql.ConnectionOptions = {
+      const connectionOptions: mysql.PoolOptions = {
         host: configService.get<string>('DATABASE_HOST'),
         port: configService.get<number>('DATABASE_PORT'),
         user: configService.get<string>('DATABASE_USER'),
         password: configService.get<string>('DATABASE_PASSWORD'),
         database: configService.get<string>('DATABASE_NAME'),
+        waitForConnections: true,
+        connectionLimit: 10, // Adjust this based on traffic
+        queueLimit: 0,
+        enableKeepAlive: true, // Ensures the connection doesn't close unexpectedly
+        keepAliveInitialDelay: 10000, 
       };
-      const connection = await mysql.createConnection(connectionOptions);
+      const connection =  mysql.createPool(connectionOptions);
 
       return drizzle(connection, { schema, mode: 'default' }) as MySql2Database<typeof schema>;
     },
