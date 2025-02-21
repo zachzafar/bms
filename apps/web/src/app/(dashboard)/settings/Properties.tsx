@@ -32,8 +32,10 @@ import { useSession } from '@/lib/api/useSession';
 
 
 
+
 export default function Properties() {
   const { toast } = useToast();
+  const queryClient = authClient.useQueryClient()
   const { session } = useSession()
   const { data: properties, isLoading } = authClient.settings.properties.getProperties.useQuery({
     queryKey: ['properties']
@@ -43,6 +45,8 @@ export default function Properties() {
     onSuccess: () => {
       toast({ description: 'Property created successfully' });
       form.reset();
+
+      queryClient.invalidateQueries({ queryKey: ['properties']});
     },
     onError: (error) => {
       toast({ 
@@ -66,18 +70,26 @@ export default function Properties() {
   
 
   const form = useForm<InsertAssetProperty>({
-    resolver: zodResolver(InsertAssetPropertySchema),
+    resolver: zodResolver(InsertAssetPropertySchema.omit({tenantId: true, createdAt: true, updatedAt: true, id: true})),
+    defaultValues: {
+      name: '',
+      propertyType: 'string',
+    },
   });
 
 
 
   const proccessform: SubmitHandler<InsertAssetProperty> = async (data: Omit<InsertAssetProperty,"tenantId">) => {
+        console.log("proccessing form .... adding property")
     if (session)
       createProperty({
         body: { ...data, tenantId: session?.tenants[0]}
       },{
-          onSuccess: (response) => {
-              console.log('response', response);
+          onSuccess: () => {
+            toast({ description: 'Property created successfully' });
+            form.reset();
+            // Invalidate the properties query to refresh the list
+
           }
       })
 
@@ -95,7 +107,9 @@ export default function Properties() {
         </CardHeader>
         <CardContent>
           <Form {...form}>
-            <form onSubmit={form.handleSubmit(proccessform)} className="space-y-4">
+            <form onSubmit={form.handleSubmit(proccessform)} onChange={(e) => {
+              console.log('e', e);
+            }} className="space-y-4">
               <FormField
                 control={form.control}
                 name="name"
@@ -123,9 +137,9 @@ export default function Properties() {
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        <SelectItem value="text">Text</SelectItem>
+                        <SelectItem value="string">Text</SelectItem>
                         <SelectItem value="number">Number</SelectItem>
-                        <SelectItem value="textarea">Text Box</SelectItem>
+                        <SelectItem value="textbox">Text Box</SelectItem>
                         <SelectItem value="list">List</SelectItem>
                       </SelectContent>
                     </Select>

@@ -1,6 +1,6 @@
 // app/providers.tsx
 'use client'
-
+import { authClient } from '@/lib/api/publicClient'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 
 
@@ -9,7 +9,7 @@ export default function TanstackProvider({ children }: { children: React.ReactNo
 
   return (
     <QueryClientProvider client={queryClient}>
-      {children}
+     <authClient.ReactQueryProvider>{children}</authClient.ReactQueryProvider> 
     </QueryClientProvider>
   )
 }

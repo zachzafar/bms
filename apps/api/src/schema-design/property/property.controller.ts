@@ -1,15 +1,17 @@
-import { Controller } from '@nestjs/common';
+import { Controller, Logger } from '@nestjs/common';
 import { TsRestHandler, tsRestHandler } from '@ts-rest/nest';
 import { contract as c } from "@repo/api-contract"
 import { PropertyService } from './property.service';
 
-@Controller('property')
+@Controller()
 export class PropertyController {
+  private readonly logger = new Logger(PropertyController.name);
     constructor(private PropertyService: PropertyService) {}
 
     @TsRestHandler(c.settings.properties.createProperty)
     async getProperties(): Promise<ReturnType<typeof tsRestHandler>> {
       return tsRestHandler(c.settings.properties.createProperty, async ({ body }) => {
+        this.logger.log(`Creating a new property for tenant:${body.tenantId}`);
         const propertyId = await this.PropertyService.createProperty(body);
         return { status: 200, body: propertyId };
       }); 

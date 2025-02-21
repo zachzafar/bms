@@ -12,7 +12,6 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { Form, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { authClient } from '@/lib/api/publicClient';
 import { ASSET_TYPE_QUERY_KEY, PROPERTIES_QUERY_KEY } from '@/lib/api/queryKeys';
-import { AssetTypeWithProperties, AssetTypeWithPropertiesSchema } from '@repo/api-contract';
 import {
   MultiSelector,
   MultiSelectorTrigger,
@@ -21,8 +20,18 @@ import {
   MultiSelectorList,
   MultiSelectorItem,
 } from '@/components/extension/multi-select';
+import { z } from 'zod';
+import { useSession } from '@/lib/api/useSession';
+
+const AssetTypeWithPropertiesSchema = z.object({
+  name: z.string(),
+  properties: z.array(z.number()),
+}) 
+
+type AssetTypeWithProperties = z.infer<typeof AssetTypeWithPropertiesSchema>;
 
 export default function AssetTypes() {
+  const { session } = useSession();
   const [editingAssetTypeId, setEditingAssetType] = useState<number>();
   const [selectedProperties, setSelectedProperties] = useState<string[]>([]);
   const { toast } = useToast();
@@ -35,7 +44,7 @@ export default function AssetTypes() {
     queryKey: [PROPERTIES_QUERY_KEY]
   });
 
-  const { data: editingAssetType, isLoading: isLoadingAssetTypeWithProperties } = authClient.settings.assetType.getAssetType.useQuery({
+  const { data: editingAssetType } = authClient.settings.assetType.getAssetType.useQuery({
     queryKey: [ASSET_TYPE_QUERY_KEY, editingAssetTypeId],
     enabled: !!editingAssetTypeId,
     queryData: {
@@ -86,17 +95,17 @@ export default function AssetTypes() {
   const form = useForm<AssetTypeWithProperties>({
     resolver: zodResolver(AssetTypeWithPropertiesSchema),
     defaultValues: {
-      assetType: { name: '' },
+       name: '' ,
       properties: []
     }
   });
 
-  const { handleSubmit, reset, setValue } = form;
+  const { handleSubmit, reset } = form;
 
   useEffect(() => {
     if (editingAssetType?.status === 200) {
       reset({
-        assetType: { name: editingAssetType.body.assetType.name },
+        name: editingAssetType.body.assetType.name,
         properties: editingAssetType.body.properties.map(item => item.id)
       });
       
@@ -131,10 +140,10 @@ export default function AssetTypes() {
     if (editingAssetType?.status === 200) {
       updateAssetTypeMutation({
         params: { id: editingAssetType.body.assetType.id },
-        body: formData
+        body: {...formData, assetType: { name: formData.name}}
       });
     } else {
-      addAssetTypeMutation({ body: formData });
+      addAssetTypeMutation({ body: { assetType: { name:formData.name, tenantId: session?.tenants[0] as string}, properties: formData.properties as number[] }});
     }
   };
 
@@ -165,7 +174,7 @@ export default function AssetTypes() {
             <form onSubmit={handleSubmit(processForm)} className="space-y-4">
               <FormField
                 control={form.control}
-                name="assetType.name"
+                name="name"
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Asset Type Name</FormLabel>
