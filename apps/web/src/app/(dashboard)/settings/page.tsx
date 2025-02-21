@@ -3,9 +3,10 @@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 import AssetTypes from './AssetTypes';
-import Categories from './Categories';
+import Tags from './Tags';
 import BookingForms from './BookingForms';
 import { useState } from 'react';
+import Properties from './Properties';
 
 export default function Settings() {
   const [activeTab, setActiveTab] = useState('asset-types');
@@ -20,15 +21,19 @@ export default function Settings() {
           <TabsTrigger value='asset-types'>Asset Types</TabsTrigger>
           <TabsTrigger value='tags'>Tags</TabsTrigger>
           <TabsTrigger value='booking-forms'>Booking Forms</TabsTrigger>
+          <TabsTrigger value="properties">Properties</TabsTrigger>
         </TabsList>
         <TabsContent value='asset-types'>
           <AssetTypes />
         </TabsContent>
         <TabsContent value='tags'>
-          <Categories />
+          <Tags />
         </TabsContent>
         <TabsContent value='booking-forms'>
           <BookingForms />
+        </TabsContent>
+        <TabsContent value="properties">
+           <Properties/>
         </TabsContent>
       </Tabs>
     </>

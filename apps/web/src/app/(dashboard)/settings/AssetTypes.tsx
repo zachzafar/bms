@@ -1,83 +1,149 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useToast } from '@/components/ui/use-toast';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from '@/components/ui/table';
-import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select';
-import { Pencil, Trash2, XIcon } from 'lucide-react';
-import { useForm, useFieldArray } from 'react-hook-form';
+import { Pencil, Trash2 } from 'lucide-react';
+import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Form, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
-import { Checkbox } from '@/components/ui/checkbox';
 import { authClient } from '@/lib/api/publicClient';
 import { ASSET_TYPE_QUERY_KEY, PROPERTIES_QUERY_KEY } from '@/lib/api/queryKeys';
-import { AssetTypeWithProperties, AssetTypeWithPropertiesSchema, SelectAssetTypeWithProperties } from '@repo/api-contract';
-
-
-
+import { AssetTypeWithProperties, AssetTypeWithPropertiesSchema } from '@repo/api-contract';
+import {
+  MultiSelector,
+  MultiSelectorTrigger,
+  MultiSelectorInput,
+  MultiSelectorContent,
+  MultiSelectorList,
+  MultiSelectorItem,
+} from '@/components/extension/multi-select';
 
 export default function AssetTypes() {
-  const [editingAssetType, setEditingAssetType] = useState<SelectAssetTypeWithProperties | null>(null);
-  const { data: assetTypes, isLoading: isLoadingAssetTypes } = authClient.settings.assetType.getAssetTypes.useQuery({ queryKey: ASSET_TYPE_QUERY_KEY });
-  const { data: properties, isLoading: isLoadingProperties } = authClient.settings.assetType.getProperties.useQuery({queryKey: PROPERTIES_QUERY_KEY});
-  const { mutate: addAssetTypeMutation } = authClient.settings.assetType.createAssetType.useMutation();
-  const { mutate: updateAssetTypeMutation } = authClient.settings.assetType.updateAssetType.useMutation();
-
-
+  const [editingAssetTypeId, setEditingAssetType] = useState<number>();
+  const [selectedProperties, setSelectedProperties] = useState<string[]>([]);
   const { toast } = useToast();
 
-  const form = useForm<AssetTypeWithProperties>({
-    resolver: zodResolver(AssetTypeWithPropertiesSchema),
+  const { data: assetTypes, isLoading: isLoadingAssetTypes } = authClient.settings.assetType.getAssetTypes.useQuery({ 
+    queryKey: [ASSET_TYPE_QUERY_KEY] 
   });
 
-  const { fields, append, remove } = useFieldArray({
-    control: form.control,
-    name: 'properties.newProperties',
+  const { data: properties, isLoading: isLoadingProperties } = authClient.settings.assetType.getProperties.useQuery({
+    queryKey: [PROPERTIES_QUERY_KEY]
   });
 
-  const { handleSubmit, reset, setValue, watch } = form;
+  const { data: editingAssetType, isLoading: isLoadingAssetTypeWithProperties } = authClient.settings.assetType.getAssetType.useQuery({
+    queryKey: [ASSET_TYPE_QUERY_KEY, editingAssetTypeId],
+    enabled: !!editingAssetTypeId,
+    queryData: {
+      params: { id: editingAssetTypeId as number}
+    }
+  });
 
-  const watchSchema = watch('properties');
-
-  const processForm = async (data: AssetTypeWithProperties) => {
-    try {
-      if (editingAssetType) {
-        updateAssetTypeMutation({
-          params: { id: editingAssetType.assetType.id },
-          body: data
-        });
-        toast({ description: 'Asset type was updated successfully' });
-        setEditingAssetType(null);
-      } else {
-        addAssetTypeMutation({ body: data });
-        toast({ description: 'New asset type was added successfully' });
-      }
+  const { mutate: addAssetTypeMutation } = authClient.settings.assetType.createAssetType.useMutation({
+    onSuccess: () => {
+      toast({ description: 'New asset type was added successfully' });
       reset();
-    } catch (error) {
+      setSelectedProperties([]);
+    },
+    onError: (error) => {
       toast({
         description: `Error occurred: ${error instanceof Error ? error.message : 'Unknown error'}`,
         variant: 'destructive',
       });
     }
+  });
+
+  const { mutate: updateAssetTypeMutation } = authClient.settings.assetType.updateAssetType.useMutation({
+    onSuccess: () => {
+      toast({ description: 'Asset type was updated successfully' });
+      setEditingAssetType(undefined);
+      reset();
+    },
+    onError: (error) => {
+      toast({
+        description: `Error occurred: ${error instanceof Error ? error.message : 'Unknown error'}`,
+        variant: 'destructive',
+      });
+    }
+  });
+
+  const { mutate: deleteAssetTypeMutation } = authClient.settings.assetType.deleteAssetType.useMutation({
+    onSuccess: () => {
+      toast({ description: 'Asset type was deleted successfully' });
+    },
+    onError: (error) => {
+      toast({
+        description: `Error occurred: ${error instanceof Error ? error.message : 'Unknown error'}`,
+        variant: 'destructive',
+      });
+    }
+  });
+
+  const form = useForm<AssetTypeWithProperties>({
+    resolver: zodResolver(AssetTypeWithPropertiesSchema),
+    defaultValues: {
+      assetType: { name: '' },
+      properties: []
+    }
+  });
+
+  const { handleSubmit, reset, setValue } = form;
+
+  useEffect(() => {
+    if (editingAssetType?.status === 200) {
+      reset({
+        assetType: { name: editingAssetType.body.assetType.name },
+        properties: editingAssetType.body.properties.map(item => item.id)
+      });
+      
+      // Set selected properties for MultiSelect
+      const selectedProps = editingAssetType.body.properties.map(item => {
+
+        const property = properties?.status === 200 && 
+          properties.body.find(p => p.id === item.id);
+        return property ? property.name : '';
+      }).filter(Boolean);
+      
+      setSelectedProperties(selectedProps);
+    }
+  }, [editingAssetType, properties, reset]);
+
+  const processForm = (data: AssetTypeWithProperties) => {
+    // Convert selected property names to IDs and required status
+    const propertyIds = selectedProperties.map(propName => {
+      const property = properties?.status === 200 && 
+        properties.body.find(p => p.name === propName);
+      return property ?  property.id
+         : null;
+    })
+
+    const nonNullPropertyIds = propertyIds.filter(prop => prop !== null);
+
+    const formData = {
+      ...data,
+      properties: nonNullPropertyIds
+    };
+
+    if (editingAssetType?.status === 200) {
+      updateAssetTypeMutation({
+        params: { id: editingAssetType.body.assetType.id },
+        body: formData
+      });
+    } else {
+      addAssetTypeMutation({ body: formData });
+    }
   };
 
-  // const handleDeleteAssetType = async (id: number) => {
-  //   try {
-  //     await deleteAssetTypeMutation.mutateAsync(id);
-  //     toast({ description: 'Asset type was deleted' });
-  //   } catch (error) {
-  //     toast({
-  //       description: `Error occurred: ${error instanceof Error ? error.message : 'Unknown error'}`,
-  //       variant: 'destructive',
-  //     });
-  //   }
-  // };
+  const handleDeleteAssetType = (id: number) => {
+    deleteAssetTypeMutation({ params: { id } });
+  };
 
   const cancelEdit = () => {
-    setEditingAssetType(null);
+    setEditingAssetType(undefined);
     reset();
   };
 
@@ -99,7 +165,7 @@ export default function AssetTypes() {
             <form onSubmit={handleSubmit(processForm)} className="space-y-4">
               <FormField
                 control={form.control}
-                name="name"
+                name="assetType.name"
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Asset Type Name</FormLabel>
@@ -108,59 +174,45 @@ export default function AssetTypes() {
                   </FormItem>
                 )}
               />
-              <div className="space-y-2">
-                <FormLabel>Schema</FormLabel>
-                {fields.map((field, index) => (
-                  <div key={field.id} className="flex items-center space-x-2">
-                    <Select
-                      value={field.propertyId.toString()}
-                      onValueChange={(value) => setValue(`schema.${index}.propertyId`, Number(value))}
-                    >
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {properties?.map((property) => (
-                          <SelectItem key={property.id} value={property.id.toString()}>
-                            {property.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <Checkbox
-                      checked={field.isRequired}
-                      onCheckedChange={(checked) => setValue(`schema.${index}.isRequired`, checked as boolean)}
-                    />
-                    <Button type="button" variant="outline" size="icon" onClick={() => remove(index)}>
-                      <XIcon className="h-4 w-4" />
-                    </Button>
-                  </div>
-                ))}
-                <Button
-                  type="button"
-                  onClick={() => append({ propertyId: 0, isRequired: false })}
+              <FormItem>
+                <FormLabel>Properties</FormLabel>
+                <MultiSelector
+                  values={selectedProperties}
+                  onValuesChange={setSelectedProperties}
                 >
-                  Add field
+                  <MultiSelectorTrigger>
+                    <MultiSelectorInput placeholder="Select properties..." />
+                  </MultiSelectorTrigger>
+                  <MultiSelectorContent>
+                    <MultiSelectorList>
+                      {properties?.status === 200 && properties.body.map((property) => (
+                        <MultiSelectorItem
+                          key={property.id}
+                          value={property.name}
+                        >
+                          {property.name}
+                        </MultiSelectorItem>
+                      ))}
+                    </MultiSelectorList>
+                  </MultiSelectorContent>
+                </MultiSelector>
+                <FormMessage />
+              </FormItem>
+              <div className="flex space-x-2">
+                <Button type="submit">
+                  {editingAssetType ? 'Update Asset Type' : 'Add Asset Type'}
                 </Button>
+                {editingAssetType && (
+                  <Button type="button" variant="outline" onClick={cancelEdit}>
+                    Cancel
+                  </Button>
+                )}
               </div>
-              <Button type="submit" disabled={addAssetTypeMutation.isPending || updateAssetTypeMutation.isPending}>
-                {addAssetTypeMutation.isPending || updateAssetTypeMutation.isPending
-                  ? editingAssetType
-                    ? 'Updating Asset Type...'
-                    : 'Adding Asset Type...'
-                  : editingAssetType
-                  ? 'Update Asset Type'
-                  : 'Add Asset Type'}
-              </Button>
-              {editingAssetType && (
-                <Button type="button" variant="outline" onClick={cancelEdit}>
-                  Cancel Edit
-                </Button>
-              )}
             </form>
           </Form>
         </CardContent>
       </Card>
+
       <Card className="mt-4">
         <CardHeader>
           <CardTitle>Existing Asset Types</CardTitle>
@@ -170,41 +222,42 @@ export default function AssetTypes() {
             <TableHeader>
               <TableRow>
                 <TableHead>Name</TableHead>
-                <TableHead>Schema</TableHead>
-                <TableHead>Actions</TableHead>
+                <TableHead>Properties</TableHead>
+                <TableHead className="w-[100px]">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {assetTypes?.status === 200 ? assetTypes.body?.map((type) => (
-                <TableRow key={type.id}>
-                  <TableCell>{type.name}</TableCell>
-                  <TableCell>
-                    {type.schema.map((schemaItem) => {
-                      const property = properties?.find(p => p.id === schemaItem.propertyId);
-                      return `${property?.name} (${schemaItem.isRequired ? 'Required' : 'Optional'})`;
-                    }).join(', ')}
-                  </TableCell>
-                  <TableCell>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => {
-                        setEditingAssetType(type);
-                        reset(type);
-                      }}
-                    >
-                      <Pencil className="h-4 w-4" />
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      // onClick={() => handleDeleteAssetType(type.id)}
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
+              {assetTypes?.status === 200 ? (
+                assetTypes.body.map((type) => (
+                  <TableRow key={type.id}>
+                    <TableCell>{type.name}</TableCell>
+                    <TableCell>
+                      <div className="flex space-x-2">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => setEditingAssetType(type.id)}
+                        >
+                          <Pencil className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => handleDeleteAssetType(type.id)}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ))
+              ) : (
+                <TableRow>
+                  <TableCell colSpan={3} className="text-center">
+                    No Asset Types Found
                   </TableCell>
                 </TableRow>
-              )): <TableRow><TableCell colSpan={3}>No Asset Types Found</TableCell></TableRow>}
+              )}
             </TableBody>
           </Table>
         </CardContent>

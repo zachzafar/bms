@@ -1,10 +1,10 @@
-import { relations, sql } from "drizzle-orm";
-import { mysqlTable, serial, varchar, text, json, timestamp, index, int, uniqueIndex, boolean, bigint,mysqlEnum } from "drizzle-orm/mysql-core";
+import { relations } from "drizzle-orm";
+import { mysqlTable, serial, varchar, text, timestamp, index, uniqueIndex, boolean, bigint,mysqlEnum } from "drizzle-orm/mysql-core";
 import { createInsertSchema, createSelectSchema,  } from "drizzle-zod";
 import { Tenant } from "../tenant";
 
 import { z } from "zod";
-import { Asset, AssetHasBookingForms, AssetHasTags } from "../asset";
+import { AssetHasBookingForms, AssetHasTags } from "../asset";
 
 
 
@@ -60,7 +60,7 @@ export const AssetTypeRelations = relations(AssetType, ({ one, many }) => ({
 export const assetProperty = mysqlTable("asset_properties", {
     id: serial("id").primaryKey(),
     name: varchar("name", { length: 255 }).notNull().unique(),
-    propertyType: mysqlEnum(['number','string','textbox']).notNull(),
+    propertyType: mysqlEnum(['number','string','textbox','list']).notNull(),
     tenantId: varchar("tenant_id", { length: 255 }).notNull().references(() => Tenant.id),
     createdAt: timestamp('createdAt').notNull().defaultNow(),
     updatedAt: timestamp('updatedAt'),
@@ -139,7 +139,7 @@ export const BookingFormField = mysqlTable("booking_form_fields", {
     id: serial("id").primaryKey(),
     formId: bigint("form_id",{ mode: 'bigint', unsigned: true}).notNull().references(() => BookingForm.id),
     name: varchar("name", { length: 255 }).notNull(),
-    type: varchar("type", { length: 50 }).notNull(),
+    type: mysqlEnum(['number','text','textarea','date','time']).notNull(),
     required: boolean("required").notNull(),
 }, (table) => ({
     formIdx: index("form_idx").on(table.formId),

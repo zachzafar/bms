@@ -5,27 +5,59 @@ import { PropertyService } from './property.service';
 
 @Controller('property')
 export class PropertyController {
-    constructor(private service: PropertyService) {}
+    constructor(private PropertyService: PropertyService) {}
 
-    // @TsRestHandler(c.getProperties)
-    // async getProperties(): Promise<{ status: number; body: any }> {
-    //   return tsRestHandler(c.getProperties, async ({ params }) => {
-    //     const post = await this.service.getProperties(params.id);
+    @TsRestHandler(c.settings.properties.createProperty)
+    async getProperties(): Promise<ReturnType<typeof tsRestHandler>> {
+      return tsRestHandler(c.settings.properties.createProperty, async ({ body }) => {
+        const propertyId = await this.PropertyService.createProperty(body);
+        return { status: 200, body: propertyId };
+      }); 
+    }
   
-    //     if (!post) {
-    //       return { status: 404, body: null };
-    //     }
+    @TsRestHandler(c.settings.properties.getProperties)
+    async getPosts(): Promise<ReturnType<typeof tsRestHandler>>  {
+      return tsRestHandler(c.settings.properties.getProperties, async () => {
+        const properties = await this.PropertyService.getProperties();
   
-    //     return { status: 200, body: post };
-    //   }); 
-    // }
-  
-    // @TsRestHandler(c.getPosts)
-    // async getPosts() {
-    //   return tsRestHandler(c.getPosts, async () => {
-    //     const posts = await this.service.getPosts();
-  
-    //     return { status: 200, body: posts };
-    //   });
-    // }
+        return { status: 200, body: properties};
+      });
+    }
+
+    @TsRestHandler(c.settings.properties.getProperty)
+    async getProperty(): Promise<ReturnType<typeof tsRestHandler>>  {
+      return tsRestHandler(c.settings.properties.getProperty, async ({ params }) => {
+        const property = await this.PropertyService.getProperty(params.id);
+
+        if (!property) {
+          return { status: 404, body: { message: 'Property not found' } };
+        }
+
+        return { status: 200, body: property};
+      });
+    }
+
+    @TsRestHandler(c.settings.properties.updateProperty)
+    async updateProperty(): Promise<ReturnType<typeof tsRestHandler>>  {
+      return tsRestHandler(c.settings.properties.updateProperty, async ({ params, body }) => {
+        const property = await this.PropertyService.updateProperty(params.id, body);
+        if (!property) {
+          return { status: 404, body: { message: 'Property not found' } };
+        }
+        return { status: 200, body: property};
+      });
+    }
+
+    @TsRestHandler(c.settings.properties.deleteProperty)
+    async deleteProperty(): Promise<ReturnType<typeof tsRestHandler>>  {
+      return tsRestHandler(c.settings.properties.deleteProperty, async ({ params }) => {
+        const property = await this.PropertyService.deleteProperty(params.id);
+        if (!property) {
+          return { status: 404, body: { message: 'Property not found' } };
+        }
+        return { status: 200, body: { message: 'Property deleted'}};
+      });
+    }
+
+
 }
