@@ -7,18 +7,12 @@ const c = initContract();
 
 export const AssetTypeWithPropertiesSchema = z.object({
     assetType: InsertAssetTypeSchema,
-    properties: z.object({
-        existingProperies: z.array(z.number()),
-        newProperties: z.array(InsertAssetPropertySchema)
-}).optional()
+    properties: z.array(z.number())
 })
 
 export const SelectAssetTypeWithPropertiesSchema = z.object({
     assetType: SelectAssetTypeSchema,
-    properties: z.object({
-        existingProperies: z.array(z.number()),
-        newProperties: z.array(InsertAssetPropertySchema)
-}).optional()
+    properties: z.array(z.number())
 })
 
 export type SelectAssetTypeWithProperties = z.infer<typeof SelectAssetTypeWithPropertiesSchema>
@@ -66,10 +60,7 @@ export const assetTypeContract = c.router({
         path: '/asset-type/:id',
         body: z.object({
             assetType: UpdateAssetTypeSchema,
-            properties: z.object({
-                existingProperies: z.array(z.number()),
-                newProperties: z.array(InsertAssetPropertySchema)
-        }).optional()
+            properties: z.array(z.number())
     }),
         responses: {
             200: z.null()
@@ -82,6 +73,7 @@ export const assetTypeContract = c.router({
     deleteAssetType: {
         method: 'DELETE',
         path: '/asset-type/:id',
+        body: z.undefined(),
         responses: {
             200: z.object({
                 message: z.string()

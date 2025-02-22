@@ -46,6 +46,11 @@ const items = [
         url:"/users",
         icon: User2
       },
+      {
+        title:"Teams",
+        url:"/teams",
+        icon: User2
+      },
     {
       title: "Settings",
       url: "/settings",

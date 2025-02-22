@@ -11,12 +11,13 @@ export const formsContract = c.router({
         path: '/form',
         body: z.object({
             form : InsertBookingFormSchema,
-            fields: z.array(InsertBookingFormFieldSchema)
+            fields: z.array(InsertBookingFormFieldSchema.omit({
+                formId: true
+            }))
         }),
         responses: {
             201: z.object({
-                form: SelectBookingFormSchema,
-                fields: z.array(SelectBookingFormSchema)
+                id: z.number()
             })
         },
         summary: 'Create a new form'
@@ -37,10 +38,9 @@ export const formsContract = c.router({
                 form: SelectBookingFormSchema,
                 fields: z.array(SelectBookingFormSchema)
             }),
-            404: z.undefined()
         },
         pathParams: z.object({
-            id: z.string()
+            id: z.number()
         }),
         summary: 'Get a form by id'
     },
