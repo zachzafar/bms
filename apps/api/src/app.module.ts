@@ -9,12 +9,13 @@ import { ConfigModule } from '@nestjs/config';
 import { AssetsModule } from './assets/assets.module';
 import { BookingModule } from './booking/booking.module';
 import { MaintenanceModule } from './maintenance/maintenance.module';
+import { TeamsModule } from './teams/teams.module';
 
 @Module({
   imports: [DrizzleModule, SchemaDesignModule, AuthModule, UsersModule,ConfigModule.forRoot({
     isGlobal: true, // Makes ConfigService globally available
     envFilePath: '.env', // Path to your environment file
-  }), AssetsModule, BookingModule, MaintenanceModule,],
+  }), AssetsModule, BookingModule, MaintenanceModule, TeamsModule,],
   controllers: [AppController],
   providers: [AppService],
 })

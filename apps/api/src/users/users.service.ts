@@ -9,7 +9,7 @@ import { eq , and} from 'drizzle-orm';
 export class UsersService {
     constructor(@Inject(DrizzleAsyncProvider) private db: MySql2Database<typeof schema>){}
 
-    async create(userData: InsertUser,tenantId: string): Promise<schema.SelectTenantHasUsers> {
+    async createUser(userData: InsertUser,tenantId: string): Promise<string> {
         let tenantUser_id: number
         await this.db.transaction(async (tx) => {
              await tx.insert(schema.User).values(userData)
@@ -25,7 +25,7 @@ export class UsersService {
 
         if (!tenantUser) throw new InternalServerErrorException("Error occured while adding a tenant user")
 
-            return tenantUser
+            return tenantUser.userId
         
     }
 
@@ -48,6 +48,14 @@ export class UsersService {
 
     async findByEmail(email: string): Promise<SelectUser | undefined> {
         return this.db.query.User.findFirst({ where: (user, { eq }) => eq(user.email, email) });
+    }
+
+    async update(id: string, userData: Partial<InsertUser>): Promise<void>{
+        await this.db.update(schema.User).set(userData).where(eq(schema.User.id, id));
+        
+    }
+    async remove(id: string): Promise<void> {
+        await this.db.delete(schema.User).where(eq(schema.User.id, id));
     }
 
 }
