@@ -3,7 +3,7 @@ import { mysqlTable, serial, varchar, text, int, timestamp, index, uniqueIndex, 
 import { AssetType,assetProperty, BookingForm, Tags } from "../settings";
 import { Tenant, TenantTeamHasAssets } from "../tenant";
 import { Owner, User, UserHasAssets } from "../users";
-import { createSelectSchema } from "drizzle-zod";
+import { createSelectSchema, createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 import { v4 as uuid } from "uuid";
 
@@ -26,7 +26,7 @@ export const Asset = mysqlTable("assets", {
 }));
 
 export const SelectAssetSchema = createSelectSchema(Asset);
-export const InsertAssetSchema = createSelectSchema(Asset);
+export const InsertAssetSchema = createInsertSchema(Asset);
 export const UpdateAssetSchema = InsertAssetSchema.partial();
 
 export type SelectAsset = z.infer<typeof SelectAssetSchema>;

@@ -15,7 +15,11 @@ import { useRouter } from 'next/navigation';
 import { SubmitHandler, useForm, useFormState } from 'react-hook-form';
 import { z } from 'zod';
 
-const ModifiedInsertAssetSchema = InsertAssetSchema.omit({ requiresApproval: true, tenantId: true });
+const ModifiedInsertAssetSchema = z.object({
+  name:z.string().min(1, 'Asset name is required'),
+  assetTypeId:z.bigint().min(BigInt(1), 'Asset type is required')
+})
+
 type ModifiedInsertAsset = z.infer<typeof ModifiedInsertAssetSchema>;
 
 function AddAssetForm() {
@@ -32,15 +36,20 @@ function AddAssetForm() {
   const { isSubmitting } = useFormState({ control: form.control });
 
   const processform: SubmitHandler<ModifiedInsertAsset> = async (data: ModifiedInsertAsset) => {
-    if (session)
+    console.log('data', data)
+    if (session){
+      console.log("adding asset")
       mutate({
-        body: { asset: { requiresApproval: false,...data}, tenant: session?.tenants[0]}
+        body: { asset: { ...data,requiresApproval: false, assetTypeId: data.assetTypeId.toString(),}, tenant: session?.tenants[0]}
       },{
           onSuccess: (response) => {
               console.log('response', response);
               router.push(`/assets/${response.body.id}`)
+          },
+          onError: (error) => {
+              console.log('error', error);
           }
-      })
+      })}
       
   };
 
@@ -65,7 +74,7 @@ function AddAssetForm() {
           render={({ field }) => (
             <FormItem>
               <FormLabel htmlFor="asset-type">Asset Type</FormLabel>
-              <Select onValueChange={(value) => field.onChange(Number(value))} value={field.value?.toString()}>
+              <Select onValueChange={(value) => field.onChange(BigInt(value))} value={field.value?.toString()}>
                 <FormControl>
                 <SelectTrigger id="asset-type">
                   <SelectValue placeholder="Select asset type" />
