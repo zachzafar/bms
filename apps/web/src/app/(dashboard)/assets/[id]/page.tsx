@@ -21,8 +21,10 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
-import { Package2Icon, UploadIcon, XIcon } from 'lucide-react';
+import { UploadIcon, XIcon } from 'lucide-react';
 import Image from 'next/image';
+import  AssetAvailabilityCalendar  from '@/components/custom/AssetAvailabilityCalendar';
+import  AssetBookings from '@/components/custom/AssetBookings';
 
 export default function AssetDetailsPage() {
   const [asset, setAsset] = useState({
@@ -43,6 +45,9 @@ export default function AssetDetailsPage() {
 
   const [newFeature, setNewFeature] = useState('');
   const [files, setFiles] = useState([]);
+  const [images, setImages] = useState<string[]>([]);
+  const [dateRanges, setDateRanges] = useState([]);
+  const [bookings, setBookings] = useState([]); // You'll fetch this from your API
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -82,8 +87,17 @@ export default function AssetDetailsPage() {
     console.log('Files to upload:', files);
   };
 
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files || []);
+    
+    // Here you would typically upload to your backend/storage
+    // For now, we'll just create object URLs
+    const newImages = files.map(file => URL.createObjectURL(file));
+    setImages([...images, ...newImages]);
+  };
+
   return (
-    <main className='flex flex-1 flex-col gap-4 p-4 md:gap-8 md:p-6'>
+    <>
       <div className='flex items-center'>
         <h1 className='font-semibold text-lg md:text-2xl'>
           Asset Details: {asset.name}
@@ -290,12 +304,68 @@ export default function AssetDetailsPage() {
           </CardContent>
         </Card>
 
+          <AssetAvailabilityCalendar
+            initialRanges={dateRanges}
+            onRangesChange={setDateRanges}
+          />
+          
+          <AssetBookings bookings={bookings} />
+          
+          <Card className='mt-4'>
+            <CardHeader>
+              <CardTitle>Images</CardTitle>
+              <CardDescription>
+                Upload and manage images of this asset.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className='space-y-4'>
+              <div className='grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4'>
+                {images.map((image, index) => (
+                  <div key={index} className='relative aspect-square'>
+                    <Image
+                      src={image}
+                      alt={`Asset image ${index + 1}`}
+                      fill
+                      className='object-cover rounded-md'
+                    />
+                    <Button
+                      variant='destructive'
+                      size='icon'
+                      className='absolute top-2 right-2'
+                      onClick={() => {
+                        const newImages = images.filter((_, i) => i !== index);
+                        setImages(newImages);
+                      }}
+                    >
+                      <XIcon className='h-4 w-4' />
+                    </Button>
+                  </div>
+                ))}
+                <label className='border-2 border-dashed rounded-md aspect-square flex items-center justify-center cursor-pointer hover:bg-secondary/50'>
+                  <input
+                    type='file'
+                    accept='image/*'
+                    multiple
+                    className='hidden'
+                    onChange={handleImageUpload}
+                  />
+                  <div className='text-center'>
+                    <UploadIcon className='mx-auto h-8 w-8 text-muted-foreground' />
+                    <span className='mt-2 block text-sm text-muted-foreground'>
+                      Upload Images
+                    </span>
+                  </div>
+                </label>
+              </div>
+            </CardContent>
+          </Card>
+
         <CardFooter className='mt-4'>
           <Button type='submit' className='w-full'>
             Save Changes
           </Button>
         </CardFooter>
       </form>
-    </main>
+    </>
   );
 }

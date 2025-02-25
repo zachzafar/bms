@@ -4,6 +4,8 @@ import { assetsContract } from './assets';
 import { settingsContract } from './settings';
 import { bookingContract } from './booking';
 import { maintenanceContract } from './maintenance';
+import { userContract } from './users';
+import { teamsContract } from './teams';
 
 
 const c = initContract();
@@ -15,6 +17,8 @@ export const contract = c.router({
   settings: settingsContract,
   booking: bookingContract,
   maintenance: maintenanceContract,
+  users: userContract,
+  teams: teamsContract
 });
 
 export * from './auth';
@@ -22,3 +26,5 @@ export * from './assets';
 export * from './settings';
 export * from './booking';
 export * from './maintenance';
+export * from './users';
+export * from './teams';

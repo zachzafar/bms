@@ -139,7 +139,7 @@ export const BookingFormField = mysqlTable("booking_form_fields", {
     id: serial("id").primaryKey(),
     formId: bigint("form_id",{ mode: 'bigint', unsigned: true}).notNull().references(() => BookingForm.id),
     name: varchar("name", { length: 255 }).notNull(),
-    type: mysqlEnum(['number','text','textarea','date','time']).notNull(),
+    type: mysqlEnum(['number','text','textarea','date','time',"date_range","range","boolean"]).notNull(),
     required: boolean("required").notNull(),
 }, (table) => ({
     formIdx: index("form_idx").on(table.formId),

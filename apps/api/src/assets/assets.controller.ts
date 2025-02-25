@@ -1,10 +1,11 @@
-import { Controller } from '@nestjs/common';
+import { Controller, Logger } from '@nestjs/common';
 import { AssetsService } from './assets.service';
 import { TsRestHandler, tsRestHandler } from '@ts-rest/nest';
 import { contract } from '@repo/api-contract';
 
 @Controller()
 export class AssetsController {
+    private readonly logger = new Logger(AssetsController.name);
     constructor(private assetService: AssetsService) {
         
     }
@@ -31,7 +32,9 @@ export class AssetsController {
     @TsRestHandler(contract.assets.createAsset)
     async createAsset(): Promise<ReturnType<typeof tsRestHandler>> {
         return tsRestHandler(contract.assets.createAsset, async ({ body }) => {
-             const id = await this.assetService.createAsset({...body.asset,tenantId: body.tenant});
+            this.logger.log(`Creating a new asset for tenant:${body.tenant}`);
+             const id = await this.assetService.createAsset({...body.asset,assetTypeId: BigInt(body.asset.assetTypeId),tenantId: body.tenant});
+             this.logger.log(`Created asset with id: ${id}`);
             return { status: 201, body: { id } };
         });
     }

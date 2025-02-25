@@ -32,6 +32,10 @@ export const drizzleProvider: Provider[] = [
       };
       const connection =  mysql.createPool(connectionOptions);
 
+      setInterval(() => {
+        connection.query('SELECT 1');
+      },60000)
+
       return drizzle(connection, { schema, mode: 'default' }) as MySql2Database<typeof schema>;
     },
   },

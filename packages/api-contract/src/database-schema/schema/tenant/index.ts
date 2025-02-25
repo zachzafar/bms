@@ -49,7 +49,8 @@ export const TenantTeamRelations = relations(TenantTeams, ({ one ,many}) => ({
         fields: [TenantTeams.tenantId],
         references: [Tenant.id],
     }),
-    tenantTeamToAsset: many(TenantTeamHasAssets)
+    tenantTeamToAsset: many(TenantTeamHasAssets),
+    tenantTeamToUsers: many(TenantTeamHasUsers),
 }))
 
 
@@ -65,6 +66,16 @@ export const SelectTenantTeamHasUsersSchema = createSelectSchema(TenantTeamHasUs
 export type InsertTenantTeamHasUsers = z.infer<typeof InsertTenantTeamHasUsersSchema>
 export type SelectTenantTeamHasUsers = z.infer<typeof SelectTenantTeamHasUsersSchema>
 
+export const TenantTeamHasUsersRelations = relations(TenantTeamHasUsers, ({ one }) => ({
+    team: one(TenantTeams, {
+        fields: [TenantTeamHasUsers.teamId],
+        references: [TenantTeams.id]
+    }),
+    user: one(User, {
+        fields: [TenantTeamHasUsers.userId],
+        references: [User.id]
+    })
+}))
 
 export const TenantTeamHasAssets = mysqlTable("tenant_team_has_assets",{
     id: serial("id").primaryKey(),

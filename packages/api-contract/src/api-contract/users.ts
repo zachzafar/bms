@@ -1,28 +1,78 @@
 
 import { initContract } from "@ts-rest/core";
 import { z } from "zod";
+import { InsertUserSchema, SelectUserSchema } from "../database-schema";
+import { get } from "http";
 
-// export const UserInsertSchema = z.object({
-//     id: z.string().max(36),
-//     name: z.string().max(255),
-//     email: z.string().email(),
-//     password: z.string().max(255),
-//     tenantId: z.string().max(255),
-//     role: z.enum(['ADMIN','SYSADMIN',"STAFF","OWNER","CUSTOMER"]), // Enum values should be validated if needed
-//     createdAt: z.string().optional(),
-//     updatedAt: z.string().optional(),
-// });
 
-// export const UserSelectSchema = UserInsertSchema.extend({
-//     createdAt: z.string(),
-//     updatedAt: z.string(),
-// });
-
-// export type InsertUser = z.infer<typeof UserInsertSchema>
-// export type SelectUser = z.infer<typeof UserSelectSchema>
 
 const c = initContract();
 
-export const contract = c.router({
-    
+export const userContract = c.router({
+    createUser: {
+        method: "POST",
+        path: "/users/:id",
+        body:  z.object({
+             user: InsertUserSchema,
+             tenant: z.string(),
+            }),
+        responses: {
+            200: z.object({
+                id: z.string(),
+            }),
+        },
+        summary: "Create a new user"
+    },
+    getUser: {
+        method: "GET",
+        path: "/users/:tenant/:id",
+        responses: {
+            200: z.object({
+                id: z.string(),
+            }),
+        },
+        pathParams: z.object({
+            id: z.string(),
+        }),
+        summary: "Get a user"
+    },
+    getUsers: {
+        method: "GET",
+        path: "/users/:tenant",
+        responses: {
+            200: z.array(SelectUserSchema),
+        },
+        summary: "Get all users"
+    },
+    updateUser: {
+        method: "PUT",
+        path: "/users/:id",
+        body: InsertUserSchema.partial(),
+        
+        responses: {
+            200: z.object({
+                message: z.string(),
+            }),
+        },
+        pathParams: z.object({
+            id: z.string(),
+        }),
+        summary: "Update a user"
+    },
+    deleteUser: {
+        method: "DELETE",
+        path: "/users/:id",
+        responses: {
+            200: z.object({
+                id: z.string(),
+            }),
+        },
+        pathParams: z.object({
+            id: z.string(),
+        }),
+        summary: "Delete a user"
+    },  
+
+
+
 })

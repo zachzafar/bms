@@ -41,6 +41,7 @@ import { useSession } from '@/lib/api/useSession';
 import { InsertBookingFormFieldSchema } from '@repo/api-contract';
 import * as z from 'zod';
 import { Textarea } from '@/components/ui/textarea';
+import { useState } from 'react';
 
 const bookingFormSchema = z.object({
   name: z.string().min(1, 'Form name is required'),
@@ -48,11 +49,22 @@ const bookingFormSchema = z.object({
   fields: z.array(InsertBookingFormFieldSchema.omit({ formId: true })),
 });
 
+const ModifiedInsetBookingFormFieldSchema = InsertBookingFormFieldSchema.omit({
+  formId: true,
+});
+
+type Field = z.infer<typeof ModifiedInsetBookingFormFieldSchema>
 type BookingFormValues = z.infer<typeof bookingFormSchema>;
+type FieldType = Field['type'];
 
 function BookingForms() {
   const { toast } = useToast();
   const { session } = useSession();
+  const [newField,setNewField] = useState<Field>({
+    name: '',
+    type: 'text',
+    required: false,
+  })
   
   const { data: bookingForms, isLoading } = authClient.settings.form.getForms.useQuery({
     queryKey: ['bookingForms'],
@@ -150,7 +162,7 @@ function BookingForms() {
                       render={({ field }) => (
                         <FormItem className="flex-1">
                           <FormControl>
-                            <Input placeholder="Field name" {...field} />
+                            <Input disabled placeholder="Field name" {...field} />
                           </FormControl>
                           <FormMessage />
                         </FormItem>
@@ -161,7 +173,7 @@ function BookingForms() {
                       name={`fields.${index}.type`}
                       render={({ field }) => (
                         <FormItem>
-                          <Select onValueChange={field.onChange} value={field.value}>
+                          <Select disabled onValueChange={field.onChange} value={field.value}>
                             <FormControl>
                               <SelectTrigger className="w-[180px]">
                                 <SelectValue />
@@ -190,6 +202,7 @@ function BookingForms() {
                                 type="checkbox"
                                 checked={field.value}
                                 onChange={field.onChange}
+                                disabled
                               />
                               <span>Required</span>
                             </div>
@@ -207,17 +220,39 @@ function BookingForms() {
                     </Button>
                   </div>
                 ))}
-                <Button
-                  type="button"
-                  onClick={() =>
-                    append({ name: '', type: 'text' as const, required: false})
-                  }
-                >
-                  <Plus className="mr-2 h-4 w-4" />
-                  Add Field
-                </Button>
-              </div>
-
+                <div className="flex items-center space-x-2">
+                  <Input placeholder="Field name" onChange={(e) => setNewField({...newField,name: e.target.value})}/>
+                  <Select onValueChange={(v) => setNewField({...newField,type: v as FieldType})} value={newField.type}>
+                    <SelectTrigger className="w-[180px]">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="text">Text</SelectItem>
+                      <SelectItem value="number">Number</SelectItem>
+                      <SelectItem value="date">Date</SelectItem>
+                      <SelectItem value="time">Time</SelectItem>
+                      <SelectItem value="textarea">Textarea</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <div className="flex items-center space-x-2">
+                    <input
+                      type="checkbox"
+                      checked={newField.required}
+                      onChange={(e) => setNewField({...newField,required: e.target.checked})}
+                    />
+                    <span>Required</span>
+                  </div>
+                  <Button
+                    type="button"
+                    onClick={() =>
+                      append(newField)
+                    }
+                  >
+                    <Plus className="mr-2 h-4 w-4" />
+                    Add Field
+                  </Button>
+                </div>
+            </div>    
               <Button type="submit">Create Booking Form</Button>
             </form>
           </Form>

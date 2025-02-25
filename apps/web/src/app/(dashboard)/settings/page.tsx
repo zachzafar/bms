@@ -19,15 +19,11 @@ export default function Settings() {
       <Tabs value={activeTab} onValueChange={setActiveTab} className='w-full'>
         <TabsList>
           <TabsTrigger value='asset-types'>Asset Types</TabsTrigger>
-          <TabsTrigger value='tags'>Tags</TabsTrigger>
           <TabsTrigger value='booking-forms'>Booking Forms</TabsTrigger>
           <TabsTrigger value="properties">Properties</TabsTrigger>
         </TabsList>
         <TabsContent value='asset-types'>
           <AssetTypes />
-        </TabsContent>
-        <TabsContent value='tags'>
-          <Tags />
         </TabsContent>
         <TabsContent value='booking-forms'>
           <BookingForms />
