@@ -18,8 +18,8 @@ export class FormsService {
         let formId: number = 0;
         try {
             await this.db.transaction(async (tx) => {
-                const { id } = await tx.insert(schema.BookingForm).values(form).$returningId().execute()[0];
-                await tx.insert(schema.BookingFormField).values(fields.map(field => ({ ...field, formId: id }))).execute();
+                const [{ id }] = await tx.insert(schema.BookingForm).values(form).$returningId().execute()
+                await tx.insert(schema.BookingFormField).values(fields.map(field => ({ ...field, formId: BigInt(id) }))).execute();
                 formId = id;
             });
         } catch (error) {

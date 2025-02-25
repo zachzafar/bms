@@ -1,13 +1,14 @@
-import { Inject, Injectable, NotFoundException } from '@nestjs/common';
+import { Inject, Injectable, InternalServerErrorException, Logger, NotFoundException } from '@nestjs/common';
 import { MySql2Database } from 'drizzle-orm/mysql2';
 import { DrizzleAsyncProvider } from 'src/drizzle/drizzle.provider';
 import * as schema from '@repo/api-contract';
 import type { InsertAssetType, UpdateAssetType } from '@repo/api-contract';
-import type { InsertAssetProperty, UpdateAssetProperty } from '@repo/api-contract';
 import { eq } from 'drizzle-orm';
 
 @Injectable()
 export class AssetTypeService {
+    private readonly logger = new Logger(AssetTypeService.name);
+
     constructor(
         @Inject(DrizzleAsyncProvider) private db: MySql2Database<typeof schema>
     ){}
@@ -42,10 +43,35 @@ export class AssetTypeService {
         }
     }
 
-    async createAssetType(data: InsertAssetType) {
-        const newAssetTypeId = await this.db.insert(schema.AssetType).values(data).$returningId().execute();
-        
-        return newAssetTypeId[0].id;
+    async createAssetType(data: InsertAssetType, properties: number[]) {
+        try {
+            const result = await this.db.transaction(async (tx) => {
+                const [{ id }] = await tx
+                    .insert(schema.AssetType)
+                    .values(data)
+                    .$returningId();
+
+                if (properties.length > 0) {
+                    await tx
+                        .insert(schema.AssetTypeHasProperties)
+                        .values(
+                            properties.map(property => ({
+                                assetTypeId: BigInt(id),
+                                assetPropertyId: BigInt(property)
+                            }))
+                        );
+                }
+
+                return id;
+            });
+
+            return result;
+        } catch (error) {
+            this.logger.error(`Failed to create asset type: ${error}`);
+            throw new InternalServerErrorException(
+                `Failed to create asset type: ${error}`
+            );
+        }
     }
 
     async updateAssetType(id: number, data: UpdateAssetType) {

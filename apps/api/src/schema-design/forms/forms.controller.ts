@@ -1,10 +1,11 @@
-import { Controller, InternalServerErrorException, NotFoundException } from '@nestjs/common';
+import { Controller, InternalServerErrorException, Logger, NotFoundException } from '@nestjs/common';
 import { FormsService } from './forms.service';
 import { tsRestHandler, TsRestHandler } from '@ts-rest/nest';
 import { contract } from '@repo/api-contract';
 
-@Controller('forms')
+@Controller()
 export class FormsController {
+    private readonly logger = new Logger(FormsController.name);
     constructor(private formsService: FormsService) {}
 
     @TsRestHandler(contract.settings.form.getForms)
@@ -21,7 +22,7 @@ export class FormsController {
             const id = await this.formsService.createForm(body.form, body.fields);
             if (id == 0)
             throw new InternalServerErrorException('Failed to create form');
-            
+            this.logger.log(`Created form with id: ${id}`);
             return { status: 201, body: { id } };
         
         });
