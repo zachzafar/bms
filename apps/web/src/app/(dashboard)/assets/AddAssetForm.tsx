@@ -40,7 +40,7 @@ function AddAssetForm() {
     if (session){
       console.log("adding asset")
       mutate({
-        body: { asset: { ...data,requiresApproval: false, assetTypeId: data.assetTypeId.toString(),}, tenant: session?.tenants[0]}
+        body: { asset: { ...data,requiresApproval: false, assetTypeId: Number(data.assetTypeId),}, tenant: session?.tenants[0]}
       },{
           onSuccess: (response) => {
               console.log('response', response);

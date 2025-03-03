@@ -27,7 +27,18 @@ export class BookingController {
     @TsRestHandler(contract.booking.getBookings)
     async getBookings(): Promise<ReturnType<typeof tsRestHandler>> {
         return tsRestHandler(contract.booking.getBookings, async () => {
-            const bookings = await this.bookingService.getBookings();
+            const bookings = (await this.bookingService.getBookings()).map((booking) => {
+                let assetTypeId = booking.asset.assetTypeId? Number(booking.asset.assetTypeId): undefined;
+
+                return {
+                    ...booking,
+                    asset: {
+                        ...booking.asset,
+                        assetTypeId
+                    }
+                }
+            });
+
             return { status: 200, body:  bookings  };
         });
     }
@@ -53,6 +64,22 @@ export class BookingController {
         return tsRestHandler(contract.booking.getAssetStatus, async ({ params, query }) => {
             const status = await this.bookingService.checkAvailability(params.id,query.start,query.end);
             return { status: 200, body:{ status }};
+        });
+    }
+
+    @TsRestHandler(contract.booking.createAssetAvailability)
+    async createAssetAvailability(): Promise<ReturnType<typeof tsRestHandler>> {
+        return tsRestHandler(contract.booking.createAssetAvailability, async ({ body }) => {
+            const [{id}] = await this.bookingService.addAvailabilityException(body);
+            return { status: 201, body: {id}};
+        });
+    }
+
+    @TsRestHandler(contract.booking.getAssetAvailability)
+    async getAssetAvailability(): Promise<ReturnType<typeof tsRestHandler>> {
+        return tsRestHandler(contract.booking.getAssetAvailability, async ({ params }) => {
+            const availability = await this.bookingService.getAvailabilityExceptions(params.id);
+            return { status: 200, body:  availability  };
         });
     }
 }

@@ -13,7 +13,10 @@ export class AssetsController {
     @TsRestHandler(contract.assets.getAssets)
     async getAssets(): Promise<ReturnType<typeof tsRestHandler>> {
         return tsRestHandler(contract.assets.getAssets, async ({ query }) => {
-            const assets = await this.assetService.getAssets(query);
+            const assets = (await this.assetService.getAssets(query)).map((asset) => {
+                let assetTypeId = asset.assetTypeId? Number(asset.assetTypeId): undefined;
+                return {...asset, assetTypeId};
+            });
             return { status: 200, body: assets };
         });
     }
@@ -25,7 +28,9 @@ export class AssetsController {
             if (!asset) {
                 return { status: 404, message: 'Asset not found' };
             }
-            return { status: 200, body: asset };
+            let assetTypeId = asset.assetTypeId ? Number(asset.assetTypeId): undefined;
+
+            return { status: 200, body: {...asset, assetTypeId} };
         });
     }
 
@@ -33,7 +38,7 @@ export class AssetsController {
     async createAsset(): Promise<ReturnType<typeof tsRestHandler>> {
         return tsRestHandler(contract.assets.createAsset, async ({ body }) => {
             this.logger.log(`Creating a new asset for tenant:${body.tenant}`);
-             const id = await this.assetService.createAsset({...body.asset,assetTypeId: BigInt(body.asset.assetTypeId),tenantId: body.tenant});
+             const id = await this.assetService.createAsset({...body.asset,tenantId: body.tenant});
              this.logger.log(`Created asset with id: ${id}`);
             return { status: 201, body: { id } };
         });
@@ -48,7 +53,7 @@ export class AssetsController {
                 return { status: 500, body: { message: 'Error updating asset' } };
             }
 
-            return { status: 200, body: asset };
+            return { status: 200, body: {...asset, assetTypeId: Number(asset.assetTypeId)} };
         });
     }
 

@@ -12,7 +12,7 @@ export class AssetsService {
     ) {}
 
     async getAssets(query: any) {
-        return this.db.query.Asset.findMany();
+        return await this.db.query.Asset.findMany()
     }
 
     async getAssetById(id: string) {
@@ -20,8 +20,9 @@ export class AssetsService {
     }
 
     async createAsset(data: InsertAsset) {
+        let assetTypeId = data.assetTypeId ? BigInt(data.assetTypeId) : undefined;
         try{
-            const result = await this.db.insert(schema.Asset).values(data).$returningId()
+            const result = await this.db.insert(schema.Asset).values({...data, assetTypeId}).$returningId()
             return result[0].id
         } catch (e) {
             throw new InternalServerErrorException("Error occured while creating asset") 
@@ -29,11 +30,24 @@ export class AssetsService {
     }
 
     async updateAsset(id: string, data: UpdateAsset) {
-        await this.db.update(schema.Asset).set(data).where(eq(schema.Asset.id, id)).execute()
+        let assetTypeId = data.assetTypeId ? BigInt(data.assetTypeId) : undefined;
+        await this.db.update(schema.Asset).set({...data, assetTypeId }).where(eq(schema.Asset.id, id)).execute()
         return this.getAssetById(id);
     }
 
     async deleteAsset(id: string) {
         return this.db.delete(schema.Asset).where(eq(schema.Asset.id, id));
     }
+
+    async addPropertyValues(assetId: string, propertyValues: {propertyId: number,value:string}[]){
+       return await this.db.insert(schema.AssetHasProperties).values(
+            propertyValues.map(({propertyId,value}) => ({
+                assetId,
+                assetPropertyId: BigInt(propertyId),
+                value
+            }))
+        ).$returningId().execute();
+    }
+
+    
 }

@@ -23,6 +23,7 @@ import AddAssetForm from './AddAssetForm';
 
 import { authClient } from '@/lib/api/publicClient';
 import { SelectAsset } from '@repo/api-contract';
+import Link from 'next/link';
 
 
 export default function AssetsPage() {
@@ -85,13 +86,15 @@ const Row = ({ asset }: { asset: SelectAsset }) => {
       <TableCell>{asset.id}</TableCell>
       <TableCell>{asset.name}</TableCell>
       <TableCell>{asset.assetTypeId}</TableCell>
-      <TableCell>{statusIsLoading ? "Loading Status..." : status?.body.status}</TableCell>
+      <TableCell>{statusIsLoading ? "Loading Status..." : status?.body.status ?? "Unknown"}</TableCell>
       <TableCell>{asset.requiresApproval ? 'Yes' : 'No'}</TableCell>
       <TableCell>
+        <Link href={`/assets/${asset.id}`}>
         <Button variant='ghost' size='sm'>
           <Pencil className='mr-2 h-4 w-4' />
           Edit
         </Button>
+        </Link>
       </TableCell>
     </TableRow>
   );

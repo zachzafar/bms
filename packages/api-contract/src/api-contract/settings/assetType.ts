@@ -51,7 +51,7 @@ export const assetTypeContract = c.router({
             })
         },
         pathParams: z.object({
-            id: z.number()
+            id: z.string()
         }),
         summary: 'Get asset type by id'
     },
