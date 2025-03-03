@@ -18,7 +18,7 @@ export const assetsContract = c.router({
         },
         body: z.object({
             tenant: z.string(),     
-            asset: InsertAssetSchema.omit({ tenantId: true}).extend({assetTypeId:  z.string()})
+            asset: InsertAssetSchema.omit({ tenantId: true})
         }),
         summary: 'Create a new asset'
     },
@@ -68,5 +68,24 @@ export const assetsContract = c.router({
             id: z.string()
         }),
         summary: 'Delete an asset by id'
-    }
+    },
+    addAssetProperties: {
+        method: 'POST',
+        path: '/asset/:id/properties',
+        responses: {
+            200: z.object({
+                message: z.string(),
+            })
+        },
+        pathParams: z.object({
+            id: z.string()
+        }),
+        body: z.object({
+            properties: z.array(z.object({
+                propertyId: z.string(),
+                value: z.string()
+            }))
+        }),
+        summary: 'Add properties to an asset'
+    },
 })

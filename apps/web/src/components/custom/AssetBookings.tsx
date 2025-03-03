@@ -9,23 +9,14 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
+import { authClient } from '@/lib/api/publicClient';
+import { SelectAsset } from '@repo/api-contract';
 
-interface Booking {
-  id: string;
-  startDate: Date;
-  endDate: Date;
-  user: {
-    name: string;
-    email: string;
-  };
-  status: 'pending' | 'approved' | 'rejected' | 'completed';
-}
 
-interface AssetBookingsProps {
-  bookings: Booking[];
-}
 
-export default function AssetBookings({ bookings }: AssetBookingsProps) {
+export default function AssetBookings({ asset }: { asset: SelectAsset}) {
+  const { data } = authClient.booking.getBookings.useQuery({ queryKey: ['bookings',asset.id]})
+  const bookings = data?.body ?? [];
   return (
     <Card>
       <CardHeader>
@@ -47,8 +38,7 @@ export default function AssetBookings({ bookings }: AssetBookingsProps) {
                 <TableCell>{booking.startDate.toLocaleDateString()}</TableCell>
                 <TableCell>{booking.endDate.toLocaleDateString()}</TableCell>
                 <TableCell>
-                  <div>{booking.user.name}</div>
-                  <div className="text-sm text-gray-500">{booking.user.email}</div>
+                  <div>{booking.customer.userId}</div>
                 </TableCell>
                 <TableCell>
                   <span className={`capitalize ${getStatusColor(booking.status)}`}>

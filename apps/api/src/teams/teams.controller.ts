@@ -37,7 +37,7 @@ export class TeamsController {
             }
 
             const { name , tenantTeamToAsset, tenantTeamToUsers} = team
-            const assets = tenantTeamToAsset.map((asset) => asset.asset)
+            const assets = tenantTeamToAsset.map((asset) => ({...asset.asset, assetTypeId: asset.asset.assetTypeId ? Number(asset.asset.assetTypeId) : undefined}))
             const users = tenantTeamToUsers.map((user) => user.user)
 
             return {

@@ -14,19 +14,26 @@ export const Asset = mysqlTable("assets", {
     description: text("description"),
     requiresApproval: boolean("requires_approval").default(false).notNull(),
     assetTypeId: bigint("asset_type_id", { mode: 'bigint', unsigned: true}).references(() => AssetType.id),
-    bookingFormId: bigint("booking_form_id",{ mode: 'bigint', unsigned: true}).references(() => BookingForm.id),
     userId: varchar("user_id",{length: 255}).references(() => User.id),
     tenantId: varchar("tenant_id", { length: 255 }).notNull().references(() => Tenant.id),
     createdAt: timestamp('createdAt').notNull().defaultNow(),
     updatedAt: timestamp('updated_at', { mode: 'date', }).$onUpdate(() => new Date()),
 }, (table) => ({
     assetTypeIdx: index("asset_type_idx").on(table.assetTypeId),
-    bookingformIdx: index("booking_form_idx").on(table.bookingFormId),
     userIdx: index("owner_idx").on(table.userId),
 }));
 
-export const SelectAssetSchema = createSelectSchema(Asset);
-export const InsertAssetSchema = createInsertSchema(Asset);
+export const SelectAssetSchema = createSelectSchema(Asset)
+  .omit({ assetTypeId: true })
+  .extend({ 
+    assetTypeId: z.coerce.number().optional()
+  });
+
+export const InsertAssetSchema = createInsertSchema(Asset)
+  .omit({ assetTypeId: true })
+  .extend({ 
+    assetTypeId: z.coerce.number().optional()
+  });
 export const UpdateAssetSchema = InsertAssetSchema.partial();
 
 export type SelectAsset = z.infer<typeof SelectAssetSchema>;

@@ -54,7 +54,7 @@ export class BookingService {
     return {
       ...booking.booking,
       customer: booking.customer_details,
-      asset: booking.assets,
+      asset: {...booking.assets, assetTypeId: booking.assets.assetTypeId ? Number(booking.assets.assetTypeId) : undefined},
     }
     }
 
@@ -164,16 +164,12 @@ export class BookingService {
       return status 
     }
 
-     async addAvailabilityException(assetId: string, startDate: Date, endDate:Date , isAvailable: boolean,price: string) {
-      const availabilityException: InsertAvailability = {
-        startDate,
-        endDate,
-        price,
-        available: isAvailable,
-        assetId,
-      }
-      await this.db.insert(schema.Availability).values(availabilityException);
+     async addAvailabilityException(data: InsertAvailability) {
+      return await this.db.insert(schema.Availability).values(data).$returningId().execute();
     }
 
+    async getAvailabilityExceptions(assetId: string,) {
+      return await this.db.query.Availability.findMany({ where: (availability, { eq }) => eq(availability.assetId, assetId) })
+    }
 
 }

@@ -6,6 +6,8 @@ import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { SelectAsset } from '@repo/api-contract';
+import { authClient } from '@/lib/api/publicClient';
 
 interface DateRange {
   from: Date;
@@ -20,11 +22,14 @@ interface AssetAvailabilityCalendarProps {
 }
 
 export default function AssetAvailabilityCalendar({
-  initialRanges = [],
-  onRangesChange,
-}: AssetAvailabilityCalendarProps) {
+  asset }: { asset: SelectAsset}) {
+
+  const { data: availabilities} = authClient.booking.getAssetAvailability.useQuery({ queryKey: ['availability',asset.id], queryData: { params: {id: asset.id }} });
+  const { mutate } = authClient.booking.createAssetAvailability.useMutation();
+
+  const ranges = availabilities?.status == 200 ? availabilities.body.map(availability => availability): []
   const [selectedRange, setSelectedRange] = useState<DateRange>({ from: new Date(), to: new Date() });
-  const [ranges, setRanges] = useState<DateRange[]>(initialRanges);
+  
   const [price, setPrice] = useState<string>('');
   const [isBlocked, setIsBlocked] = useState(false);
 
@@ -39,10 +44,10 @@ export default function AssetAvailabilityCalendar({
       isBlocked,
     };
     const updatedRanges = [...ranges, newRange];
-    setRanges(updatedRanges);
-    onRangesChange(updatedRanges);
-    setPrice('');
-    setIsBlocked(false);
+    // setRanges(updatedRanges);
+    // onRangesChange(updatedRanges);
+    // setPrice('');
+    // setIsBlocked(false);
   };
 
   return (
@@ -56,7 +61,7 @@ export default function AssetAvailabilityCalendar({
             <Calendar
               mode="range"
               selected={selectedRange}
-              onSelect={(range) => range && handleRangeSelect(range)}
+              // onSelect={(range) => range && handleRangeSelect(range)}
               numberOfMonths={2}
               className="rounded-md border"
             />
@@ -97,10 +102,10 @@ export default function AssetAvailabilityCalendar({
               >
                 <div>
                   <div className="font-medium">
-                    {range.from.toLocaleDateString()} - {range.to.toLocaleDateString()}
+                    {range.startDate.toLocaleDateString()} - {range.endDate.toLocaleDateString()}
                   </div>
                   <div className="text-sm text-gray-500">
-                    {range.isBlocked
+                    {range.available
                       ? 'Blocked'
                       : range.price
                       ? `$${range.price}/day`
@@ -112,8 +117,8 @@ export default function AssetAvailabilityCalendar({
                   size="sm"
                   onClick={() => {
                     const updatedRanges = ranges.filter((_, i) => i !== index);
-                    setRanges(updatedRanges);
-                    onRangesChange(updatedRanges);
+                    // setRanges(updatedRanges);
+                    // onRangesChange(updatedRanges);
                   }}
                 >
                   Remove

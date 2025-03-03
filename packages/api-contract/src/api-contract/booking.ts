@@ -2,7 +2,7 @@ import { initContract } from "@ts-rest/core";
 
 import { z } from "zod";
 
-import { Customer, InsertBookingSchema, SelectAssetSchema, SelectBookingSchema, SelectCustomerSchema, UpdateBookingSchema } from "../database-schema";
+import { Customer, InsertAvailabilitySchema, InsertBookingSchema, SelectAssetSchema, SelectAvailabilitySchema, SelectBookingSchema, SelectCustomerSchema, UpdateBookingSchema } from "../database-schema";
 
 
 const c = initContract();
@@ -89,6 +89,28 @@ export const bookingContract = c.router({
             id: z.string()
         }),
         summary: 'Get asset status by id'
-    }
+    },
+    createAssetAvailability: {
+        method: 'POST',
+        path: '/booking/asset-availability',
+        responses: {
+            201: z.object({
+                id: z.number(),
+            })
+        },
+        body: InsertAvailabilitySchema,
+        summary: 'Create a new asset availability'
+    },
+    getAssetAvailability: {
+        method: 'GET',
+        path: '/booking/asset-availability/:id',
+        responses: {
+            200: z.array(SelectAvailabilitySchema)
+        },
+        pathParams: z.object({
+            id: z.string()
+        }),
+        summary: 'Get asset availability by id'
+    },
     
 })
