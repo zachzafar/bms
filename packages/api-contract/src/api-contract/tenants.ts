@@ -36,5 +36,16 @@ export const tenantsContract = c.router({
       adminUser: InsertUserSchema
     }).required({ tenant: true, adminUser: true }),
     summary: 'Create a new tenant with an admin user'
+  },
+  getTenantsDetails: {
+    method: 'GET',
+    path: '/tenant',
+    responses: {
+      200: z.array(SelectTenantSchema),
+    },
+    query: z.object({
+      tenants: z.array(z.string())
+    }),
+    summary: 'Get all tenants'
   }
 });

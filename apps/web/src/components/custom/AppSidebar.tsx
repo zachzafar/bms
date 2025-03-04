@@ -7,10 +7,8 @@ import {
     SidebarMenu,
     SidebarMenuButton,
     SidebarMenuItem,
-    SidebarFooter,
   } from "@/components/ui/sidebar"
 import { Home, Box, Calendar, Clipboard,Cog, Settings, User2 } from "lucide-react"
-import Logout from "./Logout"
 
 
 
@@ -80,9 +78,6 @@ const items = [
             </SidebarGroupContent>
           </SidebarGroup>
         </SidebarContent>
-        <SidebarFooter>
-            <Logout />
-        </SidebarFooter>
       </Sidebar>
     )
   }

@@ -24,11 +24,15 @@ import AddAssetForm from './AddAssetForm';
 import { authClient } from '@/lib/api/publicClient';
 import { SelectAsset } from '@repo/api-contract';
 import Link from 'next/link';
+import { useTenant } from '@/lib/api/useTenant';
 
 
 export default function AssetsPage() {
+    const { currentTenant } = useTenant() 
     const { data: assets } = authClient.assets.getAssets.useQuery({
-        queryKey: ['assets']
+        queryKey: ['assets'],
+        enabled: !!currentTenant,
+        queryData: { headers: { tenant: currentTenant?.id as string } }
     });
 
 
