@@ -5,7 +5,6 @@ import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/com
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { authClient } from '@/lib/api/publicClient';
-import { useSession } from '@/lib/api/useSession';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { SelectAsset } from '@repo/api-contract';
 import { useEffect } from 'react';
@@ -15,7 +14,6 @@ import { z } from 'zod';
 type DynamicFormData = Record<string, string | number | string[]>;
 
 export default function AssetTypePropertiesForm({ asset }: { asset: SelectAsset }) {
-  const { session } = useSession();
   const { mutate } = authClient.assets.addAssetProperties.useMutation();
   const { data: assetType } = authClient.settings.assetType.getAssetType.useQuery({
     queryKey: ['assetType', asset.assetTypeId],
@@ -63,7 +61,7 @@ export default function AssetTypePropertiesForm({ asset }: { asset: SelectAsset 
   }, [asset.assetTypeId]);
 
   const processForm: SubmitHandler<DynamicFormData> = async (data: DynamicFormData) => {
-    if (!session) return;
+ 
 
     try {
       // Handle form submission

@@ -30,7 +30,7 @@ export const authContract = c.router({
               token: z.string(),
               refreshToken: z.string(),
                 user: SelectUserSchema.omit({ password: true}),
-                tenants: z.array(z.string())
+                tenants: z.array(SelectTenantSchema)
             })
           },
         body: z.object({
@@ -81,9 +81,8 @@ export const authContract = c.router({
             })
         },
         headers: z.object({
-                user: SelectUserSchema ,
-                Authorization: z.string().regex(/^Bearer .+$/, 'Must be a Bearer token'),
-              }),
+          tenant: z.string()
+      }),
         summary: 'Create a new user'
     }
 })

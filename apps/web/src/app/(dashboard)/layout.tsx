@@ -1,11 +1,6 @@
-import { Inter } from 'next/font/google';
-
-import { Package2Icon } from 'lucide-react';
-;
 import Logout from '@/components/custom/Logout';
 import { SidebarProvider, SidebarTrigger } from '@/components/ui/sidebar';
 import { AppSidebar } from '@/components/custom/AppSidebar';
-import { useTenant } from '@/lib/api/useTenant';
 
 export default function RootLayout({
   children,

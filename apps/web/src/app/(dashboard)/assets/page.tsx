@@ -24,11 +24,11 @@ import AddAssetForm from './AddAssetForm';
 import { authClient } from '@/lib/api/publicClient';
 import { SelectAsset } from '@repo/api-contract';
 import Link from 'next/link';
-import { useTenant } from '@/lib/api/useTenant';
+import { StorageService } from '@/lib/api/storage';
 
 
 export default function AssetsPage() {
-    const { currentTenant } = useTenant() 
+    const currentTenant = StorageService.getTenant();
     const { data: assets } = authClient.assets.getAssets.useQuery({
         queryKey: ['assets'],
         enabled: !!currentTenant,
@@ -83,7 +83,11 @@ export default function AssetsPage() {
 
 const Row = ({ asset }: { asset: SelectAsset }) => {
   const { data: status, isLoading: statusIsLoading } = authClient.booking.getAssetStatus.useQuery({
-    queryKey: ['asset-status', asset.id], queryData: { params: { id: asset.id }, query: { start: new Date(), end: new Date() } }
+    queryKey: ['asset-status', asset.id], 
+    queryData: { 
+      params: { id: asset.id },
+      query: { start: new Date().toISOString(), end: new Date().toISOString() }
+    }
   });
   return (
     <TableRow key={asset.id}>

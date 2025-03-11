@@ -21,7 +21,7 @@ import {
   MultiSelectorItem,
 } from '@/components/extension/multi-select';
 import { z } from 'zod';
-import { useSession } from '@/lib/api/useSession';
+import { StorageService } from '@/lib/api/storage';
 
 const AssetTypeWithPropertiesSchema = z.object({
   name: z.string(),
@@ -31,7 +31,7 @@ const AssetTypeWithPropertiesSchema = z.object({
 type AssetTypeWithProperties = z.infer<typeof AssetTypeWithPropertiesSchema>;
 
 export default function AssetTypes() {
-  const { session } = useSession();
+  const tenant = StorageService.getTenant();
   const [editingAssetTypeId, setEditingAssetType] = useState<number>();
   const [selectedProperties, setSelectedProperties] = useState<string[]>([]);
   const { toast } = useToast();
@@ -48,7 +48,7 @@ export default function AssetTypes() {
     queryKey: [ASSET_TYPE_QUERY_KEY, editingAssetTypeId],
     enabled: !!editingAssetTypeId,
     queryData: {
-      params: { id: editingAssetTypeId as number}
+      params: { id: editingAssetTypeId?.toString() as string}
     }
   });
 
@@ -143,7 +143,7 @@ export default function AssetTypes() {
         body: {...formData, assetType: { name: formData.name}}
       });
     } else {
-      addAssetTypeMutation({ body: { assetType: { name:formData.name, tenantId: session?.tenants[0] as string}, properties: formData.properties as number[] }});
+      addAssetTypeMutation({ body: { assetType: { name:formData.name, tenantId: tenant?.id as string}, properties: formData.properties as number[] }});
     }
   };
 

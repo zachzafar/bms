@@ -27,16 +27,13 @@ import { Plus, Trash2 } from 'lucide-react';
 import { authClient } from '@/lib/api/publicClient';
 import { useToast } from '@/components/ui/use-toast';
 import { InsertAssetProperty,InsertAssetPropertySchema } from '@repo/api-contract';
-import { useSession } from '@/lib/api/useSession';
-
-
-
-
+import { StorageService } from '@/lib/api/storage';
 
 export default function Properties() {
   const { toast } = useToast();
   const queryClient = authClient.useQueryClient()
-  const { session } = useSession()
+  const tenant = StorageService.getTenant();
+
   const { data: properties, isLoading } = authClient.settings.properties.getProperties.useQuery({
     queryKey: ['properties']
   });
@@ -81,9 +78,9 @@ export default function Properties() {
 
   const proccessform: SubmitHandler<InsertAssetProperty> = async (data: Omit<InsertAssetProperty,"tenantId">) => {
         console.log("proccessing form .... adding property")
-    if (session)
+    if (tenant)
       createProperty({
-        body: { ...data, tenantId: session?.tenants[0]}
+        body: { ...data, tenantId: tenant.id}
       },{
           onSuccess: () => {
             toast({ description: 'Property created successfully' });

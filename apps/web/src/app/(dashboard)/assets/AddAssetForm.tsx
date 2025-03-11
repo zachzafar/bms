@@ -6,11 +6,8 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { authClient } from '@/lib/api/publicClient';
 import { ASSET_TYPE_QUERY_KEY } from '@/lib/api/queryKeys';
-import { useSession } from '@/lib/api/useSession';
-
+import { StorageService } from '@/lib/api/storage';
 import { zodResolver } from '@hookform/resolvers/zod';
-
-import { InsertAsset, InsertAssetSchema } from '@repo/api-contract';
 import { useRouter } from 'next/navigation';
 import { SubmitHandler, useForm, useFormState } from 'react-hook-form';
 import { z } from 'zod';
@@ -23,24 +20,21 @@ const ModifiedInsertAssetSchema = z.object({
 type ModifiedInsertAsset = z.infer<typeof ModifiedInsertAssetSchema>;
 
 function AddAssetForm() {
-  const {session} = useSession()
+  const tenant = StorageService.getTenant();
   const router = useRouter();
   const { mutate, isPending } = authClient.assets.createAsset.useMutation();
   const { data: assetTypes } = authClient.settings.assetType.getAssetTypes.useQuery({ queryKey: ASSET_TYPE_QUERY_KEY});
 
-
   const form = useForm<ModifiedInsertAsset>({
     resolver: zodResolver(ModifiedInsertAssetSchema)
   });
-  
-  const { isSubmitting } = useFormState({ control: form.control });
 
   const processform: SubmitHandler<ModifiedInsertAsset> = async (data: ModifiedInsertAsset) => {
     console.log('data', data)
-    if (session){
+    if (tenant){
       console.log("adding asset")
       mutate({
-        body: { asset: { ...data,requiresApproval: false, assetTypeId: Number(data.assetTypeId),}, tenant: session?.tenants[0]}
+        body: { asset: { ...data,requiresApproval: false, assetTypeId: Number(data.assetTypeId),}, tenant: tenant?.id as string}
       },{
           onSuccess: (response) => {
               console.log('response', response);
@@ -53,7 +47,6 @@ function AddAssetForm() {
       
   };
 
- 
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(processform)} className="space-y-4">
@@ -95,7 +88,7 @@ function AddAssetForm() {
             </FormItem>
           )}
         />
-        <Button type="submit" disabled={isPending || session == undefined}>
+        <Button type="submit" disabled={isPending || tenant == null}>
           {isPending ? 'Adding Asset...' : 'Add Asset'}
         </Button>
       </form>

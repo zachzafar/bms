@@ -37,11 +37,11 @@ import { useForm, useFieldArray } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { authClient } from '@/lib/api/publicClient';
 import { useToast } from '@/components/ui/use-toast';
-import { useSession } from '@/lib/api/useSession';
 import { InsertBookingFormFieldSchema } from '@repo/api-contract';
 import * as z from 'zod';
 import { Textarea } from '@/components/ui/textarea';
 import { useState } from 'react';
+import { StorageService } from '@/lib/api/storage';
 
 const bookingFormSchema = z.object({
   name: z.string().min(1, 'Form name is required'),
@@ -58,8 +58,8 @@ type BookingFormValues = z.infer<typeof bookingFormSchema>;
 type FieldType = Field['type'];
 
 function BookingForms() {
+  const tenant = StorageService.getTenant();
   const { toast } = useToast();
-  const { session } = useSession();
   const [newField,setNewField] = useState<Field>({
     name: '',
     type: 'text',
@@ -99,9 +99,9 @@ function BookingForms() {
 
   const onSubmit = (data: BookingFormValues) => {
     const { fields, ...form } = data
-    if (session) {
+    if (tenant) {
       createBookingForm({
-        body: { fields , form: { ...form, tenantId: session.tenants[0]} },
+        body: { fields , form: { ...form, tenantId: tenant.id} },
       });
     }
   };

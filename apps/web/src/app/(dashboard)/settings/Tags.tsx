@@ -25,12 +25,10 @@ import { Plus, Trash2 } from 'lucide-react';
 import { authClient } from '@/lib/api/publicClient';
 import { useToast } from '@/components/ui/use-toast';
 import { InsertTag, InsertTagSchema } from '@repo/api-contract';
-import { useSession } from '@/lib/api/useSession';
 import { Textarea } from '@/components/ui/textarea';
 
 export default function Tags() {
   const { toast } = useToast();
-  const { session } = useSession();
   const { data: tags, isLoading } = authClient.settings.tags.getTags.useQuery({
     queryKey: ['tags']
   });

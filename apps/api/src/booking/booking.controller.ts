@@ -62,7 +62,14 @@ export class BookingController {
     @TsRestHandler(contract.booking.getAssetStatus)
     async getAssetStatus(): Promise<ReturnType<typeof tsRestHandler>> {
         return tsRestHandler(contract.booking.getAssetStatus, async ({ params, query }) => {
-            const status = await this.bookingService.checkAvailability(params.id,query.start,query.end);
+            const startDate = query?.start ? new Date(query.start) : undefined;
+            const endDate = query?.end? new Date(query.end) : undefined;
+
+            if (startDate?.toString() === 'Invalid Date' || endDate?.toString() === 'Invalid Date') {
+                return { status: 400, body: { message: 'Invalid start date' }};
+            }
+
+            const status = await this.bookingService.checkAvailability(params.id, startDate && endDate ? {startDate, endDate}: undefined);
             return { status: 200, body:{ status }};
         });
     }

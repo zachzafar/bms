@@ -11,6 +11,8 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { client } from '@/lib/api/publicClient';
 import { useRouter } from 'next/navigation';
 import { createSession, Session } from '@/lib/api/session';
+import { StorageService } from '@/lib/api/storage';
+import { access } from 'fs';
 
 const loginSchema = z.object({
   email: z.string().email('Invalid email address'),
@@ -42,12 +44,15 @@ export default function LoginPage() {
         onSuccess: async (response) => {
           console.log('response', response);
       if (response.status !== 200) throw new Error('Invalid response');
+      
+      StorageService.setToken(response.body.token);
+      StorageService.setUser(response.body.user)
+      StorageService.setTenant(response.body.tenants[0])
+      StorageService.setTenantList(response.body.tenants)
 
       const session: Session = {
-      user: response.body.user,
-      accessToken: response.body.token,
       refreshToken: response.body.refreshToken,
-      tenants: response.body.tenants
+      accessToken: response.body.token
       };
 
       await createSession(session)

@@ -3,6 +3,7 @@ import { initTsrReactQuery } from "@ts-rest/react-query/v5";
 import  axios, { AxiosError, AxiosResponse, isAxiosError, Method } from 'axios';
 import { memoizedRefreshToken } from "./refreshToken";
 import { getSession } from "./session";
+import { StorageService } from "./storage";
 
 export const baseUrl = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3001'
 
@@ -18,12 +19,13 @@ const axiosInstance = axios.create({
 
 axiosInstance.interceptors.request.use(
     async (config) => {
-      const session = await getSession();
-      console.log('session:', session)
-      if (session) {
+      const accessToken = await StorageService.getToken()
+      const tenant = StorageService.getTenant()
+      if (accessToken && tenant) {
         config.headers = new axios.AxiosHeaders({
           ...config.headers,
-          Authorization: `Bearer ${session.accessToken}`,
+          Authorization: `Bearer ${accessToken}`,
+          "x-tenant-id": tenant.id,
         });
       }
   
@@ -34,18 +36,19 @@ axiosInstance.interceptors.response.use(
     (response) => response,
     async (error) => {
       const config = error?.config;
-  
+      
       if (error?.response?.status === 401 && !config?.sent) {
         config.sent = true;
-  
+        
         const result = await memoizedRefreshToken();
 
         if (!result) {
           return Promise.reject(error);
         }
         
-        console.log("Tokens",result)
-       
+        console.log("access token",result.accessToken)
+        console.log("refresh token",result.refreshToken)
+        StorageService.setToken(result.accessToken)
           config.headers = new axios.AxiosHeaders({
             ...config.headers,
             Authorization: `Bearer ${result.accessToken}`,
@@ -74,8 +77,6 @@ export const authClient = initTsrReactQuery(contract, {
       Object.entries(result.headers).forEach(([key, value]) => {
         if (value) headersObj.append(key, value.toString());
       });
-
-      console.log("Headers:", headersObj)
 
           return { status: result.status, body: result.data, headers: headersObj };
         } catch (e: Error | AxiosError | any) {

@@ -10,17 +10,23 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import BasicInfo from './BasicInfo';
 import Images from './Images';
 import AssetBookings from '@/components/custom/AssetBookings';
+import { StorageService } from '@/lib/api/storage';
 
 export default function AssetDetailsPage() {
+  const tenant = StorageService.getTenant();
   const [activeTab,setActiveTab] = useState("basic-information")
   const params = useParams();
   const { data, isLoading} = authClient.assets.getAsset.useQuery({
     queryKey: ["assets", params.id as string],
     queryData:  {
+      headers: {
+        tenant: tenant?.id as string 
+      },
       params: {
         id: params.id as string,
       },
     },
+    enabled: !!tenant
   });
 
   const asset = data?.status === 200 ? data.body : null

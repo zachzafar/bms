@@ -59,7 +59,7 @@ export class AuthService {
         }
       }
 
-      async login(email: string, password: string): Promise<{ user: Omit<SelectUser, "password">; tenants:string[] ;accessToken: string; refreshToken: string }> {
+      async login(email: string, password: string): Promise<{ user: Omit<SelectUser, "password">; tenants:SelectTenant[] ;accessToken: string; refreshToken: string }> {
 
          let  user_ = await this.db.query.User.findFirst({ where: (user,{eq}) => eq(user.email, email )})
         
@@ -69,12 +69,15 @@ export class AuthService {
       
       
 
-        let tenants = await this.db.select().from(schema.TenantHasUsers).where(eq(schema.TenantHasUsers.userId,user_.id))
+        let tenantHasUsers = await this.db.select().from(schema.TenantHasUsers).where(eq(schema.TenantHasUsers.userId,user_.id))
 
+        let tenants = await this.db.query.Tenant.findMany({ 
+            where: (tenant, { inArray }) => inArray(
+                tenant.id, 
+                tenantHasUsers.map(tenantHasUser => tenantHasUser.tenantId)
+            )
+        })
 
-        const tenantIds = tenants.map((tenant) => tenant.tenantId);
-
-        // let tenant = await this.db.query.Tenant.findMany({ where: (tenant,{eq}) => eq(tenant.id, tenants[0].tenantId) });
 
         const isValid = await verify(user_.password,password);
         
@@ -96,7 +99,7 @@ export class AuthService {
     
         return {
           user,
-          tenants: tenantIds, 
+          tenants,
           accessToken,
           refreshToken,
         };

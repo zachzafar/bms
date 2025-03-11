@@ -1,4 +1,4 @@
-import { Controller, Logger } from '@nestjs/common';
+import { Controller, Headers, Logger } from '@nestjs/common';
 import { AssetsService } from './assets.service';
 import { TsRestHandler, tsRestHandler } from '@ts-rest/nest';
 import { contract } from '@repo/api-contract';
@@ -11,8 +11,9 @@ export class AssetsController {
     }
 
     @TsRestHandler(contract.assets.getAssets)
-    async getAssets(): Promise<ReturnType<typeof tsRestHandler>> {
+    async getAssets(@Headers() headers: any): Promise<ReturnType<typeof tsRestHandler>> {
         return tsRestHandler(contract.assets.getAssets, async ({ query }) => {
+            console.log("Get assets for tenant: ", headers['x-tenant-id'] || "no tenant")
             const assets = (await this.assetService.getAssets(query)).map((asset) => {
                 let assetTypeId = asset.assetTypeId? Number(asset.assetTypeId): undefined;
                 return {...asset, assetTypeId};

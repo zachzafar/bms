@@ -42,7 +42,7 @@ export class JwtGuardGuard extends AuthGuard('jwt') {
         if (info.name === 'TokenExpiredError') {
           throw new UnauthorizedException('JWT token has expired');
         } else {
-          throw new BadRequestException('Invalid JWT token');
+          throw new UnauthorizedException('Invalid JWT token');
         }
       }
     if (!user) {

@@ -7,6 +7,8 @@ import { JwtGuardGuard } from './auth/guards/jwt-guard/jwt-guard.guard';
 import { Reflector } from '@nestjs/core';
 import { Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { TenantGuard } from './auth/guards/tenant/tenant.guard';
+import { TenantService } from './tenant/tenant.service';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
@@ -29,7 +31,8 @@ async function bootstrap() {
   const logger = new Logger('Bootstrap');
 
   const reflector = app.get(Reflector);
-  app.useGlobalGuards(new JwtGuardGuard(reflector));
+  const tenantService = app.get(TenantService)
+  app.useGlobalGuards(new JwtGuardGuard(reflector),new TenantGuard(reflector,tenantService));
 
   await app.listen(process.env.PORT ?? 3001);
   logger.log(`Application is running on: ${await app.getUrl()}`);

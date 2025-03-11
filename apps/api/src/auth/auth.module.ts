@@ -10,6 +10,11 @@ import { LocalStrategy } from './strategies/local.strategy';
 import { RefreshStrategy } from './strategies/refresh-token.strategy';
 import { UsersService } from 'src/users/users.service';
 import { DrizzleModule } from 'src/drizzle/drizzle.module';
+import { PassportModule } from '@nestjs/passport';
+import { Tenant } from '@repo/api-contract';
+import { TenantService } from 'src/tenant/tenant.service';
+
+import { TenantGuard } from './guards/tenant/tenant.guard';
 
 @Module({
   imports: [
@@ -24,6 +29,8 @@ import { DrizzleModule } from 'src/drizzle/drizzle.module';
       LocalStrategy,
       JwtStrategy,
       RefreshStrategy,
+      TenantGuard,
+      TenantService
   ],
   controllers: [AuthController]
 })
