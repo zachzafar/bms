@@ -36,7 +36,7 @@ export const AssetType = mysqlTable("asset_type", {
     updatedAt: timestamp('updatedAt'),
     tenantId: varchar("tenant_id", { length: 255 }).notNull().references(() => Tenant.id),
 }, (table) => ({
-    nameUniqueIdx: uniqueIndex("name_unique").on(table.name),
+    nameUniqueIdx: uniqueIndex("name_unique").on(table.name, table.tenantId),
 }));
 
 export const InsertAssetTypeSchema = createInsertSchema(AssetType);
