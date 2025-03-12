@@ -10,8 +10,8 @@ export class FormsService {
         @Inject(DrizzleAsyncProvider) private db: MySql2Database<typeof schema>
     ) {}
 
-    async getForms() {
-        return this.db.query.BookingForm.findMany();
+    async getForms(tenantId:string) {
+        return this.db.query.BookingForm.findMany({where: (form, { eq }) => eq(form.tenantId, tenantId), with: { fields: true }});
     }
 
     async createForm(form: schema.InsertBookingForm, fields: Omit<schema.InsertBookingFormField,"formId">[]) {

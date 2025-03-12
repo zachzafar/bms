@@ -2,19 +2,23 @@ import { Controller, Headers, Logger } from '@nestjs/common';
 import { AssetsService } from './assets.service';
 import { TsRestHandler, tsRestHandler } from '@ts-rest/nest';
 import { contract } from '@repo/api-contract';
+import { TenantService } from 'src/tenant/tenant.service';
+import * as schema from "@repo/api-contract"
 
 @Controller()
 export class AssetsController {
     private readonly logger = new Logger(AssetsController.name);
-    constructor(private assetService: AssetsService) {
+    constructor(private assetService: AssetsService,private tenantService: TenantService) {
         
     }
 
     @TsRestHandler(contract.assets.getAssets)
     async getAssets(@Headers() headers: any): Promise<ReturnType<typeof tsRestHandler>> {
         return tsRestHandler(contract.assets.getAssets, async ({ query }) => {
-            console.log("Get assets for tenant: ", headers['x-tenant-id'] || "no tenant")
-            const assets = (await this.assetService.getAssets(query)).map((asset) => {
+            this.logger.log("Get assets for tenant: ", headers['x-tenant-id'] || "no tenant")
+            const tenantId = headers['x-tenant-id'];
+            
+            const assets = (await this.assetService.getAssets(query,tenantId)).map((asset) => {
                 let assetTypeId = asset.assetTypeId? Number(asset.assetTypeId): undefined;
                 return {...asset, assetTypeId};
             });
@@ -23,8 +27,10 @@ export class AssetsController {
     }
 
     @TsRestHandler(contract.assets.getAsset)
-    async getAssetById(): Promise<ReturnType<typeof tsRestHandler>> {
+    async getAssetById(@Headers() headers: any): Promise<ReturnType<typeof tsRestHandler>> {
         return tsRestHandler(contract.assets.getAsset, async ({ params }) => {
+            const tenantId = headers['x-tenant-id'];
+            await this.tenantService.validateTenantAccess(tenantId,schema.Asset,params.id)
             const asset = await this.assetService.getAssetById(params.id);
             if (!asset) {
                 return { status: 404, message: 'Asset not found' };
@@ -36,18 +42,21 @@ export class AssetsController {
     }
 
     @TsRestHandler(contract.assets.createAsset)
-    async createAsset(): Promise<ReturnType<typeof tsRestHandler>> {
+    async createAsset(@Headers() headers: any): Promise<ReturnType<typeof tsRestHandler>> {
         return tsRestHandler(contract.assets.createAsset, async ({ body }) => {
-            this.logger.log(`Creating a new asset for tenant:${body.tenant}`);
-             const id = await this.assetService.createAsset({...body.asset,tenantId: body.tenant});
+            const tenantId = headers['x-tenant-id'];
+            this.logger.log(`Creating a new asset for tenant:${tenantId}`);
+             const id = await this.assetService.createAsset({...body.asset,tenantId});
              this.logger.log(`Created asset with id: ${id}`);
             return { status: 201, body: { id } };
         });
     }
 
     @TsRestHandler(contract.assets.updateAsset)
-    async updateAsset(): Promise<ReturnType<typeof tsRestHandler>> {
+    async updateAsset(@Headers() headers: any): Promise<ReturnType<typeof tsRestHandler>> {
         return tsRestHandler(contract.assets.updateAsset, async ({ params, body }) => {
+            const tenantId = headers['x-tenant-id'];
+            await this.tenantService.validateTenantAccess(tenantId,schema.Asset,params.id)
             const asset = await this.assetService.updateAsset(params.id, body);
 
             if (!asset) {
@@ -59,8 +68,10 @@ export class AssetsController {
     }
 
     @TsRestHandler(contract.assets.deleteAsset)
-    async deleteAsset(): Promise<ReturnType<typeof tsRestHandler>> {
+    async deleteAsset(@Headers() headers: any): Promise<ReturnType<typeof tsRestHandler>> {
         return tsRestHandler(contract.assets.deleteAsset, async ({ params }) => {
+            const tenantId = headers['x-tenant-id'];
+            await this.tenantService.validateTenantAccess(tenantId,schema.Asset,params.id)
             const result = await this.assetService.deleteAsset(params.id);
 
             if (!result) {

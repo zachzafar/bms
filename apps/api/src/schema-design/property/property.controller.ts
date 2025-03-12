@@ -1,47 +1,61 @@
-import { Controller, Logger } from '@nestjs/common';
+import { Controller, Logger, Headers } from '@nestjs/common';
 import { TsRestHandler, tsRestHandler } from '@ts-rest/nest';
 import { contract as c } from "@repo/api-contract"
 import { PropertyService } from './property.service';
+import { TenantService } from 'src/tenant/tenant.service';
+import * as schema from '@repo/api-contract'
 
 @Controller()
 export class PropertyController {
   private readonly logger = new Logger(PropertyController.name);
-    constructor(private PropertyService: PropertyService) {}
+    constructor(private PropertyService: PropertyService, private TenantService: TenantService) {}
 
     @TsRestHandler(c.settings.properties.createProperty)
-    async getProperties(): Promise<ReturnType<typeof tsRestHandler>> {
+    async getProperties(@Headers() headers:any): Promise<ReturnType<typeof tsRestHandler>> {
       return tsRestHandler(c.settings.properties.createProperty, async ({ body }) => {
-        this.logger.log(`Creating a new property for tenant:${body.tenantId}`);
-        const propertyId = await this.PropertyService.createProperty(body);
+        const tenantId = headers['x-tenant-id']
+        this.logger.log(`Creating a new property for tenant:${tenantId}`);
+        const propertyId = await this.PropertyService.createProperty({...body ,tenantId});
         return { status: 200, body: propertyId };
       }); 
     }
   
     @TsRestHandler(c.settings.properties.getProperties)
-    async getPosts(): Promise<ReturnType<typeof tsRestHandler>>  {
+    async getPosts(@Headers() headers:any): Promise<ReturnType<typeof tsRestHandler>>  {
       return tsRestHandler(c.settings.properties.getProperties, async () => {
-        const properties = await this.PropertyService.getProperties();
+        const tenantId = headers['x-tenant-id']
+        const properties = await this.PropertyService.getProperties(tenantId);
   
         return { status: 200, body: properties};
       });
     }
 
     @TsRestHandler(c.settings.properties.getProperty)
-    async getProperty(): Promise<ReturnType<typeof tsRestHandler>>  {
+    async getProperty(@Headers() headers:any): Promise<ReturnType<typeof tsRestHandler>>  {
       return tsRestHandler(c.settings.properties.getProperty, async ({ params }) => {
+        const tenantId = headers['x-tenant-id']
+        await this.TenantService.validateTenantAccess(tenantId, schema.assetProperty, params.id)
         const property = await this.PropertyService.getProperty(params.id);
 
         if (!property) {
-          return { status: 404, body: { message: 'Property not found' } };
+          return {
+            status: 404 as const,
+            body: { message: 'Property not found' as const }
+          };
         }
 
-        return { status: 200, body: property};
+        return {
+          status: 200 as const,
+          body: property
+        };
       });
     }
 
     @TsRestHandler(c.settings.properties.updateProperty)
-    async updateProperty(): Promise<ReturnType<typeof tsRestHandler>>  {
+    async updateProperty(@Headers() headers:any): Promise<ReturnType<typeof tsRestHandler>>  {
       return tsRestHandler(c.settings.properties.updateProperty, async ({ params, body }) => {
+        const tenantId = headers['x-tenant-id']
+        await this.TenantService.validateTenantAccess(tenantId, schema.assetProperty, params.id)
         const property = await this.PropertyService.updateProperty(params.id, body);
         if (!property) {
           return { status: 404, body: { message: 'Property not found' } };
@@ -51,7 +65,7 @@ export class PropertyController {
     }
 
     @TsRestHandler(c.settings.properties.deleteProperty)
-    async deleteProperty(): Promise<ReturnType<typeof tsRestHandler>>  {
+    async deleteProperty(@Headers() headers: any): Promise<ReturnType<typeof tsRestHandler>>  {
       return tsRestHandler(c.settings.properties.deleteProperty, async ({ params }) => {
         const property = await this.PropertyService.deleteProperty(params.id);
         if (!property) {

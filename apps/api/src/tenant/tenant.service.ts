@@ -1,10 +1,25 @@
-import { Inject, Injectable } from '@nestjs/common';
+import { Inject, Injectable, Logger, UnauthorizedException } from '@nestjs/common';
 import { MySql2Database } from 'drizzle-orm/mysql2';
 import { DrizzleAsyncProvider } from 'src/drizzle/drizzle.provider';
 import * as schema from '@repo/api-contract';
+import { and, eq } from 'drizzle-orm';
+import type { MySqlTableWithColumns,MySqlColumn } from "drizzle-orm/mysql-core"
+
+type TableWithTenant = MySqlTableWithColumns<{
+    name: string;
+    schema: undefined;
+    dialect: 'mysql';
+    columns: {
+        id: MySqlColumn;
+        tenantId: MySqlColumn;
+    };
+}>;
 
 @Injectable()
 export class TenantService {
+    private readonly logger = new Logger(TenantService.name);
+
+
     constructor(@Inject(DrizzleAsyncProvider) private db:MySql2Database<typeof schema>){}
 
     async getTenantsDetails(tenantIds: string[]){
@@ -25,5 +40,18 @@ export class TenantService {
         return true
     }
 
+    async validateTenantAccess(
+        tenantId: string, 
+        table: TableWithTenant, 
+        id: number | string | bigint
+    ) {
+        
+        const row = await this.db.select().from(table).where(and(eq(table.tenantId, tenantId), eq(table.id, id)))
+        this.logger.log(`data available for tenant: ${JSON.stringify(row,(_,value) => typeof value === 'bigint' ? value.toString() : value)}`)
+        
+        if (row.length === 0) {
+            throw new UnauthorizedException(`Not authorized to access this resource`)
+        }
+    }
 
 }

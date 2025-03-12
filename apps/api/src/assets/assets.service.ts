@@ -11,8 +11,8 @@ export class AssetsService {
         @Inject(DrizzleAsyncProvider) private db: MySql2Database<typeof schema>
     ) {}
 
-    async getAssets(query: any) {
-        return await this.db.query.Asset.findMany()
+    async getAssets(query: any,tenantId: string) {
+        return await this.db.query.Asset.findMany({where: (asset,{eq}) => eq(asset.tenantId,tenantId)})
     }
 
     async getAssetById(id: string) {
