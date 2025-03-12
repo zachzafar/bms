@@ -25,19 +25,15 @@ const refreshTokenFn = async () => {
         }
       })
 
-      
-      console.log("Status", response.status)
-      console.log("response data:", response.data)
       if (response.status !== 201) {
         deleteSession();
         redirect("/login");
         return null;
       }
-
-      console.log("updating tokens:", response.data)
-     await updateTokens({ accessToken: response.data.body.token, refreshToken: response.data.body.refreshToken });
-      console.log("returning tokens")
-     return { accessToken: response.data.token, refreshToken: response.data.refreshToken };
+  
+     await updateTokens(response.data.body.refreshToken,response.data.body.token);
+      
+     return { accessToken: response.data.body.token, refreshToken: response.data.body.refreshToken };
   
       
     } catch (error) {

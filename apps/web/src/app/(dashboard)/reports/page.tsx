@@ -43,6 +43,7 @@ import {
   Legend,
   ResponsiveContainer,
 } from 'recharts';
+import ReportingDashboard from '@/components/custom/reporting-dashboard';
 
 export default function Component() {
   const [reportType, setReportType] = useState('assetUtilization');
@@ -102,160 +103,20 @@ export default function Component() {
   };
 
   return (
-    <>
-      <div className='flex items-center'>
-        <h1 className='font-semibold text-lg md:text-2xl'>Reports</h1>
+    <div className="container space-y-4 py-4">
+      <div className="flex items-center justify-between">
+        <h1 className="font-semibold text-lg md:text-2xl">Reports</h1>
       </div>
-      <div className='grid gap-6 md:grid-cols-2'>
-        <Card>
-          <CardHeader>
-            <CardTitle>Generate Report</CardTitle>
-            <CardDescription>Select parameters for your report</CardDescription>
-          </CardHeader>
-          <CardContent className='space-y-4'>
-            <div className='space-y-2'>
-              <Label htmlFor='report-type'>Report Type</Label>
-              <Select value={reportType} onValueChange={setReportType}>
-                <SelectTrigger id='report-type'>
-                  <SelectValue placeholder='Select report type' />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value='assetUtilization'>
-                    Asset Utilization
-                  </SelectItem>
-                  <SelectItem value='maintenanceCosts'>
-                    Maintenance Costs
-                  </SelectItem>
-                  <SelectItem value='bookingRevenue'>
-                    Booking Revenue
-                  </SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div className='space-y-2'>
-              <Label>Date Range</Label>
-              <div className='flex space-x-2'>
-                <div>
-                  <Label htmlFor='start-date'>Start Date</Label>
-                  <Calendar
-                    mode='single'
-                    selected={startDate}
-                    onSelect={setStartDate}
-                    className='rounded-md border'
-                  />
-                </div>
-                <div>
-                  <Label htmlFor='end-date'>End Date</Label>
-                  <Calendar
-                    mode='single'
-                    selected={endDate}
-                    onSelect={setEndDate}
-                    className='rounded-md border'
-                  />
-                </div>
-              </div>
-            </div>
-            <div className='space-y-2'>
-              <Label htmlFor='asset-type'>Asset Type</Label>
-              <Select value={assetType} onValueChange={setAssetType}>
-                <SelectTrigger id='asset-type'>
-                  <SelectValue placeholder='Select asset type' />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value='All'>All Assets</SelectItem>
-                  <SelectItem value='Cars'>Cars</SelectItem>
-                  <SelectItem value='Rooms'>Rooms</SelectItem>
-                  <SelectItem value='Equipment'>Equipment</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <Button onClick={handleGenerateReport}>Generate Report</Button>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader>
-            <CardTitle>Report Preview</CardTitle>
-            <CardDescription>Preview of the generated report</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <ResponsiveContainer width='100%' height={300}>
-              <BarChart data={reportData}>
-                <CartesianGrid strokeDasharray='3 3' />
-                <XAxis dataKey='name' />
-                <YAxis yAxisId='left' orientation='left' stroke='#8884d8' />
-                <YAxis yAxisId='right' orientation='right' stroke='#82ca9d' />
-                <Tooltip />
-                <Legend />
-                <Bar
-                  yAxisId='left'
-                  dataKey='utilization'
-                  fill='#8884d8'
-                  name='Utilization (%)'
-                />
-                <Bar
-                  yAxisId='right'
-                  dataKey='maintenance'
-                  fill='#82ca9d'
-                  name='Maintenance Cost ($)'
-                />
-                <Bar
-                  yAxisId='right'
-                  dataKey='revenue'
-                  fill='#ffc658'
-                  name='Revenue ($)'
-                />
-              </BarChart>
-            </ResponsiveContainer>
-            <div className='mt-4 flex justify-end space-x-2'>
-              <Button variant='outline'>
-                <DownloadIcon className='mr-2 h-4 w-4' />
-                Export as PDF
-              </Button>
-              <Button variant='outline'>
-                <DownloadIcon className='mr-2 h-4 w-4' />
-                Export as Excel
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
+
       <Card>
         <CardHeader>
-          <CardTitle>Generated Reports</CardTitle>
-          <CardDescription>
-            List of previously generated reports
-          </CardDescription>
+          <CardTitle>Generate Report</CardTitle>
+          <CardDescription>Select parameters for your report</CardDescription>
         </CardHeader>
         <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Report Name</TableHead>
-                <TableHead>Type</TableHead>
-                <TableHead>Date Generated</TableHead>
-                <TableHead>Format</TableHead>
-                <TableHead>Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {generatedReports.map((report) => (
-                <TableRow key={report.id}>
-                  <TableCell>{report.name}</TableCell>
-                  <TableCell>{report.type}</TableCell>
-                  <TableCell>{report.date}</TableCell>
-                  <TableCell>{report.format}</TableCell>
-                  <TableCell>
-                    <Button variant='ghost' size='sm'>
-                      <DownloadIcon className='mr-2 h-4 w-4' />
-                      Download
-                    </Button>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+          <ReportingDashboard />
         </CardContent>
       </Card>
-    </>
+    </div>
   );
 }

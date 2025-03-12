@@ -82,9 +82,9 @@ export const bookingContract = c.router({
             })
         },
         query: z.object({
-            start: z.date(),
-            end: z.date()
-        }),
+            start: z.string(),
+            end: z.string()
+        }).optional(),
         pathParams: z.object({
             id: z.string()
         }),

@@ -36,12 +36,12 @@ import { XIcon, Plus, EyeIcon, PencilIcon, TrashIcon } from 'lucide-react';
 import { useForm, useFieldArray } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { authClient } from '@/lib/api/publicClient';
-import { useToast } from '@/components/ui/use-toast';
-import { useSession } from '@/lib/api/useSession';
+import { toast } from 'sonner';
 import { InsertBookingFormFieldSchema } from '@repo/api-contract';
 import * as z from 'zod';
 import { Textarea } from '@/components/ui/textarea';
 import { useState } from 'react';
+import { StorageService } from '@/lib/api/storage';
 
 const bookingFormSchema = z.object({
   name: z.string().min(1, 'Form name is required'),
@@ -58,8 +58,7 @@ type BookingFormValues = z.infer<typeof bookingFormSchema>;
 type FieldType = Field['type'];
 
 function BookingForms() {
-  const { toast } = useToast();
-  const { session } = useSession();
+  const tenant = StorageService.getTenant();
   const [newField,setNewField] = useState<Field>({
     name: '',
     type: 'text',
@@ -72,14 +71,11 @@ function BookingForms() {
 
   const { mutate: createBookingForm } = authClient.settings.form.createForm.useMutation({
     onSuccess: () => {
-      toast({ description: 'Booking form created successfully' });
+      toast('Booking form created successfully');
       form.reset();
     },
     onError: (error) => {
-      toast({
-        description: `Error creating booking form: ${error}`,
-        variant: 'destructive',
-      });
+      toast(`Error creating booking form: ${error}`);
     },
   });
 
@@ -99,9 +95,9 @@ function BookingForms() {
 
   const onSubmit = (data: BookingFormValues) => {
     const { fields, ...form } = data
-    if (session) {
+    if (tenant) {
       createBookingForm({
-        body: { fields , form: { ...form, tenantId: session.tenants[0]} },
+        body: { fields , form: { ...form, tenantId: tenant.id} },
       });
     }
   };

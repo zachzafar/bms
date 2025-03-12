@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { useToast } from '@/components/ui/use-toast';
+import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -21,7 +21,7 @@ import {
   MultiSelectorItem,
 } from '@/components/extension/multi-select';
 import { z } from 'zod';
-import { useSession } from '@/lib/api/useSession';
+import { StorageService } from '@/lib/api/storage';
 
 const AssetTypeWithPropertiesSchema = z.object({
   name: z.string(),
@@ -31,10 +31,10 @@ const AssetTypeWithPropertiesSchema = z.object({
 type AssetTypeWithProperties = z.infer<typeof AssetTypeWithPropertiesSchema>;
 
 export default function AssetTypes() {
-  const { session } = useSession();
+  const tenant = StorageService.getTenant();
   const [editingAssetTypeId, setEditingAssetType] = useState<number>();
   const [selectedProperties, setSelectedProperties] = useState<string[]>([]);
-  const { toast } = useToast();
+  const queryClient = authClient.useQueryClient();
 
   const { data: assetTypes, isLoading: isLoadingAssetTypes } = authClient.settings.assetType.getAssetTypes.useQuery({ 
     queryKey: [ASSET_TYPE_QUERY_KEY] 
@@ -48,47 +48,39 @@ export default function AssetTypes() {
     queryKey: [ASSET_TYPE_QUERY_KEY, editingAssetTypeId],
     enabled: !!editingAssetTypeId,
     queryData: {
-      params: { id: editingAssetTypeId as number}
+      params: { id: editingAssetTypeId?.toString() as string}
     }
   });
 
   const { mutate: addAssetTypeMutation } = authClient.settings.assetType.createAssetType.useMutation({
     onSuccess: () => {
-      toast({ description: 'New asset type was added successfully' });
+      toast.success('New asset type was added successfully');
+      queryClient.invalidateQueries({ queryKey: [ASSET_TYPE_QUERY_KEY]});
       reset();
       setSelectedProperties([]);
     },
     onError: (error) => {
-      toast({
-        description: `Error occurred: ${error instanceof Error ? error.message : 'Unknown error'}`,
-        variant: 'destructive',
-      });
+      toast.error(`Error occurred: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   });
 
   const { mutate: updateAssetTypeMutation } = authClient.settings.assetType.updateAssetType.useMutation({
     onSuccess: () => {
-      toast({ description: 'Asset type was updated successfully' });
+      toast.success('Asset type was updated successfully');
       setEditingAssetType(undefined);
       reset();
     },
     onError: (error) => {
-      toast({
-        description: `Error occurred: ${error instanceof Error ? error.message : 'Unknown error'}`,
-        variant: 'destructive',
-      });
+      toast.error(`Error occurred: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   });
 
   const { mutate: deleteAssetTypeMutation } = authClient.settings.assetType.deleteAssetType.useMutation({
     onSuccess: () => {
-      toast({ description: 'Asset type was deleted successfully' });
+      toast.success('Asset type was deleted successfully');
     },
     onError: (error) => {
-      toast({
-        description: `Error occurred: ${error instanceof Error ? error.message : 'Unknown error'}`,
-        variant: 'destructive',
-      });
+      toast(`Error occurred: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   });
 
@@ -143,7 +135,7 @@ export default function AssetTypes() {
         body: {...formData, assetType: { name: formData.name}}
       });
     } else {
-      addAssetTypeMutation({ body: { assetType: { name:formData.name, tenantId: session?.tenants[0] as string}, properties: formData.properties as number[] }});
+      addAssetTypeMutation({ body: { assetType: { name:formData.name, tenantId: tenant?.id as string}, properties: formData.properties as number[] }});
     }
   };
 

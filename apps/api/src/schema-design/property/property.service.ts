@@ -21,8 +21,8 @@ export class PropertyService {
         return this.db.query.assetProperty.findFirst({ where: (property, { eq }) => eq(property.id, id) });
     }
 
-    async getProperties() {
-        return this.db.query.assetProperty.findMany();
+    async getProperties(tenantId: string) {
+        return this.db.query.assetProperty.findMany({ where: (property, { eq }) => eq(property.tenantId, tenantId)});
     }
 
     async updateProperty(id: number, data: schema.UpdateAssetProperty) {

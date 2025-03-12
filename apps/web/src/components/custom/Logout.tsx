@@ -1,21 +1,21 @@
 "use client"
 
-import React, { use } from 'react'
 import { Button } from '@/components/ui/button';
 import { authClient } from '@/lib/api/publicClient';
 import { useRouter } from 'next/navigation';
-import { useSession } from '@/lib/api/useSession';
 import { deleteSession } from '@/lib/api/session';
+import { useStorage } from '@/hooks/useStorage';
 
 export default function Logout() {
     const { mutate, isPending } = authClient.auth.logout.useMutation();
-    const {session, loading} = useSession();
+    const { user } = useStorage()
     const router = useRouter();
+
     
   return (
-    <Button disabled={isPending || loading} onClick={() => session ? mutate({
+    <Button disabled={isPending || user == null} onClick={() => user ? mutate({
       body: {
-        userId: session.user.id
+        userId: user?.id
       }
     },{
         onSuccess:  async (response) => {

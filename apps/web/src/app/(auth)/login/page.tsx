@@ -6,11 +6,13 @@ import { z } from 'zod';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Form, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
-import { useToast } from '@/components/ui/use-toast';
+import { toast } from 'sonner';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { client } from '@/lib/api/publicClient';
 import { useRouter } from 'next/navigation';
 import { createSession, Session } from '@/lib/api/session';
+import { StorageService } from '@/lib/api/storage';
+import { access } from 'fs';
 
 const loginSchema = z.object({
   email: z.string().email('Invalid email address'),
@@ -20,7 +22,7 @@ const loginSchema = z.object({
 type LoginFormData = z.infer<typeof loginSchema>;
 
 export default function LoginPage() {
-  const { toast } = useToast();
+
   const router = useRouter();
   const { mutate, isPending } = client.auth.login.useMutation();
   // const isPending = false
@@ -42,26 +44,26 @@ export default function LoginPage() {
         onSuccess: async (response) => {
           console.log('response', response);
       if (response.status !== 200) throw new Error('Invalid response');
+      
+      StorageService.setToken(response.body.token);
+      StorageService.setUser(response.body.user)
+      StorageService.setTenant(response.body.tenants[0])
+      StorageService.setTenantList(response.body.tenants)
 
       const session: Session = {
-      user: response.body.user,
-      accessToken: response.body.token,
       refreshToken: response.body.refreshToken,
-      tenants: response.body.tenants
+      accessToken: response.body.token
       };
 
       await createSession(session)
       console.log('Newly created session:', session);
-      toast({ description: 'Logged in successfully' });
+      toast('Logged in successfully');
       router.push('/dashboard');
       // Redirect to dashboard
         },
         onError: (error) => {
           console.error('error', error);
-          toast({
-            description: `Error occurred: ${error instanceof Error ? error.message : 'Unknown error'}`,
-            variant: 'destructive',
-          });
+          toast.error( `Error occurred: ${error instanceof Error ? error.message : 'Unknown error'}`)
         }
       });
       

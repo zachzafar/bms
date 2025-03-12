@@ -25,46 +25,36 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { SubmitHandler, useForm } from 'react-hook-form';
 import { Plus, Trash2 } from 'lucide-react';
 import { authClient } from '@/lib/api/publicClient';
-import { useToast } from '@/components/ui/use-toast';
+import { toast } from 'sonner';
 import { InsertAssetProperty,InsertAssetPropertySchema } from '@repo/api-contract';
-import { useSession } from '@/lib/api/useSession';
-
-
-
-
+import { StorageService } from '@/lib/api/storage';
 
 export default function Properties() {
-  const { toast } = useToast();
   const queryClient = authClient.useQueryClient()
-  const { session } = useSession()
+  const tenant = StorageService.getTenant();
+
   const { data: properties, isLoading } = authClient.settings.properties.getProperties.useQuery({
     queryKey: ['properties']
   });
 
   const { mutate: createProperty } = authClient.settings.properties.createProperty.useMutation({
     onSuccess: () => {
-      toast({ description: 'Property created successfully' });
+      toast.success('Property created successfully');
       form.reset();
 
       queryClient.invalidateQueries({ queryKey: ['properties']});
     },
     onError: (error) => {
-      toast({ 
-        description: `Error creating property: ${error}`,
-        variant: 'destructive'
-      });
+      toast.error(`Error creating property: ${error}`);
     }
   });
 
   const { mutate: deleteProperty } = authClient.settings.properties.deleteProperty.useMutation({
     onSuccess: () => {
-      toast({ description: 'Property deleted successfully' });
+      toast('Property deleted successfully');
     },
     onError: (error: any) => {
-      toast({
-        description: `Error deleting property: ${error.message}`,
-        variant: 'destructive'
-      });
+      toast.error(`Error deleting property: ${error.message}`);
     }
   });
   
@@ -81,12 +71,12 @@ export default function Properties() {
 
   const proccessform: SubmitHandler<InsertAssetProperty> = async (data: Omit<InsertAssetProperty,"tenantId">) => {
         console.log("proccessing form .... adding property")
-    if (session)
+    if (tenant)
       createProperty({
-        body: { ...data, tenantId: session?.tenants[0]}
+        body: { ...data, tenantId: tenant.id}
       },{
           onSuccess: () => {
-            toast({ description: 'Property created successfully' });
+            toast.success('Property created successfully');
             form.reset();
             // Invalidate the properties query to refresh the list
 
@@ -103,7 +93,7 @@ export default function Properties() {
     <div className="space-y-6">
       <Card>
         <CardHeader>
-          <CardTitle>Create Property</CardTitle>
+          <CardTitle>Create Field</CardTitle>
         </CardHeader>
         <CardContent>
           <Form {...form}>

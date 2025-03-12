@@ -6,7 +6,7 @@ import { z } from 'zod';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Form, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
-import { useToast } from '@/components/ui/use-toast';
+import { toast }from "sonner"
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { client } from '@/lib/api/publicClient';
 import { useRouter } from 'next/navigation';
@@ -22,38 +22,47 @@ const signupSchema = z.object({
 
 
 export default function SignupPage() {
-  const { toast } = useToast();
   const router = useRouter();
-  const signupMutation = client.auth.registerTenant.useMutation();
+  const { mutate, isPending } = client.auth.registerTenant.useMutation();
 
   const form = useForm<UserRegistration>({
     resolver: zodResolver(signupSchema),
   });
 
-  const { handleSubmit } = form;
+  const { handleSubmit, reset } = form;
 
   const onSubmit = async (data: UserRegistration) => {
 
     try {
-      const response = await signupMutation.mutateAsync({
+      await mutate({
         body: {
-        tenant: {
-          name: data.organization,
-          subdomain: data.organization,
+          tenant: {
+            name: data.organization,
+            subdomain: data.organization,
+          },
+          adminUser: {
+            name: data.name,
+            email: data.email,
+            password: data.password
+          }
+        }
+      }, {
+        onSuccess: (response) => {
+          if (response.status === 201) {
+            toast.success('Account created successfully');
+            reset();
+            router.push('/login');
+          } else {
+            toast.success('Account creation failed');
+          }
         },
-        adminUser: {
-          name: data.name,
-          email: data.email,
-          password: data.password
-        }}
-      })
-      toast({ description: 'Account created successfully' });
-      router.push('/login');
-    } catch (error) {
-      toast({
-        description: `Error occurred: ${error instanceof Error ? error.message : 'Unknown error'}`,
-        variant: 'destructive',
+        onError: (error) => {
+          toast.error(`Error occurred: ${error instanceof Error ? error.message : 'Unknown error'}`);
+        }
       });
+    } catch (error) {
+      // This catch block is mainly for unexpected errors
+      toast.error('An unexpected error occurred');
     }
   };
 
@@ -105,8 +114,8 @@ export default function SignupPage() {
                 </FormItem>
               )}
             />
-            <Button type="submit" className="w-full" disabled={signupMutation.isPending}>
-              {signupMutation.isPending ? 'Signing up...' : 'Sign Up'}
+            <Button type="submit" className="w-full" disabled={isPending}>
+              {isPending ? 'Signing up...' : 'Sign Up'}
             </Button>
           </form>
         </Form>

@@ -8,13 +8,8 @@ import { NextRequest } from "next/server";
 
 
 export type Session = {
-  user: {
-    id: string;
-    name: string;
-  };
-  accessToken: string;
   refreshToken: string;
-  tenants: string[]
+  accessToken: string;
 };
 
 
@@ -91,13 +86,7 @@ export  async function deleteSession() {
    await cookies().delete("session");
 }
 
-export async function updateTokens({
-  accessToken,
-  refreshToken,
-}: {
-  accessToken: string;
-  refreshToken: string;
-}) {
+export async function updateTokens( refreshToken:string ,accessToken: string) {
 
   console.log("Trying to update session")
   
@@ -114,12 +103,8 @@ export async function updateTokens({
   console.log("new Session payload", payload)
 
   const newPayload: Session = {
-    user: {
-      ...payload.user,
-    },
-    tenants: payload.tenants,
-    accessToken,
     refreshToken,
+    accessToken
   };
 
   await createSession(newPayload);

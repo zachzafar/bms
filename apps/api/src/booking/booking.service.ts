@@ -18,7 +18,7 @@ export class BookingService {
 
 
     async createBooking(booking: InsertBooking) {
-        const status  = await this.checkAvailability(booking.assetId, booking.startDate, booking.endDate);
+        const status  = await this.checkAvailability(booking.assetId,{ startDate: booking.startDate, endDate: booking.endDate});
        
         
         
@@ -86,7 +86,7 @@ export class BookingService {
     if (!existingBooking) {
       throw new NotFoundException('Booking not found');
     }
-    const status = await this.checkAvailability(existingBooking.assetId, booking.startDate, booking.endDate);
+    const status = await this.checkAvailability(existingBooking.assetId, { startDate:booking.startDate, endDate:booking.endDate});
     if (status !== 'Available') {
       throw new ConflictException('The asset is not available for the selected dates.');
     }
@@ -138,30 +138,47 @@ export class BookingService {
       return Number(result[0]?.total) ?? 0;
     }
 
-    async checkAvailability(assetId: string, startDate: Date, endDate: Date): Promise<"Unavailable"| "Available" | "Booked"> {
+    async checkAvailability(assetId: string, dates?: {startDate: Date, endDate: Date}): Promise<"Unavailable"| "Available" | "Booked"> {
       type STATUS = "Unavailable" | "Available" | "Booked"; 
+      
+      // If no dates provided, check current availability
+      const currentDate = new Date();
+      const startDate = dates?.startDate || currentDate;
+      const endDate = dates?.endDate || currentDate;
 
-      const result = await this.db.select()
+      // Check for unavailable periods (maintenance, etc.)
+      const unavailablePeriods = await this.db.select()
         .from(schema.Availability)
         .where(
-          and(
+          and( 
             eq(schema.Availability.assetId, assetId),
             eq(schema.Availability.available, false),
-            lte(schema.Availability.startDate, endDate), // start_date <= your_end_date
+            lte(schema.Availability.startDate, endDate),
             gte(schema.Availability.endDate, startDate)
           )
         );
 
-      const bookings = await this.db.select().from(schema.Booking).where(
-        and(
-          eq(schema.Booking.assetId, assetId),
-          sql`(start_date, end_date) OVERLAPS (${startDate}, ${endDate})`
-        )
-      )
+      // Check for existing bookings
+      const existingBookings = await this.db.select()
+        .from(schema.Booking)
+        .where(
+          and(
+            eq(schema.Booking.assetId, assetId),
+            lte(schema.Booking.startDate, endDate),
+            gte(schema.Booking.endDate, startDate)
+          )
+        );
 
-      let status:STATUS = result.length > 0 ? "Unavailable" : "Available";
-          status = bookings.length > 0 ? "Booked" : status;
-      return status 
+      // Determine status
+      if (unavailablePeriods.length > 0) {
+        return "Unavailable";
+      }
+      
+      if (existingBookings.length > 0) {
+        return "Booked";
+      }
+
+      return "Available";
     }
 
      async addAvailabilityException(data: InsertAvailability) {

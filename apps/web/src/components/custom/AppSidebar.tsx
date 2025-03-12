@@ -7,10 +7,11 @@ import {
     SidebarMenu,
     SidebarMenuButton,
     SidebarMenuItem,
-    SidebarFooter,
+    SidebarMenuSub,
+    SidebarMenuSubItem,
   } from "@/components/ui/sidebar"
+import { Collapsible, CollapsibleTrigger, CollapsibleContent } from "@radix-ui/react-collapsible"
 import { Home, Box, Calendar, Clipboard,Cog, Settings, User2 } from "lucide-react"
-import Logout from "./Logout"
 
 
 
@@ -33,8 +34,19 @@ const items = [
     },
     {
       title: "Assets",
-      url: "/assets",
       icon: Box,
+      children: [
+        {
+          title: "Asset List",
+          url: "/assets",
+          icon: Box,
+        },
+        {
+          title: "Config",
+          url: "/assets/config",
+          icon: Settings
+        },
+      ],
     },
     {
         title: "Reports",
@@ -66,23 +78,43 @@ const items = [
             <SidebarGroupLabel>Application</SidebarGroupLabel>
             <SidebarGroupContent>
               <SidebarMenu>
-                {items.map((item) => (
-                  <SidebarMenuItem key={item.title}>
+              {items.map((item) => (
+                <SidebarMenuItem key={item.title}>
+                  {item.children ? (
+                    <Collapsible defaultOpen className="group/collapsible">
+                      <CollapsibleTrigger asChild>
+                        <SidebarMenuButton>
+                          <item.icon />
+                          <span>{item.title}</span>
+                        </SidebarMenuButton>
+                      </CollapsibleTrigger>
+                      <CollapsibleContent>
+                        <SidebarMenuSub>
+                          {item.children.map((child) => (
+                            <SidebarMenuSubItem key={child.title}>
+                              <a href={child.url} className="flex items-center gap-2">
+                                <child.icon className="h-4 w-4" />
+                                <span>{child.title}</span>
+                              </a>
+                            </SidebarMenuSubItem>
+                          ))}
+                        </SidebarMenuSub>
+                      </CollapsibleContent>
+                    </Collapsible>
+                  ) : (
                     <SidebarMenuButton asChild>
                       <a href={item.url}>
                         <item.icon />
                         <span>{item.title}</span>
                       </a>
                     </SidebarMenuButton>
-                  </SidebarMenuItem>
-                ))}
-              </SidebarMenu>
-            </SidebarGroupContent>
-          </SidebarGroup>
-        </SidebarContent>
-        <SidebarFooter>
-            <Logout />
-        </SidebarFooter>
-      </Sidebar>
-    )
-  }
+                  )}
+                </SidebarMenuItem>
+              ))}
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
+      </SidebarContent>
+    </Sidebar>
+  )
+}

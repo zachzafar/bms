@@ -13,8 +13,8 @@ export class AssetTypeService {
         @Inject(DrizzleAsyncProvider) private db: MySql2Database<typeof schema>
     ){}
     
-    async getAssetTypes() {
-        return this.db.query.AssetType.findMany();
+    async getAssetTypes(tenantId: string) {
+        return this.db.query.AssetType.findMany({where: (assetType, { eq }) => eq(assetType.tenantId, tenantId)});
     }
 
     async getAssetType(id: number) {
