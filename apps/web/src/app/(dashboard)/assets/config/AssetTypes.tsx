@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { useToast } from '@/components/ui/use-toast';
+import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -34,7 +34,7 @@ export default function AssetTypes() {
   const tenant = StorageService.getTenant();
   const [editingAssetTypeId, setEditingAssetType] = useState<number>();
   const [selectedProperties, setSelectedProperties] = useState<string[]>([]);
-  const { toast } = useToast();
+  const queryClient = authClient.useQueryClient();
 
   const { data: assetTypes, isLoading: isLoadingAssetTypes } = authClient.settings.assetType.getAssetTypes.useQuery({ 
     queryKey: [ASSET_TYPE_QUERY_KEY] 
@@ -54,41 +54,33 @@ export default function AssetTypes() {
 
   const { mutate: addAssetTypeMutation } = authClient.settings.assetType.createAssetType.useMutation({
     onSuccess: () => {
-      toast({ description: 'New asset type was added successfully' });
+      toast.success('New asset type was added successfully');
+      queryClient.invalidateQueries({ queryKey: [ASSET_TYPE_QUERY_KEY]});
       reset();
       setSelectedProperties([]);
     },
     onError: (error) => {
-      toast({
-        description: `Error occurred: ${error instanceof Error ? error.message : 'Unknown error'}`,
-        variant: 'destructive',
-      });
+      toast.error(`Error occurred: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   });
 
   const { mutate: updateAssetTypeMutation } = authClient.settings.assetType.updateAssetType.useMutation({
     onSuccess: () => {
-      toast({ description: 'Asset type was updated successfully' });
+      toast.success('Asset type was updated successfully');
       setEditingAssetType(undefined);
       reset();
     },
     onError: (error) => {
-      toast({
-        description: `Error occurred: ${error instanceof Error ? error.message : 'Unknown error'}`,
-        variant: 'destructive',
-      });
+      toast.error(`Error occurred: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   });
 
   const { mutate: deleteAssetTypeMutation } = authClient.settings.assetType.deleteAssetType.useMutation({
     onSuccess: () => {
-      toast({ description: 'Asset type was deleted successfully' });
+      toast.success('Asset type was deleted successfully');
     },
     onError: (error) => {
-      toast({
-        description: `Error occurred: ${error instanceof Error ? error.message : 'Unknown error'}`,
-        variant: 'destructive',
-      });
+      toast(`Error occurred: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   });
 

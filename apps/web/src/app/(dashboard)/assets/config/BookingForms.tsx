@@ -36,7 +36,7 @@ import { XIcon, Plus, EyeIcon, PencilIcon, TrashIcon } from 'lucide-react';
 import { useForm, useFieldArray } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { authClient } from '@/lib/api/publicClient';
-import { useToast } from '@/components/ui/use-toast';
+import { toast } from 'sonner';
 import { InsertBookingFormFieldSchema } from '@repo/api-contract';
 import * as z from 'zod';
 import { Textarea } from '@/components/ui/textarea';
@@ -59,7 +59,6 @@ type FieldType = Field['type'];
 
 function BookingForms() {
   const tenant = StorageService.getTenant();
-  const { toast } = useToast();
   const [newField,setNewField] = useState<Field>({
     name: '',
     type: 'text',
@@ -72,14 +71,11 @@ function BookingForms() {
 
   const { mutate: createBookingForm } = authClient.settings.form.createForm.useMutation({
     onSuccess: () => {
-      toast({ description: 'Booking form created successfully' });
+      toast('Booking form created successfully');
       form.reset();
     },
     onError: (error) => {
-      toast({
-        description: `Error creating booking form: ${error}`,
-        variant: 'destructive',
-      });
+      toast(`Error creating booking form: ${error}`);
     },
   });
 

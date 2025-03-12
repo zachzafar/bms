@@ -6,7 +6,7 @@ import { z } from 'zod';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Form, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
-import { useToast } from '@/components/ui/use-toast';
+import { toast }from "sonner"
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { client } from '@/lib/api/publicClient';
 import { useRouter } from 'next/navigation';
@@ -22,7 +22,6 @@ const signupSchema = z.object({
 
 
 export default function SignupPage() {
-  const { toast } = useToast();
   const router = useRouter();
   const { mutate, isPending } = client.auth.registerTenant.useMutation();
 
@@ -50,29 +49,20 @@ export default function SignupPage() {
       }, {
         onSuccess: (response) => {
           if (response.status === 201) {
-            toast({ description: 'Account created successfully' });
+            toast.success('Account created successfully');
             reset();
             router.push('/login');
           } else {
-            toast({ 
-              description: 'Account creation failed', 
-              variant: 'destructive' 
-            });
+            toast.success('Account creation failed');
           }
         },
         onError: (error) => {
-          toast({
-            description: `Error occurred: ${error instanceof Error ? error.message : 'Unknown error'}`,
-            variant: 'destructive',
-          });
+          toast.error(`Error occurred: ${error instanceof Error ? error.message : 'Unknown error'}`);
         }
       });
     } catch (error) {
       // This catch block is mainly for unexpected errors
-      toast({
-        description: 'An unexpected error occurred',
-        variant: 'destructive',
-      });
+      toast.error('An unexpected error occurred');
     }
   };
 

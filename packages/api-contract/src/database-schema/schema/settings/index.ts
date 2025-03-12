@@ -59,13 +59,14 @@ export const AssetTypeRelations = relations(AssetType, ({ one, many }) => ({
 // AssetProperty Model
 export const assetProperty = mysqlTable("asset_properties", {
     id: serial("id").primaryKey(),
-    name: varchar("name", { length: 255 }).notNull().unique(),
+    name: varchar("name", { length: 255 }).notNull(),
     propertyType: mysqlEnum(['number','string','textbox','list']).notNull(),
     tenantId: varchar("tenant_id", { length: 255 }).notNull().references(() => Tenant.id),
     createdAt: timestamp('createdAt').notNull().defaultNow(),
     updatedAt: timestamp('updatedAt'),
 }, (table) => ({
-    nameUniqueIdx: uniqueIndex("name_unique").on(table.name),
+    // Change the unique index to include both name and tenantId
+    nameUniqueIdx: uniqueIndex("name_unique").on(table.name, table.tenantId),
 }));
 
 export const InsertAssetPropertySchema = createInsertSchema(assetProperty);

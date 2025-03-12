@@ -6,7 +6,7 @@ import { z } from 'zod';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Form, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
-import { useToast } from '@/components/ui/use-toast';
+import { toast } from 'sonner';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { client } from '@/lib/api/publicClient';
 import { useRouter } from 'next/navigation';
@@ -22,7 +22,7 @@ const loginSchema = z.object({
 type LoginFormData = z.infer<typeof loginSchema>;
 
 export default function LoginPage() {
-  const { toast } = useToast();
+
   const router = useRouter();
   const { mutate, isPending } = client.auth.login.useMutation();
   // const isPending = false
@@ -57,16 +57,13 @@ export default function LoginPage() {
 
       await createSession(session)
       console.log('Newly created session:', session);
-      toast({ description: 'Logged in successfully' });
+      toast('Logged in successfully');
       router.push('/dashboard');
       // Redirect to dashboard
         },
         onError: (error) => {
           console.error('error', error);
-          toast({
-            description: `Error occurred: ${error instanceof Error ? error.message : 'Unknown error'}`,
-            variant: 'destructive',
-          });
+          toast.error( `Error occurred: ${error instanceof Error ? error.message : 'Unknown error'}`)
         }
       });
       

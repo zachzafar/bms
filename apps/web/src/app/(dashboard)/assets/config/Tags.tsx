@@ -23,38 +23,31 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { SubmitHandler, useForm } from 'react-hook-form';
 import { Plus, Trash2 } from 'lucide-react';
 import { authClient } from '@/lib/api/publicClient';
-import { useToast } from '@/components/ui/use-toast';
+import { toast } from 'sonner';
 import { InsertTag, InsertTagSchema } from '@repo/api-contract';
 import { Textarea } from '@/components/ui/textarea';
 
 export default function Tags() {
-  const { toast } = useToast();
   const { data: tags, isLoading } = authClient.settings.tags.getTags.useQuery({
     queryKey: ['tags']
   });
 
   const { mutate: createTag } = authClient.settings.tags.createTag.useMutation({
     onSuccess: () => {
-      toast({ description: 'Tag created successfully' });
+      toast('Tag created successfully');
       form.reset();
     },
     onError: (error) => {
-      toast({ 
-        description: `Error creating tag: ${error}`,
-        variant: 'destructive'
-      });
+      toast(`Error creating tag: ${error}`);
     }
   });
 
   const { mutate: deleteTag } = authClient.settings.tags.deleteTag.useMutation({
     onSuccess: () => {
-      toast({ description: 'Tag deleted successfully' });
+      toast('Tag deleted successfully');
     },
     onError: (error: any) => {
-      toast({
-        description: `Error deleting tag: ${error.message}`,
-        variant: 'destructive'
-      });
+      toast(`Error deleting tag: ${error.message}`);
     }
   });
 
