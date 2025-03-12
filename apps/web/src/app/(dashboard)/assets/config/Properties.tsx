@@ -100,7 +100,7 @@ export default function Properties() {
     <div className="space-y-6">
       <Card>
         <CardHeader>
-          <CardTitle>Create Property</CardTitle>
+          <CardTitle>Create Field</CardTitle>
         </CardHeader>
         <CardContent>
           <Form {...form}>

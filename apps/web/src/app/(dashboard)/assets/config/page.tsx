@@ -14,13 +14,13 @@ export default function Settings() {
   return (
     <>
       <div className='flex items-center'>
-        <h1 className='font-semibold text-lg md:text-2xl'>Settings</h1>
+        <h1 className='font-semibold text-lg md:text-2xl'>Asset Configuration</h1>
       </div>
       <Tabs value={activeTab} onValueChange={setActiveTab} className='w-full'>
         <TabsList>
           <TabsTrigger value='asset-types'>Asset Types</TabsTrigger>
           <TabsTrigger value='booking-forms'>Booking Forms</TabsTrigger>
-          <TabsTrigger value="properties">Properties</TabsTrigger>
+          <TabsTrigger value="properties">Fields</TabsTrigger>
         </TabsList>
         <TabsContent value='asset-types'>
           <AssetTypes />

@@ -26,7 +26,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@/components/ui/dialog';
-import { Package2Icon, SearchIcon, FilterIcon } from 'lucide-react';
+import { SearchIcon } from 'lucide-react';
 import { Label } from '@/components/ui/label';
 import { authClient } from '@/lib/api/publicClient';
 import { BOOKINGS_QUERY_KEY } from '@/lib/api/queryKeys';
@@ -34,12 +34,10 @@ import { ExtendedSelectBooking } from '@repo/api-contract/src/api-contract/booki
 
 
 export default function Component() {
-  // const { mutate } = authClient.booking.
   const { data: bookings } = authClient.booking.getBookings.useQuery({
     queryKey: BOOKINGS_QUERY_KEY,
-  })
-
-  
+  });
+  const { mutate: createBooking } = authClient.booking.createBooking.useMutation();
 
   const [searchTerm, setSearchTerm] = useState('');
   const [filterType, setFilterType] = useState('All');
@@ -47,23 +45,12 @@ export default function Component() {
   const [sortBy, setSortBy] = useState('startDate');
   const [sortOrder, setSortOrder] = useState('asc');
   const [selectedBooking, setSelectedBooking] = useState<ExtendedSelectBooking>();
-
-  // const filteredBookings = bookings?.status === 200 ?
-  //   bookings.body.filter(
-  //     (booking) =>
-  //       (searchTerm === '' ||
-  //         booking.assetName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-  //         booking.customerName
-  //           .toLowerCase()
-  //           .includes(searchTerm.toLowerCase())) &&
-  //       (filterType === 'All' || booking.assetType === filterType) &&
-  //       (filterStatus === 'All' || booking.status === filterStatus)
-  //   )
-  //   // .sort((a, b) => {
-  //   //   if (a[sortBy] < b[sortBy]) return sortOrder === 'asc' ? -1 : 1;
-  //   //   if (a[sortBy] > b[sortBy]) return sortOrder === 'asc' ? 1 : -1;
-  //   //   return 0;
-  //   // }) : [];
+  const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
+  const [newBooking, setNewBooking] = useState({
+    startDate: '',
+    endDate: '',
+    assetId: '',
+  });
 
   const handleSort = (column: any) => {
     if (sortBy === column) {
@@ -78,10 +65,64 @@ export default function Component() {
      
   };
 
+  const handleCreateBooking = () => {
+    // createBooking({
+    //   body: {
+    //     startDate: new Date(newBooking.startDate),
+    //     endDate: new Date(newBooking.endDate),
+    //     assetId: newBooking.assetId,
+    //   }
+    // });
+    setIsCreateDialogOpen(false);
+    setNewBooking({ startDate: '', endDate: '', assetId: '' });
+  };
+
   return (
     <>
-      <div className='flex items-center'>
+      <div className='flex items-center justify-between'>
         <h1 className='font-semibold text-lg md:text-2xl'>Bookings</h1>
+        <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
+          <DialogTrigger asChild>
+            <Button>Create Booking</Button>
+          </DialogTrigger>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Create New Booking</DialogTitle>
+              <DialogDescription>
+                Enter the details for the new booking
+              </DialogDescription>
+            </DialogHeader>
+            <div className='grid gap-4 py-4'>
+              <div className='grid grid-cols-4 items-center gap-4'>
+                <Label className='text-right'>Asset ID:</Label>
+                <Input
+                  className='col-span-3'
+                  value={newBooking.assetId}
+                  onChange={(e) => setNewBooking({ ...newBooking, assetId: e.target.value })}
+                />
+              </div>
+              <div className='grid grid-cols-4 items-center gap-4'>
+                <Label className='text-right'>Start Date:</Label>
+                <Input
+                  className='col-span-3'
+                  type="date"
+                  value={newBooking.startDate}
+                  onChange={(e) => setNewBooking({ ...newBooking, startDate: e.target.value })}
+                />
+              </div>
+              <div className='grid grid-cols-4 items-center gap-4'>
+                <Label className='text-right'>End Date:</Label>
+                <Input
+                  className='col-span-3'
+                  type="date"
+                  value={newBooking.endDate}
+                  onChange={(e) => setNewBooking({ ...newBooking, endDate: e.target.value })}
+                />
+              </div>
+              <Button onClick={handleCreateBooking}>Create Booking</Button>
+            </div>
+          </DialogContent>
+        </Dialog>
       </div>
       <div className='flex flex-col gap-4 md:flex-row md:items-center md:justify-between'>
         <div className='flex items-center gap-2'>
