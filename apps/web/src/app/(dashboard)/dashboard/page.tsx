@@ -136,7 +136,7 @@ export default function Component() {
           <Card>
             <CardHeader className='flex flex-row items-center justify-between space-y-0 pb-2'>
               <CardTitle className='text-sm font-medium'>
-                Room Bookings
+                Villa Bookings
               </CardTitle>
               <HomeIcon className='w-4 h-4 text-muted-foreground' />
             </CardHeader>
@@ -163,7 +163,7 @@ export default function Component() {
             <TableBody>
               <TableRow>
                 <TableCell className='font-medium'>BK001</TableCell>
-                <TableCell>John Doe</TableCell>
+                <TableCell>Zach Harris</TableCell>
                 <TableCell>Car - Toyota Camry</TableCell>
                 <TableCell>2023-07-15</TableCell>
                 <TableCell>Confirmed</TableCell>
@@ -172,15 +172,15 @@ export default function Component() {
               <TableRow>
                 <TableCell className='font-medium'>BK002</TableCell>
                 <TableCell>Jane Smith</TableCell>
-                <TableCell>Room - Deluxe Suite</TableCell>
+                <TableCell>Nevis Villa</TableCell>
                 <TableCell>2023-07-16</TableCell>
                 <TableCell>Pending</TableCell>
                 <TableCell className='text-right'>$250.00</TableCell>
               </TableRow>
               <TableRow>
                 <TableCell className='font-medium'>BK003</TableCell>
-                <TableCell>Bob Johnson</TableCell>
-                <TableCell>Equipment - Projector</TableCell>
+                <TableCell>Laura Whitney</TableCell>
+                <TableCell>Royal WestMoreland Royal Villa 12</TableCell>
                 <TableCell>2023-07-17</TableCell>
                 <TableCell>Confirmed</TableCell>
                 <TableCell className='text-right'>$50.00</TableCell>
@@ -196,7 +196,7 @@ export default function Component() {
               <TableRow>
                 <TableCell className='font-medium'>BK005</TableCell>
                 <TableCell>Charlie Davis</TableCell>
-                <TableCell>Room - Standard Double</TableCell>
+                <TableCell>Royal WestMoreland Mango Walk</TableCell>
                 <TableCell>2023-07-19</TableCell>
                 <TableCell>Confirmed</TableCell>
                 <TableCell className='text-right'>$180.00</TableCell>

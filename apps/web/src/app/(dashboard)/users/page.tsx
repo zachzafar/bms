@@ -1,6 +1,6 @@
 'use client';
 
-import { SetStateAction, SetStateAction, useState } from 'react';
+import { SetStateAction, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -68,7 +68,7 @@ const mockUsers = [
     role: 'Owner',
     ownerDetails: { companyName: 'Smith Enterprises', taxId: '12-3456789' },
   },
-  { id: '3', name: 'Admin User', email: 'admin@example.com', role: 'Admin' },
+  { id: '3', name: 'Muffin Stollmyer', email: 'admin@example.com', role: 'Admin' },
   // Add more mock users here...
 ];
 

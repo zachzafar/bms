@@ -68,6 +68,7 @@ export default function AssetTypes() {
     onSuccess: () => {
       toast.success('Asset type was updated successfully');
       setEditingAssetType(undefined);
+      queryClient.invalidateQueries({ queryKey: [ASSET_TYPE_QUERY_KEY]});
       reset();
     },
     onError: (error) => {
@@ -78,6 +79,7 @@ export default function AssetTypes() {
   const { mutate: deleteAssetTypeMutation } = authClient.settings.assetType.deleteAssetType.useMutation({
     onSuccess: () => {
       toast.success('Asset type was deleted successfully');
+      queryClient.invalidateQueries({ queryKey: [ASSET_TYPE_QUERY_KEY]});
     },
     onError: (error) => {
       toast(`Error occurred: ${error instanceof Error ? error.message : 'Unknown error'}`);
@@ -131,7 +133,7 @@ export default function AssetTypes() {
 
     if (editingAssetType?.status === 200) {
       updateAssetTypeMutation({
-        params: { id: editingAssetType.body.assetType.id },
+        params: { id: editingAssetType.body.assetType.id.toString() },
         body: {...formData, assetType: { name: formData.name}}
       });
     } else {
@@ -140,7 +142,7 @@ export default function AssetTypes() {
   };
 
   const handleDeleteAssetType = (id: number) => {
-    deleteAssetTypeMutation({ params: { id } });
+    deleteAssetTypeMutation({ params: { id: id.toString() } });
   };
 
   const cancelEdit = () => {
@@ -158,7 +160,7 @@ export default function AssetTypes() {
         <CardHeader>
           <CardTitle>{editingAssetType ? 'Edit Asset Type' : 'Add New Asset Type'}</CardTitle>
           <CardDescription>
-            {editingAssetType ? 'Update the selected asset type.' : 'Define new types of assets and their properties.'}
+            {editingAssetType ? 'Update the selected asset type.' : 'Define new types of assets and their fields.'}
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -176,13 +178,13 @@ export default function AssetTypes() {
                 )}
               />
               <FormItem>
-                <FormLabel>Properties</FormLabel>
+                <FormLabel>Fields</FormLabel>
                 <MultiSelector
                   values={selectedProperties}
                   onValuesChange={setSelectedProperties}
                 >
                   <MultiSelectorTrigger>
-                    <MultiSelectorInput placeholder="Select properties..." />
+                    <MultiSelectorInput placeholder="Select Fields..." />
                   </MultiSelectorTrigger>
                   <MultiSelectorContent>
                     <MultiSelectorList>
@@ -223,7 +225,7 @@ export default function AssetTypes() {
             <TableHeader>
               <TableRow>
                 <TableHead>Name</TableHead>
-                <TableHead>Properties</TableHead>
+                <TableHead>Fields</TableHead>
                 <TableHead className="w-[100px]">Actions</TableHead>
               </TableRow>
             </TableHeader>
