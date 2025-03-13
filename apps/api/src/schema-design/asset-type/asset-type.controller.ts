@@ -56,12 +56,19 @@ export class AssetTypeController {
         return tsRestHandler(contract.settings.assetType.updateAssetType, async ({ params, body }) => {
             const tenantId = headers['x-tenant-id']
             await this.TenantService.validateTenantAccess(tenantId, schema.AssetType, params.id)
-            const assetType = await this.assetTypeService.updateAssetType(params.id, body.assetType);
+            const assetType = await this.assetTypeService.updateAssetType(Number(params.id), body.assetType);
             if (!assetType) {
-                return { status: 500, body: { message: 'Error updating asset type' } };
+                return { 
+                    status: 500 as const, 
+                    body: { assetType: null, properties: [], message: 'Error updating asset type' }
+                };
             }
-         
-            return { status: 200, body: null};
+            
+            const { properties, ...assetTypeData } = assetType;
+            return { 
+                status: 200 as const, 
+                body: null
+            };
         });
     }
 
@@ -70,8 +77,11 @@ export class AssetTypeController {
         return tsRestHandler(contract.settings.assetType.deleteAssetType, async ({ params }) => {
             const tenantId = headers['x-tenant-id']
             await this.TenantService.validateTenantAccess(tenantId, schema.AssetType, params.id)
-            await this.assetTypeService.deleteAssetType(params.id);
-            return { status: 204, body: { message: 'Asset type deleted' } };
+            await this.assetTypeService.deleteAssetType(Number(params.id));
+            return { 
+                status: 204 as const, 
+                body: undefined 
+            };
         });
     }
 

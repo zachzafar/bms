@@ -107,7 +107,7 @@ export default function Properties() {
                   <FormItem>
                     <FormLabel>Name</FormLabel>
                     <FormControl>
-                      <Input placeholder="Enter property name" {...field} />
+                      <Input placeholder="Enter field name" {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
