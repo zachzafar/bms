@@ -77,7 +77,7 @@ export class BookingController {
     @TsRestHandler(contract.booking.createAssetAvailability)
     async createAssetAvailability(): Promise<ReturnType<typeof tsRestHandler>> {
         return tsRestHandler(contract.booking.createAssetAvailability, async ({ body }) => {
-            const [{id}] = await this.bookingService.addAvailabilityException(body);
+            const [{id}] = await this.bookingService.addAvailabilityException({...body, startDate: new Date(body.startDate), endDate: new Date(body.endDate)});
             return { status: 201, body: {id}};
         });
     }

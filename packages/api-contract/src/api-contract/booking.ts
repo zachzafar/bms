@@ -3,6 +3,7 @@ import { initContract } from "@ts-rest/core";
 import { z } from "zod";
 
 import { Customer, InsertAvailabilitySchema, InsertBookingSchema, SelectAssetSchema, SelectAvailabilitySchema, SelectBookingSchema, SelectCustomerSchema, UpdateBookingSchema } from "../database-schema";
+import { start } from "repl";
 
 
 const c = initContract();
@@ -98,7 +99,7 @@ export const bookingContract = c.router({
                 id: z.number(),
             })
         },
-        body: InsertAvailabilitySchema,
+        body: InsertAvailabilitySchema.omit({startDate:true, endDate:true}).extend({ startDate: z.string(), endDate: z.string()}),
         summary: 'Create a new asset availability'
     },
     getAssetAvailability: {

@@ -46,7 +46,7 @@ export const maintenanceContract = c.router({
         method: 'PUT',
         path: '/maintenance/:id',
         responses: {
-            200: SelectMaintenanceTaskSchema
+            200: z.string()
         },
         pathParams: z.object({
             id: z.string()
@@ -64,6 +64,35 @@ export const maintenanceContract = c.router({
             id: z.string()
         }),
         summary: 'Delete a maintenance task by id'
-    }
+    },
+    uploadMaintenanceFile: {
+        method: 'POST',
+        path: '/maintenance/:id/files',
+        responses: {
+            200: z.object({
+                fileUrl: z.string(),
+            }),
+            404: z.object({
+                message: z.string(),
+            }),
+        },
+        body: z.object({
+            file: z.any(), // File will be handled by multer
+        }),
+        summary: 'Upload a file for a maintenance task',
+    },
+
+    deleteMaintenanceFile: {
+        method: 'DELETE',
+        path: '/maintenance/:maintenanceId/files/:fileId',
+        responses: {
+            204: z.void(),
+            404: z.object({
+                message: z.string(),
+            }),
+        },
+        body: null,
+        summary: 'Delete a file from a maintenance task',
+    },
         
 })

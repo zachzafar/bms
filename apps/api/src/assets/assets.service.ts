@@ -5,6 +5,8 @@ import * as schema from '@repo/api-contract';
 import { eq } from 'drizzle-orm';
 import type { InsertAsset, UpdateAsset } from '@repo/api-contract';
 
+
+
 @Injectable()
 export class AssetsService {
     constructor(

@@ -6,6 +6,7 @@ import { Owner, User, UserHasAssets } from "../users";
 import { createSelectSchema, createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 import { v4 as uuid } from "uuid";
+import { MaintenanceTask } from "../maintenance";
 
 // Asset Model
 export const Asset = mysqlTable("assets", {
@@ -49,6 +50,7 @@ export const AssetRelations = relations(Asset, ({ one, many }) => ({
         fields: [Asset.assetTypeId],
         references: [AssetType.id],
     }),
+    maintenances: many(MaintenanceTask),
     user: many(UserHasAssets),
     tags: many(AssetHasTags),
     bookingForms: many(AssetHasBookingForms),

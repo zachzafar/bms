@@ -1,8 +1,8 @@
-import { ConflictException, forwardRef, Inject, Injectable } from '@nestjs/common';
+import { ConflictException, forwardRef, Inject, Injectable, NotFoundException } from '@nestjs/common';
 import { MySql2Database } from 'drizzle-orm/mysql2';
 import { DrizzleAsyncProvider } from 'src/drizzle/drizzle.provider';
 import * as schema from '@repo/api-contract';
-import { BookingService } from 'src/booking/booking.service';
+import { TenantService } from 'src/tenant/tenant.service';
 import  type { InsertMaintenanceTask, UpdateMaintenanceTask } from '@repo/api-contract';
 import { eq } from 'drizzle-orm';
 
@@ -12,6 +12,7 @@ export class MaintenanceService {
 
     constructor(
         @Inject(DrizzleAsyncProvider) private db: MySql2Database<typeof schema>,
+        @Inject(forwardRef(() => TenantService)) private tenantService: TenantService
     ){ }
 
     async createMaintenance(body: InsertMaintenanceTask) {
@@ -32,17 +33,37 @@ export class MaintenanceService {
 
     }
 
-    async getMaintenances() {
-        return await this.db.query.MaintenanceTask.findMany();
-    }
-    async updateMaintenance(body: UpdateMaintenanceTask) {
-        const existingMaintenance = await this.getMaintenance(body.id);
-        if (!existingMaintenance) {
-            throw new ConflictException('Maintenance not found');
-        }
+    async getMaintenances(tenantId: string) {
 
-        await this.db.update(schema.MaintenanceTask).set(body).where(eq(schema.MaintenanceTask.id, body.id)).execute();
-        return await this.getMaintenance(body.id);
+        const maintenances = await this.db.select()
+            .from(schema.MaintenanceTask)
+            .innerJoin(
+                schema.Asset, 
+                eq(schema.MaintenanceTask.assetId, schema.Asset.id)
+            )
+            .where(eq(schema.Asset.tenantId, tenantId));
+        
+        const results = maintenances.map((maintenance) => {
+            return {
+                ...maintenance.maintenance_tasks,
+                asset: maintenance.assets,
+            }
+        });
+
+        return results;
+    }
+    async updateMaintenance(body: UpdateMaintenanceTask,maintenanceId: string) {
+        const existingMaintenance = await this.getMaintenance(maintenanceId);
+
+        if (!existingMaintenance) {
+            throw new NotFoundException('Maintenance not found');
+        }
+        try {
+            await this.db.update(schema.MaintenanceTask).set(body).where(eq(schema.MaintenanceTask.id, maintenanceId)).execute();        
+        } catch (e) {
+            throw new ConflictException('Error occured while updating maintenance');
+        }
+    
     }
     async deleteMaintenance(id: string) {
         this.db.delete(schema.MaintenanceTask).where(eq(schema.MaintenanceTask.id,id)).execute();

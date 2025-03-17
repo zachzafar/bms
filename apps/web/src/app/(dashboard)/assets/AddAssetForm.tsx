@@ -9,7 +9,8 @@ import { ASSET_TYPE_QUERY_KEY } from '@/lib/api/queryKeys';
 import { StorageService } from '@/lib/api/storage';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useRouter } from 'next/navigation';
-import { SubmitHandler, useForm, useFormState } from 'react-hook-form';
+import { toast } from 'sonner';
+import { SubmitHandler, useForm } from 'react-hook-form';
 import { z } from 'zod';
 
 const ModifiedInsertAssetSchema = z.object({
@@ -37,8 +38,9 @@ function AddAssetForm() {
         body: { asset: { ...data,requiresApproval: false, assetTypeId: Number(data.assetTypeId),}, tenant: tenant?.id as string}
       },{
           onSuccess: (response) => {
-              console.log('response', response);
+              toast.success('Asset added successfully');
               router.push(`/assets/${response.body.id}`)
+              form.reset();
           },
           onError: (error) => {
               console.log('error', error);

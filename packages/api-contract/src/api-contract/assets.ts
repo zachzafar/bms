@@ -16,9 +16,6 @@ export const assetsContract = c.router({
             })
             
         },
-        headers: z.object({
-            tenant: z.string().optional(),
-        }),
         body: z.object({
             tenant: z.string(),     
             asset: InsertAssetSchema.omit({ tenantId: true})
@@ -31,9 +28,6 @@ export const assetsContract = c.router({
         responses: {
             200: z.array(SelectAssetSchema)
         },
-        headers: z.object({
-            tenant: z.string(),
-        }),
         query: z.object({
             search: z.string().optional(),
         }),
@@ -46,9 +40,6 @@ export const assetsContract = c.router({
             200: SelectAssetSchema,
             404: z.undefined()
         },
-        headers: z.object({
-            tenant: z.string(),
-        }),
         pathParams: z.object({
             id: z.string()
         }),
@@ -60,9 +51,6 @@ export const assetsContract = c.router({
         responses: {
             200: SelectAssetSchema
         },
-        headers: z.object({
-            tenant: z.string(),
-        }),
         pathParams: z.object({
             id: z.string()
         }),
@@ -75,9 +63,6 @@ export const assetsContract = c.router({
         responses: {
             204: z.undefined()
         },
-        headers: z.object({
-            tenant: z.string(),
-        }),
         pathParams: z.object({
             id: z.string()
         }),
@@ -91,9 +76,6 @@ export const assetsContract = c.router({
                 message: z.string(),
             })
         },
-        headers: z.object({
-            tenant: z.string(),
-        }),
         pathParams: z.object({
             id: z.string()
         }),
