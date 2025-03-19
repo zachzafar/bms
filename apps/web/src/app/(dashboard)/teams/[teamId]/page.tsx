@@ -1,42 +1,28 @@
 'use client';
 
 import { useState } from 'react';
-import { useRouter } from 'next/router';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Pencil, Trash2 } from 'lucide-react';
 
-// Mock data for demonstration
-const mockTeams = [
-  {
-    id: '1',
-    name: 'Rentals',
-    tenant: 'Sotheby',
-    members: [
-      { id: '101', name: 'Alice Johnson', role: 'Manager' },
-      { id: '102', name: 'Bob Smith', role: 'Agent' },
-    ],
-  },
-  {
-    id: '2',
-    name: 'Sales',
-    tenant: 'Sotheby',
-    members: [
-      { id: '103', name: 'Charlie Davis', role: 'Sales Lead' },
-      { id: '104', name: 'Dana White', role: 'Agent' },
-    ],
-  },
-];
+// Define Props Interface
+interface Team {
+  id: string;
+  name: string;
+  tenant: string;
+  members: { id: string; name: string; role: string }[];
+}
 
-export default function TeamDetails() {
-  const router = useRouter();
-  const { teamId } = router.query;
-  const team = mockTeams.find((t) => t.id === teamId);
-  const [teamMembers, setTeamMembers] = useState(team ? team.members : []);
+interface TeamDetailsProps {
+  team: Team;
+}
 
-  const handleRoleChange = (memberId, newRole) => {
+export default function TeamDetails({ team }: TeamDetailsProps) {
+  const [teamMembers, setTeamMembers] = useState(team.members);
+
+  const handleRoleChange = (memberId: string, newRole: string) => {
     setTeamMembers((prevMembers) =>
       prevMembers.map((member) =>
         member.id === memberId ? { ...member, role: newRole } : member
@@ -44,11 +30,9 @@ export default function TeamDetails() {
     );
   };
 
-  const handleDeleteMember = (memberId) => {
+  const handleDeleteMember = (memberId: string) => {
     setTeamMembers((prevMembers) => prevMembers.filter((member) => member.id !== memberId));
   };
-
-  if (!team) return <p>Team not found</p>;
 
   return (
     <div className='container mx-auto py-10'>
