@@ -82,4 +82,18 @@ export class AssetTypeService {
     async deleteAssetType(id: number) {
         return this.db.delete(schema.AssetType).where(eq(schema.AssetType.id, id));
     }
+
+    async updateAssetTypeProperties(id: number, properties: number[]) {
+        await this.db.delete(schema.AssetTypeHasProperties).where(eq(schema.AssetTypeHasProperties.assetTypeId, BigInt(id))).execute()
+        if (properties.length > 0) {
+            await this.db
+                .insert(schema.AssetTypeHasProperties)
+                .values(
+                    properties.map(property => ({
+                        assetTypeId: BigInt(id),
+                        assetPropertyId: BigInt(property)
+                    }))
+                );
+        }
+    }
 }

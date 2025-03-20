@@ -14,7 +14,7 @@ export const client = initTsrReactQuery(contract,{
 
 
 const axiosInstance = axios.create({
-
+  baseURL: baseUrl,
 })
 
 axiosInstance.interceptors.request.use(
@@ -27,6 +27,11 @@ axiosInstance.interceptors.request.use(
           Authorization: `Bearer ${accessToken}`,
           "x-tenant-id": tenant.id,
         });
+
+        if (config.data instanceof FormData) {
+          console.log(config.data)
+          config.headers['Content-Type'] = "multipart/form-data"
+        }
       }
   
       return config
@@ -61,6 +66,7 @@ axiosInstance.interceptors.response.use(
     }
   );
 
+export const axiosClient = axiosInstance
 
 export const authClient = initTsrReactQuery(contract, {
     baseUrl,

@@ -1,8 +1,8 @@
 import { relations } from "drizzle-orm";
-import { mysqlTable, serial, varchar, text, int, timestamp, index, uniqueIndex, boolean, bigint } from "drizzle-orm/mysql-core";
+import { mysqlTable, serial, varchar, text, timestamp, index, uniqueIndex, boolean, bigint, mysqlEnum } from "drizzle-orm/mysql-core";
 import { AssetType,assetProperty, BookingForm, Tags } from "../settings";
 import { Tenant, TenantTeamHasAssets } from "../tenant";
-import { Owner, User, UserHasAssets } from "../users";
+import { User, UserHasAssets } from "../users";
 import { createSelectSchema, createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 import { v4 as uuid } from "uuid";
@@ -63,10 +63,13 @@ export const AssetRelations = relations(Asset, ({ one, many }) => ({
 
 export const AssetImages = mysqlTable("asset_images",{
     id: serial("id").primaryKey(),
-    assetId: varchar("tenant_id", { length: 255 }).notNull().references(() => Asset.id),
-    filePath: varchar("tenant_id", { length: 255 }).notNull()
+    assetId: varchar("asset_id", { length: 255 }).notNull().references(() => Asset.id),
+    filePath: varchar("file_path", { length: 255 }).notNull(),
+    imageType: mysqlEnum("image_type", ["primary", "secondary","gallery"]).notNull().default("gallery"),
 })
 
+export const SelectAssetImagesSchema = createSelectSchema(AssetImages)
+export type SelectAssetImages = z.infer<typeof SelectAssetImagesSchema>;
 
 export const AssetImagesRelations = relations(AssetImages, ({ one }) => ({
     asset: one(Asset, {
@@ -84,6 +87,10 @@ export const AssetHasProperties = mysqlTable("asset_has_properties", {
 }, (table) => ({
     assetPropertyUniqueIdx: uniqueIndex("asset_property_unique").on(table.assetId, table.assetPropertyId),
 }));
+
+export const SelectAssetHasPropertiesSchema = createSelectSchema(AssetHasProperties)
+
+export type SelectAssetHasProperties = z.infer<typeof SelectAssetHasPropertiesSchema>;
 
 export const AssetHasPropertiesRelations = relations(AssetHasProperties, ({ one }) => ({
     asset: one(Asset, {
