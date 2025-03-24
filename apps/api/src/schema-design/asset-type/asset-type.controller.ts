@@ -57,6 +57,7 @@ export class AssetTypeController {
             const tenantId = headers['x-tenant-id']
             await this.TenantService.validateTenantAccess(tenantId, schema.AssetType, params.id)
             const assetType = await this.assetTypeService.updateAssetType(Number(params.id), body.assetType);
+             await this.assetTypeService.updateAssetTypeProperties(Number(params.id), body.properties);
             if (!assetType) {
                 return { 
                     status: 500 as const, 

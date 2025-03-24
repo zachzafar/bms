@@ -11,13 +11,15 @@ import { BookingModule } from './booking/booking.module';
 import { MaintenanceModule } from './maintenance/maintenance.module';
 import { TeamsModule } from './teams/teams.module';
 import { TenantModule } from './tenant/tenant.module';
+import { ObjectStorageService } from './object-storage/object-storage.service';
+import { ObjectStorageModule } from './object-storage/object-storage.module';
 
 @Module({
   imports: [DrizzleModule, SchemaDesignModule, AuthModule, UsersModule,ConfigModule.forRoot({
     isGlobal: true, // Makes ConfigService globally available
     envFilePath: '.env', // Path to your environment file
-  }), AssetsModule, BookingModule, MaintenanceModule, TeamsModule, TenantModule,],
+  }), AssetsModule, BookingModule, MaintenanceModule, TeamsModule, TenantModule, ObjectStorageModule,],
   controllers: [AppController],
-  providers: [AppService],
+  providers: [AppService, ObjectStorageService],
 })
 export class AppModule {}

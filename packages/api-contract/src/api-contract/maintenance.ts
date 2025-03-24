@@ -1,7 +1,7 @@
 import { initContract } from "@ts-rest/core";
 
 import { z } from "zod";
-import { InsertMaintenanceTaskSchema, SelectMaintenanceTaskSchema, UpdateMaintenanceTaskSchema } from "../database-schema";
+import { InsertMaintenanceTaskSchema, SelectFileSchema, SelectMaintenanceTaskSchema, UpdateMaintenanceTaskSchema } from "../database-schema";
 
 
 
@@ -46,7 +46,7 @@ export const maintenanceContract = c.router({
         method: 'PUT',
         path: '/maintenance/:id',
         responses: {
-            200: SelectMaintenanceTaskSchema
+            200: z.string()
         },
         pathParams: z.object({
             id: z.string()
@@ -64,6 +64,51 @@ export const maintenanceContract = c.router({
             id: z.string()
         }),
         summary: 'Delete a maintenance task by id'
-    }
+    },
+    uploadMaintenanceFiles: {
+        method: 'POST',
+        path: '/maintenance/:id/files',
+        responses: {
+            200: z.object({
+                message: z.string(),
+            })
+        },
+        pathParams: z.object({
+            id: z.string(),
+        }),
+        body: z.object({
+            images: z.any()
+        }),
+        summary: 'Upload images for a property'
+    },
+    getMaintenanceFiles: {
+        method: 'GET',
+        path: '/maintenance/:id/files',
+        responses: {
+            200: z.array(SelectFileSchema)
+        },
+        pathParams: z.object({
+            id: z.string()
+        }),
+        summary: 'Get images for an asset'
+    },
+    deleteMaintenanceFiles: {
+        method: 'DELETE',
+        path: '/maintenance/:id/files',
+        responses: {
+            200: z.object({
+                failedIds: z.array(z.number()),
+                message: z.string(),
+            }),
+            204: z.undefined()
+        },
+        pathParams: z.object({
+            id: z.string(),
+        }),
+        body: z.object({
+            files: z.array(z.number())
+        }),
+        summary: 'Delete images for an asset'
+    },
         
 })

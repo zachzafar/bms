@@ -9,7 +9,7 @@ import { eq , and} from 'drizzle-orm';
 export class UsersService {
     constructor(@Inject(DrizzleAsyncProvider) private db: MySql2Database<typeof schema>){}
 
-    async createUser(userData: InsertUser,tenantId: string): Promise<string> {
+    async createUser(userData: InsertUser,tenantId: string,customer:boolean,owner:boolean,roles:number[]): Promise<string> {
         let tenantUser_id: number
         await this.db.transaction(async (tx) => {
              await tx.insert(schema.User).values(userData)
@@ -19,6 +19,13 @@ export class UsersService {
              if (!user) throw new InternalServerErrorException("Error occured while creating user")
 
              tenantUser_id = await tx.insert(schema.TenantHasUsers).values({ tenantId, userId: user.id}).$returningId()[0].id
+
+             if (customer) await tx.insert(schema.Customer).values({userId: user.id})
+             if (owner) await tx.insert(schema.Owner).values({userId: user.id})
+
+            roles.forEach(async (role) => {
+                await tx.insert(schema.UserHasRoles).values({userId: user.id,roleId: BigInt(role)})
+            })
         })
 
         const tenantUser = await this.db.query.TenantHasUsers.findFirst({where: (tenant_user,{eq}) => eq(tenant_user.id,tenantUser_id)})

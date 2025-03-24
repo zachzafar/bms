@@ -32,7 +32,6 @@ export default function AssetsPage() {
     const { data: assets } = authClient.assets.getAssets.useQuery({
         queryKey: ['assets'],
         enabled: !!currentTenant,
-        queryData: { headers: { tenant: currentTenant?.id as string } }
     });
 
 

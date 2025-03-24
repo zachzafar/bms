@@ -1,8 +1,8 @@
 import { relations } from "drizzle-orm";
-import { mysqlTable, serial, varchar, text, datetime, int, timestamp, index, bigint } from "drizzle-orm/mysql-core";
+import { mysqlTable, serial, varchar, text, datetime, int, timestamp, index, bigint, mysqlEnum, float } from "drizzle-orm/mysql-core";
 import { Asset } from "../asset";
 import { Tenant } from "../tenant";
-import { createInsertSchema } from "drizzle-zod";
+import { createInsertSchema, createSelectSchema } from "drizzle-zod";
 import { z } from "zod";
 import { v4 as uuid } from "uuid";
 
@@ -10,11 +10,9 @@ import { v4 as uuid } from "uuid";
 export const MaintenanceTask = mysqlTable("maintenance_tasks", {
     id: varchar("id", { length: 36 }).primaryKey().$default(() => uuid()),
     title: varchar("title", { length: 255 }).notNull(),
+    cost: float("cost").notNull(),
     description: text("description").notNull(),
-    status: varchar("status", { length: 255 }).notNull(),
-    priority: varchar("priority", { length: 255 }),
-    startDate: datetime("start_date").notNull(),
-    endDate: datetime("end_date"),
+    status: mysqlEnum(["COMPLETE","IN_PROGRESS","AWAITING"]).notNull(),
     assetId: varchar("asset_id", { length: 255 }).notNull().references(() => Asset.id),
     createdAt: timestamp('createdAt').notNull().defaultNow(),
     updatedAt: timestamp('updated_at', { mode: 'date', }).$onUpdate(() => new Date()),
@@ -23,8 +21,8 @@ export const MaintenanceTask = mysqlTable("maintenance_tasks", {
 }));
 
 export const InsertMaintenanceTaskSchema = createInsertSchema(MaintenanceTask);
-export const SelectMaintenanceTaskSchema = createInsertSchema(MaintenanceTask);
-export const UpdateMaintenanceTaskSchema = InsertMaintenanceTaskSchema.partial().required({ id: true, title: true, description: true, status: true, priority: true, startDate: true, assetId: true });
+export const SelectMaintenanceTaskSchema = createSelectSchema(MaintenanceTask);
+export const UpdateMaintenanceTaskSchema = InsertMaintenanceTaskSchema.partial().omit({ id: true, assetId: true})
 
 export type InsertMaintenanceTask = z.infer<typeof InsertMaintenanceTaskSchema>;
 export type SelectMaintenanceTask = z.infer<typeof SelectMaintenanceTaskSchema>;

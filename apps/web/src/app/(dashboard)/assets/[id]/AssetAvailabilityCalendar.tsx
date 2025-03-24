@@ -1,53 +1,60 @@
 'use client';
 
-import { useState } from 'react';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { SelectAsset } from '@repo/api-contract';
 import { authClient } from '@/lib/api/publicClient';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-
-interface DateRange {
-  from: Date;
-  to: Date;
-  price?: number;
-  available?: boolean;
-}
-
-interface AssetAvailabilityCalendarProps {
-  initialRanges?: DateRange[];
-  onRangesChange: (ranges: DateRange[]) => void;
-}
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { Form, FormField, FormItem, FormLabel, FormControl, FormMessage } from '@/components/ui/form';
+import { toast } from 'sonner';
+import { InsertAvailabilitySchema, InsertAvailability } from '@repo/api-contract';
 
 export default function AssetAvailabilityCalendar({
-  asset }: { asset: SelectAsset}) {
-  const { data: availabilities} = authClient.booking.getAssetAvailability.useQuery({ 
-    queryKey: ['availability',asset.id], 
-    queryData: { params: {id: asset.id }} 
+  asset }: { asset: SelectAsset }) {
+    const queryClient = authClient.useQueryClient();
+  
+    const { data: availabilities } = authClient.booking.getAssetAvailability.useQuery({
+    queryKey: ['availability', asset.id],
+    queryData: { params: { id: asset.id } }
   });
+
   const { mutate } = authClient.booking.createAssetAvailability.useMutation();
 
-  const ranges = availabilities?.status == 200 ? availabilities.body.map(availability => availability): []
-  const [startDate, setStartDate] = useState<string>('');
-  const [endDate, setEndDate] = useState<string>('');
-  const [price, setPrice] = useState<string>('');
-  const [available, setavailable] = useState(false);
+  const ranges = availabilities?.status == 200 ? availabilities.body.map(availability => availability) : [];
 
-  const handleAddRange = () => {
+  const form = useForm<InsertAvailability>({
+    resolver: zodResolver(InsertAvailabilitySchema),
+    defaultValues: {
+      available: false,
+    },
+  });
+
+  const onSubmit = (data: InsertAvailability) => {
     const newRange = {
-      startDate: new Date(startDate),
-      endDate: new Date(endDate),
-      price,
-      available,
+      startDate: data.startDate.toISOString(),
+      endDate: data.endDate.toISOString(),
+      price: data.price,
+      available: !data.available,
       assetId: asset.id
     };
-    mutate({ body: newRange });
-    setStartDate('');
-    setEndDate('');
-    setPrice('');
-    setavailable(false);
+
+    mutate(
+      { body: newRange },
+      {
+        onSuccess: () => {
+          toast.success('Availability added successfully');
+          queryClient.invalidateQueries({ queryKey: ['availability', asset.id]});
+          form.reset();
+        },
+        onError: (error) => {
+          toast.error('Failed to add availability');
+          console.error(error);
+        },
+      }
+    );
   };
 
   return (
@@ -56,48 +63,77 @@ export default function AssetAvailabilityCalendar({
         <CardHeader>
           <CardTitle>Add Availability</CardTitle>
         </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label>Start Date</Label>
-              <Input
-                type="date"
-                value={startDate}
-                onChange={(e) => setStartDate(e.target.value)}
+        <CardContent>
+          <Form {...form}>
+            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <FormField
+                  control={form.control}
+                  name="startDate"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Start Date</FormLabel>
+                      <FormControl>
+                        <Input type="date" {...field} value={field.value ? new Date(field.value).toISOString().split('T')[0] : ''} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="endDate"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>End Date</FormLabel>
+                      <FormControl>
+                        <Input type="date" {...field} value={field.value ? new Date(field.value).toISOString().split('T')[0] : ''} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+
+              <FormField
+                control={form.control}
+                name="price"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Price per day</FormLabel>
+                    <FormControl>
+                      <Input type="number" {...field} value={field.value || ''} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
               />
-            </div>
-            <div className="space-y-2">
-              <Label>End Date</Label>
-              <Input
-                type="date"
-                value={endDate}
-                onChange={(e) => setEndDate(e.target.value)}
+
+              <FormField
+                control={form.control}
+                name="available"
+                render={({ field }) => (
+                  <FormItem className="flex items-center space-x-2">
+                    <FormControl>
+                      <input
+                        type="checkbox"
+                        checked={field.value}
+                        onChange={field.onChange}
+                        className="mr-2"
+                      />
+                    </FormControl>
+                    <FormLabel>Block these dates</FormLabel>
+                    <FormMessage />
+                  </FormItem>
+                )}
               />
-            </div>
-          </div>
-          <div className="space-y-2">
-            <Label>Price per day</Label>
-            <Input
-              type="number"
-              value={price}
-              onChange={(e) => setPrice(e.target.value)}
-              placeholder="Enter price"
-            />
-          </div>
-          <div className="space-y-2">
-            <Label className="flex items-center space-x-2">
-              <input
-                type="checkbox"
-                checked={available}
-                onChange={(e) => setavailable(e.target.checked)}
-                className="mr-2"
-              />
-              Block these dates
-            </Label>
-          </div>
-          <Button onClick={handleAddRange} className="w-full">
-            Add Range
-          </Button>
+
+              <Button type="submit" className="w-full">
+                Add Range
+              </Button>
+            </form>
+          </Form>
         </CardContent>
       </Card>
 

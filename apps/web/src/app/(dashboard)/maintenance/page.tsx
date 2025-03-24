@@ -1,16 +1,19 @@
 'use client';
 
-import { useState, useRef } from 'react';
 import { Button } from '@/components/ui/button';
+import { DialogHeader, Dialog, DialogTrigger, DialogContent, DialogTitle, DialogDescription } from '@/components/ui/dialog';
+import { FormField, FormItem, FormLabel, Form, FormControl, FormDescription, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { authClient } from '@/lib/api/publicClient';
+import { ASSETS_QUERY_KEY, MAINTENANCE_QUERY_KEY } from '@/lib/api/queryKeys';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { PlusIcon, Pencil  } from 'lucide-react';
+import { SubmitHandler, useForm } from 'react-hook-form';
+import { z } from 'zod';
+import Link from 'next/link';
+
+
 import {
   Table,
   TableBody,
@@ -19,160 +22,74 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from '@/components/ui/dialog';
-import { Calendar } from '@/components/ui/calendar';
-import {
-  Package2Icon,
-  PlusIcon,
-  FilterIcon,
-  SearchIcon,
-  FileIcon,
-  DownloadIcon,
-} from 'lucide-react';
-import Image from 'next/image';
+import { SearchIcon } from 'lucide-react';
+import { useState } from 'react';
+import { Textarea } from '@/components/ui/textarea';
+import { toast } from 'sonner';
+import { useRouter } from 'next/navigation';
+
+const MaintenanceFormSchema = z.object({
+  title: z.string().min(1, 'Title is required'),
+  description: z.string().min(1, 'Description is required'),
+  cost: z.number().min(0, 'Cost must be positive'),
+  status: z.enum(['COMPLETE', 'IN_PROGRESS', 'AWAITING']),
+  assetId: z.string().min(1, 'Asset is required'),
+});
+
+type MaintenanceFormData = z.infer<typeof MaintenanceFormSchema>;
 
 export default function Component() {
-  const [maintenanceTasks, setMaintenanceTasks] = useState([
-    {
-      id: 1,
-      assetName: 'Toyota Camry',
-      assetType: 'Car',
-      taskDescription: 'Oil Change',
-      dueDate: '2023-07-20',
-      status: 'Pending',
-      cost: 50,
-      files: [],
-    },
-    {
-      id: 2,
-      assetName: 'Conference Room A',
-      assetType: 'Room',
-      taskDescription: 'Deep Cleaning',
-      dueDate: '2023-07-25',
-      status: 'Scheduled',
-      cost: 200,
-      files: ['invoice.pdf'],
-    },
-    {
-      id: 3,
-      assetName: 'Projector #2',
-      assetType: 'Equipment',
-      taskDescription: 'Lamp Replacement',
-      dueDate: '2023-07-18',
-      status: 'In Progress',
-      cost: 150,
-      files: ['quote.pdf', 'workorder.pdf'],
-    },
-    {
-      id: 4,
-      assetName: 'Honda Civic',
-      assetType: 'Car',
-      taskDescription: 'Brake Inspection',
-      dueDate: '2023-07-22',
-      status: 'Completed',
-      cost: 75,
-      files: ['receipt.pdf'],
-    },
-    {
-      id: 5,
-      assetName: 'Deluxe Suite 101',
-      assetType: 'Room',
-      taskDescription: 'AC Maintenance',
-      dueDate: '2023-07-19',
-      status: 'Pending',
-      cost: 100,
-      files: [],
-    },
-  ]);
+  const router = useRouter();
+  const { data: assetsResponse} = authClient.assets.getAssets.useQuery({ queryKey: ASSETS_QUERY_KEY });
+  const { data: maintenance } = authClient.maintenance.getMaintenances.useQuery({ queryKey: MAINTENANCE_QUERY_KEY });
+  const { mutate, isPending } = authClient.maintenance.createMaintenance.useMutation();
 
-  const [newTask, setNewTask] = useState({
-    assetName: '',
-    assetType: '',
-    taskDescription: '',
-    dueDate: new Date(),
-    status: 'Pending',
-    cost: 0,
-    files: [],
+  const form = useForm<MaintenanceFormData>({
+    resolver: zodResolver(MaintenanceFormSchema),
+    defaultValues: {
+      title: '',
+      description: '',
+      cost: 0,
+      status: 'AWAITING',
+      assetId: '',
+    },
   });
+  const filteredTasks = maintenance?.status === 200? maintenance.body : [];
 
+  // const filteredTasks = maintenance?.status === 200 ?
+  //   maintenance.body.filter(
+  //     (task) =>
+  //       (searchTerm === '' ||
+  //         task.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+  //         task.description
+  //           .toLowerCase()
+  //           .includes(searchTerm.toLowerCase())) &&
+  //       (filterStatus === 'All' || task.status === filterStatus)
+  //   ) : [];
+
+  const assets = assetsResponse?.status === 200? assetsResponse.body : [];
+
+  const processForm: SubmitHandler<MaintenanceFormData> = async (data) => {
+    mutate({
+      body: data
+    }, {
+      onSuccess: (response) => {
+        toast.success('Task added successfully');
+        router.push(`/maintenance/${response.body.id}`)
+        form.reset();
+        // Optionally redirect or refresh data
+      },
+      onError: (error) => {
+        console.log('error', error);
+      }
+    });
+  };
+
+  // Add these state declarations after existing ones
   const [searchTerm, setSearchTerm] = useState('');
-  const [filterType, setFilterType] = useState('All');
   const [filterStatus, setFilterStatus] = useState('All');
   const [sortBy, setSortBy] = useState('dueDate');
   const [sortOrder, setSortOrder] = useState('asc');
-  const [selectedTask, setSelectedTask] = useState(null);
-  const fileInputRef = useRef(null);
-
-  const filteredTasks = maintenanceTasks
-    .filter(
-      (task) =>
-        (searchTerm === '' ||
-          task.assetName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          task.taskDescription
-            .toLowerCase()
-            .includes(searchTerm.toLowerCase())) &&
-        (filterType === 'All' || task.assetType === filterType) &&
-        (filterStatus === 'All' || task.status === filterStatus)
-    )
-    .sort((a, b) => {
-      if (a[sortBy] < b[sortBy]) return sortOrder === 'asc' ? -1 : 1;
-      if (a[sortBy] > b[sortBy]) return sortOrder === 'asc' ? 1 : -1;
-      return 0;
-    });
-
-  const handleSort = (column) => {
-    if (sortBy === column) {
-      setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc');
-    } else {
-      setSortBy(column);
-      setSortOrder('asc');
-    }
-  };
-
-  const handleAddTask = (e) => {
-    e.preventDefault();
-    const id = maintenanceTasks.length + 1;
-    setMaintenanceTasks([
-      ...maintenanceTasks,
-      { id, ...newTask, dueDate: newTask.dueDate.toISOString().split('T')[0] },
-    ]);
-    setNewTask({
-      assetName: '',
-      assetType: '',
-      taskDescription: '',
-      dueDate: new Date(),
-      status: 'Pending',
-      cost: 0,
-      files: [],
-    });
-  };
-
-  const handleUpdateStatus = (id, newStatus) => {
-    setMaintenanceTasks(
-      maintenanceTasks.map((task) =>
-        task.id === id ? { ...task, status: newStatus } : task
-      )
-    );
-  };
-
-  const handleFileUpload = (e) => {
-    const files = Array.from(e.target.files).map((file) => file.name);
-    setNewTask({ ...newTask, files: [...newTask.files, ...files] });
-  };
-
-  const handleRemoveFile = (fileName) => {
-    setNewTask({
-      ...newTask,
-      files: newTask.files.filter((file) => file !== fileName),
-    });
-  };
 
   return (
     <>
@@ -192,115 +109,113 @@ export default function Component() {
                 Enter the details for the new maintenance task.
               </DialogDescription>
             </DialogHeader>
-            <form onSubmit={handleAddTask} className='space-y-4'>
-              <div className='space-y-2'>
-                <Label htmlFor='asset-name'>Asset Name</Label>
-                <Input
-                  id='asset-name'
-                  placeholder='Enter asset name'
-                  value={newTask.assetName}
-                  onChange={(e) =>
-                    setNewTask({ ...newTask, assetName: e.target.value })
-                  }
+            <Form {...form}>
+              <form onSubmit={form.handleSubmit(processForm)} className="space-y-4">
+                <FormField
+                  control={form.control}
+                  name="title"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Title</FormLabel>
+                      <FormControl>
+                        <Input placeholder="Enter task title" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
                 />
-              </div>
-              <div className='space-y-2'>
-                <Label htmlFor='asset-type'>Asset Type</Label>
-                <Select
-                  value={newTask.assetType}
-                  onValueChange={(value) =>
-                    setNewTask({ ...newTask, assetType: value })
-                  }
-                >
-                  <SelectTrigger id='asset-type'>
-                    <SelectValue placeholder='Select asset type' />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value='Car'>Car</SelectItem>
-                    <SelectItem value='Room'>Room</SelectItem>
-                    <SelectItem value='Equipment'>Equipment</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className='space-y-2'>
-                <Label htmlFor='task-description'>Task Description</Label>
-                <Input
-                  id='task-description'
-                  placeholder='Enter task description'
-                  value={newTask.taskDescription}
-                  onChange={(e) =>
-                    setNewTask({
-                      ...newTask,
-                      taskDescription: e.target.value,
-                    })
-                  }
+
+                <FormField
+                  control={form.control}
+                  name="description"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Description</FormLabel>
+                      <FormControl>
+                        <Textarea placeholder="Enter task description" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
                 />
-              </div>
-              <div className='space-y-2'>
-                <Label>Due Date</Label>
-                <Calendar
-                  mode='single'
-                  selected={newTask.dueDate}
-                  onSelect={(date) => setNewTask({ ...newTask, dueDate: date })}
-                  className='rounded-md border'
+
+                <FormField
+                  control={form.control}
+                  name="cost"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Cost</FormLabel>
+                      <FormControl>
+                        <Input 
+                          type="number" 
+                          placeholder="Enter cost" 
+                          {...field}
+                          onChange={(e) => field.onChange(Number(e.target.value))}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
                 />
-              </div>
-              <div className='space-y-2'>
-                <Label htmlFor='task-cost'>Estimated Cost ($)</Label>
-                <Input
-                  id='task-cost'
-                  type='number'
-                  placeholder='Enter estimated cost'
-                  value={newTask.cost}
-                  onChange={(e) =>
-                    setNewTask({
-                      ...newTask,
-                      cost: parseFloat(e.target.value),
-                    })
-                  }
+
+                <FormField
+                  control={form.control}
+                  name="status"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Status</FormLabel>
+                      <Select onValueChange={field.onChange} value={field.value}>
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select status" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value="AWAITING">Awaiting</SelectItem>
+                          <SelectItem value="IN_PROGRESS">In Progress</SelectItem>
+                          <SelectItem value="COMPLETE">Complete</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
                 />
-              </div>
-              <div className='space-y-2'>
-                <Label htmlFor='file-upload'>Upload Files</Label>
-                <Input
-                  id='file-upload'
-                  type='file'
-                  multiple
-                  onChange={handleFileUpload}
-                  ref={fileInputRef}
-                  className='hidden'
+
+                <FormField
+                  control={form.control}
+                  name="assetId"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Asset</FormLabel>
+                      <Select onValueChange={field.onChange} value={field.value}>
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select asset" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {assets.map((asset) => (
+                            <SelectItem key={asset.id} value={asset.id}>
+                              {asset.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
                 />
-                <Button
-                  type='button'
-                  onClick={() => fileInputRef.current.click()}
-                >
-                  Select Files
+
+                <Button type="submit" disabled={isPending}>
+                  {isPending ? 'Adding Task...' : 'Add Task'}
                 </Button>
-                {newTask.files.length > 0 && (
-                  <ul className='mt-2 space-y-1'>
-                    {newTask.files.map((file, index) => (
-                      <li
-                        key={index}
-                        className='flex items-center justify-between'
-                      >
-                        <span>{file}</span>
-                        <Button
-                          size='sm'
-                          variant='ghost'
-                          onClick={() => handleRemoveFile(file)}
-                        >
-                          Remove
-                        </Button>
-                      </li>
-                    ))}
-                  </ul>
-                )}
-              </div>
-              <Button type='submit'>Add Task</Button>
-            </form>
+              </form>
+            </Form>
           </DialogContent>
         </Dialog>
       </div>
+
+      {/* Rest of your table component remains the same */}
       <div className='flex flex-col gap-4 md:flex-row md:items-center md:justify-between'>
         <div className='flex items-center gap-2'>
           <Input
@@ -316,124 +231,69 @@ export default function Component() {
           </Button>
         </div>
         <div className='flex flex-col gap-2 sm:flex-row sm:items-center'>
-          <Select value={filterType} onValueChange={setFilterType}>
-            <SelectTrigger className='w-[180px]'>
-              <SelectValue placeholder='Filter by type' />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value='All'>All Types</SelectItem>
-              <SelectItem value='Car'>Car</SelectItem>
-              <SelectItem value='Room'>Room</SelectItem>
-              <SelectItem value='Equipment'>Equipment</SelectItem>
-            </SelectContent>
-          </Select>
           <Select value={filterStatus} onValueChange={setFilterStatus}>
             <SelectTrigger className='w-[180px]'>
               <SelectValue placeholder='Filter by status' />
             </SelectTrigger>
             <SelectContent>
               <SelectItem value='All'>All Statuses</SelectItem>
-              <SelectItem value='Pending'>Pending</SelectItem>
-              <SelectItem value='Scheduled'>Scheduled</SelectItem>
-              <SelectItem value='In Progress'>In Progress</SelectItem>
-              <SelectItem value='Completed'>Completed</SelectItem>
+              <SelectItem value='AWAITING'>Awaiting</SelectItem>
+              <SelectItem value='IN_PROGRESS'>In Progress</SelectItem>
+              <SelectItem value='COMPLETE'>Complete</SelectItem>
             </SelectContent>
           </Select>
         </div>
       </div>
+
       <div className='border shadow-sm rounded-lg overflow-x-auto'>
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead className='w-[100px]'>
-                <Button variant='ghost' onClick={() => handleSort('id')}>
-                  Task ID {sortBy === 'id' && (sortOrder === 'asc' ? '↑' : '↓')}
-                </Button>
-              </TableHead>
-              <TableHead>
-                <Button variant='ghost' onClick={() => handleSort('assetName')}>
-                  Asset{' '}
-                  {sortBy === 'assetName' && (sortOrder === 'asc' ? '↑' : '↓')}
-                </Button>
-              </TableHead>
-              <TableHead>
-                <Button variant='ghost' onClick={() => handleSort('assetType')}>
-                  Type{' '}
-                  {sortBy === 'assetType' && (sortOrder === 'asc' ? '↑' : '↓')}
-                </Button>
-              </TableHead>
-              <TableHead>
-                <Button
-                  variant='ghost'
-                  onClick={() => handleSort('taskDescription')}
-                >
-                  Description{' '}
-                  {sortBy === 'taskDescription' &&
-                    (sortOrder === 'asc' ? '↑' : '↓')}
-                </Button>
-              </TableHead>
-              <TableHead>
-                <Button variant='ghost' onClick={() => handleSort('dueDate')}>
-                  Due Date{' '}
-                  {sortBy === 'dueDate' && (sortOrder === 'asc' ? '↑' : '↓')}
-                </Button>
-              </TableHead>
-              <TableHead>
-                <Button variant='ghost' onClick={() => handleSort('status')}>
-                  Status{' '}
-                  {sortBy === 'status' && (sortOrder === 'asc' ? '↑' : '↓')}
-                </Button>
-              </TableHead>
-              <TableHead>
-                <Button variant='ghost' onClick={() => handleSort('cost')}>
-                  Cost ($){' '}
-                  {sortBy === 'cost' && (sortOrder === 'asc' ? '↑' : '↓')}
-                </Button>
-              </TableHead>
-              <TableHead>Files</TableHead>
+              <TableHead>ID</TableHead>
+              <TableHead>Title</TableHead>
+              <TableHead>Description</TableHead>
+              <TableHead>Status</TableHead>
+              <TableHead>Cost ($)</TableHead>
+              <TableHead>Asset ID</TableHead>
+              <TableHead>Created At</TableHead>
               <TableHead>Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {filteredTasks.map((task) => (
               <TableRow key={task.id}>
-                <TableCell className='font-medium'>{task.id}</TableCell>
-                <TableCell>{task.assetName}</TableCell>
-                <TableCell>{task.assetType}</TableCell>
-                <TableCell>{task.taskDescription}</TableCell>
-                <TableCell>{task.dueDate}</TableCell>
+                <TableCell>{task.id}</TableCell>
+                <TableCell>{task.title}</TableCell>
+                <TableCell>{task.description}</TableCell>
                 <TableCell>{task.status}</TableCell>
                 <TableCell>${task.cost.toFixed(2)}</TableCell>
-                <TableCell>
-                  {task.files.map((file, index) => (
-                    <Button
-                      key={index}
-                      variant='ghost'
-                      size='sm'
-                      className='mr-2'
-                    >
-                      <FileIcon className='mr-2 h-4 w-4' />
-                      {file}
-                    </Button>
-                  ))}
-                </TableCell>
-                <TableCell>
+                <TableCell>{task.assetId}</TableCell>
+                <TableCell>{new Date(task.createdAt).toLocaleDateString()}</TableCell>
+                {/* <TableCell>
                   <Select
                     value={task.status}
-                    onValueChange={(value) =>
-                      handleUpdateStatus(task.id, value)
-                    }
+                    onValueChange={(value) => {
+                      // Add your status update mutation here
+                      console.log('Update status', task.id, value);
+                    }}
                   >
                     <SelectTrigger className='w-[140px]'>
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value='Pending'>Pending</SelectItem>
-                      <SelectItem value='Scheduled'>Scheduled</SelectItem>
-                      <SelectItem value='In Progress'>In Progress</SelectItem>
-                      <SelectItem value='Completed'>Completed</SelectItem>
+                      <SelectItem value='AWAITING'>Awaiting</SelectItem>
+                      <SelectItem value='IN_PROGRESS'>In Progress</SelectItem>
+                      <SelectItem value='COMPLETE'>Complete</SelectItem>
                     </SelectContent>
                   </Select>
+                </TableCell> */}
+                <TableCell>
+                  <Link href={`/maintenance/${task.id}`}>
+                    <Button variant='ghost' size='sm'>
+                      <Pencil className='mr-2 h-4 w-4' />
+                      Edit
+                    </Button>
+                  </Link>
                 </TableCell>
               </TableRow>
             ))}
