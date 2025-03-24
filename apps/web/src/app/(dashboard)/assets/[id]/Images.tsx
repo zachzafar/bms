@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { SelectAsset } from '@repo/api-contract';
 import { authClient, axiosClient } from '@/lib/api/publicClient';
 import { Dialog, DialogContent, DialogTrigger } from '@/components/ui/dialog';
-import { toast } from '@/components/ui/use-toast';
+import { toast } from 'sonner';
 
 function Images({asset}: {asset: SelectAsset}) {
   // Fetch existing images
@@ -42,16 +42,9 @@ function Images({asset}: {asset: SelectAsset}) {
     try {
       await axiosClient.post(`/asset/${asset.id}/images`, formData);
       refetchImages();
-      toast({
-        title: "Success",
-        description: `Successfully uploaded ${files.length} image${files.length > 1?'s' : ''}`,
-      });
+      toast.success(`Images uplaoded successfully`);
     } catch (error) {
-      toast({
-        title: "Error",
-        description: "Failed to upload images",
-        variant: "destructive"
-      });
+      toast.error( "Failed to upload images");
     }
     
     
@@ -74,27 +67,16 @@ function Images({asset}: {asset: SelectAsset}) {
     }, {
       onSuccess: (response) => {
         if (response.status === 204) {
-          toast({
-            title: "Success",
-            description: `Successfully deleted ${selectedForDeletion.length} image${selectedForDeletion.length > 1 ? 's' : ''}`,
-          });
+          toast.success( `Successfully deleted images`);
         } else {
           // Handle partial success
-          toast({
-            title: "Partial Success",
-            description: `Some images could not be deleted. Please try again.`,
-            variant: "destructive"
-          });
+          toast.success(`Some images could not be deleted. Please try again.`);
         }
         setSelectedForDeletion([]);
         refetchImages();
       },
       onError: () => {
-        toast({
-          title: "Error",
-          description: "Failed to delete images",
-          variant: "destructive"
-        });
+        toast.error("Failed to delete images");
       }
     });
   };

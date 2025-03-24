@@ -13,11 +13,11 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { UpdateMaintenanceTaskSchema, UpdateMaintenanceTask } from '@repo/api-contract';
 import {toast} from "sonner"
+import AddMaintenanceFile from './AddMaintenanceFile';
 
 export default function MaintenanceDetails() {
   const params = useParams();
   const maintenanceId = params.id as string;
-  const [files, setFiles] = useState<File[]>([]);
 
   const { data: maintenanceData } = authClient.maintenance.getMaintenance.useQuery({
     queryKey: [...MAINTENANCE_QUERY_KEY, maintenanceId],
@@ -29,8 +29,7 @@ export default function MaintenanceDetails() {
 
   const { mutate: updateMaintenance, isPending: isUpdating } = 
     authClient.maintenance.updateMaintenance.useMutation();
-  const { mutate: uploadFile, isPending: isUploading } = 
-    authClient.maintenance.uploadMaintenanceFile.useMutation();
+
 
   const form = useForm<UpdateMaintenanceTask>({
     resolver: zodResolver(UpdateMaintenanceTaskSchema),
@@ -55,23 +54,6 @@ export default function MaintenanceDetails() {
   );
   };
 
-  const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const fileList = event.target.files;
-    if (fileList) {
-      setFiles(Array.from(fileList));
-    }
-  };
-
-  const submitFiles = () => {
-    files.forEach(file => {
-      const formData = new FormData();
-      formData.append('file', file);
-      uploadFile({
-        params: { id: maintenanceId },
-        body: formData as any
-      });
-    });
-  };
 
   useEffect(() => {
     if(maintenanceData?.body){
@@ -166,31 +148,7 @@ export default function MaintenanceDetails() {
       </Form>
 
       <div className="space-y-4">
-        <h2 className="text-xl font-semibold">Attachments</h2>
-        <Input
-          type="file"
-          multiple
-          onChange={handleFileUpload}
-          className="max-w-sm"
-        />
-        <Button 
-          onClick={submitFiles} 
-          disabled={isUploading || files.length === 0}
-        >
-          {isUploading ? 'Uploading...' : 'Upload Files'}
-        </Button>
-
-        {/* Display uploaded files */}
-        {/* <div className="space-y-2">
-          {maintenanceData?.body.files?.map((file: any) => (
-            <div key={file.id} className="flex items-center gap-2">
-              <span>{file.name}</span>
-              <Button variant="link" onClick={() => window.open(file.url)}>
-                View
-              </Button>
-            </div>
-          ))}
-        </div> */}
+            <AddMaintenanceFile />
       </div>
     </div>
   );

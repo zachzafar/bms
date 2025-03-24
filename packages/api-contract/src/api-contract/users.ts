@@ -2,8 +2,6 @@
 import { initContract } from "@ts-rest/core";
 import { z } from "zod";
 import { InsertUserSchema, SelectUserSchema } from "../database-schema";
-import { get } from "http";
-
 
 
 const c = initContract();
@@ -14,7 +12,9 @@ export const userContract = c.router({
         path: "/users/:id",
         body:  z.object({
              user: InsertUserSchema,
-             tenant: z.string(),
+             customer : z.boolean(),
+             owner: z.boolean(),
+             roles: z.array(z.number()),
             }),
         responses: {
             200: z.object({

@@ -1,9 +1,10 @@
-import { Controller, Header, Headers, Logger } from '@nestjs/common';
+import { Controller, Header, Headers, Logger, UploadedFiles, UseInterceptors } from '@nestjs/common';
 import { MaintenanceService } from './maintenance.service';
 import {  tsRestHandler, TsRestHandler } from '@ts-rest/nest';
 import { contract } from '@repo/api-contract';
 import { TenantService } from 'src/tenant/tenant.service';
 import * as schema from "@repo/api-contract"
+import { FileFieldsInterceptor } from '@nestjs/platform-express';
 
 @Controller()
 export class MaintenanceController {
@@ -73,6 +74,61 @@ export class MaintenanceController {
             const tenantId = headers['x-tenant-id']
             await this.maintenanceService.deleteMaintenance(params.id);
             return { status: 204, body: undefined};
+        });
+    }
+
+    @UseInterceptors(FileFieldsInterceptor([
+        { name: 'files', maxCount: 10 }
+    ]))
+    @TsRestHandler(contract.maintenance.uploadMaintenanceFiles)
+    async uploadMaintenanceFiles(
+        @Headers() headers:any,
+        @UploadedFiles() files: { files?: Express.Multer.File[] },
+    ):Promise<ReturnType<typeof tsRestHandler>> {
+        return tsRestHandler(contract.maintenance.uploadMaintenanceFiles, async ({ params }) => {
+            const tenantId = headers['x-tenant-id']
+            const existingMaintenance = await this.maintenanceService.getMaintenance(params.id);
+            if (!existingMaintenance) {
+                return { status: 404, body: { message: 'Maintenance not found' } };
+            }
+
+            if (!files.files || files.files.length === 0) {
+                return { status: 400, body: { message: 'No files uploaded' } };
+            }
+
+            const fileBuffers = files.files.map(file => file.buffer);
+            await this.TenantService.validateTenantAccess(tenantId, schema.Asset, existingMaintenance.assetId)
+            await this.maintenanceService.uploadFiles(existingMaintenance.id,tenantId,existingMaintenance.assetId,fileBuffers);
+            return { status: 200, body:  { message: "successfully uploaded files" } };
+        });
+    }
+
+    @TsRestHandler(contract.maintenance.getMaintenanceFiles)
+    async getMaintenanceFiles(@Headers() headers:any): Promise<ReturnType<typeof tsRestHandler>> {
+        return tsRestHandler(contract.maintenance.getMaintenanceFiles, async ({ params }) => {
+            const tenantId = headers['x-tenant-id']
+            const existingMaintenance = await this.maintenanceService.getMaintenance(params.id);
+            if (!existingMaintenance) {
+                return { status: 404, body: { message: 'Maintenance not found' } };
+            }
+
+            await this.TenantService.validateTenantAccess(tenantId, schema.Asset, existingMaintenance.assetId)
+            const files = await this.maintenanceService.getFiles(params.id);
+            return { status: 200, body:  files  };
+        });
+    }
+
+    @TsRestHandler(contract.maintenance.deleteMaintenanceFiles)
+    async deleteMaintenanceFiles(@Headers() headers:any): Promise<ReturnType<typeof tsRestHandler>> {
+        return tsRestHandler(contract.maintenance.deleteMaintenanceFiles, async ({ params,body }) => {
+            const tenantId = headers['x-tenant-id']
+            const existingMaintenance = await this.maintenanceService.getMaintenance(params.id);
+            if (!existingMaintenance) {
+                return { status: 404, body: { message: 'Maintenance not found' } };
+            }
+            await this.TenantService.validateTenantAccess(tenantId, schema.Asset, existingMaintenance.assetId)
+            await this.maintenanceService.deleteFiles(body.files,params.id);
+            return { status: 204, body:  undefined  };
         });
     }
 }

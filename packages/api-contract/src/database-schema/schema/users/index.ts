@@ -1,5 +1,5 @@
 import { relations } from "drizzle-orm";
-import { bigint, datetime, mysqlTable, serial, text, timestamp, uniqueIndex, varchar } from "drizzle-orm/mysql-core";
+import { bigint, datetime, mysqlEnum, mysqlTable, serial, text, timestamp, uniqueIndex, varchar } from "drizzle-orm/mysql-core";
 import { Asset } from "../asset";
 import { createInsertSchema, createSelectSchema } from "drizzle-zod";
 import { z } from "zod";
@@ -63,7 +63,8 @@ export const UserHasBookingsRelations = relations(UserHasBookings, ({ one }) => 
 export const UserHasAssets = mysqlTable("user_has_assets",{
     id: serial("id").primaryKey(),
     userId: varchar("user_id", {length: 255}).notNull().references(() => User.id).notNull(),
-    assetId: varchar("asset_id", { length: 255 }).notNull().references(() => Asset.id)
+    assetId: varchar("asset_id", { length: 255 }).notNull().references(() => Asset.id),
+    type: mysqlEnum("type", ["owner", "manager"]).notNull().default("manager")
 })
 
 export const InsertUserHasAssetsSchema = createInsertSchema(UserHasAssets);

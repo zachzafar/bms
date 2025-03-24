@@ -1,4 +1,4 @@
-import { Controller, Logger, NotFoundException } from '@nestjs/common';
+import { Controller,  Headers,Logger, NotFoundException } from '@nestjs/common';
 import { UsersService } from './users.service';
 import { tsRestHandler, TsRestHandler } from '@ts-rest/nest';
 import { contract as c } from "@repo/api-contract"
@@ -9,11 +9,13 @@ export class UsersController {
     constructor(private UserService: UsersService) {}
 
     @TsRestHandler(c.users.createUser)
-    async createUser(): Promise<ReturnType<typeof tsRestHandler>> {
+    async createUser(@Headers() headers: any): Promise<ReturnType<typeof tsRestHandler>> {
         this.logger.log(`Creating a new user`);
         return tsRestHandler(c.users.createUser, async ({ body }) => {
-            const { user, tenant } = body;
-            const userId = await this.UserService.createUser(user,tenant);
+            const tenantId = headers['x-tenant-id'];
+
+            const { user,customer,owner,roles } = body;
+            const userId = await this.UserService.createUser(user,tenantId,customer,owner,roles);
             return { status: 200, body: { id: userId} };
         });
     }

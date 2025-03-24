@@ -5,11 +5,12 @@ import { DrizzleModule } from 'src/drizzle/drizzle.module';
 import { BookingModule } from 'src/booking/booking.module';
 import { TenantService } from 'src/tenant/tenant.service';
 import { TenantModule } from 'src/tenant/tenant.module';
+import { ObjectStorageService } from 'src/object-storage/object-storage.service';
 
 
 @Module({
   imports: [DrizzleModule,forwardRef(() => BookingModule),TenantModule ],
-  providers: [MaintenanceService,TenantService],
+  providers: [MaintenanceService,TenantService,ObjectStorageService],
   controllers: [MaintenanceController],
   exports: [MaintenanceService]
 })
