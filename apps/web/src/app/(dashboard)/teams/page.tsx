@@ -7,6 +7,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { PlusCircle, Pencil, Trash2, Search, Eye, X } from 'lucide-react';
+import { authClient } from '@/lib/api/publicClient';
+
 
 // Team Type Definition
 type Team = {
@@ -39,6 +41,9 @@ const mockTeams: Team[] = [
 ];
 
 export default function Teams() {
+
+  // const { data } = authClient.
+
   const [teams, setTeams] = useState<Team[]>(mockTeams);
   const [selectedTeam, setSelectedTeam] = useState<Team | null>(null);
   const [searchTerm, setSearchTerm] = useState('');

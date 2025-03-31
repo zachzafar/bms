@@ -45,6 +45,8 @@ import {
   ChevronRight,
   Search,
 } from 'lucide-react';
+import { authClient } from '@/lib/api/publicClient';
+import { USERS_QUERY_KEY } from '@/lib/api/queryKeys';
 
 // Mock data for demonstration
 const mockUsers = [
@@ -73,6 +75,9 @@ const mockUsers = [
 ];
 
 export default function Component() {
+
+  // const {data: users} = authClient.users.getUsers.useQuery({ queryKey: USERS_QUERY_KEY }) 
+
   const [users, setUsers] = useState(mockUsers);
   const [selectedUser, setSelectedUser] = useState(null);
   const [formData, setFormData] = useState({

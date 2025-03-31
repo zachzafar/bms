@@ -6,3 +6,4 @@ export const USERS_QUERY_KEY = ['users'];
 export const PROPERTIES_QUERY_KEY = ['properties'];
 export const FORMS_QUERY_KEY = ['forms'];
 export const MAINTENANCE_QUERY_KEY = ['maintenance'];
+export const TEAMS_QUERY_KEY = ['teams'];
