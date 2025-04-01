@@ -15,6 +15,8 @@ import { Tenant } from '@repo/api-contract';
 import { TenantService } from 'src/tenant/tenant.service';
 
 import { TenantGuard } from './guards/tenant/tenant.guard';
+import { ApiKeyStrategy } from './strategies/apikey.strategy';
+import { KeysService } from 'src/keys/keys.service';
 
 @Module({
   imports: [
@@ -28,7 +30,9 @@ import { TenantGuard } from './guards/tenant/tenant.guard';
       UsersService,
       LocalStrategy,
       JwtStrategy,
+      ApiKeyStrategy,
       RefreshStrategy,
+      KeysService,
       TenantGuard,
       TenantService
   ],
