@@ -7,6 +7,7 @@ import { maintenanceContract } from './maintenance';
 import { userContract } from './users';
 import { teamsContract } from './teams';
 import { tenantsContract } from './tenants';
+import { keysContract } from './keys';
 
 
 const c = initContract();
@@ -21,6 +22,7 @@ export const contract = c.router({
   users: userContract,
   teams: teamsContract,
   tenants: tenantsContract,
+  keys: keysContract,
 });
 
 export * from './auth';
@@ -31,3 +33,4 @@ export * from './maintenance';
 export * from './users';
 export * from './teams';
 export * from './tenants';
+export * from './keys'
