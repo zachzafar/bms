@@ -48,8 +48,10 @@ export class UsersController {
         this.logger.log(`Updating a user`);
         return tsRestHandler(c.users.updateUser, async ({ params, body }) => {
             const { id } = params;
-            await this.UserService.update(id,body);
+            const { user,customer,owner,roles } = body;
+            await this.UserService.update(id,user,customer,owner,roles);
             return { status: 200, body: { message: 'User updated successfully'} };
+           
         });
     }
 }

@@ -2,7 +2,7 @@ import { Injectable,Inject, InternalServerErrorException } from '@nestjs/common'
 import { MySql2Database } from 'drizzle-orm/mysql2';
 import { DrizzleAsyncProvider } from 'src/drizzle/drizzle.provider';
 import * as schema from '@repo/api-contract';
-import { InsertUser, SelectTenant, SelectUser } from '@repo/api-contract';
+import { InsertUser, SelectTenant, SelectUser, UpdateUser } from '@repo/api-contract';
 import { eq , and} from 'drizzle-orm';
 
 @Injectable()
@@ -57,10 +57,69 @@ export class UsersService {
         return this.db.query.User.findFirst({ where: (user, { eq }) => eq(user.email, email) });
     }
 
-    async update(id: string, userData: Partial<InsertUser>): Promise<void>{
-        await this.db.update(schema.User).set(userData).where(eq(schema.User.id, id));
-        
+    async update(id: string, userData: UpdateUser, customer: boolean, owner: boolean, roles: number[]): Promise<void> {
+        await this.db.transaction(async (tx) => {
+            // Update user data
+            await tx.update(schema.User).set(userData).where(eq(schema.User.id, id));
+
+            // Handle customer role
+            if (customer) {
+                const existingCustomer = await tx.query.Customer.findFirst({
+                    where: (customer, { eq }) => eq(customer.userId, id)
+                });
+                
+                if (!existingCustomer) {
+                    await tx.insert(schema.Customer).values({ userId: id });
+                }
+            } else {
+                // Optionally: Remove customer if flag is false
+                await tx.delete(schema.Customer).where(eq(schema.Customer.userId, id));
+            }
+            
+            // Handle owner role
+            if (owner) {
+                const existingOwner = await tx.query.Owner.findFirst({
+                    where: (owner, { eq }) => eq(owner.userId, id)
+                });
+                
+                if (!existingOwner) {
+                    await tx.insert(schema.Owner).values({ userId: id });
+                }
+            } else {
+                // Optionally: Remove owner if flag is false
+                await tx.delete(schema.Owner).where(eq(schema.Owner.userId, id));
+            }
+
+            // Handle roles - first get existing roles
+            const existingRoles = await tx.query.UserHasRoles.findMany({
+                where: (userRole, { eq }) => eq(userRole.userId, id)
+            });
+            
+            const existingRoleIds = existingRoles.map(role => Number(role.roleId));
+            
+            // Add new roles that don't exist yet
+            for (const roleId of roles) {
+                if (!existingRoleIds.includes(roleId)) {
+                    await tx.insert(schema.UserHasRoles).values({
+                        userId: id,
+                        roleId: BigInt(roleId)
+                    });
+                }
+            }
+            
+            // Optionally: Remove roles that are no longer assigned
+            const rolesToRemove = existingRoleIds.filter(existingId => !roles.includes(existingId));
+            for (const roleId of rolesToRemove) {
+                await tx.delete(schema.UserHasRoles)
+                    .where(and(
+                        eq(schema.UserHasRoles.userId, id),
+                        eq(schema.UserHasRoles.roleId, BigInt(roleId))
+                    ));
+            }
+        });
     }
+
+
     async remove(id: string): Promise<void> {
         await this.db.delete(schema.User).where(eq(schema.User.id, id));
     }

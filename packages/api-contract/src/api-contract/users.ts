@@ -47,8 +47,12 @@ export const userContract = c.router({
     updateUser: {
         method: "PUT",
         path: "/users/:id",
-        body: InsertUserSchema.partial(),
-        
+        body:  z.object({
+            user: InsertUserSchema.partial(),
+            customer : z.boolean(),
+            owner: z.boolean(),
+            roles: z.array(z.number()),
+           }),
         responses: {
             200: z.object({
                 message: z.string(),
