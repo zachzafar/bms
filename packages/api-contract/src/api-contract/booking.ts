@@ -20,11 +20,15 @@ export const bookingContract = c.router({
         path: '/booking',
         responses: {
             201: z.object({
-                id: z.string(),
+                message: z.string(),
             })
           
         },
-        body: InsertBookingSchema,
+        body: z.object({
+            booking: InsertBookingSchema,
+            customers: z.array(z.number()),
+        }),
+    
         summary: 'Create a new booking'
     },
     getBookings: {

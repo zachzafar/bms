@@ -18,8 +18,8 @@ export class UsersService {
             
              if (!user) throw new InternalServerErrorException("Error occured while creating user")
 
-             tenantUser_id = await tx.insert(schema.TenantHasUsers).values({ tenantId, userId: user.id}).$returningId()[0].id
-
+             const [{id}] = await tx.insert(schema.TenantHasUsers).values({ tenantId, userId: user.id}).$returningId()
+             tenantUser_id = id
              if (customer) await tx.insert(schema.Customer).values({userId: user.id})
              if (owner) await tx.insert(schema.Owner).values({userId: user.id})
 
@@ -117,6 +117,11 @@ export class UsersService {
                     ));
             }
         });
+    }
+
+    async getCustomers(tenantId: string): Promise<schema.SelectCustomer[]> {
+        const rows = await this.db.select().from(schema.TenantHasUsers).where(eq(schema.TenantHasUsers.tenantId,tenantId)).innerJoin(schema.User,eq(schema.TenantHasUsers.userId,schema.User.id)).innerJoin(schema.Customer,eq(schema.Customer.userId,schema.User.id))
+        return rows.map(row => row.customer_details)
     }
 
 
