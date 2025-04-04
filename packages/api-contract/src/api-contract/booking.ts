@@ -2,8 +2,7 @@ import { initContract } from "@ts-rest/core";
 
 import { z } from "zod";
 
-import { Customer, InsertAvailabilitySchema, InsertBookingSchema, SelectAssetSchema, SelectAvailabilitySchema, SelectBookingSchema, SelectCustomerSchema, UpdateBookingSchema } from "../database-schema";
-import { start } from "repl";
+import { InsertAvailabilitySchema, InsertBookingSchema, SelectAssetSchema, SelectAvailabilitySchema, SelectBookingSchema, SelectCustomerSchema, UpdateBookingSchema } from "../database-schema";
 
 
 const c = initContract();
@@ -21,11 +20,15 @@ export const bookingContract = c.router({
         path: '/booking',
         responses: {
             201: z.object({
-                id: z.string(),
+                message: z.string(),
             })
           
         },
-        body: InsertBookingSchema,
+        body: z.object({
+            booking: InsertBookingSchema,
+            customers: z.array(z.number()),
+        }),
+    
         summary: 'Create a new booking'
     },
     getBookings: {

@@ -33,9 +33,11 @@ export const userRelations = relations(User, ({ one,many }) => ({
 
 export const InsertUserSchema = createInsertSchema(User);
 export const SelectUserSchema = createSelectSchema(User);
+export const UpdateUserSchema = InsertUserSchema.partial();
 
 export type InsertUser = z.infer<typeof InsertUserSchema>
 export type SelectUser = z.infer<typeof SelectUserSchema>
+export type UpdateUser = z.infer<typeof UpdateUserSchema>
 
 export const UserHasBookings = mysqlTable("user_has_bookings",{
     id: serial("id").primaryKey(),

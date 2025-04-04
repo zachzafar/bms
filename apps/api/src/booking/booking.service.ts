@@ -17,20 +17,25 @@ export class BookingService {
 
 
 
-    async createBooking(booking: InsertBooking) {
-        const status  = await this.checkAvailability(booking.assetId,{ startDate: booking.startDate, endDate: booking.endDate});
+    async createBooking(booking: InsertBooking,customers: number[]) {
+      if (!customers.length) {
+        throw new ConflictException('No customers selected');
+      }
+      
+      const status  = await this.checkAvailability(booking.assetId,{ startDate: booking.startDate, endDate: booking.endDate});
        
-        
-        
         if (status !== 'Available') {
           throw new ConflictException('The asset is not available for the selected dates.');
         }
 
+        const users = (await this.db.query.Customer.findMany({where: (user, {inArray}) => inArray(user.id, customers),with: { user: true}})).map(({user}) => user);
 
        try{
-        const result = await this.db.insert(schema.Booking).values(booking).$returningId()
+        await this.db.transaction(async (tx) => {
+            const bookingId = await tx.insert(schema.Booking).values(booking).$returningId();
+            await tx.insert(schema.UserHasBookings).values(users.map(user => ({bookingId: bookingId[0].id, userId: user.id})));
+        })
 
-        return result[0].id
        } catch (e) {
         throw new ConflictException('Error occured while creating booking');
        }
