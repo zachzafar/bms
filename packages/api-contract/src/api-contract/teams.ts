@@ -45,6 +45,10 @@ export const teamsContract = c.router({
         responses: {
             200: z.array(SelectTenantTeamSchema)
         },
+        pathParams: z.object({
+            id: z.number(),
+            tenant: z.string(),
+        }),
         summary: "Get all teams"
     },
     updateTeam: {

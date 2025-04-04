@@ -34,11 +34,11 @@ export class UsersController {
     }
 
     @TsRestHandler(c.users.getUsers)
-    async getUsers(): Promise<ReturnType<typeof tsRestHandler>> {
+    async getUsers(@Headers() headers: any): Promise<ReturnType<typeof tsRestHandler>> {
         this.logger.log(`Getting all users`);
-        return tsRestHandler(c.users.getUsers, async ({ params }) => {
-            const { tenant } = params;
-            const users = await this.UserService.findAll(tenant);
+        return tsRestHandler(c.users.getUsers, async ({  }) => {
+            const tenantId = headers['x-tenant-id'];
+            const users = await this.UserService.findAll(tenantId);
             return { status: 200, body: users };
         });
     }

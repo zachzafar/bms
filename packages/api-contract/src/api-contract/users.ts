@@ -38,7 +38,7 @@ export const userContract = c.router({
     },
     getUsers: {
         method: "GET",
-        path: "/users/:tenant",
+        path: "/users/",
         responses: {
             200: z.array(SelectUserSchema),
         },

@@ -12,21 +12,12 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table';
-import {
   Card,
   CardContent,
   CardDescription,
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
   Dialog,
   DialogContent,
@@ -35,129 +26,133 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@/components/ui/dialog';
-import {
-  PlusCircle,
-  Pencil,
-  Trash2,
-  Menu,
-  Mountain,
-  ChevronLeft,
-  ChevronRight,
-  Search,
-} from 'lucide-react';
+import { Search, PlusCircle, ChevronLeft, ChevronRight, Pencil, Trash2 } from 'lucide-react';
+import { useForm, SubmitHandler } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { z } from 'zod';
+import { InsertUserSchema } from '@repo/api-contract';
+import { toast } from 'sonner';
+import { useRouter } from 'next/navigation';
 import { authClient } from '@/lib/api/publicClient';
 import { USERS_QUERY_KEY } from '@/lib/api/queryKeys';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 
-// Mock data for demonstration
-const mockUsers = [
-  {
-    id: '1',
-    name: 'John Doe',
-    email: 'john@example.com',
-    role: 'Customer',
-    customerDetails: {
-      firstName: 'John',
-      lastName: 'Doe',
-      phone: '123-456-7890',
-      dateOfBirth: '1990-01-01',
-      address: '123 Main St',
-    },
-  },
-  {
-    id: '2',
-    name: 'Jane Smith',
-    email: 'jane@example.com',
-    role: 'Owner',
-    ownerDetails: { companyName: 'Smith Enterprises', taxId: '12-3456789' },
-  },
-  { id: '3', name: 'Muffin Stollmyer', email: 'admin@example.com', role: 'Admin' },
-  // Add more mock users here...
-];
+// Schema
+const UserFormSchema = z.object({
+  user: InsertUserSchema.extend({
+    role: z.string().min(1, 'Role is required'),
+  }),
+  customer: z.boolean(),
+  owner: z.boolean(),
+  roles: z.array(z.number()),
+});
+
+type UserFormData = z.infer<typeof UserFormSchema>;
 
 export default function Component() {
+  const router = useRouter();
 
-  // const {data: users} = authClient.users.getUsers.useQuery({ queryKey: USERS_QUERY_KEY }) 
+  const { data: users } = authClient.users.getUsers.useQuery({ queryKey: USERS_QUERY_KEY });
+  const { mutate, isPending } = authClient.users.createUser.useMutation();
+  const { mutate: deleteUserMutation, isPending: isDeleting } = authClient.users.deleteUser.useMutation();
 
-  const [users, setUsers] = useState(mockUsers);
-  const [selectedUser, setSelectedUser] = useState(null);
-  const [formData, setFormData] = useState({
-    name: '',
-    email: '',
-    password: '',
-    role: '',
-    firstName: '',
-    lastName: '',
-    phone: '',
-    address: '',
-    dateOfBirth: '',
-    companyName: '',
-    taxId: '',
+
+  const form = useForm<UserFormData>({
+    resolver: zodResolver(UserFormSchema),
+    defaultValues: {
+      user: {
+        name: '',
+        email: '',
+        password: '',
+        role: '',
+      },
+      customer: false,
+      owner: false,
+      roles: [],
+    },
   });
+
+  const processForm: SubmitHandler<UserFormData> = async (data) => {
+    mutate(
+      {
+        body: data,
+        params: { id: '' },
+      },
+      {
+        onSuccess: (response) => {
+          toast.success('User added successfully');
+          router.push(`/users/${response.body.id}`);
+          form.reset();
+        },
+        onError: (error) => {
+          console.log('Error:', error);
+          toast.error('Failed to add user');
+        },
+      }
+    );
+  };
+
+  const [selectedUser, setSelectedUser] = useState<UserFormData | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [searchTerm, setSearchTerm] = useState('');
   const usersPerPage = 10;
 
-  const handleInputChange = (e: { target: { name: any; value: any; }; }) => {
-    const { name, value } = e.target;
-    setFormData((prev) => ({ ...prev, [name]: value }));
-  };
-
-  const handleRoleChange = (value: any) => {
-    setFormData((prev) => ({ ...prev, role: value }));
-  };
-
-  const handleSubmit = (e: { preventDefault: () => void; }) => {
-    e.preventDefault();
-    if (selectedUser) {
-      setUsers(
-        users.map((user) =>
-          user.id === selectedUser.id ? { ...user, ...formData } : user
-        )
-      );
-    } else {
-      setUsers([...users, { id: Date.now().toString(), ...formData }]);
-    }
-    resetForm();
-  };
+  // const resetForm = () => {
+  //   setSelectedUser(null);
+  //   setFormData({
+  //     name: '',
+  //     email: '',
+  //     password: '',
+  //     role: '',
+  //     firstName: '',
+  //     lastName: '',
+  //     phone: '',
+  //     address: '',
+  //     dateOfBirth: '',
+  //     companyName: '',
+  //     taxId: '',
+  //   });
+  // };
 
   const resetForm = () => {
     setSelectedUser(null);
-    setFormData({
-      name: '',
-      email: '',
-      password: '',
-      role: '',
-      firstName: '',
-      lastName: '',
-      phone: '',
-      address: '',
-      dateOfBirth: '',
-      companyName: '',
-      taxId: '',
-    });
+    form.reset({});
   };
 
-  const editUser = (user: { id: string; name: string; email: string; role: string; customerDetails: { firstName: string; lastName: string; phone: string; dateOfBirth: string; address: string; }; ownerDetails?: undefined; } | { id: string; name: string; email: string; role: string; ownerDetails: { companyName: string; taxId: string; }; customerDetails?: undefined; } | { id: string; name: string; email: string; role: string; customerDetails?: undefined; ownerDetails?: undefined; } | SetStateAction<null> | SetStateAction<{ name: string; email: string; password: string; role: string; firstName: string; lastName: string; phone: string; address: string; dateOfBirth: string; companyName: string; taxId: string; }>) => {
+  const editUser = (user: UserFormData) => {
     setSelectedUser(user);
-    setFormData({
-      ...user,
-      ...user.customerDetails,
-      ...user.ownerDetails,
-      password: '', // Don't populate password for security reasons
-    });
+    form.reset(user); // Populate form with existing user data
   };
+  
 
   const deleteUser = (userId: string) => {
-    setUsers(users.filter((user) => user.id !== userId));
+    if (!confirm('Are you sure you want to delete this user?')) return;
+  
+    deleteUserMutation(
+      {
+        params: { id: userId },
+      },
+      {
+        onSuccess: () => {
+          toast.success('User deleted successfully');
+          router.refresh(); // Refresh data
+        },
+        onError: (error) => {
+          console.error('Delete failed:', error);
+          toast.error('Failed to delete user');
+        },
+      }
+    );
   };
 
-  const filteredUsers = users.filter(
+  const filteredUsers = users?.filter(
     (user) =>
       user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       user.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
       user.role.toLowerCase().includes(searchTerm.toLowerCase())
-  );
-
+  ) || [];
+  
+  
   const indexOfLastUser = currentPage * usersPerPage;
   const indexOfFirstUser = indexOfLastUser - usersPerPage;
   const currentUsers = filteredUsers.slice(indexOfFirstUser, indexOfLastUser);
@@ -201,15 +196,14 @@ export default function Component() {
                       Enter user details below
                     </DialogDescription>
                   </DialogHeader>
-                  <form onSubmit={handleSubmit} className='space-y-4'>
+                  <form onSubmit={form.handleSubmit(processForm)} className='space-y-4'>
                     <div className='grid grid-cols-1 md:grid-cols-2 gap-4'>
                       <div className='space-y-2'>
                         <Label htmlFor='name'>Name</Label>
                         <Input
                           id='name'
-                          name='name'
-                          value={formData.name}
-                          onChange={handleInputChange}
+                          {...form.register('user.name')}
+                          // onChange={handleInputChange}
                           required
                         />
                       </div>
@@ -217,10 +211,9 @@ export default function Component() {
                         <Label htmlFor='email'>Email</Label>
                         <Input
                           id='email'
-                          name='email'
                           type='email'
-                          value={formData.email}
-                          onChange={handleInputChange}
+                          {...form.register('user.email')}
+                          // onChange={handleInputChange}
                           required
                         />
                       </div>
@@ -228,10 +221,9 @@ export default function Component() {
                         <Label htmlFor='password'>Password</Label>
                         <Input
                           id='password'
-                          name='password'
                           type='password'
-                          value={formData.password}
-                          onChange={handleInputChange}
+                          {...form.register('user.password')}
+                          // onChange={handleInputChange}
                           required={!selectedUser}
                         />
                       </div>
@@ -239,8 +231,8 @@ export default function Component() {
                         <Label htmlFor='role'>Role</Label>
                         <Select
                           name='role'
-                          value={formData.role}
-                          onValueChange={handleRoleChange}
+                          onValueChange={(value) => form.setValue('user.role', value)}
+                          // onValueChange={handleRoleChange}
                           required
                         >
                           <SelectTrigger id='role'>
@@ -256,7 +248,7 @@ export default function Component() {
                       </div>
                     </div>
 
-                    <Tabs defaultValue='customer' className='w-full'>
+                    {/* <Tabs defaultValue='customer' className='w-full'>
                       <TabsList className='grid w-full grid-cols-2'>
                         <TabsTrigger value='customer'>
                           Customer Details
@@ -336,7 +328,7 @@ export default function Component() {
                           </div>
                         </div>
                       </TabsContent>
-                    </Tabs>
+                    </Tabs> */}
 
                     <div className='flex justify-end space-x-2'>
                       <Button
