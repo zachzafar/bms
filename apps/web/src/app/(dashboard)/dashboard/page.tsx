@@ -52,6 +52,7 @@ export default function Component() {
   const bookings = bookingsData?.body ?? [];
   const customers = customersData?.body ?? [];
   const assets = assetsData?.body ?? [];
+  const assetTypes = assetTypeData?.body ?? [];
   
   // Calculate totals
   const totalBookings = bookings.length;
@@ -124,8 +125,8 @@ export default function Component() {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value='all'>All Types</SelectItem>
-                  {Object.entries(assetTypes).map(([id, name]) => (
-                    <SelectItem key={id} value={id}>{name}</SelectItem>
+                  {assetTypes.map((assetType) => (
+                    <SelectItem key={assetType.id} value={assetType.id.toString()}>{assetType.name}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
