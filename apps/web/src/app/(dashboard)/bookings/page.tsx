@@ -31,14 +31,33 @@ import { Label } from '@/components/ui/label';
 import { authClient } from '@/lib/api/publicClient';
 import { BOOKINGS_QUERY_KEY } from '@/lib/api/queryKeys';
 import { ExtendedSelectBooking } from '@repo/api-contract/src/api-contract/booking';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { z } from 'zod';
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
+import { toast } from 'sonner';
+import { MultiSelector, MultiSelectorTrigger, MultiSelectorInput, MultiSelectorContent, MultiSelectorList, MultiSelectorItem } from '@/components/extension/multi-select';
 
+// Define the booking form schema
+const bookingFormSchema = z.object({
+  assetId: z.string().min(1, { message: 'Asset is required' }),
+  startDate: z.string().min(1, { message: 'Start date is required' }),
+  endDate: z.string().min(1, { message: 'End date is required' }),
+});
+
+type BookingFormValues = z.infer<typeof bookingFormSchema>;
 
 export default function Component() {
+  const queryClient = authClient.useQueryClient();
   const { data: bookings } = authClient.booking.getBookings.useQuery({
     queryKey: BOOKINGS_QUERY_KEY,
   });
   const { mutate: createBooking } = authClient.booking.createBooking.useMutation();
-
+  const { data: assets} = authClient.assets.getAssets.useQuery({ queryKey: ['assets']});
+  const assetList = assets?.body ?? [];
+  const { data: customerResponse } = authClient.users.getCustomers.useQuery({ queryKey: ['customers']})
+  const customerList = customerResponse?.body?? [];
+  const [customers, setCustomers] = useState<string[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [filterType, setFilterType] = useState('All');
   const [filterStatus, setFilterStatus] = useState('All');
@@ -46,10 +65,15 @@ export default function Component() {
   const [sortOrder, setSortOrder] = useState('asc');
   const [selectedBooking, setSelectedBooking] = useState<ExtendedSelectBooking>();
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
-  const [newBooking, setNewBooking] = useState({
-    startDate: '',
-    endDate: '',
-    assetId: '',
+
+  // Initialize react-hook-form
+  const form = useForm<BookingFormValues>({
+    resolver: zodResolver(bookingFormSchema),
+    defaultValues: {
+      assetId: '',
+      startDate: '',
+      endDate: '',
+    },
   });
 
   const handleSort = (column: any) => {
@@ -62,19 +86,31 @@ export default function Component() {
   };
 
   const handleCancel = (id: string) => {
-     
+    // Implement cancel booking logic here
   };
 
-  const handleCreateBooking = () => {
-    // createBooking({
-    //   body: {
-    //     startDate: new Date(newBooking.startDate),
-    //     endDate: new Date(newBooking.endDate),
-    //     assetId: newBooking.assetId,
-    //   }
-    // });
-    setIsCreateDialogOpen(false);
-    setNewBooking({ startDate: '', endDate: '', assetId: '' });
+  const onSubmit = (values: BookingFormValues) => {
+    createBooking({
+      body: {
+        booking: {
+          assetId: values.assetId,
+        startDate: values.startDate,
+        endDate: values.endDate,
+        },
+        customers:  customers.map((customerId) => parseInt(customerId)),
+      }
+    }, {
+      onSuccess: () => {
+        toast.success('Booking created successfully');
+        queryClient.invalidateQueries({ queryKey: BOOKINGS_QUERY_KEY });
+        setIsCreateDialogOpen(false);
+        form.reset();
+      },
+      onError: (error) => {
+        toast.error('Failed to create booking');
+        console.error(error);
+      }
+    });
   };
 
   return (
@@ -92,35 +128,96 @@ export default function Component() {
                 Enter the details for the new booking
               </DialogDescription>
             </DialogHeader>
-            <div className='grid gap-4 py-4'>
-              <div className='grid grid-cols-4 items-center gap-4'>
-                <Label className='text-right'>Asset ID:</Label>
-                <Input
-                  className='col-span-3'
-                  value={newBooking.assetId}
-                  onChange={(e) => setNewBooking({ ...newBooking, assetId: e.target.value })}
+            <Form {...form}>
+              <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 py-4">
+                <FormField
+                  control={form.control}
+                  name="assetId"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Asset</FormLabel>
+                      <Select 
+                        onValueChange={field.onChange} 
+                        defaultValue={field.value}
+                      >
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select an asset" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {assetList.map((asset) => (
+                            <SelectItem key={asset.id} value={asset.id}>
+                              {asset.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
                 />
-              </div>
-              <div className='grid grid-cols-4 items-center gap-4'>
-                <Label className='text-right'>Start Date:</Label>
-                <Input
-                  className='col-span-3'
-                  type="date"
-                  value={newBooking.startDate}
-                  onChange={(e) => setNewBooking({ ...newBooking, startDate: e.target.value })}
+                <FormItem>
+                <FormLabel>Customers</FormLabel>
+                <MultiSelector
+                  values={customers}
+                  onValuesChange={setCustomers}
+                >
+                  <MultiSelectorTrigger>
+                    <MultiSelectorInput placeholder="Select Customers..." />
+                  </MultiSelectorTrigger>
+                  <MultiSelectorContent>
+                    <MultiSelectorList>
+                      {customerList.map((customer) => (
+                        <MultiSelectorItem
+                          key={customer.customer.id}
+                          value={customer.customer.id.toString()}
+                        >
+                          {customer.user.name}
+                        </MultiSelectorItem>
+                      ))}
+                    </MultiSelectorList>
+                  </MultiSelectorContent>
+                </MultiSelector>
+                <FormMessage />
+              </FormItem>
+                <FormField
+                  control={form.control}
+                  name="startDate"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Start Date</FormLabel>
+                      <FormControl>
+                        <Input
+                          type="date"
+                          {...field}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
                 />
-              </div>
-              <div className='grid grid-cols-4 items-center gap-4'>
-                <Label className='text-right'>End Date:</Label>
-                <Input
-                  className='col-span-3'
-                  type="date"
-                  value={newBooking.endDate}
-                  onChange={(e) => setNewBooking({ ...newBooking, endDate: e.target.value })}
+                <FormField
+                  control={form.control}
+                  name="endDate"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>End Date</FormLabel>
+                      <FormControl>
+                        <Input
+                          type="date"
+                          {...field}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
                 />
-              </div>
-              <Button onClick={handleCreateBooking}>Create Booking</Button>
-            </div>
+                <Button type="submit" className="w-full">
+                  Create Booking
+                </Button>
+              </form>
+            </Form>
           </DialogContent>
         </Dialog>
       </div>
@@ -224,8 +321,8 @@ export default function Component() {
                 <TableCell>{booking.asset.name}</TableCell>
                 <TableCell>{booking.asset.assetTypeId}</TableCell>
                 <TableCell>{booking.customer.id}</TableCell>
-                <TableCell>{booking.startDate.toDateString()}</TableCell>
-                <TableCell>{booking.endDate.toDateString()}</TableCell>
+                <TableCell>{new Date(booking.startDate).toLocaleDateString()}</TableCell>
+                <TableCell>{new Date(booking.endDate).toLocaleDateString()}</TableCell>
                 <TableCell>{booking.status}</TableCell>
                 <TableCell>
                   <div className='flex items-center gap-2'>
@@ -269,13 +366,13 @@ export default function Component() {
                             <div className='grid grid-cols-4 items-center gap-4'>
                               <Label className='text-right'>Start Date:</Label>
                               <div className='col-span-3'>
-                                {selectedBooking.startDate.toDateString()}
+                                {new Date(selectedBooking.startDate).toLocaleDateString()}
                               </div>
                             </div>
                             <div className='grid grid-cols-4 items-center gap-4'>
                               <Label className='text-right'>End Date:</Label>
                               <div className='col-span-3'>
-                                {selectedBooking.endDate.toDateString()}
+                                {new Date(selectedBooking.endDate).toLocaleDateString()}
                               </div>
                             </div>
                             <div className='grid grid-cols-4 items-center gap-4'>

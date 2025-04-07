@@ -119,9 +119,9 @@ export class UsersService {
         });
     }
 
-    async getCustomers(tenantId: string): Promise<schema.SelectCustomer[]> {
+    async getCustomers(tenantId: string): Promise<{customer:schema.SelectCustomer,user: SelectUser}[]> {
         const rows = await this.db.select().from(schema.TenantHasUsers).where(eq(schema.TenantHasUsers.tenantId,tenantId)).innerJoin(schema.User,eq(schema.TenantHasUsers.userId,schema.User.id)).innerJoin(schema.Customer,eq(schema.Customer.userId,schema.User.id))
-        return rows.map(row => row.customer_details)
+        return rows.map(row => ({customer:row.customer_details,user:row.users}))
     }
 
 

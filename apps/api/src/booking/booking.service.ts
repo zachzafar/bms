@@ -22,7 +22,7 @@ export class BookingService {
         throw new ConflictException('No customers selected');
       }
       
-      const status  = await this.checkAvailability(booking.assetId,{ startDate: booking.startDate, endDate: booking.endDate});
+      const status  = await this.checkAvailability(booking.assetId,{ startDate: new Date(booking.startDate), endDate: new Date(booking.endDate)});
        
         if (status !== 'Available') {
           throw new ConflictException('The asset is not available for the selected dates.');
@@ -32,7 +32,7 @@ export class BookingService {
 
        try{
         await this.db.transaction(async (tx) => {
-            const bookingId = await tx.insert(schema.Booking).values(booking).$returningId();
+            const bookingId = await tx.insert(schema.Booking).values({...booking, startDate: new Date(booking.startDate), endDate: new Date(booking.endDate)}).$returningId();
             await tx.insert(schema.UserHasBookings).values(users.map(user => ({bookingId: bookingId[0].id, userId: user.id})));
         })
 
@@ -58,6 +58,9 @@ export class BookingService {
     }
     return {
       ...booking.booking,
+      startDate: booking.booking.startDate.toISOString(),
+      endDate: booking.booking.endDate.toISOString(),
+      user: booking.users,
       customer: booking.customer_details,
       asset: {...booking.assets, assetTypeId: booking.assets.assetTypeId ? Number(booking.assets.assetTypeId) : undefined},
     }
@@ -81,22 +84,25 @@ export class BookingService {
 
         return bookings.map(booking => ({
             ...booking.booking,
+            startDate: booking.booking.startDate.toISOString(),
+            endDate: booking.booking.endDate.toISOString(),
             customer: booking.customer_details,
             asset: booking.assets,
+            user: booking.users
           }));
     }
 
-    async updateBooking(booking: UpdateBooking) {
-        const existingBooking = await this.getBooking(booking.id);
+    async updateBooking(id: string) {
+        const existingBooking = await this.getBooking(id);
     if (!existingBooking) {
       throw new NotFoundException('Booking not found');
     }
-    const status = await this.checkAvailability(existingBooking.assetId, { startDate:booking.startDate, endDate:booking.endDate});
+    const status = await this.checkAvailability(existingBooking.assetId, { startDate: new Date(existingBooking.startDate), endDate: new Date(existingBooking.endDate)});
     if (status !== 'Available') {
       throw new ConflictException('The asset is not available for the selected dates.');
     }
-    await this.db.update(schema.Booking).set(booking).where(eq(schema.Booking.id, booking.id)).execute();
-    return  this.getBooking(booking.id);
+    await this.db.update(schema.Booking).set({...existingBooking,startDate: new Date(existingBooking.startDate), endDate: new Date(existingBooking.endDate) }).where(eq(schema.Booking.id, existingBooking.id)).execute();
+    return  this.getBooking(existingBooking.id);
     }
 
     async deleteBooking(bookingId: string) {
@@ -106,28 +112,6 @@ export class BookingService {
     }
     await this.db.delete(schema.Booking).where(eq(schema.Booking.id, bookingId)).execute();
     }
-
-    // async checkAvailability(assetId: bigint,startDate: Date, endDate: Date, bookingId?: number): Promise<{ available: boolean, conflictingBookings:SelectBooking[] }> {
-
-    //     const conflictingBookings = await this.db.query.Booking.findMany({
-    //         where: (booking, { and, eq, not, or, lte, gte }) =>
-    //             and(
-    //               eq(booking.assetId, assetId),
-    //               bookingId ? not(eq(booking.id, bookingId)) : undefined, // Exclude the current booking
-    //               and(
-    //                 lte(booking.startDate, endDate),         // Booking starts before the current ends
-    //                 gte(booking.endDate, startDate)          // Booking ends after the current starts
-    //               )
-    //             )
-    //     })
-
-
-    //     if (conflictingBookings.length > 0) {
-    //         return { available: false, conflictingBookings };
-    //     }
-        
-    //     return { available: true, conflictingBookings: [] };
-    // }
 
     async  calculatePrice(assetId: string, startDate: string, endDate: string): Promise<number> {
       const result = await this.db
@@ -187,7 +171,7 @@ export class BookingService {
     }
 
      async addAvailabilityException(data: InsertAvailability) {
-      return await this.db.insert(schema.Availability).values(data).$returningId().execute();
+      return await this.db.insert(schema.Availability).values({...data, startDate: new Date(data.startDate), endDate: new Date(data.endDate)}).$returningId().execute();
     }
 
     async getAvailabilityExceptions(assetId: string,) {

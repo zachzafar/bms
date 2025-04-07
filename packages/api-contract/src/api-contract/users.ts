@@ -80,7 +80,7 @@ export const userContract = c.router({
         method: "GET",
         path: "/customers",
         responses: {
-            200: z.array(SelectCustomerSchema),
+            200: z.array(z.object({customer:SelectCustomerSchema,user: SelectUserSchema})),
         },
         summary: "Get all customers"
     }

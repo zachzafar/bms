@@ -19,7 +19,7 @@ import {
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { authClient } from '@/lib/api/publicClient';
-import { InsertBookingSchema, SelectAsset, SelectCustomer } from '@repo/api-contract';
+import { InsertBookingSchema, SelectAsset} from '@repo/api-contract';
 import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -36,7 +36,7 @@ const bookingFormSchema = z.object({
 type BookingFormValues = z.infer<typeof bookingFormSchema>;
 
 export default function AssetBookings({ asset }: { asset: SelectAsset}) {
-  const [customers, setCustomers] = useState<number[]>([]);
+  const [customers, setCustomers] = useState<string[]>([]);
   const { data } = authClient.booking.getBookings.useQuery({ queryKey: ['bookings',asset.id]})
   const { mutate: createBooking } = authClient.booking.createBooking.useMutation();
   const { data: customerResponse } = authClient.users.getCustomers.useQuery({ queryKey: ['customers']})
@@ -49,24 +49,22 @@ export default function AssetBookings({ asset }: { asset: SelectAsset}) {
   const form = useForm<BookingFormValues>({
     resolver: zodResolver(bookingFormSchema),
     defaultValues: {
-      startDate: new Date(),
-      endDate: new Date(),
       status: '',
       assetId: asset.id,
       customers: [],
     },
-  });
+  }); 
 
   const onSubmit = (values: BookingFormValues) => {
     createBooking({
       body: {
         booking: {
-          startDate: new Date(values.startDate),
-          endDate: new Date(values.endDate),
+          startDate: values.startDate,
+          endDate: values.endDate,
           status: '',
           assetId: asset.id
         },
-          customers: customers,
+          customers: customers.map((customerId) => parseInt(customerId)),
         },
     });
     setIsOpen(false);
@@ -113,7 +111,7 @@ export default function AssetBookings({ asset }: { asset: SelectAsset}) {
                       <FormControl>
                         <Input
                           {...field}
-                          value={field.value.toISOString().split('T')[0]}
+                          value={field.value ? new Date(field.value).toISOString().split('T')[0] : ''}
                           type="date"
                         />
                       </FormControl>
@@ -122,24 +120,24 @@ export default function AssetBookings({ asset }: { asset: SelectAsset}) {
                   )}
                 />
                  <FormItem>
-                <FormLabel>Fields</FormLabel>
+                <FormLabel>Customers</FormLabel>
                 <MultiSelector
                   values={customers}
                   onValuesChange={setCustomers}
                 >
                   <MultiSelectorTrigger>
-                    <MultiSelectorInput placeholder="Select Fields..." />
+                    <MultiSelectorInput placeholder="Select Customers..." />
                   </MultiSelectorTrigger>
                   <MultiSelectorContent>
                     <MultiSelectorList>
-                      {/* {customerList.map((customer) => (
+                      {customerList.map((customer) => (
                         <MultiSelectorItem
-                          key={customer.id}
-                          value={customer.id}
+                          key={customer.customer.id}
+                          value={customer.customer.id.toString()}
                         >
-                          {customer.name}
+                          {customer.user.name}
                         </MultiSelectorItem>
-                      ))} */}
+                      ))}
                     </MultiSelectorList>
                   </MultiSelectorContent>
                 </MultiSelector>
@@ -159,20 +157,20 @@ export default function AssetBookings({ asset }: { asset: SelectAsset}) {
             <TableRow>
               <TableHead>Start Date</TableHead>
               <TableHead>End Date</TableHead>
-              <TableHead>User</TableHead>
+              <TableHead>Customer</TableHead>
               <TableHead>Status</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {bookings.map((booking) => (
               <TableRow key={booking.id}>
-                <TableCell>{booking.startDate.toLocaleDateString()}</TableCell>
-                <TableCell>{booking.endDate.toLocaleDateString()}</TableCell>
+                <TableCell>{booking.startDate as string}</TableCell>
+                <TableCell>{booking.endDate as string}</TableCell>
                 <TableCell>
-                  <div>{booking.customer.userId}</div>
+                  <div>{booking.user.name}</div>
                 </TableCell>
                 <TableCell>
-                  <span className={`capitalize ${getStatusColor(booking.status)}`}>
+                  <span className={`capitalize ${getStatusColor(booking.status ?? "")}`}>
                     {booking.status}
                   </span>
                 </TableCell>

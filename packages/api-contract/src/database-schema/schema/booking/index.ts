@@ -14,7 +14,7 @@ export const Booking = mysqlTable("booking", {
     id: varchar("id", { length: 36 }).primaryKey().$default(uuid),
     startDate: datetime("start_date").notNull(),
     endDate: datetime("end_date").notNull(),
-    status: varchar("status", { length: 255 }).notNull(),
+    status: varchar("status", { length: 255 }),
     totalPrice: decimal({ precision: 1 }),
     createdAt: timestamp('createdAt').notNull().defaultNow(),
     updatedAt: timestamp('updated_at', { mode: 'date', }).$onUpdate(() => new Date()),
@@ -23,10 +23,10 @@ export const Booking = mysqlTable("booking", {
     assetIdx: index("asset_idx").on(table.assetId),
 }));
 
-export const InsertBookingSchema = createInsertSchema(Booking);
+export const InsertBookingSchema = createInsertSchema(Booking).omit({ startDate: true, endDate: true }).extend({ startDate: z.string(), endDate: z.string() });
 export const SelectBookingSchema = createSelectSchema(Booking);
 
-export const UpdateBookingSchema = InsertBookingSchema.partial().required({ id: true, startDate: true, endDate: true, status: true, totalPrice: true, assetId: true});
+export const UpdateBookingSchema = InsertBookingSchema.partial().required({id:true, startDate: true, endDate: true, status: true, totalPrice: true, assetId: true});
 
 export type InsertBooking = z.infer<typeof InsertBookingSchema>;
 export type SelectBooking = z.infer<typeof SelectBookingSchema>;
@@ -62,7 +62,7 @@ export const Availability = mysqlTable("availabilities", {
     assetIdx: index("asset_idx").on(table.assetId),
 }));
 
-export const InsertAvailabilitySchema = createInsertSchema(Availability)
+export const InsertAvailabilitySchema = createInsertSchema(Availability).omit({ startDate: true, endDate: true}).extend({ startDate: z.string(), endDate: z.string() })
 export const SelectAvailabilitySchema = createSelectSchema(Availability)
 export const UpdateAvailabilitySchema = InsertAvailabilitySchema.partial()
 
