@@ -1,7 +1,6 @@
 'use client';
 
 import { useState } from 'react';
-import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import {
   Select,
@@ -19,7 +18,6 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import {
-  CalendarIcon,
   UserIcon,
   Package2Icon,
 } from 'lucide-react';
@@ -40,8 +38,8 @@ export default function Component() {
   });
   
   // Fetch assets data
-  const { data: assetsData } = authClient.assets.getAssets.useQuery({
-    queryKey: ['assets'],
+  const { data: assetCountData } = authClient.analytics.getAssetCount.useQuery({
+    queryKey: ['assetCount'],
   });
 
   const { data: assetTypeData} = authClient.settings.assetType.getAssetTypes.useQuery({
@@ -51,7 +49,7 @@ export default function Component() {
   // Process data for display
   const bookings = bookingsData?.body ?? [];
   const customers = customersData?.body ?? [];
-  const assets = assetsData?.body ?? [];
+  const assetCount = assetCountData?.body ?? {} 
   const assetTypes = assetTypeData?.body ?? [];
   
   // Calculate totals
@@ -81,38 +79,10 @@ export default function Component() {
         </h1>
       </div>
       <div className='grid gap-4 md:grid-cols-2 lg:grid-cols-3 mt-6'>
-        <Card>
+      <Card>
           <CardHeader className='flex flex-row items-center justify-between space-y-0 pb-2'>
             <CardTitle className='text-sm font-medium'>
               Total Bookings
-            </CardTitle>
-            <CalendarIcon className='w-4 h-4 text-muted-foreground' />
-          </CardHeader>
-          <CardContent>
-            <div className='text-2xl font-bold'>{totalBookings}</div>
-            <p className='text-xs text-muted-foreground'>
-              All time bookings
-            </p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className='flex flex-row items-center justify-between space-y-0 pb-2'>
-            <CardTitle className='text-sm font-medium'>
-              Total Customers
-            </CardTitle>
-            <UserIcon className='w-4 h-4 text-muted-foreground' />
-          </CardHeader>
-          <CardContent>
-            <div className='text-2xl font-bold'>{totalCustomers}</div>
-            <p className='text-xs text-muted-foreground'>
-              Registered customers
-            </p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className='flex flex-row items-center justify-between space-y-0 pb-2'>
-            <CardTitle className='text-sm font-medium'>
-              Asset Bookings
             </CardTitle>
             <Package2Icon className='w-4 h-4 text-muted-foreground' />
           </CardHeader>
@@ -133,39 +103,73 @@ export default function Component() {
             </div>
           </CardContent>
         </Card>
+        <Card>
+          <CardHeader className='flex flex-row items-center justify-between space-y-0 pb-2'>
+            <CardTitle className='text-sm font-medium'>
+              Total Customers
+            </CardTitle>
+            <UserIcon className='w-4 h-4 text-muted-foreground' />
+          </CardHeader>
+          <CardContent>
+            <div className='text-2xl font-bold'>{totalCustomers}</div>
+            <p className='text-xs text-muted-foreground'>
+              Registered customers
+            </p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className='flex flex-row items-center justify-between space-y-0 pb-2'>
+            <CardTitle className='text-sm font-medium'>
+              Total Assets
+            </CardTitle>
+            <Package2Icon className='w-4 h-4 text-muted-foreground' />
+          </CardHeader>
+          <CardContent>
+            <div className='text-2xl font-bold'>{assetCount.totalAssets || 0}</div>
+            <p className='text-xs text-muted-foreground'>
+              Available assets
+            </p>
+          </CardContent>
+        </Card>
+        
       </div>
-      <div className='border shadow-sm rounded-lg mt-6'>
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead className='w-[100px]'>Booking ID</TableHead>
-              <TableHead>Customer</TableHead>
-              <TableHead>Asset</TableHead>
-              <TableHead>Start Date</TableHead>
-              <TableHead>End Date</TableHead>
-              <TableHead>Status</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {bookings.length > 0 ? (
-              bookings.slice(0, 5).map((booking) => (
-                <TableRow key={booking.id}>
-                  <TableCell className='font-medium'>{booking.id}</TableCell>
-                  <TableCell>{booking.user?.name || booking.customer?.userId || 'Unknown'}</TableCell>
-                  <TableCell>{booking.asset?.name || 'Unknown Asset'}</TableCell>
-                  <TableCell>{new Date(booking.startDate).toLocaleDateString()}</TableCell>
-                  <TableCell>{new Date(booking.endDate).toLocaleDateString()}</TableCell>
-                  <TableCell>{booking.status}</TableCell>
-                </TableRow>
-              ))
-            ) : (
+      <Card className="mt-6">
+        <CardHeader>
+          <CardTitle>Upcoming Bookings</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <Table>
+            <TableHeader>
               <TableRow>
-                <TableCell colSpan={6} className="text-center">No bookings found</TableCell>
+                <TableHead className='w-[100px]'>Booking ID</TableHead>
+                <TableHead>Customer</TableHead>
+                <TableHead>Asset</TableHead>
+                <TableHead>Start Date</TableHead>
+                <TableHead>End Date</TableHead>
+                <TableHead>Status</TableHead>
               </TableRow>
-            )}
-          </TableBody>
-        </Table>
-      </div>
+            </TableHeader>
+            <TableBody>
+              {bookings.length > 0 ? (
+                bookings.slice(0, 5).map((booking) => (
+                  <TableRow key={booking.id}>
+                    <TableCell className='font-medium'>{booking.id}</TableCell>
+                    <TableCell>{booking.user?.name || booking.customer?.userId || 'Unknown'}</TableCell>
+                    <TableCell>{booking.asset?.name || 'Unknown Asset'}</TableCell>
+                    <TableCell>{new Date(booking.startDate).toLocaleDateString()}</TableCell>
+                    <TableCell>{new Date(booking.endDate).toLocaleDateString()}</TableCell>
+                    <TableCell>{booking.status}</TableCell>
+                  </TableRow>
+                ))
+              ) : (
+                <TableRow>
+                  <TableCell colSpan={6} className="text-center">No bookings found</TableCell>
+                </TableRow>
+              )}
+            </TableBody>
+          </Table>
+        </CardContent>
+      </Card>
     </>
   );
 }
