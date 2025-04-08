@@ -1,7 +1,7 @@
 
 import { initContract } from "@ts-rest/core";
 import { z } from "zod";
-import { InsertUserSchema, SelectUserSchema } from "../database-schema";
+import { InsertUserSchema, SelectCustomerSchema, SelectUserSchema } from "../database-schema";
 
 
 const c = initContract();
@@ -47,8 +47,12 @@ export const userContract = c.router({
     updateUser: {
         method: "PUT",
         path: "/users/:id",
-        body: InsertUserSchema.partial(),
-        
+        body:  z.object({
+            user: InsertUserSchema.partial(),
+            customer : z.boolean(),
+            owner: z.boolean(),
+            roles: z.array(z.number()),
+           }),
         responses: {
             200: z.object({
                 message: z.string(),
@@ -71,7 +75,15 @@ export const userContract = c.router({
             id: z.string(),
         }),
         summary: "Delete a user"
-    },  
+    },
+    getCustomers: {
+        method: "GET",
+        path: "/customers",
+        responses: {
+            200: z.array(z.object({customer:SelectCustomerSchema,user: SelectUserSchema})),
+        },
+        summary: "Get all customers"
+    }
 
 
 

@@ -18,33 +18,57 @@ import {
   DialogTrigger,
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { authClient } from '@/lib/api/publicClient';
-import { SelectAsset } from '@repo/api-contract';
+import { InsertBookingSchema, SelectAsset} from '@repo/api-contract';
 import { useState } from 'react';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import * as z from 'zod';
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
+import { MultiSelector, MultiSelectorTrigger, MultiSelectorInput, MultiSelectorContent, MultiSelectorList, MultiSelectorItem } from '../extension/multi-select';
 
+// Define the form schema with zod
+const bookingFormSchema = z.object({
+  ...InsertBookingSchema.shape,
+  customers: z.array(z.number()),
+})
 
+type BookingFormValues = z.infer<typeof bookingFormSchema>;
 
 export default function AssetBookings({ asset }: { asset: SelectAsset}) {
+  const [customers, setCustomers] = useState<string[]>([]);
   const { data } = authClient.booking.getBookings.useQuery({ queryKey: ['bookings',asset.id]})
   const { mutate: createBooking } = authClient.booking.createBooking.useMutation();
+  const { data: customerResponse } = authClient.users.getCustomers.useQuery({ queryKey: ['customers']})
+  const customerList = customerResponse?.body?? [];
   const bookings = data?.body ?? [];
   
-  const [startDate, setStartDate] = useState('');
-  const [endDate, setEndDate] = useState('');
   const [isOpen, setIsOpen] = useState(false);
 
-  const handleCreateBooking = () => {
-    // createBooking({
-    //   params: { id: asset.id },
-    //   body: {
-    //     startDate: new Date(startDate),
-    //     endDate: new Date(endDate),
-    //   }
-    // });
-    // setIsOpen(false);
-    // setStartDate('');
-    // setEndDate('');
+  // Initialize react-hook-form
+  const form = useForm<BookingFormValues>({
+    resolver: zodResolver(bookingFormSchema),
+    defaultValues: {
+      status: '',
+      assetId: asset.id,
+      customers: [],
+    },
+  }); 
+
+  const onSubmit = (values: BookingFormValues) => {
+    createBooking({
+      body: {
+        booking: {
+          startDate: values.startDate,
+          endDate: values.endDate,
+          status: '',
+          assetId: asset.id
+        },
+          customers: customers.map((customerId) => parseInt(customerId)),
+        },
+    });
+    setIsOpen(false);
+    form.reset();
   };
 
   return (
@@ -59,27 +83,71 @@ export default function AssetBookings({ asset }: { asset: SelectAsset}) {
             <DialogHeader>
               <DialogTitle>Create New Booking</DialogTitle>
             </DialogHeader>
-            <div className="space-y-4 py-4">
-              <div className="space-y-2">
-                <Label>Start Date</Label>
-                <Input
-                  type="date"
-                  value={startDate}
-                  onChange={(e) => setStartDate(e.target.value)}
+            <Form {...form}>
+              <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 py-4">
+                <FormField
+                  control={form.control}
+                  name="startDate"
+                  render={({ field }) => (
+                    <FormItem className="space-y-2">
+                      <FormLabel>Start Date</FormLabel>
+                      <FormControl>
+                        <Input
+                          {...field}
+                          value={field.value ? new Date(field.value).toISOString().split('T')[0] : ''}
+                          type="date"
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
                 />
-              </div>
-              <div className="space-y-2">
-                <Label>End Date</Label>
-                <Input
-                  type="date"
-                  value={endDate}
-                  onChange={(e) => setEndDate(e.target.value)}
+                <FormField
+                  control={form.control}
+                  name="endDate"
+                  render={({ field }) => (
+                    <FormItem className="space-y-2">
+                      <FormLabel>End Date</FormLabel>
+                      <FormControl>
+                        <Input
+                          {...field}
+                          value={field.value ? new Date(field.value).toISOString().split('T')[0] : ''}
+                          type="date"
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
                 />
-              </div>
-              <Button onClick={handleCreateBooking} className="w-full">
-                Create Booking
-              </Button>
-            </div>
+                 <FormItem>
+                <FormLabel>Customers</FormLabel>
+                <MultiSelector
+                  values={customers}
+                  onValuesChange={setCustomers}
+                >
+                  <MultiSelectorTrigger>
+                    <MultiSelectorInput placeholder="Select Customers..." />
+                  </MultiSelectorTrigger>
+                  <MultiSelectorContent>
+                    <MultiSelectorList>
+                      {customerList.map((customer) => (
+                        <MultiSelectorItem
+                          key={customer.customer.id}
+                          value={customer.customer.id.toString()}
+                        >
+                          {customer.user.name}
+                        </MultiSelectorItem>
+                      ))}
+                    </MultiSelectorList>
+                  </MultiSelectorContent>
+                </MultiSelector>
+                <FormMessage />
+              </FormItem>
+                <Button type="submit" className="w-full">
+                  Create Booking
+                </Button>
+              </form>
+            </Form>
           </DialogContent>
         </Dialog>
       </CardHeader>
@@ -89,20 +157,20 @@ export default function AssetBookings({ asset }: { asset: SelectAsset}) {
             <TableRow>
               <TableHead>Start Date</TableHead>
               <TableHead>End Date</TableHead>
-              <TableHead>User</TableHead>
+              <TableHead>Customer</TableHead>
               <TableHead>Status</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {bookings.map((booking) => (
               <TableRow key={booking.id}>
-                <TableCell>{booking.startDate.toLocaleDateString()}</TableCell>
-                <TableCell>{booking.endDate.toLocaleDateString()}</TableCell>
+                <TableCell>{booking.startDate as string}</TableCell>
+                <TableCell>{booking.endDate as string}</TableCell>
                 <TableCell>
-                  <div>{booking.customer.userId}</div>
+                  <div>{booking.user.name}</div>
                 </TableCell>
                 <TableCell>
-                  <span className={`capitalize ${getStatusColor(booking.status)}`}>
+                  <span className={`capitalize ${getStatusColor(booking.status ?? "")}`}>
                     {booking.status}
                   </span>
                 </TableCell>

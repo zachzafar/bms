@@ -1,10 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import {
   Select,
   SelectContent,
@@ -21,190 +18,158 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from '@/components/ui/dialog';
-import { Calendar } from '@/components/ui/calendar';
-import {
-  CalendarIcon,
-  PlusIcon,
   UserIcon,
   Package2Icon,
-  CarIcon,
-  HomeIcon,
 } from 'lucide-react';
-import Image from 'next/image';
+import { authClient } from '@/lib/api/publicClient';
+import { BOOKINGS_QUERY_KEY } from '@/lib/api/queryKeys';
 
 export default function Component() {
-  const [date, setDate] = useState<Date | undefined>(new Date());
+  const [selectedAssetType, setSelectedAssetType] = useState('all');
+  
+  // Fetch bookings data
+  const { data: bookingsData } = authClient.booking.getBookings.useQuery({
+    queryKey: BOOKINGS_QUERY_KEY,
+  });
+  
+  // Fetch customers data
+  const { data: customersData } = authClient.users.getCustomers.useQuery({
+    queryKey: ['customers'],
+  });
+  
+  // Fetch assets data
+  const { data: assetCountData } = authClient.analytics.getAssetCount.useQuery({
+    queryKey: ['assetCount'],
+  });
+
+  const { data: assetTypeData} = authClient.settings.assetType.getAssetTypes.useQuery({
+    queryKey: ['assetTypes'],
+  });
+
+  // Process data for display
+  const bookings = bookingsData?.body ?? [];
+  const customers = customersData?.body ?? [];
+  const assetCount = assetCountData?.body ?? {} 
+  const assetTypes = assetTypeData?.body ?? [];
+  
+  // Calculate totals
+  const totalBookings = bookings.length;
+  const totalCustomers = customers.length;
+  
+  // Group bookings by asset type
+  const bookingsByAssetType = bookings.reduce((acc, booking) => {
+    const assetType = booking.asset.assetTypeId?.toString() || 'unknown';
+    acc[assetType] = (acc[assetType] || 0) + 1;
+    return acc;
+  }, {} as Record<string, number>);
+  
+  // Get asset type names for dropdown
+  
+  
+  // Get bookings count for selected asset type
+  const selectedTypeBookings = selectedAssetType === 'all' 
+    ? totalBookings 
+    : bookingsByAssetType[selectedAssetType] || 0;
 
   return (
-      <>
-        <div className='flex items-center'>
-          <h1 className='font-semibold text-lg md:text-2xl'>
-            Booking Dashboard
-          </h1>
-          <Dialog>
-            <DialogTrigger asChild>
-              <Button className='ml-auto' size='sm'>
-                <PlusIcon className='w-4 h-4 mr-2' />
-                Add Booking
-              </Button>
-            </DialogTrigger>
-            <DialogContent>
-              <DialogHeader>
-                <DialogTitle>Add New Booking</DialogTitle>
-              </DialogHeader>
-              <form className='grid gap-4 py-4'>
-                <div className='grid gap-2'>
-                  <Label htmlFor='asset'>Asset Type</Label>
-                  <Select>
-                    <SelectTrigger id='asset'>
-                      <SelectValue placeholder='Select asset type' />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value='car'>Car</SelectItem>
-                      <SelectItem value='room'>Room</SelectItem>
-                      <SelectItem value='equipment'>Equipment</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className='grid gap-2'>
-                  <Label htmlFor='date'>Date</Label>
-                  <Calendar
-                    mode='single'
-                    selected={date}
-                    onSelect={setDate}
-                    className='rounded-md border'
-                  />
-                </div>
-                <div className='grid gap-2'>
-                  <Label htmlFor='name'>Customer Name</Label>
-                  <Input id='name' placeholder='Enter customer name' />
-                </div>
-                <Button type='submit'>Add Booking</Button>
-              </form>
-            </DialogContent>
-          </Dialog>
-        </div>
-        <div className='grid gap-4 md:grid-cols-2 lg:grid-cols-4'>
-          <Card>
-            <CardHeader className='flex flex-row items-center justify-between space-y-0 pb-2'>
-              <CardTitle className='text-sm font-medium'>
-                Total Bookings
-              </CardTitle>
-              <CalendarIcon className='w-4 h-4 text-muted-foreground' />
-            </CardHeader>
-            <CardContent>
-              <div className='text-2xl font-bold'>1,248</div>
-              <p className='text-xs text-muted-foreground'>
-                +20.1% from last month
-              </p>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardHeader className='flex flex-row items-center justify-between space-y-0 pb-2'>
-              <CardTitle className='text-sm font-medium'>
-                Active Users
-              </CardTitle>
-              <UserIcon className='w-4 h-4 text-muted-foreground' />
-            </CardHeader>
-            <CardContent>
-              <div className='text-2xl font-bold'>573</div>
-              <p className='text-xs text-muted-foreground'>
-                +180 since last week
-              </p>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardHeader className='flex flex-row items-center justify-between space-y-0 pb-2'>
-              <CardTitle className='text-sm font-medium'>
-                Car Bookings
-              </CardTitle>
-              <CarIcon className='w-4 h-4 text-muted-foreground' />
-            </CardHeader>
-            <CardContent>
-              <div className='text-2xl font-bold'>432</div>
-              <p className='text-xs text-muted-foreground'>
-                +19% from last month
-              </p>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardHeader className='flex flex-row items-center justify-between space-y-0 pb-2'>
-              <CardTitle className='text-sm font-medium'>
-                Villa Bookings
-              </CardTitle>
-              <HomeIcon className='w-4 h-4 text-muted-foreground' />
-            </CardHeader>
-            <CardContent>
-              <div className='text-2xl font-bold'>816</div>
-              <p className='text-xs text-muted-foreground'>
-                +201 since last month
-              </p>
-            </CardContent>
-          </Card>
-        </div>
-        <div className='border shadow-sm rounded-lg'>
+    <>
+      <div className='flex items-center'>
+        <h1 className='font-semibold text-lg md:text-2xl'>
+          Booking Dashboard
+        </h1>
+      </div>
+      <div className='grid gap-4 md:grid-cols-2 lg:grid-cols-3 mt-6'>
+      <Card>
+          <CardHeader className='flex flex-row items-center justify-between space-y-0 pb-2'>
+            <CardTitle className='text-sm font-medium'>
+              Total Bookings
+            </CardTitle>
+            <Package2Icon className='w-4 h-4 text-muted-foreground' />
+          </CardHeader>
+          <CardContent>
+            <div className='flex flex-col gap-2'>
+              <div className='text-2xl font-bold'>{selectedTypeBookings}</div>
+              <Select value={selectedAssetType} onValueChange={setSelectedAssetType}>
+                <SelectTrigger className='w-full'>
+                  <SelectValue placeholder='Select asset type' />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value='all'>All Types</SelectItem>
+                  {assetTypes.map((assetType) => (
+                    <SelectItem key={assetType.id} value={assetType.id.toString()}>{assetType.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className='flex flex-row items-center justify-between space-y-0 pb-2'>
+            <CardTitle className='text-sm font-medium'>
+              Total Customers
+            </CardTitle>
+            <UserIcon className='w-4 h-4 text-muted-foreground' />
+          </CardHeader>
+          <CardContent>
+            <div className='text-2xl font-bold'>{totalCustomers}</div>
+            <p className='text-xs text-muted-foreground'>
+              Registered customers
+            </p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className='flex flex-row items-center justify-between space-y-0 pb-2'>
+            <CardTitle className='text-sm font-medium'>
+              Total Assets
+            </CardTitle>
+            <Package2Icon className='w-4 h-4 text-muted-foreground' />
+          </CardHeader>
+          <CardContent>
+            <div className='text-2xl font-bold'>{assetCount.totalAssets || 0}</div>
+            <p className='text-xs text-muted-foreground'>
+              Available assets
+            </p>
+          </CardContent>
+        </Card>
+        
+      </div>
+      <Card className="mt-6">
+        <CardHeader>
+          <CardTitle>Upcoming Bookings</CardTitle>
+        </CardHeader>
+        <CardContent>
           <Table>
             <TableHeader>
               <TableRow>
                 <TableHead className='w-[100px]'>Booking ID</TableHead>
                 <TableHead>Customer</TableHead>
                 <TableHead>Asset</TableHead>
-                <TableHead>Date</TableHead>
+                <TableHead>Start Date</TableHead>
+                <TableHead>End Date</TableHead>
                 <TableHead>Status</TableHead>
-                <TableHead className='text-right'>Amount</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              <TableRow>
-                <TableCell className='font-medium'>BK001</TableCell>
-                <TableCell>Zach Harris</TableCell>
-                <TableCell>Car - Toyota Camry</TableCell>
-                <TableCell>2023-07-15</TableCell>
-                <TableCell>Confirmed</TableCell>
-                <TableCell className='text-right'>$120.00</TableCell>
-              </TableRow>
-              <TableRow>
-                <TableCell className='font-medium'>BK002</TableCell>
-                <TableCell>Jane Smith</TableCell>
-                <TableCell>Nevis Villa</TableCell>
-                <TableCell>2023-07-16</TableCell>
-                <TableCell>Pending</TableCell>
-                <TableCell className='text-right'>$250.00</TableCell>
-              </TableRow>
-              <TableRow>
-                <TableCell className='font-medium'>BK003</TableCell>
-                <TableCell>Laura Whitney</TableCell>
-                <TableCell>Royal WestMoreland Royal Villa 12</TableCell>
-                <TableCell>2023-07-17</TableCell>
-                <TableCell>Confirmed</TableCell>
-                <TableCell className='text-right'>$50.00</TableCell>
-              </TableRow>
-              <TableRow>
-                <TableCell className='font-medium'>BK004</TableCell>
-                <TableCell>Alice Brown</TableCell>
-                <TableCell>Car - Honda Civic</TableCell>
-                <TableCell>2023-07-18</TableCell>
-                <TableCell>Cancelled</TableCell>
-                <TableCell className='text-right'>$100.00</TableCell>
-              </TableRow>
-              <TableRow>
-                <TableCell className='font-medium'>BK005</TableCell>
-                <TableCell>Charlie Davis</TableCell>
-                <TableCell>Royal WestMoreland Mango Walk</TableCell>
-                <TableCell>2023-07-19</TableCell>
-                <TableCell>Confirmed</TableCell>
-                <TableCell className='text-right'>$180.00</TableCell>
-              </TableRow>
+              {bookings.length > 0 ? (
+                bookings.slice(0, 5).map((booking) => (
+                  <TableRow key={booking.id}>
+                    <TableCell className='font-medium'>{booking.id}</TableCell>
+                    <TableCell>{booking.user?.name || booking.customer?.userId || 'Unknown'}</TableCell>
+                    <TableCell>{booking.asset?.name || 'Unknown Asset'}</TableCell>
+                    <TableCell>{new Date(booking.startDate).toLocaleDateString()}</TableCell>
+                    <TableCell>{new Date(booking.endDate).toLocaleDateString()}</TableCell>
+                    <TableCell>{booking.status}</TableCell>
+                  </TableRow>
+                ))
+              ) : (
+                <TableRow>
+                  <TableCell colSpan={6} className="text-center">No bookings found</TableCell>
+                </TableRow>
+              )}
             </TableBody>
           </Table>
-        </div>
-      </>
-
+        </CardContent>
+      </Card>
+    </>
   );
 }
