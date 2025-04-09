@@ -56,12 +56,16 @@ export class UsersController {
     }
 
     @TsRestHandler(c.users.deleteUser)
-    async deleteUser(): Promise<ReturnType<typeof tsRestHandler>> {
+    async deleteUser(@Headers() headers: any): Promise<ReturnType<typeof tsRestHandler>> {
         this.logger.log(`Deleting a user`);
         return tsRestHandler(c.users.deleteUser, async ({ params }) => {
             const { id } = params;
-            await this.UserService.remove(id);
-            return { status: 200, body: { id } };
+            const tenantId = headers['x-tenant-id'];
+            await this.UserService.remove(id, tenantId);
+            return { 
+                status: 204 as const, 
+                body: undefined 
+            };
         });
     }
 

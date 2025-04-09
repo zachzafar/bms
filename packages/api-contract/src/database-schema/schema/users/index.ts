@@ -41,7 +41,7 @@ export type UpdateUser = z.infer<typeof UpdateUserSchema>
 
 export const UserHasBookings = mysqlTable("user_has_bookings",{
     id: serial("id").primaryKey(),
-    userId: varchar("user_id", {length: 255}).notNull().references(() => User.id),
+    userId: varchar("user_id", {length: 255}).notNull().references(() => User.id, { onDelete: 'cascade' }),
     bookingId: varchar("booking_id", { length: 255 }).notNull().references(() => Booking.id)
 })
 
@@ -64,7 +64,7 @@ export const UserHasBookingsRelations = relations(UserHasBookings, ({ one }) => 
 
 export const UserHasAssets = mysqlTable("user_has_assets",{
     id: serial("id").primaryKey(),
-    userId: varchar("user_id", {length: 255}).notNull().references(() => User.id).notNull(),
+    userId: varchar("user_id", {length: 255}).notNull().references(() => User.id, { onDelete: 'cascade' }).notNull(),
     assetId: varchar("asset_id", { length: 255 }).notNull().references(() => Asset.id),
     type: mysqlEnum("type", ["owner", "manager"]).notNull().default("manager")
 })
@@ -158,7 +158,7 @@ export const RoleRelations = relations(Roles, ({ many }) => ({
 export const UserHasRoles = mysqlTable("user_has_roles",{
     id: serial("id").primaryKey(),
     roleId: bigint("roles_id", { mode: 'bigint', unsigned: true}).notNull().references(() => Roles.id),
-    userId: varchar("user_id", { length: 255}).references(() => User.id).notNull()
+    userId: varchar("user_id", { length: 255}).references(() => User.id, { onDelete: 'cascade' }).notNull()
 })
 
 export const InsertUserHasRolesSchema = createInsertSchema(UserHasRoles);
