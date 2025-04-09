@@ -55,6 +55,20 @@ export class UsersController {
         });
     }
 
+    @TsRestHandler(c.users.deleteUser)
+    async deleteUser(@Headers() headers: any): Promise<ReturnType<typeof tsRestHandler>> {
+        this.logger.log(`Deleting a user`);
+        return tsRestHandler(c.users.deleteUser, async ({ params }) => {
+            const { id } = params;
+            const tenantId = headers['x-tenant-id'];
+            await this.UserService.remove(id, tenantId);
+            return { 
+                status: 204 as const, 
+                body: undefined 
+            };
+        });
+    }
+
     @TsRestHandler(c.users.getCustomers)
     async getCustomers(@Headers() headers: any): Promise<ReturnType<typeof tsRestHandler>> {
         this.logger.log(`Getting all customers`);

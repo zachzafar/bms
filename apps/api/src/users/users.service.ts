@@ -2,8 +2,9 @@ import { Injectable,Inject, InternalServerErrorException } from '@nestjs/common'
 import { MySql2Database } from 'drizzle-orm/mysql2';
 import { DrizzleAsyncProvider } from 'src/drizzle/drizzle.provider';
 import * as schema from '@repo/api-contract';
-import { InsertUser, SelectTenant, SelectUser, UpdateUser } from '@repo/api-contract';
+import { InsertUser, SelectUser, UpdateUser } from '@repo/api-contract';
 import { eq , and} from 'drizzle-orm';
+import { hash } from 'argon2';
 
 @Injectable()
 export class UsersService {
@@ -12,7 +13,9 @@ export class UsersService {
     async createUser(userData: InsertUser,tenantId: string,customer:boolean,owner:boolean,roles:number[]): Promise<string> {
         let tenantUser_id: number
         await this.db.transaction(async (tx) => {
-             await tx.insert(schema.User).values(userData)
+
+            const hashedPassword = await hash(userData.password);
+             await tx.insert(schema.User).values({...userData, password: hashedPassword})
 
              const user = await  tx.query.User.findFirst({ where: (user,{eq}) => eq(user.email,userData.email)})
             
@@ -125,8 +128,35 @@ export class UsersService {
     }
 
 
-    async remove(id: string): Promise<void> {
-        await this.db.delete(schema.User).where(eq(schema.User.id, id));
-    }
+    async remove(id: string, tenantId: string): Promise<void> {
+        // First check if there's at least one admin in the tenant
+        const admins = await this.db.select()
+            .from(schema.TenantHasUsers)
+            .where(and(eq(schema.TenantHasUsers.tenantId, tenantId),eq(schema.TenantHasUsers.isAdmin, true)))
+            .innerJoin(schema.User, eq(schema.TenantHasUsers.userId, schema.User.id))
+        
+        // Check if the user being removed is an admin and if there's only one admin
+        const isUserAdmin = admins.some(admin => admin.users.id === id);
+        if (isUserAdmin && admins.length <= 1) {
+            throw new InternalServerErrorException("Cannot remove the last admin from a tenant");
+        }
 
+        // Remove user from the tenant
+        await this.db.delete(schema.TenantHasUsers)
+            .where(and(
+                eq(schema.TenantHasUsers.userId, id),
+                eq(schema.TenantHasUsers.tenantId, tenantId)
+            ));
+        
+        // Check if user belongs to any other tenants
+        const otherTenants = await this.db.query.TenantHasUsers.findMany({
+            where: (tenantUser, { eq }) => eq(tenantUser.userId, id)
+        });
+        
+        // If user doesn't belong to any other tenants, remove the user profile completely
+        if (otherTenants.length === 0) {
+            await this.db.delete(schema.User).where(eq(schema.User.id, id));
+            // With cascade delete in the database schema, all related records will be automatically deleted
+        }
+    }
 }

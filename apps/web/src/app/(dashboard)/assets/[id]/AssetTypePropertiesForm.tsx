@@ -38,16 +38,32 @@ export default function AssetTypePropertiesForm({ asset }: { asset: SelectAsset 
 
 
   const handleValueChange = (propertyId: number, value: string | number | string[]) => {
-    setPropertyValues(prev => 
-      prev.map(item => 
-        item.propertyId === propertyId ? { ...item, value } : item
-      )
-    );
+    setPropertyValues(prev => {
+      // Check if the property already exists in the array
+      const propertyExists = prev.some(item => item.propertyId === propertyId);
+      
+      if (propertyExists) {
+        // Update existing property
+        return prev.map(item => 
+          item.propertyId === propertyId ? { ...item, value } : item
+        );
+      } else {
+        // Add new property
+        return [...prev, { propertyId, value }];
+      }
+    });
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     console.log('Submitting property values:', propertyValues);
+    
+    // Only submit if there are property values
+    if (propertyValues.length === 0) {
+      toast.error("No property values to submit");
+      return;
+    }
+    
     mutate({
       params:{
         id: asset.id,
