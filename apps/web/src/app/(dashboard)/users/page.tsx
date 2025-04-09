@@ -76,7 +76,6 @@ export default function Component() {
     mutate(
       {
         body: data,
-        params: { id: '' },
       },
       {
         onSuccess: (response) => {
@@ -145,7 +144,7 @@ export default function Component() {
     );
   };
 
-  const filteredUsers = users?.filter(
+  const filteredUsers = users?.body?.filter(
     (user) =>
       user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       user.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -233,7 +232,6 @@ export default function Component() {
                           name='role'
                           onValueChange={(value) => form.setValue('user.role', value)}
                           // onValueChange={handleRoleChange}
-                          required
                         >
                           <SelectTrigger id='role'>
                             <SelectValue placeholder='Select role' />

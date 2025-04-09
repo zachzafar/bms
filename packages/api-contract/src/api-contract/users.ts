@@ -9,7 +9,7 @@ const c = initContract();
 export const userContract = c.router({
     createUser: {
         method: "POST",
-        path: "/users/:id",
+        path: "/users/",
         body:  z.object({
              user: InsertUserSchema,
              customer : z.boolean(),
