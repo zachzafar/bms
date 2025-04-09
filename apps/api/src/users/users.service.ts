@@ -2,8 +2,9 @@ import { Injectable,Inject, InternalServerErrorException } from '@nestjs/common'
 import { MySql2Database } from 'drizzle-orm/mysql2';
 import { DrizzleAsyncProvider } from 'src/drizzle/drizzle.provider';
 import * as schema from '@repo/api-contract';
-import { InsertUser, SelectTenant, SelectUser, UpdateUser } from '@repo/api-contract';
+import { InsertUser, SelectUser, UpdateUser } from '@repo/api-contract';
 import { eq , and} from 'drizzle-orm';
+import { hash } from 'argon2';
 
 @Injectable()
 export class UsersService {
@@ -12,7 +13,9 @@ export class UsersService {
     async createUser(userData: InsertUser,tenantId: string,customer:boolean,owner:boolean,roles:number[]): Promise<string> {
         let tenantUser_id: number
         await this.db.transaction(async (tx) => {
-             await tx.insert(schema.User).values(userData)
+
+            const hashedPassword = await hash(userData.password);
+             await tx.insert(schema.User).values({...userData, password: hashedPassword})
 
              const user = await  tx.query.User.findFirst({ where: (user,{eq}) => eq(user.email,userData.email)})
             
@@ -119,9 +122,9 @@ export class UsersService {
         });
     }
 
-    async getCustomers(tenantId: string): Promise<schema.SelectCustomer[]> {
+    async getCustomers(tenantId: string): Promise<{customer:schema.SelectCustomer,user: SelectUser}[]> {
         const rows = await this.db.select().from(schema.TenantHasUsers).where(eq(schema.TenantHasUsers.tenantId,tenantId)).innerJoin(schema.User,eq(schema.TenantHasUsers.userId,schema.User.id)).innerJoin(schema.Customer,eq(schema.Customer.userId,schema.User.id))
-        return rows.map(row => row.customer_details)
+        return rows.map(row => ({customer:row.customer_details,user:row.users}))
     }
 
 

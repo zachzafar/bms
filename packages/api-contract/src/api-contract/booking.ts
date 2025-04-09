@@ -1,15 +1,18 @@
 import { initContract } from "@ts-rest/core";
 
-import { z } from "zod";
+import { tuple, z } from "zod";
 
-import { InsertAvailabilitySchema, InsertBookingSchema, SelectAssetSchema, SelectAvailabilitySchema, SelectBookingSchema, SelectCustomerSchema, UpdateBookingSchema } from "../database-schema";
+import { InsertAvailabilitySchema, InsertBookingSchema, SelectAssetSchema, SelectAvailabilitySchema, SelectBookingSchema, SelectCustomerSchema, SelectUserSchema, UpdateBookingSchema } from "../database-schema";
 
 
 const c = initContract();
 
-export const ExtendedSelectBookingSchema = SelectBookingSchema.extend({
+export const ExtendedSelectBookingSchema = SelectBookingSchema.omit({startDate: true, endDate:true}).extend({
     customer: SelectCustomerSchema,
-    asset: SelectAssetSchema
+    asset: SelectAssetSchema,
+    user: SelectUserSchema,
+    startDate: z.string(),
+    endDate: z.string(),
 })
 
 export type ExtendedSelectBooking = z.infer<typeof ExtendedSelectBookingSchema>
@@ -69,7 +72,9 @@ export const bookingContract = c.router({
         method: 'PUT',
         path: '/booking/:id',
         responses: {
-            200: SelectBookingSchema
+            200: z.object({
+                message: z.string(),
+            })
         },
         pathParams: z.object({
             id: z.string()

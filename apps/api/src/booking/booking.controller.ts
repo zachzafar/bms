@@ -46,9 +46,9 @@ export class BookingController {
 
     @TsRestHandler(contract.booking.updateBooking)
     async updateBooking(): Promise<ReturnType<typeof tsRestHandler>> {
-        return tsRestHandler(contract.booking.updateBooking, async ({ body }) => {
-            const  booking  = await this.bookingService.updateBooking(body);
-            return { status: 200, body:  booking  };
+        return tsRestHandler(contract.booking.updateBooking, async ({ params }) => {
+            await this.bookingService.updateBooking(params.id);
+            return { status: 200, body:  { message: "succesffully updated booking"} };
         });
     }
 
@@ -78,7 +78,7 @@ export class BookingController {
     @TsRestHandler(contract.booking.createAssetAvailability)
     async createAssetAvailability(): Promise<ReturnType<typeof tsRestHandler>> {
         return tsRestHandler(contract.booking.createAssetAvailability, async ({ body }) => {
-            const [{id}] = await this.bookingService.addAvailabilityException({...body, startDate: new Date(body.startDate), endDate: new Date(body.endDate)});
+            const [{id}] = await this.bookingService.addAvailabilityException({...body, startDate: body.startDate, endDate: body.endDate});
             return { status: 201, body: {id}};
         });
     }

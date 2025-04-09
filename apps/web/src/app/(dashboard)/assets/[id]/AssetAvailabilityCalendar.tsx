@@ -33,9 +33,10 @@ export default function AssetAvailabilityCalendar({
   });
 
   const onSubmit = (data: InsertAvailability) => {
+    console.log("submiting")
     const newRange = {
-      startDate: data.startDate.toISOString(),
-      endDate: data.endDate.toISOString(),
+      startDate: data.startDate,
+      endDate: data.endDate,
       price: data.price,
       available: !data.available,
       assetId: asset.id
