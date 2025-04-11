@@ -51,8 +51,6 @@ axiosInstance.interceptors.response.use(
           return Promise.reject(error);
         }
         
-        console.log("access token",result.accessToken)
-        console.log("refresh token",result.refreshToken)
         StorageService.setToken(result.accessToken)
           config.headers = new axios.AxiosHeaders({
             ...config.headers,
