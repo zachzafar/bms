@@ -28,6 +28,7 @@
     "@nestjs/jwt": "^10.2.0",
     "@nestjs/passport": "^10.0.3",
     "@nestjs/platform-express": "^10.4.8",
+    "@nestjs/schedule": "^5.0.1",
     "@nestjs/swagger": "^8.0.1",
     "@repo/api-contract": "workspace:*",
     "@ts-rest/nest": "^3.51.0",

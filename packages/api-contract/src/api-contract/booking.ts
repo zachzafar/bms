@@ -1,8 +1,8 @@
 import { initContract } from "@ts-rest/core";
 
-import { tuple, z } from "zod";
+import { z } from "zod";
 
-import { InsertAvailabilitySchema, InsertBookingSchema, SelectAssetSchema, SelectAvailabilitySchema, SelectBookingSchema, SelectCustomerSchema, SelectUserSchema, UpdateBookingSchema } from "../database-schema";
+import {  InsertBookingSchema, SelectAssetSchema, SelectBookingSchema, SelectCustomerSchema, SelectUserSchema, UpdateBookingSchema } from "../database-schema";
 
 
 const c = initContract();
@@ -81,45 +81,6 @@ export const bookingContract = c.router({
         }),
         body: UpdateBookingSchema,
         summary: 'Update a booking by id'
-    },
-    getAssetStatus: {
-        method: 'GET',
-        path: '/booking/asset-status/:id',
-        responses: {
-            200:z.object({
-                status: z.enum(["Available", "Booked", "Unavailable"]),
-            })
-        },
-        query: z.object({
-            start: z.string(),
-            end: z.string()
-        }).optional(),
-        pathParams: z.object({
-            id: z.string()
-        }),
-        summary: 'Get asset status by id'
-    },
-    createAssetAvailability: {
-        method: 'POST',
-        path: '/booking/asset-availability',
-        responses: {
-            201: z.object({
-                id: z.number(),
-            })
-        },
-        body: InsertAvailabilitySchema.omit({startDate:true, endDate:true}).extend({ startDate: z.string(), endDate: z.string()}),
-        summary: 'Create a new asset availability'
-    },
-    getAssetAvailability: {
-        method: 'GET',
-        path: '/booking/asset-availability/:id',
-        responses: {
-            200: z.array(SelectAvailabilitySchema)
-        },
-        pathParams: z.object({
-            id: z.string()
-        }),
-        summary: 'Get asset availability by id'
     },
     
 })

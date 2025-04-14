@@ -10,10 +10,9 @@ import { Calendar } from "@/components/ui/calendar"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { cn } from "@/lib/utils"
 import { format } from "date-fns"
-import { CalendarIcon, Printer, Download } from "lucide-react"
+import { CalendarIcon,} from "lucide-react"
 import BookingsByLocationChart from "../charts/bookings-by-location-chart"
 import BookingsByMonthChart from "../charts/bookings-by-month-chart"
-import CustomerSatisfactionChart from "../charts/customer-satisfaction-chart"
 import MaintenanceCostsChart from "../charts/maintenance-costs-chart"
 import RevenueByVehicleTypeChart from "../charts/revenue-by-vehicle-type-chart"
 import VehicleUtilizationChart from "../charts/vehicle-utilization-chart"
@@ -23,7 +22,6 @@ import VehicleUtilizationChart from "../charts/vehicle-utilization-chart"
 export default function ReportingDashboard() {
   const [date, setDate] = useState<Date | undefined>(new Date())
   const [selectedReport, setSelectedReport] = useState("bookings-by-month")
-  const [selectedLocation, setSelectedLocation] = useState("all")
   const [selectedYear, setSelectedYear] = useState("2023")
 
   // Map of report IDs to their display components
@@ -32,7 +30,7 @@ export default function ReportingDashboard() {
     "bookings-by-location": <BookingsByLocationChart />,
     "vehicle-utilization": <VehicleUtilizationChart />,
     "revenue-by-vehicle-type": <RevenueByVehicleTypeChart />,
-    "customer-satisfaction": <CustomerSatisfactionChart />,
+    // "customer-satisfaction": <CustomerSatisfactionChart />,
     "maintenance-costs": <MaintenanceCostsChart />,
   }
 
@@ -42,7 +40,7 @@ export default function ReportingDashboard() {
     "bookings-by-location": "Bookings By Location",
     "vehicle-utilization": "Vehicle Utilization Rate",
     "revenue-by-vehicle-type": "Revenue By Vehicle Type",
-    "customer-satisfaction": "Customer Satisfaction Ratings",
+    // "customer-satisfaction": "Customer Satisfaction Ratings",
     "maintenance-costs": "Maintenance Costs By Vehicle Type",
   }
 
@@ -50,22 +48,6 @@ export default function ReportingDashboard() {
     <div className="flex flex-col space-y-4">
       {/* Filters Section */}
       <div className="flex flex-wrap gap-4">
-        <div>
-          <label className="mb-1 block text-sm font-medium">Location</label>
-          <Select value={selectedLocation} onValueChange={setSelectedLocation}>
-            <SelectTrigger className="w-[180px]">
-              <SelectValue placeholder="Select location" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Locations</SelectItem>
-              <SelectItem value="new-york">New York</SelectItem>
-              <SelectItem value="los-angeles">Los Angeles</SelectItem>
-              <SelectItem value="chicago">Chicago</SelectItem>
-              <SelectItem value="miami">Miami</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-
         <div>
           <label className="mb-1 block text-sm font-medium">Year</label>
           <Select value={selectedYear} onValueChange={setSelectedYear}>
@@ -122,23 +104,12 @@ export default function ReportingDashboard() {
                   By Month/Day
                 </button>
               </li>
-              <li>
-                <button
-                  className={cn(
-                    "w-full rounded-md px-3 py-2 text-left text-sm transition-colors",
-                    selectedReport === "bookings-by-location" ? "bg-primary text-primary-foreground" : "hover:bg-muted",
-                  )}
-                  onClick={() => setSelectedReport("bookings-by-location")}
-                >
-                  By Location
-                </button>
-              </li>
             </ul>
           </div>
 
           {/* Vehicle Reports */}
           <div className="border-b">
-            <div className="p-3 font-medium">Vehicles</div>
+            <div className="p-3 font-medium">Assets</div>
             <ul className="space-y-1 px-1">
               <li>
                 <button
@@ -177,14 +148,14 @@ export default function ReportingDashboard() {
                   )}
                   onClick={() => setSelectedReport("revenue-by-vehicle-type")}
                 >
-                  By Vehicle Type
+                  By Asset Type
                 </button>
               </li>
             </ul>
           </div>
 
           {/* Customer Reports */}
-          <div className="border-b">
+          {/* <div className="border-b">
             <div className="p-3 font-medium">Customers</div>
             <ul className="space-y-1 px-1">
               <li>
@@ -199,7 +170,7 @@ export default function ReportingDashboard() {
                 </button>
               </li>
             </ul>
-          </div>
+          </div> */}
         </div>
 
         {/* Chart Area */}

@@ -81,7 +81,7 @@ export default function AssetsPage() {
 
 
 const Row = ({ asset }: { asset: SelectAsset }) => {
-  const { data: status, isLoading: statusIsLoading } = authClient.booking.getAssetStatus.useQuery({
+  const { data: status, isLoading: statusIsLoading } = authClient.slots.getAssetStatus.useQuery({
     queryKey: ['asset-status', asset.id], 
     queryData: { 
       params: { id: asset.id },

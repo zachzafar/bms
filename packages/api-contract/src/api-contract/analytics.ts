@@ -44,21 +44,32 @@ export const analyticsContract = c.router({
     },
     
     // Booking analytics
-    getBookingCounts: {
+    getBookingCount: {
         method: 'GET',
         path: '/analytics/bookings/counts',
         responses: {
             200: z.object({
                 totalBookings: z.number(),
-                byStatus: z.record(z.string(), z.number())
+            })
+        },
+        summary: 'Get booking count analytics'
+    },
+
+    getBookingCountsByMonthPerYear: {
+        method: 'GET',
+        path: '/analytics/bookings/counts/monthly',
+        responses: {
+            200: z.object({
+                total: z.number(),
+                monthly: z.array(z.object({
+                month: z.number(),
+                count: z.number()
+                }))
             })
         },
         query: z.object({
-            startDate: z.string().optional(),
-            endDate: z.string().optional(),
-            assetTypeId: z.string().optional()
+            year: z.number()
         }),
-        summary: 'Get booking count analytics'
     },
     
     getBookingTrends: {

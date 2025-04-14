@@ -1,9 +1,11 @@
 import { Module } from '@nestjs/common';
-import { BookingsController } from './bookings.controller';
-import { BookingsService } from './bookings.service';
+import { BookingsAnalyticsController } from './bookings.controller';
+import { BookingAnalyticsService } from './bookings.service';
+import { DrizzleModule } from 'src/drizzle/drizzle.module';
 
 @Module({
-  controllers: [BookingsController],
-  providers: [BookingsService]
+  imports: [DrizzleModule],
+  controllers: [BookingsAnalyticsController],
+  providers: [BookingAnalyticsService]
 })
 export class BookingsModule {}
