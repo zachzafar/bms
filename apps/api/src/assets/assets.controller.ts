@@ -147,6 +147,31 @@ export class AssetsController {
     }
 
 
+    @TsRestHandler(contract.assets.getAssetsWithDetails)
+    async getAssetsWithDetails(@Headers() headers: any): Promise<ReturnType<typeof tsRestHandler>> {
+        return tsRestHandler(contract.assets.getAssetsWithDetails, async ({ query }) => {
+            const tenantId = headers['x-tenant-id'];
+            const assets = await this.assetService.getAssetsWithDetails( tenantId, query.assetTypes)
+            const assetsReshaped = assets.map((asset) => {
+                return {
+                    id: asset.id,
+                    name: asset.name,
+                    description: asset.description ?? undefined,
+                    images: asset.assetImages.map((image) => {
+                        return image.filePath;
+                    }),
+                    properties: asset.propertyValues.map((property) => {
+                        return {
+                            id: property.assetProperty.id,
+                            name: property.assetProperty.name,
+                            value: property.value
+                        }
+                  
+                    })
+                }
+            })
+            return { status: 200, body: assetsReshaped }
+    })}
     
     @TsRestHandler(contract.assets.deleteAssetImages)
     async deleteAssetImage(@Headers() headers: any): Promise<ReturnType<typeof tsRestHandler>> {

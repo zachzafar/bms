@@ -46,8 +46,8 @@ export class BookingController {
 
     @TsRestHandler(contract.booking.updateBooking)
     async updateBooking(): Promise<ReturnType<typeof tsRestHandler>> {
-        return tsRestHandler(contract.booking.updateBooking, async ({ params }) => {
-            await this.bookingService.updateBooking(params.id);
+        return tsRestHandler(contract.booking.updateBooking, async ({ body }) => {
+            await this.bookingService.updateBooking(body);
             return { status: 200, body:  { message: "succesffully updated booking"} };
         });
     }
@@ -60,34 +60,5 @@ export class BookingController {
         });
     }
 
-    @TsRestHandler(contract.booking.getAssetStatus)
-    async getAssetStatus(): Promise<ReturnType<typeof tsRestHandler>> {
-        return tsRestHandler(contract.booking.getAssetStatus, async ({ params, query }) => {
-            const startDate = query?.start ? new Date(query.start) : undefined;
-            const endDate = query?.end? new Date(query.end) : undefined;
-
-            if (startDate?.toString() === 'Invalid Date' || endDate?.toString() === 'Invalid Date') {
-                return { status: 400, body: { message: 'Invalid start date' }};
-            }
-
-            const status = await this.bookingService.checkAvailability(params.id, startDate && endDate ? {startDate, endDate}: undefined);
-            return { status: 200, body:{ status }};
-        });
-    }
-
-    @TsRestHandler(contract.booking.createAssetAvailability)
-    async createAssetAvailability(): Promise<ReturnType<typeof tsRestHandler>> {
-        return tsRestHandler(contract.booking.createAssetAvailability, async ({ body }) => {
-            const [{id}] = await this.bookingService.addAvailabilityException({...body, startDate: body.startDate, endDate: body.endDate});
-            return { status: 201, body: {id}};
-        });
-    }
-
-    @TsRestHandler(contract.booking.getAssetAvailability)
-    async getAssetAvailability(): Promise<ReturnType<typeof tsRestHandler>> {
-        return tsRestHandler(contract.booking.getAssetAvailability, async ({ params }) => {
-            const availability = await this.bookingService.getAvailabilityExceptions(params.id);
-            return { status: 200, body:  availability  };
-        });
-    }
+    
 }

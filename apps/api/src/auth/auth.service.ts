@@ -30,7 +30,7 @@ export class AuthService {
     
         try {
         await this.db.transaction(async (tx) => {
-        
+        this.loggger.log('Creating a tenant');
         let result = await tx.insert(schema.Tenant).values({...tenantData,subdomain:null}).$returningId()
         tenantId = result[0].id;
         const hashedPassword = await hash(userData.password);
