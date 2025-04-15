@@ -4,28 +4,9 @@ import { SetStateAction, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from '@/components/ui/dialog';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue, } from '@/components/ui/select';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle, } from '@/components/ui/card';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger, } from '@/components/ui/dialog';
 import { Search, PlusCircle, ChevronLeft, ChevronRight, Pencil, Trash2 } from 'lucide-react';
 import { useForm, SubmitHandler } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -50,6 +31,7 @@ const UserFormSchema = z.object({
 type UserFormData = z.infer<typeof UserFormSchema>;
 
 export default function Component() {
+
   const router = useRouter();
 
   const { data: users } = authClient.users.getUsers.useQuery({ queryKey: USERS_QUERY_KEY });
@@ -72,14 +54,26 @@ export default function Component() {
     },
   });
 
+  const [selectedUser, setSelectedUser] = useState<UserFormData | null>(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [searchTerm, setSearchTerm] = useState('');
+  const usersPerPage = 10;
+
+  const isEditMode = !!selectedUser?.user?.id;
+
   const processForm: SubmitHandler<UserFormData> = async (data) => {
     mutate(
       {
-        body: data,
+        body: {
+          user: data.user,
+          customer: data.customer,
+          owner: data.owner,
+          roles: data.roles,
+        }
       },
       {
         onSuccess: (response) => {
-          toast.success('User added successfully');
+          toast.success(isEditMode ? 'User updated successfully' : 'User added successfully');
           router.push(`/users/${response.body.id}`);
           form.reset();
         },
@@ -91,28 +85,6 @@ export default function Component() {
     );
   };
 
-  const [selectedUser, setSelectedUser] = useState<UserFormData | null>(null);
-  const [currentPage, setCurrentPage] = useState(1);
-  const [searchTerm, setSearchTerm] = useState('');
-  const usersPerPage = 10;
-
-  // const resetForm = () => {
-  //   setSelectedUser(null);
-  //   setFormData({
-  //     name: '',
-  //     email: '',
-  //     password: '',
-  //     role: '',
-  //     firstName: '',
-  //     lastName: '',
-  //     phone: '',
-  //     address: '',
-  //     dateOfBirth: '',
-  //     companyName: '',
-  //     taxId: '',
-  //   });
-  // };
-
   const resetForm = () => {
     setSelectedUser(null);
     form.reset({});
@@ -120,13 +92,13 @@ export default function Component() {
 
   const editUser = (user: UserFormData) => {
     setSelectedUser(user);
-    form.reset(user); // Populate form with existing user data
+    form.reset(user);
   };
-  
+
 
   const deleteUser = (userId: string) => {
     if (!confirm('Are you sure you want to delete this user?')) return;
-  
+
     deleteUserMutation(
       {
         params: { id: userId },
@@ -144,14 +116,29 @@ export default function Component() {
     );
   };
 
-  const filteredUsers = users?.body?.filter(
+  const parsedUsers = users?.body.map((user) => ({
+    user: {
+      id: user.id,
+      name: user.name,
+      email: user.email,
+      password: user.password,
+      role: 'user', // default or pull from API if available
+      createdAt: user.createdAt,
+      updatedAt: user.updatedAt,
+    },
+    customer: false, // default value
+    owner: false,    // default value
+    roles: [],      // default value or populate if you have role IDs
+  }));
+
+  const filteredUsers = parsedUsers?.filter(
     (user) =>
-      user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      user.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      user.role.toLowerCase().includes(searchTerm.toLowerCase())
+      user.user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      user.user.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      user.user.role.toLowerCase().includes(searchTerm.toLowerCase())
   ) || [];
-  
-  
+
+
   const indexOfLastUser = currentPage * usersPerPage;
   const indexOfFirstUser = indexOfLastUser - usersPerPage;
   const currentUsers = filteredUsers.slice(indexOfFirstUser, indexOfLastUser);
@@ -231,7 +218,7 @@ export default function Component() {
                         <Select
                           name='role'
                           onValueChange={(value) => form.setValue('user.role', value)}
-                          // onValueChange={handleRoleChange}
+                        // onValueChange={handleRoleChange}
                         >
                           <SelectTrigger id='role'>
                             <SelectValue placeholder='Select role' />
@@ -245,88 +232,6 @@ export default function Component() {
                         </Select>
                       </div>
                     </div>
-
-                    {/* <Tabs defaultValue='customer' className='w-full'>
-                      <TabsList className='grid w-full grid-cols-2'>
-                        <TabsTrigger value='customer'>
-                          Customer Details
-                        </TabsTrigger>
-                        <TabsTrigger value='owner'>Owner Details</TabsTrigger>
-                      </TabsList>
-                      <TabsContent value='customer' className='space-y-4'>
-                        <div className='grid grid-cols-1 md:grid-cols-2 gap-4'>
-                          <div className='space-y-2'>
-                            <Label htmlFor='firstName'>First Name</Label>
-                            <Input
-                              id='firstName'
-                              name='firstName'
-                              value={formData.firstName}
-                              onChange={handleInputChange}
-                            />
-                          </div>
-                          <div className='space-y-2'>
-                            <Label htmlFor='lastName'>Last Name</Label>
-                            <Input
-                              id='lastName'
-                              name='lastName'
-                              value={formData.lastName}
-                              onChange={handleInputChange}
-                            />
-                          </div>
-                          <div className='space-y-2'>
-                            <Label htmlFor='phone'>Phone</Label>
-                            <Input
-                              id='phone'
-                              name='phone'
-                              type='tel'
-                              value={formData.phone}
-                              onChange={handleInputChange}
-                            />
-                          </div>
-                          <div className='space-y-2'>
-                            <Label htmlFor='dateOfBirth'>Date of Birth</Label>
-                            <Input
-                              id='dateOfBirth'
-                              name='dateOfBirth'
-                              type='date'
-                              value={formData.dateOfBirth}
-                              onChange={handleInputChange}
-                            />
-                          </div>
-                        </div>
-                        <div className='space-y-2'>
-                          <Label htmlFor='address'>Address</Label>
-                          <Input
-                            id='address'
-                            name='address'
-                            value={formData.address}
-                            onChange={handleInputChange}
-                          />
-                        </div>
-                      </TabsContent>
-                      <TabsContent value='owner' className='space-y-4'>
-                        <div className='grid grid-cols-1 md:grid-cols-2 gap-4'>
-                          <div className='space-y-2'>
-                            <Label htmlFor='companyName'>Company Name</Label>
-                            <Input
-                              id='companyName'
-                              name='companyName'
-                              value={formData.companyName}
-                              onChange={handleInputChange}
-                            />
-                          </div>
-                          <div className='space-y-2'>
-                            <Label htmlFor='taxId'>Tax ID</Label>
-                            <Input
-                              id='taxId'
-                              name='taxId'
-                              value={formData.taxId}
-                              onChange={handleInputChange}
-                            />
-                          </div>
-                        </div>
-                      </TabsContent>
-                    </Tabs> */}
 
                     <div className='flex justify-end space-x-2'>
                       <Button
@@ -355,17 +260,17 @@ export default function Component() {
               </TableHeader>
               <TableBody>
                 {currentUsers.map((user) => (
-                  <TableRow key={user.id}>
-                    <TableCell>{user.name}</TableCell>
-                    <TableCell>{user.email}</TableCell>
-                    <TableCell>{user.role}</TableCell>
+                  <TableRow key={user.user.id}>
+                    <TableCell>{user.user.name}</TableCell>
+                    <TableCell>{user.user.email}</TableCell>
+                    <TableCell>{user.user.role}</TableCell>
                     <TableCell>
                       <Dialog>
                         <DialogTrigger asChild>
                           <Button
                             variant='ghost'
                             size='icon'
-                            aria-label={`View details for ${user.name}`}
+                            aria-label={`View details for ${user.user.name}`}
                           >
                             <Search className='h-4 w-4' />
                           </Button>
@@ -379,9 +284,9 @@ export default function Component() {
                               <h3 className='font-semibold'>
                                 Basic Information
                               </h3>
-                              <p>Name: {user.name}</p>
-                              <p>Email: {user.email}</p>
-                              <p>Role: {user.role}</p>
+                              <p>Name: {user.user.name}</p>
+                              <p>Email: {user.user.email}</p>
+                              <p>Role: {user.user.role}</p>
                             </div>
                             {user.customerDetails && (
                               <div>
@@ -418,15 +323,15 @@ export default function Component() {
                         variant='ghost'
                         size='icon'
                         onClick={() => editUser(user)}
-                        aria-label={`Edit ${user.name}`}
+                        aria-label={`Edit ${user.user.name}`}
                       >
                         <Pencil className='h-4 w-4' />
                       </Button>
                       <Button
                         variant='ghost'
                         size='icon'
-                        onClick={() => deleteUser(user.id)}
-                        aria-label={`Delete ${user.name}`}
+                        onClick={() => deleteUser(user.user.id)}
+                        aria-label={`Delete ${user.user.name}`}
                       >
                         <Trash2 className='h-4 w-4' />
                       </Button>
