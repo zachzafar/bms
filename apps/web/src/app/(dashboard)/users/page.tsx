@@ -18,6 +18,7 @@ import { authClient } from '@/lib/api/publicClient';
 import { USERS_QUERY_KEY } from '@/lib/api/queryKeys';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 
+
 // Schema
 const UserFormSchema = z.object({
   user: InsertUserSchema.extend({
@@ -35,7 +36,9 @@ export default function Component() {
   const router = useRouter();
 
   const { data: users } = authClient.users.getUsers.useQuery({ queryKey: USERS_QUERY_KEY });
-  const { mutate, isPending } = authClient.users.createUser.useMutation();
+  const { mutate: createUserMutation } = authClient.users.createUser.useMutation();
+  const { mutate: updateUserMutation, isPending } = authClient.users.updateUser.useMutation();
+
   const { mutate: deleteUserMutation, isPending: isDeleting } = authClient.users.deleteUser.useMutation();
 
 
@@ -54,6 +57,7 @@ export default function Component() {
     },
   });
 
+  const [open, setOpen] = useState(false);
   const [selectedUser, setSelectedUser] = useState<UserFormData | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [searchTerm, setSearchTerm] = useState('');
@@ -62,28 +66,76 @@ export default function Component() {
   const isEditMode = !!selectedUser?.user?.id;
 
   const processForm: SubmitHandler<UserFormData> = async (data) => {
-    mutate(
-      {
-        body: {
-          user: data.user,
-          customer: data.customer,
-          owner: data.owner,
-          roles: data.roles,
+    const payload = {
+      user: data.user,
+      customer: data.customer,
+      owner: data.owner,
+      roles: data.roles,
+    };
+  
+    if (isEditMode && selectedUser?.user.id) {
+      updateUserMutation(
+        {
+          params: { id: selectedUser.user.id },
+          body: payload,
+        },
+        {
+          onSuccess: (response) => {
+            toast.success('User updated successfully');
+            router.push(`/users`);
+            form.reset();
+          },
+          onError: (error) => {
+            console.error('Update error:', error);
+            toast.error('Failed to update user');
+          },
         }
-      },
-      {
-        onSuccess: (response) => {
-          toast.success(isEditMode ? 'User updated successfully' : 'User added successfully');
-          router.push(`/users/${response.body.id}`);
-          form.reset();
+      );
+    } else {
+      createUserMutation(
+        {
+          body: payload,
         },
-        onError: (error) => {
-          console.log('Error:', error);
-          toast.error('Failed to add user');
-        },
-      }
-    );
+        {
+          onSuccess: (response) => {
+            toast.success('User created successfully');
+            router.push(`/users/${response.body.id}`);
+            form.reset();
+          },
+          onError: (error) => {
+            console.error('Create error:', error);
+            toast.error('Failed to create user');
+          },
+        }
+      );
+    }
   };
+
+  // const processForm: SubmitHandler<UserFormData> = async (data) => {
+  //   mutate(
+  //     {
+  //       // body: data,
+  //       body: {
+  //         user: data.user,
+  //         customer: data.customer,
+  //         owner: data.owner,
+  //         roles: data.roles,
+  //       }
+  //     },
+  //     {
+  //       onSuccess: (response) => {
+  //         toast.success(isEditMode ? 'User updated successfully' : 'User added successfully');
+  //         // toast.success('User added successfully');
+  //         router.push(`/users/${response.body.id}`);
+  //         form.reset();
+  //       },
+  //       onError: (error) => {
+  //         console.log('Error:', error);
+  //         toast.error('Failed to add user');
+  //       },
+  //     }
+  //   );
+  // };
 
   const resetForm = () => {
     setSelectedUser(null);
@@ -92,7 +144,10 @@ export default function Component() {
 
   const editUser = (user: UserFormData) => {
     setSelectedUser(user);
-    form.reset(user);
+    form.setValue('user.name', user.user.name);
+    form.setValue('user.email', user.user.email);
+    form.setValue('user.role', user.user.role);
+    setOpen(true);
   };
 
 
@@ -166,9 +221,9 @@ export default function Component() {
                   onChange={(e) => setSearchTerm(e.target.value)}
                 />
               </div>
-              <Dialog>
+              <Dialog open={open} onOpenChange={setOpen}>
                 <DialogTrigger asChild>
-                  <Button>
+                  <Button onClick={() => { setSelectedUser(null); setOpen(true); }}>
                     <PlusCircle className='mr-2 h-4 w-4' />
                     Add User
                   </Button>
