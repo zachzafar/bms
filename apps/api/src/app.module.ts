@@ -15,13 +15,16 @@ import { ObjectStorageService } from './object-storage/object-storage.service';
 import { ObjectStorageModule } from './object-storage/object-storage.module';
 import { KeysModule } from './keys/keys.module';
 import { AnalyticsModule } from './analytics/analytics.module';
+import { SlotService } from './slot/slot.service';
+import { SlotController } from './slot/slot.controller';
+import { SlotModule } from './slot/slot.module';
 
 @Module({
   imports: [DrizzleModule, SchemaDesignModule, AuthModule, UsersModule,ConfigModule.forRoot({
     isGlobal: true, // Makes ConfigService globally available
     envFilePath: '.env', // Path to your environment file
-  }), AssetsModule, BookingModule, MaintenanceModule, TeamsModule, TenantModule, ObjectStorageModule, KeysModule, AnalyticsModule,],
-  controllers: [AppController],
-  providers: [AppService, ObjectStorageService],
+  }), AssetsModule, BookingModule, MaintenanceModule, TeamsModule, TenantModule, ObjectStorageModule, KeysModule, AnalyticsModule, SlotModule,],
+  controllers: [AppController, SlotController],
+  providers: [AppService, ObjectStorageService, SlotService],
 })
 export class AppModule {}

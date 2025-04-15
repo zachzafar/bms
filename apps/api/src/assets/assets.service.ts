@@ -124,4 +124,28 @@ export class AssetsService {
 
         return unsuccessfulDeletes
     }
+
+    async getAssetsWithDetails(tenant: string, assetTypes?: number[]) {
+        const assets = await this.db.query.Asset.findMany({
+            where: (asset, { eq, and, inArray }) => 
+                and(
+                    eq(asset.tenantId, tenant), 
+                    assetTypes ? inArray(asset.assetTypeId, assetTypes.map(assetType => BigInt(assetType))) : undefined
+                ),
+            with: {
+                assetType: true,
+                assetImages: true
+            }
+        });
+
+        const assetsWithDetails = await Promise.all(assets.map(async (asset) => {
+            const propertyValues = await this.getPropertyValues(asset.id);
+            
+            return {
+                ...asset,
+                propertyValues
+            };
+        }));
+        return assetsWithDetails
+    }
 }

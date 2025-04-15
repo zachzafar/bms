@@ -1,6 +1,6 @@
-import { relations, sql } from "drizzle-orm";
-import { mysqlTable, varchar, datetime, json, decimal, text, timestamp, int, index, serial, boolean, bigint, date } from "drizzle-orm/mysql-core";
-import { Customer, User, UserHasBookings } from "../users";
+import { relations} from "drizzle-orm";
+import { mysqlTable, varchar, datetime, decimal, text, timestamp, int, index, serial, boolean, bigint, date } from "drizzle-orm/mysql-core";
+import { UserHasBookings } from "../users";
 import { Asset } from "../asset";
 import { createInsertSchema, createSelectSchema } from "drizzle-zod";
 import { z } from "zod";
@@ -51,30 +51,47 @@ export const BookingRelations = relations(Booking, ({ one,many }) => ({
     }),
 }))
 
-export const Availability = mysqlTable("availabilities", {
+
+// New Slot table for granular booking
+export const Slot = mysqlTable("slots", {
     id: serial("id").primaryKey(),
-    assetId: varchar("tenant_id", { length: 255 }).notNull().references(() => Asset.id),
-    startDate: date("start_date").notNull(),
-    endDate: date("end_date").notNull(),
+    assetId: varchar("asset_id", { length: 255 }).notNull().references(() => Asset.id),
+    date: date("date").notNull(),
+    startTime: varchar("start_time", { length: 8 }).notNull(), // Format: HH:MM:SS
+    endTime: varchar("end_time", { length: 8 }).notNull(),     // Format: HH:MM:SS
+    status: varchar("status", { length: 20 }).notNull().$default(() => 'available'), // available, booked, unavailable
+    bookingId: varchar("booking_id", { length: 36 }).references(() => Booking.id),
     price: decimal("price", { precision: 10, scale: 2 }),
-    available: boolean("available").notNull(),
+    createdAt: timestamp('created_at').notNull().defaultNow(),
+    updatedAt: timestamp('updated_at').$onUpdate(() => new Date()),
 }, (table) => ({
-    assetIdx: index("asset_idx").on(table.assetId),
+    assetIdx: index("slot_asset_idx").on(table.assetId),
+    dateIdx: index("slot_date_idx").on(table.date),
+    bookingIdx: index("slot_booking_idx").on(table.bookingId),
+    // Composite index for checking availability
+    availabilityIdx: index("slot_availability_idx").on(table.assetId, table.date, table.status),
 }));
 
-export const InsertAvailabilitySchema = createInsertSchema(Availability).omit({ startDate: true, endDate: true}).extend({ startDate: z.string(), endDate: z.string() })
-export const SelectAvailabilitySchema = createSelectSchema(Availability)
-export const UpdateAvailabilitySchema = InsertAvailabilitySchema.partial()
+export const InsertSlotSchema = createInsertSchema(Slot);
+export const SelectSlotSchema = createSelectSchema(Slot);
+export const UpdateSlotSchema = InsertSlotSchema.partial();
 
-export type InsertAvailability = z.infer<typeof InsertAvailabilitySchema>
-export type SelectAvailability = z.infer<typeof SelectAvailabilitySchema>
-export type UpdateAvailability = z.infer<typeof UpdateAvailabilitySchema>
+export type InsertSlot = z.infer<typeof InsertSlotSchema>;
+export type SelectSlot = z.infer<typeof SelectSlotSchema>;
+export type UpdateSlot = z.infer<typeof UpdateSlotSchema>;
 
-export const AvailabilityRelations = relations(Availability, ({ one }) => ({
+
+export const SlotRelations = relations(Slot, ({ one }) => ({
     asset: one(Asset, {
-        fields: [Availability.assetId],
+        fields: [Slot.assetId],
         references: [Asset.id],
-    })
-}))
+    }),
+    booking: one(Booking, {
+        fields: [Slot.bookingId],
+        references: [Booking.id],
+    }),
+}));
+
+
 
 

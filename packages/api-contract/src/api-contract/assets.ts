@@ -114,6 +114,26 @@ export const assetsContract = c.router({
         }),
         summary: 'Upload images for a property'
     },
+    getAssetsWithDetails: {
+        method: 'GET',
+        path: '/asset/details',
+        responses: {
+            200: z.array(z.object({
+                id: z.string(),
+                name: z.string(),
+                description: z.string().optional(),
+                images: z.array(z.string()),
+                properties: z.array(z.object({
+                    id: z.number(),
+                    name: z.string(),
+                    value: z.string()
+                }))
+            }))
+        },
+        query: z.object({
+            assetTypes: z.array(z.number()).optional(),
+        })
+    },
     getAssetImages: {
         method: 'GET',
         path: '/asset/:id/images',

@@ -15,7 +15,6 @@ export class AuthController {
     @Public()
     @TsRestHandler(contract.auth.registerTenant)
     async createTenant(): Promise<ReturnType<typeof tsRestHandler>> {
-        this.logger.log('Creating a new tenant');
         return tsRestHandler(contract.auth.registerTenant, async ({ body }) => {
             const { tenantId, userId } = await this.authService.createTenantWithAdmin(body.tenant, body.adminUser);
             this.logger.log(`Tenant created with id: ${tenantId} and admin user created with id: ${userId}`);
