@@ -77,11 +77,11 @@ const items = [
             url: "/users/customers",
             icon: User2,
           },
-          {
-            title:"Teams",
-            url:"/teams",
-            icon: User2
-          },
+          // {
+          //   title:"Teams",
+          //   url:"/teams",
+          //   icon: User2
+          // },
         ]
       },
     {
