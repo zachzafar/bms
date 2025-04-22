@@ -2,6 +2,7 @@ import { initContract } from '@ts-rest/core';
 
 import { z } from "zod";
 import { InsertTenantSchema, SelectTenantSchema,InsertUserSchema,SelectUserSchema } from "../database-schema/schema"
+import { create } from 'domain';
 
 
 const c = initContract();
@@ -84,5 +85,40 @@ export const authContract = c.router({
           tenant: z.string()
       }),
         summary: 'Create a new user'
+    },
+
+    getPermissions: {
+      method: 'GET',
+      path: '/permissions',
+      responses: {
+          200: z.array(z.string())
+      },
+      summary: 'Get all roles'
+  },
+
+  getRoles : {
+    method: 'GET',
+    path: '/roles',
+    responses: {
+        200: z.array(z.object({
+          roleId: z.number(),
+          name: z.string(),
+          permissions: z.array(z.string())
+        }))
+    },
+    summary: 'Get all roles'
+  },
+  createRole: {
+    method: 'POST',
+    path: '/role',
+    body: z.object({
+      name: z.string(),
+      permissions: z.array(z.string())
+    }).required({ name: true, permissions: true }),
+    responses: {
+        201: z.object({
+          message: z.string()
+        })
     }
+  }
 })

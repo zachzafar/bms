@@ -15,7 +15,7 @@ import { InsertUserSchema } from '@repo/api-contract';
 import { toast } from 'sonner';
 import { useRouter } from 'next/navigation';
 import { authClient } from '@/lib/api/publicClient';
-import { USERS_QUERY_KEY } from '@/lib/api/queryKeys';
+import { CUSTOMERS_QUERY_KEY, USERS_QUERY_KEY } from '@/lib/api/queryKeys';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 
 
@@ -32,15 +32,13 @@ const UserFormSchema = z.object({
 type UserFormData = z.infer<typeof UserFormSchema>;
 
 export default function Component() {
-
   const router = useRouter();
 
-  const { data: users } = authClient.users.getUsers.useQuery({ queryKey: USERS_QUERY_KEY });
+  // Prioritize customers data instead of users
+  const { data: customers } = authClient.users.getCustomers.useQuery({ queryKey: CUSTOMERS_QUERY_KEY });
   const { mutate: createUserMutation } = authClient.users.createUser.useMutation();
   const { mutate: updateUserMutation, isPending } = authClient.users.updateUser.useMutation();
-
   const { mutate: deleteUserMutation, isPending: isDeleting } = authClient.users.deleteUser.useMutation();
-
 
   const form = useForm<UserFormData>({
     resolver: zodResolver(UserFormSchema),
@@ -49,9 +47,9 @@ export default function Component() {
         name: '',
         email: '',
         password: '',
-        role: '',
+
       },
-      customer: false,
+      customer: true, // Default to true for customer page
       owner: false,
       roles: [],
     },
@@ -66,10 +64,11 @@ export default function Component() {
   const isEditMode = !!selectedUser?.user?.id;
 
   const processForm: SubmitHandler<UserFormData> = async (data) => {
+    // Ensure customer flag is set to true
     const payload = {
       user: data.user,
-      customer: data.customer,
-      owner: data.owner,
+      customer: true, // Always set to true on customer page
+      owner: false,
       roles: data.roles,
     };
   
@@ -81,13 +80,14 @@ export default function Component() {
         },
         {
           onSuccess: (response) => {
-            toast.success('User updated successfully');
-            router.push(`/users`);
+            toast.success('Customer updated successfully');
+            router.push(`/users/customers`);
+            setOpen(false);
             form.reset();
           },
           onError: (error) => {
             console.error('Update error:', error);
-            toast.error('Failed to update user');
+            toast.error('Failed to update customer');
           },
         }
       );
@@ -98,44 +98,19 @@ export default function Component() {
         },
         {
           onSuccess: (response) => {
-            toast.success('User created successfully');
-            router.push(`/users/${response.body.id}`);
+            toast.success('Customer created successfully');
+            router.push(`/users/customers`);
+            setOpen(false);
             form.reset();
           },
           onError: (error) => {
             console.error('Create error:', error);
-            toast.error('Failed to create user');
+            toast.error('Failed to create customer');
           },
         }
       );
     }
   };
-
-  // const processForm: SubmitHandler<UserFormData> = async (data) => {
-  //   mutate(
-  //     {
-  //       // body: data,
-  //       body: {
-  //         user: data.user,
-  //         customer: data.customer,
-  //         owner: data.owner,
-  //         roles: data.roles,
-  //       }
-  //     },
-  //     {
-  //       onSuccess: (response) => {
-  //         toast.success(isEditMode ? 'User updated successfully' : 'User added successfully');
-  //         // toast.success('User added successfully');
-  //         router.push(`/users/${response.body.id}`);
-  //         form.reset();
-  //       },
-  //       onError: (error) => {
-  //         console.log('Error:', error);
-  //         toast.error('Failed to add user');
-  //       },
-  //     }
-  //   );
-  // };
 
   const resetForm = () => {
     setSelectedUser(null);
@@ -146,13 +121,14 @@ export default function Component() {
     setSelectedUser(user);
     form.setValue('user.name', user.user.name);
     form.setValue('user.email', user.user.email);
-    form.setValue('user.role', user.user.role);
+    form.setValue('user.role', 'Customer'); // Always set to Customer
+    form.setValue('customer', true);
+    form.setValue('owner', false);
     setOpen(true);
   };
 
-
   const deleteUser = (userId: string) => {
-    if (!confirm('Are you sure you want to delete this user?')) return;
+    if (!confirm('Are you sure you want to delete this customer?')) return;
 
     deleteUserMutation(
       {
@@ -160,55 +136,57 @@ export default function Component() {
       },
       {
         onSuccess: () => {
-          toast.success('User deleted successfully');
+          toast.success('Customer deleted successfully');
           router.refresh(); // Refresh data
         },
         onError: (error) => {
           console.error('Delete failed:', error);
-          toast.error('Failed to delete user');
+          toast.error('Failed to delete customer');
         },
       }
     );
   };
 
-  const parsedUsers = users?.body.map((user) => ({
+  // Parse customers data
+  const parsedCustomers = customers?.body.map((customer) => ({
     user: {
-      id: user.id,
-      name: user.name,
-      email: user.email,
-      password: user.password,
-      role: 'user', // default or pull from API if available
-      createdAt: user.createdAt,
-      updatedAt: user.updatedAt,
+      id: customer.id,
+      name: customer.name,
+      email: customer.email,
+      password: customer.password,
+      role: 'Customer',
+      createdAt: customer.createdAt,
+      updatedAt: customer.updatedAt,
     },
-    customer: false, // default value
-    owner: false,    // default value
-    roles: [],      // default value or populate if you have role IDs
-  }));
+    customer: true,
+    owner: false,
+    roles: [],
+    customerDetails: customer.customerDetails || null,
+  })) || [];
 
-  const filteredUsers = parsedUsers?.filter(
-    (user) =>
-      user.user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      user.user.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      user.user.role.toLowerCase().includes(searchTerm.toLowerCase())
-  ) || [];
+  const filteredCustomers = parsedCustomers.filter(
+    (customer) =>
+      customer.user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      customer.user.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (customer.customerDetails?.phone && 
+        customer.customerDetails.phone.toLowerCase().includes(searchTerm.toLowerCase()))
+  );
 
-
-  const indexOfLastUser = currentPage * usersPerPage;
-  const indexOfFirstUser = indexOfLastUser - usersPerPage;
-  const currentUsers = filteredUsers.slice(indexOfFirstUser, indexOfLastUser);
+  const indexOfLastCustomer = currentPage * usersPerPage;
+  const indexOfFirstCustomer = indexOfLastCustomer - usersPerPage;
+  const currentCustomers = filteredCustomers.slice(indexOfFirstCustomer, indexOfLastCustomer);
 
   const paginate = (pageNumber: SetStateAction<number>) => setCurrentPage(pageNumber);
 
   return (
     <>
       <div className='container mx-auto py-10'>
-        <h1 className='text-3xl font-bold mb-8'>User Management</h1>
+        <h1 className='text-3xl font-bold mb-8'>Customers</h1>
 
         <Card className='mb-8'>
           <CardHeader>
-            <CardTitle>User List</CardTitle>
-            <CardDescription>Manage existing users</CardDescription>
+            <CardTitle>Customer List</CardTitle>
+            <CardDescription>Manage existing customers</CardDescription>
           </CardHeader>
           <CardContent>
             <div className='flex justify-between items-center mb-4'>
@@ -216,25 +194,40 @@ export default function Component() {
                 <Search className='absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground' />
                 <Input
                   className='pl-8'
-                  placeholder='Search users...'
+                  placeholder='Search customers...'
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                 />
               </div>
               <Dialog open={open} onOpenChange={setOpen}>
                 <DialogTrigger asChild>
-                  <Button onClick={() => { setSelectedUser(null); setOpen(true); }}>
+                  <Button onClick={() => { 
+                    setSelectedUser(null); 
+                    // Reset form with customer defaults
+                    form.reset({
+                      user: {
+                        name: '',
+                        email: '',
+                        password: '',
+                        role: 'Customer',
+                      },
+                      customer: true,
+                      owner: false,
+                      roles: [],
+                    });
+                    setOpen(true); 
+                  }}>
                     <PlusCircle className='mr-2 h-4 w-4' />
-                    Add User
+                    Add Customer
                   </Button>
                 </DialogTrigger>
                 <DialogContent>
                   <DialogHeader>
                     <DialogTitle>
-                      {selectedUser ? 'Edit User' : 'Add New User'}
+                      {selectedUser ? 'Edit Customer' : 'Add New Customer'}
                     </DialogTitle>
                     <DialogDescription>
-                      Enter user details below
+                      Enter customer details below
                     </DialogDescription>
                   </DialogHeader>
                   <form onSubmit={form.handleSubmit(processForm)} className='space-y-4'>
@@ -244,7 +237,6 @@ export default function Component() {
                         <Input
                           id='name'
                           {...form.register('user.name')}
-                          // onChange={handleInputChange}
                           required
                         />
                       </div>
@@ -254,7 +246,6 @@ export default function Component() {
                           id='email'
                           type='email'
                           {...form.register('user.email')}
-                          // onChange={handleInputChange}
                           required
                         />
                       </div>
@@ -264,27 +255,28 @@ export default function Component() {
                           id='password'
                           type='password'
                           {...form.register('user.password')}
-                          // onChange={handleInputChange}
                           required={!selectedUser}
                         />
                       </div>
+                      
+                      {/* Hidden field for customer role */}
+                      <input type="hidden" {...form.register('user.role')} value="Customer" />
+                      <input type="hidden" {...form.register('customer')} value="true" />
+                      
+                      {/* Additional customer fields */}
                       <div className='space-y-2'>
-                        <Label htmlFor='role'>Role</Label>
-                        <Select
-                          name='role'
-                          onValueChange={(value) => form.setValue('user.role', value)}
-                        // onValueChange={handleRoleChange}
-                        >
-                          <SelectTrigger id='role'>
-                            <SelectValue placeholder='Select role' />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value='Admin'>Admin</SelectItem>
-                            <SelectItem value='Manager'>Manager</SelectItem>
-                            <SelectItem value='Customer'>Customer</SelectItem>
-                            <SelectItem value='Owner'>Owner</SelectItem>
-                          </SelectContent>
-                        </Select>
+                        <Label htmlFor='phone'>Phone</Label>
+                        <Input
+                          id='phone'
+                          {...form.register('customerDetails.phone')}
+                        />
+                      </div>
+                      <div className='space-y-2'>
+                        <Label htmlFor='address'>Address</Label>
+                        <Input
+                          id='address'
+                          {...form.register('customerDetails.address')}
+                        />
                       </div>
                     </div>
 
@@ -292,12 +284,15 @@ export default function Component() {
                       <Button
                         type='button'
                         variant='outline'
-                        onClick={resetForm}
+                        onClick={() => {
+                          resetForm();
+                          setOpen(false);
+                        }}
                       >
                         Cancel
                       </Button>
-                      <Button type='submit'>
-                        {selectedUser ? 'Update User' : 'Add User'}
+                      <Button type='submit' disabled={isPending}>
+                        {isPending ? 'Saving...' : (selectedUser ? 'Update Customer' : 'Add Customer')}
                       </Button>
                     </div>
                   </form>
@@ -309,97 +304,95 @@ export default function Component() {
                 <TableRow>
                   <TableHead>Name</TableHead>
                   <TableHead>Email</TableHead>
-                  <TableHead>Role</TableHead>
+                  <TableHead>Phone</TableHead>
                   <TableHead>Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {currentUsers.map((user) => (
-                  <TableRow key={user.user.id}>
-                    <TableCell>{user.user.name}</TableCell>
-                    <TableCell>{user.user.email}</TableCell>
-                    <TableCell>{user.user.role}</TableCell>
-                    <TableCell>
-                      <Dialog>
-                        <DialogTrigger asChild>
-                          <Button
-                            variant='ghost'
-                            size='icon'
-                            aria-label={`View details for ${user.user.name}`}
-                          >
-                            <Search className='h-4 w-4' />
-                          </Button>
-                        </DialogTrigger>
-                        <DialogContent>
-                          <DialogHeader>
-                            <DialogTitle>User Details</DialogTitle>
-                          </DialogHeader>
-                          <div className='space-y-4'>
-                            <div>
-                              <h3 className='font-semibold'>
-                                Basic Information
-                              </h3>
-                              <p>Name: {user.user.name}</p>
-                              <p>Email: {user.user.email}</p>
-                              <p>Role: {user.user.role}</p>
-                            </div>
-                            {user.customerDetails && (
+                {currentCustomers.length > 0 ? (
+                  currentCustomers.map((customer) => (
+                    <TableRow key={customer.user.id}>
+                      <TableCell>{customer.user.name}</TableCell>
+                      <TableCell>{customer.user.email}</TableCell>
+                      <TableCell>{customer.customerDetails?.phone || '-'}</TableCell>
+                      <TableCell>
+                        <Dialog>
+                          <DialogTrigger asChild>
+                            <Button
+                              variant='ghost'
+                              size='icon'
+                              aria-label={`View details for ${customer.user.name}`}
+                            >
+                              <Search className='h-4 w-4' />
+                            </Button>
+                          </DialogTrigger>
+                          <DialogContent>
+                            <DialogHeader>
+                              <DialogTitle>Customer Details</DialogTitle>
+                            </DialogHeader>
+                            <div className='space-y-4'>
                               <div>
                                 <h3 className='font-semibold'>
-                                  Customer Details
+                                  Basic Information
                                 </h3>
-                                <p>
-                                  First Name: {user.customerDetails.firstName}
-                                </p>
-                                <p>
-                                  Last Name: {user.customerDetails.lastName}
-                                </p>
-                                <p>Phone: {user.customerDetails.phone}</p>
-                                <p>
-                                  Date of Birth:{' '}
-                                  {user.customerDetails.dateOfBirth}
-                                </p>
-                                <p>Address: {user.customerDetails.address}</p>
+                                <p>Name: {customer.user.name}</p>
+                                <p>Email: {customer.user.email}</p>
                               </div>
-                            )}
-                            {user.ownerDetails && (
-                              <div>
-                                <h3 className='font-semibold'>Owner Details</h3>
-                                <p>
-                                  Company Name: {user.ownerDetails.companyName}
-                                </p>
-                                <p>Tax ID: {user.ownerDetails.taxId}</p>
-                              </div>
-                            )}
-                          </div>
-                        </DialogContent>
-                      </Dialog>
-                      <Button
-                        variant='ghost'
-                        size='icon'
-                        onClick={() => editUser(user)}
-                        aria-label={`Edit ${user.user.name}`}
-                      >
-                        <Pencil className='h-4 w-4' />
-                      </Button>
-                      <Button
-                        variant='ghost'
-                        size='icon'
-                        onClick={() => deleteUser(user.user.id)}
-                        aria-label={`Delete ${user.user.name}`}
-                      >
-                        <Trash2 className='h-4 w-4' />
-                      </Button>
+                              {customer.customerDetails && (
+                                <div>
+                                  <h3 className='font-semibold'>
+                                    Customer Details
+                                  </h3>
+                                  <p>Phone: {customer.customerDetails.phone || 'Not provided'}</p>
+                                  <p>Address: {customer.customerDetails.address || 'Not provided'}</p>
+                                  {customer.customerDetails.firstName && (
+                                    <p>First Name: {customer.customerDetails.firstName}</p>
+                                  )}
+                                  {customer.customerDetails.lastName && (
+                                    <p>Last Name: {customer.customerDetails.lastName}</p>
+                                  )}
+                                  {customer.customerDetails.dateOfBirth && (
+                                    <p>Date of Birth: {customer.customerDetails.dateOfBirth}</p>
+                                  )}
+                                </div>
+                              )}
+                            </div>
+                          </DialogContent>
+                        </Dialog>
+                        <Button
+                          variant='ghost'
+                          size='icon'
+                          onClick={() => editUser(customer)}
+                          aria-label={`Edit ${customer.user.name}`}
+                        >
+                          <Pencil className='h-4 w-4' />
+                        </Button>
+                        <Button
+                          variant='ghost'
+                          size='icon'
+                          onClick={() => deleteUser(customer.user.id)}
+                          aria-label={`Delete ${customer.user.name}`}
+                          disabled={isDeleting}
+                        >
+                          <Trash2 className='h-4 w-4' />
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  ))
+                ) : (
+                  <TableRow>
+                    <TableCell colSpan={4} className="text-center py-4">
+                      No customers found. Add your first customer to get started.
                     </TableCell>
                   </TableRow>
-                ))}
+                )}
               </TableBody>
             </Table>
             <div className='flex justify-between items-center mt-4'>
               <p>
-                Showing {indexOfFirstUser + 1} to{' '}
-                {Math.min(indexOfLastUser, filteredUsers.length)} of{' '}
-                {filteredUsers.length} users
+                Showing {filteredCustomers.length > 0 ? indexOfFirstCustomer + 1 : 0} to{' '}
+                {Math.min(indexOfLastCustomer, filteredCustomers.length)} of{' '}
+                {filteredCustomers.length} customers
               </p>
               <div className='flex space-x-2'>
                 <Button
@@ -412,7 +405,7 @@ export default function Component() {
                 <Button
                   variant='outline'
                   onClick={() => paginate(currentPage + 1)}
-                  disabled={indexOfLastUser >= filteredUsers.length}
+                  disabled={indexOfLastCustomer >= filteredCustomers.length}
                 >
                   <ChevronRight className='h-4 w-4' />
                 </Button>

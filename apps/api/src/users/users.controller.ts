@@ -78,4 +78,14 @@ export class UsersController {
             return { status: 200, body: customers };
         });
     }
+
+    @TsRestHandler(c.users.getOwners)
+    async getOwners(@Headers() headers: any): Promise<ReturnType<typeof tsRestHandler>> {
+        this.logger.log(`Getting all owners`);
+        return tsRestHandler(c.users.getOwners, async () => {
+            const tenantId = headers['x-tenant-id'];
+            const owners = await this.UserService.getOwners(tenantId);
+            return { status: 200, body: owners };
+        })
+    }
 }

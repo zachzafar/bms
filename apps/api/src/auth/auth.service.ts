@@ -10,6 +10,7 @@ import { ConfigType } from '@nestjs/config';
 import refreshConfig from './config/refresh.config';
 import { UsersService } from 'src/users/users.service';
 import { eq,and, desc } from 'drizzle-orm';
+import { getAllScopes } from './permissions';
 
 
 @Injectable()
@@ -180,7 +181,34 @@ export class AuthService {
         return {accessToken, refreshToken};
       }
     
+      async createRole(tenantId: string, roleName: string, permissions: string[]) {
+          let roleId:number = 0
+        await this.db.transaction(async (tx) => {
+          this.loggger.log('Creating a role');
+          let [{id}] = await tx.insert(schema.Roles).values({
+            tenantId,
+            name: roleName,
+          }).$returningId()
+           roleId = id;
+          this.loggger.log('Creating a role permissions relationship');
+           await tx.insert(schema.RoleHasPermissions).values(permissions.map(permission => ({
+            roleId: BigInt(roleId),
+            permission
+          })))
+        });
 
+        return roleId;
+      }
 
+      async getPermissions() {
+         return getAllScopes();
+      }
+
+      async getRoles(tenantId: string) {
+          return await this.db.query.Roles.findMany({ where: (role,{eq}) => eq(role.tenantId, tenantId), with: {
+            rolesToPermissions: true
+            }
+          })
+      }
       
 }

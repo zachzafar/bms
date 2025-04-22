@@ -62,8 +62,14 @@ export class UsersService {
 
     async update(id: string, userData: UpdateUser, customer: boolean, owner: boolean, roles: number[]): Promise<void> {
         await this.db.transaction(async (tx) => {
-            // Update user data
-            await tx.update(schema.User).set(userData).where(eq(schema.User.id, id));
+            // Update user dat
+            let hashedPassword: string | undefined;
+            if (userData.password) {
+                hashedPassword = await hash(userData.password);
+                userData.password = hashedPassword;
+            }
+           
+            await tx.update(schema.User).set({...userData,password: hashedPassword}).where(eq(schema.User.id, id));
 
             // Handle customer role
             if (customer) {
@@ -125,6 +131,11 @@ export class UsersService {
     async getCustomers(tenantId: string): Promise<{customer:schema.SelectCustomer,user: SelectUser}[]> {
         const rows = await this.db.select().from(schema.TenantHasUsers).where(eq(schema.TenantHasUsers.tenantId,tenantId)).innerJoin(schema.User,eq(schema.TenantHasUsers.userId,schema.User.id)).innerJoin(schema.Customer,eq(schema.Customer.userId,schema.User.id))
         return rows.map(row => ({customer:row.customer_details,user:row.users}))
+    }
+
+    async getOwners(tenantId: string): Promise<{owner:schema.SelectOwner,user: SelectUser}[]> {
+        const rows = await this.db.select().from(schema.TenantHasUsers).where(eq(schema.TenantHasUsers.tenantId,tenantId)).innerJoin(schema.User,eq(schema.TenantHasUsers.userId,schema.User.id)).innerJoin(schema.Owner,eq(schema.Owner.userId,schema.User.id))
+        return rows.map(row => ({owner:row.owner_details,user:row.users}))
     }
 
 

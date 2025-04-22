@@ -23,7 +23,7 @@ import { SlotModule } from './slot/slot.module';
   imports: [DrizzleModule, SchemaDesignModule, AuthModule, UsersModule,ConfigModule.forRoot({
     isGlobal: true, // Makes ConfigService globally available
     envFilePath: '.env', // Path to your environment file
-  }), AssetsModule, BookingModule, MaintenanceModule, TeamsModule, TenantModule, ObjectStorageModule, KeysModule, AnalyticsModule, SlotModule,],
+  }), AssetsModule, BookingModule, MaintenanceModule, TeamsModule, TenantModule, ObjectStorageModule, KeysModule, AnalyticsModule, SlotModule],
   controllers: [AppController, SlotController],
   providers: [AppService, ObjectStorageService, SlotService],
 })
