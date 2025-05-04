@@ -1,7 +1,7 @@
 
 import { initContract } from "@ts-rest/core";
 import { z } from "zod";
-import { InsertUserSchema, SelectCustomerSchema, SelectUserSchema } from "../database-schema";
+import { InsertCustomerSchema, InsertOwnerSchema, InsertUserSchema, SelectCustomerSchema, SelectOwnerSchema, SelectUserSchema } from "../database-schema";
 
 
 const c = initContract();
@@ -9,12 +9,11 @@ const c = initContract();
 export const userContract = c.router({
     createUser: {
         method: "POST",
-        path: "/users/:id",
-        body:  z.object({
-             user: InsertUserSchema,
-             customer : z.boolean(),
-             owner: z.boolean(),
+        path: "/users/",
+        body:   InsertUserSchema.extend({
              roles: z.array(z.number()),
+             ownerDetails: InsertOwnerSchema.omit({tenantId: true, userId: true, }).optional(),
+             customerDetails: InsertCustomerSchema.omit({ tenantId: true, userId: true, dateOfBirth: true}).extend({ dateOfBirth: z.string().optional()}).optional(),
             }),
         responses: {
             200: z.object({
@@ -38,9 +37,9 @@ export const userContract = c.router({
     },
     getUsers: {
         method: "GET",
-        path: "/users/:tenant",
+        path: "/users/",
         responses: {
-            200: z.array(SelectUserSchema),
+            200: z.array(SelectUserSchema.extend({ roles: z.array(z.number())})),
         },
         summary: "Get all users"
     },
@@ -80,11 +79,16 @@ export const userContract = c.router({
         method: "GET",
         path: "/customers",
         responses: {
-            200: z.array(z.object({customer:SelectCustomerSchema,user: SelectUserSchema})),
+            200: z.array(z.object({customer:SelectCustomerSchema,user: SelectUserSchema.omit({roles: true})})),
         },
         summary: "Get all customers"
+    },
+    getOwners: {
+        method: "GET",
+        path: "/owners",
+        responses: {
+            200: z.array(z.object({owner:SelectOwnerSchema,user: SelectUserSchema.omit({roles: true})})),
+        },
+        summary: "Get all owners"
     }
-
-
-
 })

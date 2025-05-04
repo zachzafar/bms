@@ -15,7 +15,7 @@ export const Booking = mysqlTable("booking", {
     startDate: datetime("start_date").notNull(),
     endDate: datetime("end_date").notNull(),
     status: varchar("status", { length: 255 }),
-    totalPrice: decimal({ precision: 1 }),
+    totalPrice: decimal({ precision: 10,scale: 2 }),
     createdAt: timestamp('createdAt').notNull().defaultNow(),
     updatedAt: timestamp('updated_at', { mode: 'date', }).$onUpdate(() => new Date()),
     assetId: varchar("asset_id", { length: 255 }).notNull().references(() => Asset.id),

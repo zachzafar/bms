@@ -53,15 +53,36 @@ const items = [
         url: "/reports",
         icon: Clipboard,
       },
-      {
+    {
         title:"Users",
-        url:"/users",
-        icon: User2
-      },
-      {
-        title:"Teams",
-        url:"/teams",
-        icon: User2
+        icon: User2,
+        children: [  
+          {
+            title: "User List",
+            url: "/users",
+            icon: User2,
+          },
+          {
+            title: "User Roles",
+            url: "/users/roles",
+            icon: Settings,
+          },
+          {
+            title: "Owners",
+            url: "/users/owners",
+            icon: User2,
+          },
+          {
+            title: "Customers",
+            url: "/users/customers",
+            icon: User2,
+          },
+          // {
+          //   title:"Teams",
+          //   url:"/teams",
+          //   icon: User2
+          // },
+        ]
       },
     {
       title: "Settings",

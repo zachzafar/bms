@@ -43,7 +43,8 @@ export default function SignupPage() {
           adminUser: {
             name: data.name,
             email: data.email,
-            password: data.password
+            password: data.password,
+            userType: ['system']
           }
         }
       }, {

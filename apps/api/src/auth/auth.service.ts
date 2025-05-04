@@ -5,182 +5,221 @@ import { DrizzleAsyncProvider } from 'src/drizzle/drizzle.provider';
 import * as schema from '@repo/api-contract';
 import { JwtService } from '@nestjs/jwt';
 import { hash, verify } from 'argon2';
-import { v4 as uuidv4 } from 'uuid';
 import { ConfigType } from '@nestjs/config';
 import refreshConfig from './config/refresh.config';
 import { UsersService } from 'src/users/users.service';
-import { eq,and, desc } from 'drizzle-orm';
+import { eq, desc } from 'drizzle-orm';
+import { getAllScopes } from './permissions';
 
 
 @Injectable()
 export class AuthService {
-    private readonly loggger = new Logger(AuthService.name);
+  private readonly loggger = new Logger(AuthService.name);
 
-    constructor(
-        private readonly jwtService: JwtService,
-        private readonly userService: UsersService,
-        @Inject(refreshConfig.KEY)
-        private refreshTokenConfig: ConfigType<typeof refreshConfig>,
-        @Inject(DrizzleAsyncProvider) private db: MySql2Database<typeof schema>
-      ) {}
-    
-      async createTenantWithAdmin(tenantData: InsertTenant, userData: Omit<InsertUser,"tenantId" | "role">): Promise<{ tenantId: string; userId: string; }> {
-        let tenantId:string = ""
-        let userId:string = ""
-    
-        try {
-        await this.db.transaction(async (tx) => {
+  constructor(
+    private readonly jwtService: JwtService,
+    private readonly userService: UsersService,
+    @Inject(refreshConfig.KEY)
+    private refreshTokenConfig: ConfigType<typeof refreshConfig>,
+    @Inject(DrizzleAsyncProvider) private db: MySql2Database<typeof schema>
+  ) { }
+
+  async createTenantWithAdmin(tenantData: InsertTenant, userData: Omit<InsertUser, "tenantId" | "role">): Promise<{ tenantId: string; userId: string; }> {
+    let tenantId: string = ""
+    let userId: string = ""
+
+    try {
+      await this.db.transaction(async (tx) => {
         this.loggger.log('Creating a tenant');
-        let result = await tx.insert(schema.Tenant).values({...tenantData,subdomain:null}).$returningId()
+        let result = await tx.insert(schema.Tenant).values({ ...tenantData, subdomain: null }).$returningId()
         tenantId = result[0].id;
         const hashedPassword = await hash(userData.password);
         this.loggger.log('Creating a user');
-         result = await tx.insert(schema.User).values({
-            ...userData,
-            password: hashedPassword,
-          }).$returningId()
-          userId = result[0].id;
-        
-          this.loggger.log('Creating a tenant user relationship');
-          await tx.insert(schema.TenantHasUsers).values({
-            tenantId,
-            userId
-          })
+        result = await tx.insert(schema.User).values({
+          ...userData,
+          password: hashedPassword,
+        }).$returningId()
+        userId = result[0].id;
 
-        });
-      } catch (error) {
-        throw new InternalServerErrorException(`Error occured while creating tenant: ${error}`,);
-      }
-
-
-        return {
-          userId,
+        this.loggger.log('Creating a tenant user relationship');
+        await tx.insert(schema.TenantHasUsers).values({
           tenantId,
-        }
-      }
-
-      async login(email: string, password: string): Promise<{ user: Omit<SelectUser, "password">; tenants:SelectTenant[] ;accessToken: string; refreshToken: string }> {
-
-         let  user_ = await this.db.query.User.findFirst({ where: (user,{eq}) => eq(user.email, email )})
-        
-         if (!user_) {
-          throw new UnauthorizedException('Invalid email or password');
-      }
-      
-      
-
-        let tenantHasUsers = await this.db.select().from(schema.TenantHasUsers).where(eq(schema.TenantHasUsers.userId,user_.id))
-
-        let tenants = await this.db.query.Tenant.findMany({ 
-            where: (tenant, { inArray }) => inArray(
-                tenant.id, 
-                tenantHasUsers.map(tenantHasUser => tenantHasUser.tenantId)
-            )
+          userId
         })
 
+      });
+    } catch (error) {
+      throw new InternalServerErrorException(`Error occured while creating tenant: ${error}`,);
+    }
 
-        const isValid = await verify(user_.password,password);
-        
-        if (!isValid) {
-          throw new UnauthorizedException('Invalid email or password');
-        }
 
-    
-        const { accessToken, refreshToken } = await this.generateTokens(user_.id);
-        
-        const hashedToken = await hash(refreshToken);
-        await this.db.insert(schema.refreshTokens).values({
-            userId: user_.id,
-            refreshToken: hashedToken,
-        });
-   
-        const { password: _, ...user } = user_;
+    return {
+      userId,
+      tenantId,
+    }
+  }
 
-    
-        return {
-          user,
-          tenants,
-          accessToken,
-          refreshToken,
-        };
-      }
+  async login(email: string, password: string): Promise<{ user: Omit<SelectUser, "password" | "roles">; tenants: SelectTenant[]; accessToken: string; refreshToken: string }> {
 
-      async logout(userId: string ) {
-       const rows = await this.db.delete(schema.refreshTokens).where(eq(schema.refreshTokens.userId, userId));
-      }
+    let user_ = await this.db.query.User.findFirst({ where: (user, { eq }) => eq(user.email, email) })
 
-      async validateLocalUser(email: string, password: string) {
-        const user = await this.userService.findByEmail(email);
+    if (!user_) {
+      throw new UnauthorizedException('Invalid email or password');
+    }
+
+
+
+    let tenantHasUsers = await this.db.select().from(schema.TenantHasUsers).where(eq(schema.TenantHasUsers.userId, user_.id))
+
+    let tenants = await this.db.query.Tenant.findMany({
+      where: (tenant, { inArray }) => inArray(
+        tenant.id,
+        tenantHasUsers.map(tenantHasUser => tenantHasUser.tenantId)
+      )
+    })
+
+
+    const isValid = await verify(user_.password, password);
+
+    if (!isValid) {
+      throw new UnauthorizedException('Invalid email or password');
+    }
+
+
+    const { accessToken, refreshToken } = await this.generateTokens(user_.id,tenants.map(tenant => tenant.id),[]);
+
+    const hashedToken = await hash(refreshToken);
+    await this.db.insert(schema.refreshTokens).values({
+      userId: user_.id,
+      refreshToken: hashedToken,
+    });
+
+    const { password: _, ...user } = user_;
+
+
+    return {
+      user,
+      tenants,
+      accessToken,
+      refreshToken,
+    };
+  }
+
+  async logout(userId: string) {
+    const rows = await this.db.delete(schema.refreshTokens).where(eq(schema.refreshTokens.userId, userId));
+  }
+
+  async validateLocalUser(email: string, password: string) {
+    const user = await this.userService.findByEmail(email);
     if (!user) throw new UnauthorizedException('User not found!');
     const isPasswordMatched = verify(user.password, password);
     if (!isPasswordMatched)
       throw new UnauthorizedException('Invalid Credentials!');
 
     return { id: user.id, name: user.name, };
+  }
+
+  async validateJwtUser(userId: string) {
+    const user = await this.userService.findOne(userId);
+    if (!user) throw new UnauthorizedException('User not found!');
+    return { id: user.id, name: user.name };
+  }
+
+  async validateRefreshToken(userId: string, refreshToken: string) {
+    console.log("looking for refresh token")
+
+    const tokens = await this.db.select().from(schema.refreshTokens).where(eq(schema.refreshTokens.userId, userId)).orderBy(desc(schema.refreshTokens.createdAt)).limit(1).execute();
+    console.log("found token: ", tokens[0])
+    if (tokens.length === 0) {
+      throw new UnauthorizedException('Invalid refresh token');
+    }
+    console.log("found token now verifying...")
+    const refreshTokenMatched = await verify(tokens[0].refreshToken, refreshToken);
+
+    if (!refreshTokenMatched) {
+      await this.logout(userId);
+      throw new UnauthorizedException('Invalid refresh token');
+
+    }
+    console.log("refresh token matched")
+    const { exp } = this.jwtService.decode(refreshToken) as { exp: number };
+    const isExpired = Date.now() >= exp * 1000;
+
+    if (isExpired) {
+      // Execute the desired function when the token is expired
+      await this.logout(userId);
+      throw new UnauthorizedException('Refresh Token Expired!');
+    }
+    console.log("returning user")
+    const currentUser = { id: userId };
+    return currentUser;
+  }
+
+  async refreshToken(userId: string) {
+
+    let tenantHasUsers = await this.db.select().from(schema.TenantHasUsers).where(eq(schema.TenantHasUsers.userId, userId))
+
+    let tenants = await this.db.query.Tenant.findMany({
+      where: (tenant, { inArray }) => inArray(
+        tenant.id,
+        tenantHasUsers.map(tenantHasUser => tenantHasUser.tenantId)
+      )
+    })
+
+
+    const { accessToken, refreshToken } = await this.generateTokens(userId,tenants.map(tenant => tenant.id),[]);
+
+    const hashedToken = await hash(refreshToken);
+
+    await this.db.update(schema.refreshTokens).set({ refreshToken: hashedToken, }).where(eq(schema.refreshTokens.userId, userId));
+
+    const user_ = await this.db.query.User.findMany({ where: (user, { eq }) => eq(user.id, user.id) });
+
+    return {
+      user: user_[0],
+      accessToken,
+      refreshToken,
+    };
+  }
+
+  async generateTokens(userId: string,tenants: string[],roles: string[]) {
+    const payload = { sub: userId, tenants,roles  };
+    const [accessToken, refreshToken] = await Promise.all([
+      this.jwtService.signAsync(payload),
+      this.jwtService.signAsync(payload, this.refreshTokenConfig)])
+
+    return { accessToken, refreshToken };
+  }
+
+  async createRole(tenantId: string, roleName: string, permissions: string[]) {
+    let roleId: number = 0
+    await this.db.transaction(async (tx) => {
+      this.loggger.log('Creating a role');
+      let [{ id }] = await tx.insert(schema.Roles).values({
+        tenantId,
+        name: roleName,
+      }).$returningId()
+      roleId = id;
+      this.loggger.log('Creating a role permissions relationship');
+      await tx.insert(schema.RoleHasPermissions).values(permissions.map(permission => ({
+        roleId: BigInt(roleId),
+        permission
+      })))
+    });
+
+    return roleId;
+  }
+
+  async getPermissions() {
+    return getAllScopes();
+  }
+
+  async getRoles(tenantId: string) {
+    return await this.db.query.Roles.findMany({
+      where: (role, { eq }) => eq(role.tenantId, tenantId), with: {
+        rolesToPermissions: true
       }
+    })
+  }
 
-      async validateJwtUser(userId: string) {
-        const user = await this.userService.findOne(userId);
-        if (!user) throw new UnauthorizedException('User not found!');
-        return { id: user.id, name: user.name};
-      }
-
-      async validateRefreshToken(userId:string,refreshToken:string){
-        console.log("looking for refresh token")
-        
-        const tokens = await this.db.select().from(schema.refreshTokens).where(eq(schema.refreshTokens.userId, userId)).orderBy(desc(schema.refreshTokens.createdAt)).limit(1).execute();
-        console.log("found token: ", tokens[0])
-        if (tokens.length === 0) {
-          throw new UnauthorizedException('Invalid refresh token');
-        }
-        console.log("found token now verifying...")
-        const refreshTokenMatched = await verify(tokens[0].refreshToken, refreshToken);
-        
-        if (!refreshTokenMatched) {
-          await this.logout(userId);
-          throw new UnauthorizedException('Invalid refresh token');
-
-        }
-        console.log("refresh token matched")
-        const { exp } = this.jwtService.decode(refreshToken) as { exp: number };
-        const isExpired = Date.now() >= exp * 1000;
-      
-        if (isExpired) {
-          // Execute the desired function when the token is expired
-         await  this.logout(userId);
-          throw new UnauthorizedException('Refresh Token Expired!');
-        }
-        console.log("returning user")
-        const currentUser = { id: userId };
-        return currentUser;
-      }
-
-      async refreshToken(userId: string) {
-        const { accessToken, refreshToken } = await this.generateTokens(userId);
-    
-        const hashedToken = await hash(refreshToken);
-
-        await this.db.update(schema.refreshTokens).set({ refreshToken: hashedToken,}).where( eq(schema.refreshTokens.userId, userId));
-    
-        const user_ = await this.db.query.User.findMany({ where: (user,{eq}) => eq(user.id, user.id) });
-    
-        return {
-          user: user_[0],
-          accessToken,
-          refreshToken,
-        };
-      }
-
-      async generateTokens(userId: string) {
-        const payload = { sub: userId };
-        const [accessToken, refreshToken] = await Promise.all([
-            this.jwtService.signAsync(payload),
-            this.jwtService.signAsync(payload, this.refreshTokenConfig)])
-
-        return {accessToken, refreshToken};
-      }
-    
-
-
-      
 }

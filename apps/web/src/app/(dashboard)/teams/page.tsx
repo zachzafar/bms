@@ -1,343 +1,207 @@
 'use client';
 
-import { SetStateAction, SetStateAction, useState } from 'react';
+import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table';
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from '@/components/ui/dialog';
-import {
-  PlusCircle,
-  Pencil,
-  Trash2,
-  Menu,
-  Mountain,
-  ChevronLeft,
-  ChevronRight,
-  Search,
-} from 'lucide-react';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { PlusCircle, Pencil, Trash2, Search, Eye, X } from 'lucide-react';
+import { authClient } from '@/lib/api/publicClient';
+import { TEAMS_QUERY_KEY } from '@/lib/api/queryKeys';
 
+// Team Type Definition
 type Team = {
   id: string;
   name: string;
   tenant: string;
-  members: number;
-  teamPermissions: string[];
+  members: { id: string; name: string; roles: string[] }[];
 };
 
-// Mock data for demonstration
-const mockTeams = [
+// Mock Teams Data
+const mockTeams: Team[] = [
   {
     id: '1',
     name: 'Rentals',
-    tenant:'Sotheby',
-    members: 5,
-    teamPermissions: ['viewProperties', 'editProperties', 'addProperties'],
+    tenant: 'Sotheby',
+    members: [
+      { id: 'm1', name: 'John Doe', roles: ['Manager'] },
+      { id: 'm2', name: 'Jane Smith', roles: ['Agent'] },
+    ],
   },
   {
     id: '2',
     name: 'Sales',
     tenant: 'Sotheby',
-    members: 4,
-    teamPermissions: ['viewProperties', 'editProperties', 'addProperties'],
+    members: [
+      { id: 'm3', name: 'Alice Brown', roles: ['Admin'] },
+      { id: 'm4', name: 'Bob White', roles: ['Sales Rep'] },
+    ],
   },
-  // { id: '3', name: 'Admin User', email: 'admin@example.com', role: 'Admin' },
-  // Add more mock users here...
 ];
 
 export default function Teams() {
+
   const [teams, setTeams] = useState<Team[]>(mockTeams);
   const [selectedTeam, setSelectedTeam] = useState<Team | null>(null);
-  const [formData, setFormData] = useState<Team>({
-    id: '',
-    name: '',
-    tenant: '',
-    members: 0,
-    teamPermissions: [],
-  });
-  const [currentPage, setCurrentPage] = useState(1);
   const [searchTerm, setSearchTerm] = useState('');
-  const teamsPerPage = 10;
+  const [tabs, setTabs] = useState([{ id: 'teams', title: 'Teams List' }]);
+  const [activeTab, setActiveTab] = useState('teams');
 
-  const handleInputChange = (e: { target: { name: any; value: any; }; }) => {
-    const { name, value } = e.target;
-    setFormData((prev) => ({ ...prev, [name]: value }));
-  };
-
-  const handleRoleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, value } = e.target;
-  
-    if (name === 'teamPermissions') {
-      // Prevent assigning a string to an array
-      setFormData((prev) => ({
-        ...prev,
-        [name]: value.split(','), // Convert comma-separated string to an array
-      }));
-    } else {
-      setFormData((prev) => ({ ...prev, [name]: value }));
-    }
-  };
-
-  const handleSubmit = (e: { preventDefault: () => void; }) => {
-    e.preventDefault();
-    if (selectedTeam) {
-      setTeams(
-        teams.map((team) =>
-          team.id === selectedTeam.id ? { ...team, ...formData } : team
-        )
-      );
-    } else {
-      setTeams([...teams, { id: Date.now().toString(), ...formData }]);
-    }
-    resetForm();
-  };
-
-  const resetForm = () => {
-    setSelectedTeam(null);
-    setFormData({
-      id: '',
-      name: '',
-      tenant: '',
-      members: 0,
-      teamPermissions: [],
-    });
-  };
-
-  const editTeam = (team: Team) => {
+  const handleEditTeam = (team: Team) => {
     setSelectedTeam(team);
-    setFormData({ ...team });
+    if (!tabs.find((tab) => tab.id === team.id)) {
+      setTabs([...tabs, { id: team.id, title: `Edit: ${team.name}` }]);
+    }
+    setActiveTab(team.id);
   };
 
-  const deleteTeam = (teamId: string) => {
+  const handleDeleteTeam = (teamId: string) => {
     setTeams(teams.filter((team) => team.id !== teamId));
+    if (selectedTeam?.id === teamId) setSelectedTeam(null);
+    setTabs(tabs.filter((tab) => tab.id !== teamId));
+    setActiveTab('teams');
   };
 
-  const filteredTeams = teams.filter(
-    (team) =>
-      team.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      team.tenant.toLowerCase().includes(searchTerm.toLowerCase())
+  const handleCloseTab = (id: string) => {
+    setTabs(tabs.filter((tab) => tab.id !== id));
+    setActiveTab('teams');
+    if (selectedTeam?.id === id) setSelectedTeam(null);
+  };
+
+  const handleUpdateTeam = (updatedTeam: Team) => {
+    setTeams(teams.map((team) => (team.id === updatedTeam.id ? updatedTeam : team)));
+    if (selectedTeam?.id === updatedTeam.id) setSelectedTeam(updatedTeam);
+  };
+
+  const filteredTeams = teams.filter((team) =>
+    team.name.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  const indexOfLastTeam = currentPage * teamsPerPage;
-  const indexOfFirstTeam = indexOfLastTeam - teamsPerPage;
-  const currentTeams = filteredTeams.slice(indexOfFirstTeam, indexOfLastTeam);
-
-  const paginate = (pageNumber: SetStateAction<number>) => setCurrentPage(pageNumber);
-
   return (
-    <>
-      <div className='container mx-auto py-10'>
-        <h1 className='text-3xl font-bold mb-8'>Team Management</h1>
+    <div className='container mx-auto py-10'>
+      <h1 className='text-3xl font-bold mb-8'>Team Management</h1>
+      
+      <div className='flex justify-between items-center mb-4'>
+        <div className='relative'>
+          <Search className='absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground' />
+          <Input
+            className='pl-8'
+            placeholder='Search teams...'
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+          />
+        </div>
+      </div>
 
-        <Card className='mb-8'>
-          <CardHeader>
-            <CardTitle>Team List</CardTitle>
-            <CardDescription>Manage existing teams</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className='flex justify-between items-center mb-4'>
-              <div className='relative'>
-                <Search className='absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground' />
-                <Input
-                  className='pl-8'
-                  placeholder='Search teams...'
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                />
-              </div>
-              <Dialog>
-                <DialogTrigger asChild>
-                  <Button>
-                    <PlusCircle className='mr-2 h-4 w-4' />
-                    Create Team
-                  </Button>
-                </DialogTrigger>
-                <DialogContent>
-                  <DialogHeader>
-                    <DialogTitle>
-                      {selectedTeam ? 'Edit Team' : 'Add New Team'}
-                    </DialogTitle>
-                    <DialogDescription>
-                      Enter Team details below
-                    </DialogDescription>
-                  </DialogHeader>
-                  <form onSubmit={handleSubmit} className='space-y-4'>
-                    <div className='grid grid-cols-1 md:grid-cols-2 gap-4'>
-                      <div className='space-y-2'>
-                        <Label htmlFor='name'>Name</Label>
-                        <Input
-                          id='name'
-                          name='name'
-                          value={formData.name}
-                          onChange={handleInputChange}
-                          required
-                        />
-                      </div>
-                      <div className='space-y-2'>
-                        <Label htmlFor='tenant'>Tenant</Label>
-                        <Input
-                          id='tenant'
-                          name='tenant'
-                          value={formData.tenant}
-                          onChange={handleInputChange}
-                          required
-                        />
-                      </div>
-                      {/* <div className='space-y-2'>
-                        <Label htmlFor='teamPermissions'>Team Permissions</Label>
-                        <Select
-                          name='permissions'
-                          value={formData.teamPermissions}
-                          onValueChange={handleRoleChange}
-                          required
-                        >
-                          <SelectTrigger id='role'>
-                            <SelectValue placeholder='Select role' />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value='Admin'>Admin</SelectItem>
-                            <SelectItem value='Manager'>Manager</SelectItem>
-                            <SelectItem value='Customer'>Customer</SelectItem>
-                            <SelectItem value='Owner'>Owner</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div> */}
-                    </div>
-
-                    <div className='flex justify-end space-x-2'>
-                      <Button
-                        type='button'
-                        variant='outline'
-                        onClick={resetForm}
-                      >
-                        Cancel
-                      </Button>
-                      <Button type='submit'>
-                        {selectedTeam ? 'Update Team' : 'Add Team'}
-                      </Button>
-                    </div>
-                  </form>
-                </DialogContent>
-              </Dialog>
+      <Tabs value={activeTab} onValueChange={setActiveTab}>
+        <TabsList>
+          {tabs.map((tab) => (
+            <div key={tab.id} className='flex items-center'>
+              <TabsTrigger value={tab.id}>{tab.title}</TabsTrigger>
+              {tab.id !== 'teams' && (
+                <Button variant='ghost' size='icon' onClick={() => handleCloseTab(tab.id)}>
+                  <X className='h-4 w-4' />
+                </Button>
+              )}
             </div>
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Name</TableHead>
-                  <TableHead>Tenant</TableHead>
-                  <TableHead>Members</TableHead>
-                  <TableHead>Actions</TableHead>
+          ))}
+        </TabsList>
+
+        <TabsContent value='teams'>
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Name</TableHead>
+                <TableHead>Tenant</TableHead>
+                <TableHead>Actions</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {filteredTeams.map((team) => (
+                <TableRow key={team.id}>
+                  <TableCell>{team.name}</TableCell>
+                  <TableCell>{team.tenant}</TableCell>
+                  <TableCell className='flex gap-2'>
+                    <Dialog>
+                      <DialogTrigger asChild>
+                        <Button variant='ghost' size='icon'>
+                          <Eye className='h-4 w-4' />
+                        </Button>
+                      </DialogTrigger>
+                      <DialogContent>
+                        <DialogHeader>
+                          <DialogTitle>Team Details</DialogTitle>
+                        </DialogHeader>
+                        <p><strong>Name:</strong> {team.name}</p>
+                        <p><strong>Tenant:</strong> {team.tenant}</p>
+                        <h3 className='font-semibold mt-4'>Members:</h3>
+                        <ul>
+                          {team.members.map((member) => (
+                            <li key={member.id}>
+                              {member.name} - {member.roles.join(', ')}
+                            </li>
+                          ))}
+                        </ul>
+                      </DialogContent>
+                    </Dialog>
+
+                    <Button variant='ghost' size='icon' onClick={() => handleEditTeam(team)}>
+                      <Pencil className='h-4 w-4' />
+                    </Button>
+                    <Button
+                      variant='ghost'
+                      size='icon'
+                      onClick={() => handleDeleteTeam(team.id)}
+                    >
+                      <Trash2 className='h-4 w-4 text-red-600' />
+                    </Button>
+                  </TableCell>
                 </TableRow>
-              </TableHeader>
+              ))}
+            </TableBody>
+          </Table>
+        </TabsContent>
+
+        {selectedTeam && (
+          <TabsContent key={selectedTeam.id} value={selectedTeam.id}>
+            <h2 className='text-xl font-bold mb-4'>Editing {selectedTeam.name}</h2>
+            <h3 className='font-semibold mt-4'>Members</h3>
+            <Table>
               <TableBody>
-                {currentTeams.map((team) => (
-                  <TableRow key={team.id}>
-                    <TableCell>{team.name}</TableCell>
-                    <TableCell>{team.tenant}</TableCell>
-                    <TableCell>{team.members}</TableCell>
+                {selectedTeam.members.map((member, memberIndex) => (
+                  <TableRow key={member.id}>
                     <TableCell>
-                      <Dialog>
-                        <DialogTrigger asChild>
-                          <Button
-                            variant='ghost'
-                            size='icon'
-                            aria-label={`View details for ${team.name}`}
-                          >
-                            <Search className='h-4 w-4' />
-                          </Button>
-                        </DialogTrigger>
-                        <DialogContent>
-                          <DialogHeader>
-                            <DialogTitle>Team Details</DialogTitle>
-                          </DialogHeader>
-                          <div className='space-y-4'>
-                            <div>
-                              <h3 className='font-semibold'>
-                                Basic Information
-                              </h3>
-                              <p>Name: {team.name}</p>
-                              <p>Tenant: {team.tenant}</p>
-                              <p>Members: {team.members}</p>
-                            </div>
-                          </div>
-                        </DialogContent>
-                      </Dialog>
-                      <Button
-                        variant='ghost'
-                        size='icon'
-                        onClick={() => editTeam(team)}
-                        aria-label={`Edit ${team.name}`}
-                      >
-                        <Pencil className='h-4 w-4' />
-                      </Button>
-                      <Button
-                        variant='ghost'
-                        size='icon'
-                        onClick={() => deleteTeam(team.id)}
-                        aria-label={`Delete ${team.name}`}
-                      >
-                        <Trash2 className='h-4 w-4' />
-                      </Button>
+                      <Input
+                        value={member.name}
+                        onChange={(e) => {
+                          const updatedTeam = { ...selectedTeam };
+                          updatedTeam.members[memberIndex].name = e.target.value;
+                          handleUpdateTeam(updatedTeam);
+                        }}
+                      />
+                    </TableCell>
+                    <TableCell>
+                      {member.roles.map((role, index) => (
+                        <span key={index} className='inline-flex items-center px-2 py-1 bg-gray-200 rounded-full text-sm mr-2'>
+                          {role}
+                          <button onClick={() => {
+                            const updatedTeam = { ...selectedTeam };
+                            updatedTeam.members.find((m) => m.id === member.id)!.roles.splice(index, 1);
+                            handleUpdateTeam(updatedTeam);
+                          }}>
+                            <X className='ml-1 h-4 w-4 text-red-600' />
+                          </button>
+                        </span>
+                      ))}
                     </TableCell>
                   </TableRow>
                 ))}
               </TableBody>
             </Table>
-            <div className='flex justify-between items-center mt-4'>
-              <p>
-                Showing {indexOfFirstTeam + 1} to{' '}
-                {Math.min(indexOfLastTeam, filteredTeams.length)} of{' '}
-                {filteredTeams.length} teams
-              </p>
-              <div className='flex space-x-2'>
-                <Button
-                  variant='outline'
-                  onClick={() => paginate(currentPage - 1)}
-                  disabled={currentPage === 1}
-                >
-                  <ChevronLeft className='h-4 w-4' />
-                </Button>
-                <Button
-                  variant='outline'
-                  onClick={() => paginate(currentPage + 1)}
-                  disabled={indexOfLastTeam >= filteredTeams.length}
-                >
-                  <ChevronRight className='h-4 w-4' />
-                </Button>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-    </>
+          </TabsContent>
+        )}
+      </Tabs>
+    </div>
   );
 }
