@@ -36,7 +36,7 @@ export class BookingService {
 
 
     try {
-      let bookingId: string;
+      let bookingId: string = ''
 
       await this.db.transaction(async (tx) => {
         // Create the booking
@@ -65,9 +65,9 @@ export class BookingService {
         await tx.insert(schema.UserHasBookings).values(
           customers.map(customer => ({ bookingId, userId: customer.userId }))
         );
-
-        return (await this.getBooking(bookingId)).id
       });
+
+      return bookingId;
       
     } catch (e) {
       throw new ConflictException('Error occurred while creating booking: ' + e);

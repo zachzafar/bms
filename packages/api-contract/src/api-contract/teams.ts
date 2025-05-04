@@ -41,11 +41,12 @@ export const teamsContract = c.router({
     },
     getTeams: {
         method: "GET",
-        path: "/teams/:tenant",
+        path: "/teams",
         responses: {
             200: z.array(SelectTenantTeamSchema)
         },
         pathParams: z.object({
+            id: z.number(),
             tenant: z.string(),
         }),
         summary: "Get all teams"

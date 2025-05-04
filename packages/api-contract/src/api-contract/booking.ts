@@ -10,7 +10,7 @@ const c = initContract();
 export const ExtendedSelectBookingSchema = SelectBookingSchema.omit({startDate: true, endDate:true}).extend({
     customer: SelectCustomerSchema,
     asset: SelectAssetSchema,
-    user: SelectUserSchema,
+    user: SelectUserSchema.omit({roles: true}),
     startDate: z.string(),
     endDate: z.string(),
 })

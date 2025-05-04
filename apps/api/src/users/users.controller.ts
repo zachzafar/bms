@@ -1,4 +1,4 @@
-import { Controller,  Headers,Logger, NotFoundException } from '@nestjs/common';
+import { Controller, Headers, Logger, NotFoundException } from '@nestjs/common';
 import { UsersService } from './users.service';
 import { tsRestHandler, TsRestHandler } from '@ts-rest/nest';
 import { contract as c } from "@repo/api-contract"
@@ -6,7 +6,7 @@ import { contract as c } from "@repo/api-contract"
 @Controller()
 export class UsersController {
     private readonly logger = new Logger(UsersController.name);
-    constructor(private UserService: UsersService) {}
+    constructor(private UserService: UsersService) { }
 
     @TsRestHandler(c.users.createUser)
     async createUser(@Headers() headers: any): Promise<ReturnType<typeof tsRestHandler>> {
@@ -14,9 +14,9 @@ export class UsersController {
         return tsRestHandler(c.users.createUser, async ({ body }) => {
             const tenantId = headers['x-tenant-id'];
 
-            const { user,customer,owner,roles } = body;
-            const userId = await this.UserService.createUser(user,tenantId,customer,owner,roles);
-            return { status: 200, body: { id: userId} };
+            const { roles } = body;
+            const userId = await this.UserService.createUser(body, tenantId, roles);
+            return { status: 200, body: { id: userId } };
         });
     }
 
@@ -25,10 +25,10 @@ export class UsersController {
         this.logger.log(`Getting a user`);
         return tsRestHandler(c.users.getUser, async ({ params }) => {
             const { id, tenant } = params;
-            const user = await this.UserService.findOne(id,tenant);
+            const user = await this.UserService.findOne(id, tenant);
             if (!user)
                 throw new NotFoundException(`User with id ${id} not found`);
-            
+
             return { status: 200, body: user };
         });
     }
@@ -44,14 +44,15 @@ export class UsersController {
     }
 
     @TsRestHandler(c.users.updateUser)
-    async updateUser(): Promise<ReturnType<typeof tsRestHandler>> {
+    async updateUser(@Headers() headers: any): Promise<ReturnType<typeof tsRestHandler>> {
         this.logger.log(`Updating a user`);
         return tsRestHandler(c.users.updateUser, async ({ params, body }) => {
             const { id } = params;
-            const { user,customer,owner,roles } = body;
-            await this.UserService.update(id,user,customer,owner,roles);
-            return { status: 200, body: { message: 'User updated successfully'} };
-           
+            const tenantId = headers['x-tenant-id'];
+            const { user, roles } = body;
+            await this.UserService.update(id,tenantId,user, roles);
+            return { status: 200, body: { message: 'User updated successfully' } };
+
         });
     }
 
@@ -62,9 +63,9 @@ export class UsersController {
             const { id } = params;
             const tenantId = headers['x-tenant-id'];
             await this.UserService.remove(id, tenantId);
-            return { 
-                status: 204 as const, 
-                body: undefined 
+            return {
+                status: 204 as const,
+                body: undefined
             };
         });
     }
@@ -77,5 +78,15 @@ export class UsersController {
             const customers = await this.UserService.getCustomers(tenantId);
             return { status: 200, body: customers };
         });
+    }
+
+    @TsRestHandler(c.users.getOwners)
+    async getOwners(@Headers() headers: any): Promise<ReturnType<typeof tsRestHandler>> {
+        this.logger.log(`Getting all owners`);
+        return tsRestHandler(c.users.getOwners, async () => {
+            const tenantId = headers['x-tenant-id'];
+            const owners = await this.UserService.getOwners(tenantId);
+            return { status: 200, body: owners };
+        })
     }
 }

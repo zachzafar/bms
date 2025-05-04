@@ -21,35 +21,35 @@ export class TeamsController {
         })
     }
 
-    @TsRestHandler(c.teams.getTeam)
-    async getTeam(): Promise<ReturnType<typeof tsRestHandler>>{
-        return tsRestHandler(c.teams.getTeam, async({ params }) => {
-            const { id, tenant } = params
-            const team = await this.TeamsService.findOne(id,tenant)
+    // @TsRestHandler(c.teams.getTeam)
+    // async getTeam(): Promise<ReturnType<typeof tsRestHandler>>{
+    //     return tsRestHandler(c.teams.getTeam, async({ params }) => {
+    //         const { id, tenant } = params
+    //         const team = await this.TeamsService.findOne(id,tenant)
 
-            if(!team){
-                return {
-                    status: 404,
-                    body: {
-                        message: "Team not found"
-                    }
-                }
-            }
+    //         if(!team){
+    //             return {
+    //                 status: 404,
+    //                 body: {
+    //                     message: "Team not found"
+    //                 }
+    //             }
+    //         }
 
-            const { name , tenantTeamToAsset, tenantTeamToUsers} = team
-            const assets = tenantTeamToAsset.map((asset) => ({...asset.asset, assetTypeId: asset.asset.assetTypeId ? Number(asset.asset.assetTypeId) : undefined}))
-            const users = tenantTeamToUsers.map((user) => user.user)
+    //         const { name , tenantTeamToAsset, tenantTeamToUsers} = team
+    //         const assets = tenantTeamToAsset.map((asset) => ({...asset.asset, assetTypeId: asset.asset.assetTypeId ? Number(asset.asset.assetTypeId) : undefined}))
+    //         const users = tenantTeamToUsers.map((user) => user.user)
 
-            return {
-                status: 200,
-                body: {
-                    name,
-                    assets,
-                    users
-                }
-            }
-        })
-    }
+    //         return {
+    //             status: 200,
+    //             body: {
+    //                 name,
+    //                 assets,
+    //                 users
+    //             }
+    //         }
+    //     })
+    // }
 
     @TsRestHandler(c.teams.getTeams)
     async getTeams(): Promise<ReturnType<typeof tsRestHandler>>{
