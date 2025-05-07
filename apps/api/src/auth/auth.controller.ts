@@ -5,12 +5,12 @@ import { AuthService } from './auth.service';
 import { RefreshAuthGuard } from './guards/refresh-auth/refresh-auth.guard';
 import { LocalAuthGuard } from './guards/local-auth/local-auth.guard';
 import { Public } from './decorators/public.decorator';
-
+import { PasswordRestService } from './password-rest/password-rest.service';
 
 @Controller()
 export class AuthController {
     private readonly logger = new Logger(AuthController.name);
-    constructor(private authService: AuthService) {}
+    constructor(private authService: AuthService, private passwordResetService: PasswordRestService) {}
 
     @Public()
     @TsRestHandler(contract.auth.registerTenant)
@@ -91,6 +91,26 @@ export class AuthController {
                 return { status: 400, body: { message: 'Error occured while creating role' } };
             }
             return { status: 201, body: {message: "role created successfully"} };
+        })
+    }
+
+    @Public()
+    @TsRestHandler(contract.auth.sendPasswordResetEmail)
+    async sendPasswordResetEmail(): Promise<ReturnType<typeof tsRestHandler>> {
+        return tsRestHandler(contract.auth.sendPasswordResetEmail, async ({ body }) => {
+            await this.passwordResetService.createPasswordResetToken(body.email);
+            this.logger.log(`Password reset email sent to: ${body.email}`);
+            return { status: 200, body: { message: 'Password reset email sent' } };
+        })
+    }
+
+    @Public()
+    @TsRestHandler(contract.auth.resetPassword)
+    async resetPassword(): Promise<ReturnType<typeof tsRestHandler>> {
+        return tsRestHandler(contract.auth.resetPassword, async ({ body }) => {
+            await this.passwordResetService.updatePassword(body.token, body.password);
+            this.logger.log(`Password reset for token: ${body.token}`);
+            return { status: 200, body: { message: 'Password reset successfully' } };
         })
     }
 

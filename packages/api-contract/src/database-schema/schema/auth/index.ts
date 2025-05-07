@@ -1,7 +1,8 @@
-import { mysqlTable, serial, varchar, int, datetime, boolean, timestamp, primaryKey } from 'drizzle-orm/mysql-core';
+import { mysqlTable, serial, varchar, int,index, datetime, boolean, timestamp, primaryKey } from 'drizzle-orm/mysql-core';
 import { relations } from 'drizzle-orm';
 import { User } from '../users'; 
 import { Tenant } from '../tenant';
+import { v4 as uuid } from "uuid";
 
 export const refreshTokens = mysqlTable('refresh_tokens', {
     id: serial('id').primaryKey(), 
@@ -19,3 +20,15 @@ export const refreshTokenRelations = relations(refreshTokens, ({ one }) => ({
         references: [User.id],
     }),
 }));
+
+export const PasswordReset = mysqlTable('password_reset', {
+    id: varchar("id", { length: 36 }).primaryKey().$default(uuid),    
+    userId: varchar('user_id', { length: 128 }).notNull().references(() => User.id),
+    token: varchar('token', { length: 255 }).notNull(),
+    expiresAt: timestamp('expires_at').notNull(),
+    createdAt: timestamp('created_at').defaultNow().notNull(),
+    usedAt: timestamp('used_at'),
+  }, (table) => ({
+    userIdIdx: index('user_id_idx').on(table.userId),
+    tokenIdx: index('token_idx').on(table.token),
+  }));

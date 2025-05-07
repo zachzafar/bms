@@ -10,6 +10,7 @@ import { toast } from 'sonner';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { client } from '@/lib/api/publicClient';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import { createSession, Session } from '@/lib/api/session';
 import { StorageService } from '@/lib/api/storage';
 import { access } from 'fs';
@@ -94,6 +95,11 @@ export default function LoginPage() {
                   <FormLabel>Password</FormLabel>
                   <Input type="password" {...field} />
                   <FormMessage />
+                  <div className="text-sm text-right">
+                    <Link href="/forgot-password" className="text-blue-600 hover:text-blue-800">
+                      Forgot Password?
+                    </Link>
+                  </div>
                 </FormItem>
               )}
             />
