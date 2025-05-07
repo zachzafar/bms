@@ -3,6 +3,7 @@ import { initContract } from '@ts-rest/core';
 import { z } from "zod";
 import { InsertTenantSchema, SelectTenantSchema,InsertUserSchema,SelectUserSchema } from "../database-schema/schema"
 import { create } from 'domain';
+import { send } from 'process';
 
 
 const c = initContract();
@@ -57,6 +58,33 @@ export const authContract = c.router({
             refresh: z.string().max(255)
     }).required({ refresh: true }),
         summary: 'Refresh token'
+    },
+    sendPasswordResetEmail: {
+        method: 'POST',
+        path: '/password-reset',
+        body: z.object({
+            email: z.string().email()
+        }).required({ email: true }),
+        responses: {
+            204: z.object({
+              message: z.string()
+            })
+          },
+        summary: 'Send password reset email'
+    },
+    resetPassword: {
+        method: 'POST',
+        path: '/password-reset/confirm',
+        body: z.object({
+            password: z.string().max(255),
+            token: z.string().max(255)
+        }).required({ password: true }),
+        responses: {
+            204: z.object({
+              message: z.string()
+            })
+          },
+        summary: 'Reset password'
     },
     logout: {
         method: 'POST',

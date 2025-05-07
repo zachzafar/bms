@@ -17,6 +17,7 @@ import { TenantService } from 'src/tenant/tenant.service';
 import { TenantGuard } from './guards/tenant/tenant.guard';
 import { ApiKeyStrategy } from './strategies/apikey.strategy';
 import { KeysService } from 'src/keys/keys.service';
+import { PasswordRestService } from './password-rest/password-rest.service';
 
 @Module({
   imports: [
@@ -34,7 +35,8 @@ import { KeysService } from 'src/keys/keys.service';
       RefreshStrategy,
       KeysService,
       TenantGuard,
-      TenantService
+      TenantService,
+      PasswordRestService
   ],
   controllers: [AuthController]
 })

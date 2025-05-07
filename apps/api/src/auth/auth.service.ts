@@ -12,6 +12,7 @@ import { eq, desc } from 'drizzle-orm';
 import { getAllScopes } from './permissions';
 
 
+
 @Injectable()
 export class AuthService {
   private readonly loggger = new Logger(AuthService.name);
@@ -64,6 +65,10 @@ export class AuthService {
     let user_ = await this.db.query.User.findFirst({ where: (user, { eq }) => eq(user.email, email) })
 
     if (!user_) {
+      throw new UnauthorizedException('Invalid email or password');
+    }
+
+    if (!user_.userType.includes("system")) {
       throw new UnauthorizedException('Invalid email or password');
     }
 
@@ -221,5 +226,7 @@ export class AuthService {
       }
     })
   }
+
+  
 
 }

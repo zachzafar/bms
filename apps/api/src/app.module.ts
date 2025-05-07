@@ -18,12 +18,14 @@ import { AnalyticsModule } from './analytics/analytics.module';
 import { SlotService } from './slot/slot.service';
 import { SlotController } from './slot/slot.controller';
 import { SlotModule } from './slot/slot.module';
+import { EventEmitterModule } from '@nestjs/event-emitter';
+import { EmailModule } from './email/email.module';
 
 @Module({
   imports: [DrizzleModule, SchemaDesignModule, AuthModule, UsersModule,ConfigModule.forRoot({
     isGlobal: true, // Makes ConfigService globally available
     envFilePath: '.env', // Path to your environment file
-  }), AssetsModule, BookingModule, MaintenanceModule, TeamsModule, TenantModule, ObjectStorageModule, KeysModule, AnalyticsModule, SlotModule],
+  }), AssetsModule, BookingModule, MaintenanceModule, TeamsModule, TenantModule, ObjectStorageModule, KeysModule, AnalyticsModule, SlotModule, EventEmitterModule.forRoot(), EmailModule],
   controllers: [AppController, SlotController],
   providers: [AppService, ObjectStorageService, SlotService],
 })
