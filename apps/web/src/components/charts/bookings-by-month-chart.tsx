@@ -2,23 +2,44 @@
 
 import { Bar, BarChart, CartesianGrid, XAxis, YAxis, ResponsiveContainer } from "recharts"
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart"
+import { authClient } from "@/lib/api/publicClient"
 
-const data = [
-  { month: "Jan", bookings: 120 },
-  { month: "Feb", bookings: 132 },
-  { month: "Mar", bookings: 145 },
-  { month: "Apr", bookings: 178 },
-  { month: "May", bookings: 189 },
-  { month: "Jun", bookings: 210 },
-  { month: "Jul", bookings: 232 },
-  { month: "Aug", bookings: 245 },
-  { month: "Sep", bookings: 215 },
-  { month: "Oct", bookings: 187 },
-  { month: "Nov", bookings: 165 },
-  { month: "Dec", bookings: 152 },
-]
 
-export default function BookingsByMonthChart() {
+// const data = [
+//   { month: "Jan", bookings: 120 },
+//   { month: "Feb", bookings: 132 },
+//   { month: "Mar", bookings: 145 },
+//   { month: "Apr", bookings: 178 },
+//   { month: "May", bookings: 189 },
+//   { month: "Jun", bookings: 210 },
+//   { month: "Jul", bookings: 232 },
+//   { month: "Aug", bookings: 245 },
+//   { month: "Sep", bookings: 215 },
+//   { month: "Oct", bookings: 187 },
+//   { month: "Nov", bookings: 165 },
+//   { month: "Dec", bookings: 152 },
+// ]
+
+export default function BookingsByMonthChart({ year }: { year: number }) {
+  const { data: CBYResponse } = authClient.analytics.getBookingCountsByMonthPerYear.useQuery({
+    queryData: { query: { year: year.toString() } },
+    queryKey: ["ANALYTICS", "BOOKINGS", "MONTH", year]
+  })
+
+  const data = CBYResponse?.status == 200 ? CBYResponse.body.monthly : [  
+    { month: "Jan", bookings: 0 },
+    { month: "Feb", bookings: 0 },
+    { month: "Mar", bookings: 0 },
+    { month: "Apr", bookings: 0 },
+    { month: "May", bookings: 0 },
+    { month: "Jun", bookings: 0 },
+    { month: "Jul", bookings: 0 },
+    { month: "Aug", bookings: 0 },
+    { month: "Sep", bookings: 0 },
+    { month: "Oct", bookings: 0 },
+    { month: "Nov", bookings: 0 },
+    { month: "Dec", bookings: 0 }]
+
   return (
     <ChartContainer
       config={{

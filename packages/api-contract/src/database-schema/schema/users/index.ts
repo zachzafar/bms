@@ -110,7 +110,7 @@ export const Customer = mysqlTable("customer_details", {
 
 export const InsertCustomerSchema = createInsertSchema(Customer);
 export const SelectCustomerSchema = createSelectSchema(Customer);
-export const UpdateCustomerSchema = InsertCustomerSchema.partial().required({ id: true, phone: true, address: true, dateOfBirth: true, userId: true });
+export const UpdateCustomerSchema = InsertCustomerSchema.partial().required({  userId: true });
 
 export type InsertCustomer = z.infer<typeof InsertCustomerSchema>;
 export type SelectCustomer = z.infer<typeof SelectCustomerSchema>;
@@ -141,7 +141,7 @@ export const Owner = mysqlTable("owner_details", {
 
 export const InsertOwnerSchema = createInsertSchema(Owner);
 export const SelectOwnerSchema = createSelectSchema(Owner);
-export const UpdateOwnerSchema = InsertOwnerSchema.partial().required({ id: true, phone: true, address: true, companyName: true, taxId: true, userId: true });
+export const UpdateOwnerSchema = InsertOwnerSchema.partial().required({ userId: true });
 export type InsertOwner = z.infer<typeof InsertOwnerSchema>;
 export type SelectOwner = z.infer<typeof SelectOwnerSchema>;
 export type UpdateOwner = z.infer<typeof UpdateOwnerSchema>;

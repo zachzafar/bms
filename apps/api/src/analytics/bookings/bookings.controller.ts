@@ -3,7 +3,7 @@ import { BookingAnalyticsService } from './bookings.service';
 import { tsRestHandler, TsRestHandler } from '@ts-rest/nest';
 import { contract } from '@repo/api-contract';
 
-@Controller('bookings')
+@Controller()
 export class BookingsAnalyticsController {
     constructor(private BookingsAnalyticsService: BookingAnalyticsService){}
 
@@ -27,15 +27,29 @@ export class BookingsAnalyticsController {
     async getBookingCountsByMonthPerYear(@Headers() headers: any): Promise<ReturnType<typeof tsRestHandler>> {
         return tsRestHandler(contract.analytics.getBookingCountsByMonthPerYear, async ({query}) => {
             const tenantId = headers['x-tenant-id'];
-            const result = await this.BookingsAnalyticsService.getBookingCountByMonth(tenantId,query.year)
+            const result = await this.BookingsAnalyticsService.getBookingCountByMonth(tenantId,Number(query.year))
+            const monthsAbbreviated = [
+                "Jan", 
+                "Feb", 
+                "Mar", 
+                "Apr", 
+                "May", 
+                "Jun", 
+                "Jul", 
+                "Aug", 
+                "Sep", 
+                "Oct", 
+                "Nov", 
+                "Dec"
+              ];
             return {
                 status: 200,
                 body: {
                     total: result.reduce((acc, cur) => acc + cur.bookingCount, 0),
                     monthly: result.map((month) => {
                         return {
-                            month: month.month,
-                            count: month.bookingCount
+                            month: monthsAbbreviated[month.month - 1],
+                            bookings: month.bookingCount
                         }
                     })
                 }

@@ -29,7 +29,7 @@ type CreateOwnerFormData = z.infer<typeof CreateOwnerSchema>;
 
 export default function Component() {
   const router = useRouter();
-
+  const queryClient = authClient.useQueryClient();
   const { data: owners } = authClient.users.getOwners.useQuery({ queryKey: OWNERS_QUERY_KEY });
   const { mutate: createUserMutation, isPending } = authClient.users.createUser.useMutation();
 
@@ -67,7 +67,7 @@ export default function Component() {
         onSuccess: (response) => {
           toast.success('Owner created successfully');
           setOpen(false);
-          router.refresh();
+          queryClient.invalidateQueries({ queryKey: OWNERS_QUERY_KEY });
           createForm.reset({
             name: '',
             email: '',

@@ -49,8 +49,8 @@ export class UsersController {
         return tsRestHandler(c.users.updateUser, async ({ params, body }) => {
             const { id } = params;
             const tenantId = headers['x-tenant-id'];
-            const { user, roles } = body;
-            await this.UserService.update(id,tenantId,user, roles);
+            const { user, roles,customer,owner } = body;
+            await this.UserService.update(id, tenantId, user, roles, {...owner, userId: id}, {...customer, userId: id});
             return { status: 200, body: { message: 'User updated successfully' } };
 
         });

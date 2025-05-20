@@ -28,17 +28,14 @@ export const analyticsContract = c.router({
         path: '/analytics/assets/utilization',
         responses: {
             200: z.array(z.object({
-                assetId: z.string(),
-                assetName: z.string(),
+                assetType: z.string(),
                 utilizationRate: z.number(),
-                totalBookingDays: z.number(),
-                totalAvailableDays: z.number()
+                booked: z.number(),
+                total: z.number()
             }))
         },
         query: z.object({
-            period: z.enum(['month', 'quarter', 'year']).default('month'),
-            assetTypeId: z.string().optional(),
-            limit: z.number().optional().default(10)
+            period: z.string()
         }),
         summary: 'Get asset utilization rates'
     },
@@ -62,13 +59,13 @@ export const analyticsContract = c.router({
             200: z.object({
                 total: z.number(),
                 monthly: z.array(z.object({
-                month: z.number(),
-                count: z.number()
+                month: z.string(),
+                bookings: z.number()
                 }))
             })
         },
         query: z.object({
-            year: z.number()
+            year: z.string()
         }),
     },
     
@@ -117,23 +114,33 @@ export const analyticsContract = c.router({
     },
     
     // Revenue analytics
-    getRevenueAnalytics: {
+    getRevenueByAssetTypePerYear: {
         method: 'GET',
         path: '/analytics/revenue',
         responses: {
-            200: z.object({
-                total: z.number(),
-                byPeriod: z.array(z.object({
-                    period: z.string(),
-                    amount: z.number()
-                }))
-            })
+            200: z.array(z.object({
+                assetType: z.string(),
+                revenue: z.number()
+            }))
         },
         query: z.object({
-            startDate: z.string().optional(),
-            endDate: z.string().optional(),
-            groupBy: z.enum(['day', 'week', 'month', 'year']).default('month')
+            period: z.string()
         }),
         summary: 'Get revenue analytics'
+    },
+
+    getMaintenanceCostByAssetTypePerMonth: {
+        method: 'GET',
+        path: '/analytics/maintenance/cost',
+        responses: {
+            200: z.array(z.object({
+                assetType: z.string(),
+                month: z.string(),
+                totalCost: z.number()
+            }))
+        },
+        query: z.object({
+            period: z.string()
+        })
     }
 })

@@ -215,6 +215,27 @@ export class AuthService {
     return roleId;
   }
 
+  async updateRole(tenantId: string, roleId: number, roleName: string, permissions: string[]) {
+    await this.db.transaction(async (tx) => {
+      this.loggger.log('Updating a role');
+      await tx.update(schema.Roles).set({
+        name: roleName,
+      }).where(eq(schema.Roles.id, roleId))
+      this.loggger.log('Updating a role permissions relationship');
+      await tx.delete(schema.RoleHasPermissions).where(eq(schema.RoleHasPermissions.roleId, BigInt(roleId)))
+      await tx.insert(schema.RoleHasPermissions).values(permissions.map(permission => ({
+        roleId: BigInt(roleId),
+        permission
+      })))
+    })
+
+    return true
+  }
+
+  async deleteRole(tenantId: string, roleId: number) {
+    await this.db.delete(schema.Roles).where(eq(schema.Roles.id, roleId))
+  }
+
   async getPermissions() {
     return getAllScopes();
   }

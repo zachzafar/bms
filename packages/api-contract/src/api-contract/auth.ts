@@ -148,5 +148,33 @@ export const authContract = c.router({
           message: z.string()
         })
     }
+  },
+  updateRole: {
+    method: 'PUT',
+    path: '/role/:roleId',
+    body: z.object({
+      name: z.string(),
+      permissions: z.array(z.string())
+    }).required({ name: true, permissions: true }),
+    responses: {
+        201: z.object({
+          message: z.string()
+        })
+    },
+    pathParams: z.object({
+      roleId: z.number()
+    })
+  },
+  deleteRole: {
+    method: 'DELETE',
+    path: '/role/:roleId',
+    responses: {
+        201: z.object({
+          message: z.string()
+        })
+    },
+    pathParams: z.object({
+      roleId: z.number()
+    })
   }
 })
