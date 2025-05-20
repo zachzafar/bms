@@ -2,6 +2,7 @@
 
 import { Bar, BarChart, XAxis, YAxis, CartesianGrid, ResponsiveContainer } from "recharts"
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart"
+import { authClient } from "@/lib/api/publicClient"
 
 const data = [
   { category: "Economy", utilization: 85 },
@@ -13,7 +14,19 @@ const data = [
   { category: "Van", utilization: 62 },
 ]
 
-export default function VehicleUtilizationChart() {
+export default function VehicleUtilizationChart({year}: {year: number}) {
+  const { data: utilization } = authClient.analytics.getAssetUtilization.useQuery({
+    queryData: { query: { period: year.toString() } },
+    queryKey: ["ANALYTICS", "VEHICLES", "UTILIZATION", year]
+  })
+
+  const parsedData = utilization?.status === 200 ? utilization.body : []
+
+  const data = parsedData.map((item) => ({
+    category: item.assetType,
+    utilization: item.utilizationRate,
+  }))
+
   return (
     <ChartContainer
       config={{

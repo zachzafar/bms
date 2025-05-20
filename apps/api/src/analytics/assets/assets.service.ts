@@ -2,7 +2,7 @@ import { Inject, Injectable, Logger } from '@nestjs/common';
 import { MySql2Database } from 'drizzle-orm/mysql2';
 import { DrizzleAsyncProvider } from 'src/drizzle/drizzle.provider';
 import * as schema from '@repo/api-contract';
-import { count,eq, inArray, and,sql } from 'drizzle-orm';
+import { count,eq, inArray, and,sql, gte, lte } from 'drizzle-orm';
 
 @Injectable()
 export class AssetAnalyticsService {
@@ -47,80 +47,192 @@ export class AssetAnalyticsService {
 
     
 
-    getAssetUtilization(tenantId:string,assetTypeIds:string[],assetId?: string,) {
+    async getAssetUtilization(tenantId: string, year: number) {
+        try {
 
-        return {
-            utilization: 0.5
+            const assetTypes = await this.db.query.AssetType.findMany({
+                where: (assetType,{ eq }) => eq(assetType.tenantId, tenantId),
+            });
+
+            const assetTypeMap: Record<number, string> = {};
+            assetTypes.forEach(assetType => {
+                assetTypeMap[assetType.id] = assetType.name;
+            });
+
+            const slots = await this.db.select({
+                assetTypeId: schema.Asset.assetTypeId,
+                totalSlots: count()
+            }).from(schema.Slot)
+            .innerJoin(schema.Asset, and(eq(schema.Slot.assetId, schema.Asset.id)))
+            .where(
+                and(
+                    gte(schema.Slot.date, new Date(year, 0, 1)),
+                    lte(schema.Slot.date, new Date(year, 11, 31)),
+                    inArray(schema.Asset.assetTypeId, assetTypes.map(assetType => BigInt(assetType.id))),
+                     sql`${schema.Asset.assetTypeId} IS NOT NULL`
+                )
+            )
+           .groupBy(schema.Asset.assetTypeId)
+
+
+
+           const bookedslots = await this.db.select({
+            assetTypeId: schema.Asset.assetTypeId,
+            totalSlots: count()
+        }).from(schema.Slot)
+        .innerJoin(schema.Asset, and(eq(schema.Slot.assetId, schema.Asset.id),inArray(schema.Asset.assetTypeId, assetTypes.map(assetType => BigInt(assetType.id)))))
+        .where(
+            and(
+                gte(schema.Slot.date, new Date(year, 0, 1)),
+                lte(schema.Slot.date, new Date(year, 11, 31)),
+                eq(schema.Slot.status, "booked"),
+                sql`${schema.Asset.assetTypeId} IS NOT NULL`
+            )
+        )
+       .groupBy(schema.Asset.assetTypeId)
+
+            type AssetUtilizationResult = {
+                assetType: string;
+                totalSlots: number;
+                bookedSlots: number;
+            }; 
+       
+        const processedResults: Record<number,AssetUtilizationResult> = {};
+        slots.forEach(slot => {
+            const assetTypeId = Number(slot.assetTypeId as bigint);
+            processedResults[assetTypeId] = {
+                assetType: assetTypeMap[assetTypeId],
+                totalSlots: slot.totalSlots,
+                bookedSlots: 0
+            };
+            
+        })
+        
+        bookedslots.forEach(slot => {
+            const assetTypeId = Number(slot.assetTypeId as bigint);
+            if(processedResults[assetTypeId]) {
+                processedResults[assetTypeId].bookedSlots = slot.totalSlots;
+            }
+        })
+            
+        return processedResults;
+
+        } catch (error) {
+            this.logger.error(`Error getting asset utilization for tenant: ${tenantId}`, error);
+            throw error;
         }
     }
 
-    async getMaintenanceCostByAssetTypePerMonth(tenantId: string, assetTypeIds: string[], year?: number) {
+    async getMaintenanceCostByAssetTypePerMonth(tenantId: string,  year: number) {
         try {
             this.logger.log(`Getting maintenance cost by asset type per month for tenant: ${tenantId}`);
             
             // Build query conditions
-            const conditions = [eq(schema.Asset.tenantId, tenantId)];
-            
-            // Add asset type filter if provided
-            if (assetTypeIds && assetTypeIds.length > 0) {
-                conditions.push(inArray(schema.Asset.assetTypeId, assetTypeIds.map(id => BigInt(id))));
-            }
-            
-            // Add year filter if provided
-            let startDate, endDate;
-            if (year !== undefined) {
-                startDate = new Date(year, 0, 1); // January 1st of the year
-                endDate = new Date(year, 11, 31, 23, 59, 59); // December 31st of the year
-                conditions.push(
-                    sql`${schema.MaintenanceTask.createdAt} >= ${startDate}`,
-                    sql`${schema.MaintenanceTask.createdAt} <= ${endDate}`
-                );
-            }
-            
-            // Execute the query
-            const results = await this.db.select({
+            const assetTypes = await this.db.query.AssetType.findMany({
+                where: (assetType,{ eq }) => eq(assetType.tenantId, tenantId),
+            });
+
+            const assetTypeMap: Record<number, string> = {};
+            assetTypes.forEach(assetType => {
+                assetTypeMap[assetType.id] = assetType.name;
+            });
+
+            const maintenanceCost = await this.db.select({
                 assetTypeId: schema.Asset.assetTypeId,
                 month: sql`MONTH(${schema.MaintenanceTask.createdAt})`,
                 totalCost: sql`SUM(${schema.MaintenanceTask.cost})`
-            })
-            .from(schema.MaintenanceTask)
-            .innerJoin(schema.Asset, eq(schema.MaintenanceTask.assetId, schema.Asset.id))
-            .where(and(...conditions))
+            }).from(schema.MaintenanceTask).innerJoin(schema.Asset, eq(schema.MaintenanceTask.assetId, schema.Asset.id)).where(and(
+                eq(schema.Asset.tenantId, tenantId),
+                gte(schema.MaintenanceTask.createdAt, new Date(year, 0, 1)),
+                lte(schema.MaintenanceTask.createdAt, new Date(year, 11, 31)),
+                inArray(schema.Asset.assetTypeId, assetTypes.map(assetType => BigInt(assetType.id))),
+            ))
             .groupBy(schema.Asset.assetTypeId, sql`MONTH(${schema.MaintenanceTask.createdAt})`)
-            .orderBy(schema.Asset.assetTypeId, sql`MONTH(${schema.MaintenanceTask.createdAt})`);
-            
-            // Process results to ensure all months are represented
-            const processedResults = {};
-            
-            // Initialize data structure for all asset types and months
-            const uniqueAssetTypes = [...new Set(results.map(r => r.assetTypeId ? r.assetTypeId.toString() : 'unknown'))];
-            
-            uniqueAssetTypes.forEach(assetTypeId => {
-                processedResults[assetTypeId] = Array(12).fill(0).map((_, index) => ({
-                    month: index + 1,
-                    cost: 0
-                }));
-            });
-            
-            // Fill in actual data
-            results.forEach(result => {
-                const assetTypeId = result.assetTypeId ? result.assetTypeId.toString() : 'unknown';
-                const monthIndex = Number(result.month) - 1;
-                if (monthIndex >= 0 && monthIndex < 12 && processedResults[assetTypeId]) {
-                    processedResults[assetTypeId][monthIndex].cost = Number(result.totalCost) || 0;
-                }
-            });
-            
-            return {
-                byAssetType: processedResults
-            };
+            .execute();
+
+            const monthsAbbreviated = [
+                "Jan", 
+                "Feb", 
+                "Mar", 
+                "Apr", 
+                "May", 
+                "Jun", 
+                "Jul", 
+                "Aug", 
+                "Sep", 
+                "Oct", 
+                "Nov", 
+                "Dec"
+              ];
+
+
+            type MaintenanceCostResult = {
+                assetType: string;
+                month: string
+                totalCost: number;
+            }
+
+            const maintenance: MaintenanceCostResult[] = []
+            maintenanceCost.forEach(cost => {
+                 maintenance.push(
+                    {
+                        assetType:assetTypeMap[Number(cost.assetTypeId as bigint)],
+                        month: monthsAbbreviated[cost.month as number - 1],
+                        totalCost: Number(cost.totalCost)
+                    }
+                )
+
+            })
+
+            return maintenance
         } catch (error) {
             this.logger.error(`Error getting maintenance cost for tenant: ${tenantId}`, error);
             throw error;
         }
     }
 
-    async getRevenueByAssetType() {
+    async getRevenueByAssetType(tenantId: string, year: number) {
+        try {
+            this.logger.log(`Getting revenue by asset type for tenant: ${tenantId}`);
+            const assetTypes = await this.db.query.AssetType.findMany({
+                where: (assetType,{ eq }) => eq(assetType.tenantId, tenantId),
+            });
+
+            const assetTypeMap: Record<number, string> = {};
+            assetTypes.forEach(assetType => {
+                assetTypeMap[assetType.id] = assetType.name;
+            });
+
+
+            const bookings = await this.db.select({
+                assetTypeId: schema.Asset.assetTypeId,
+                totalRevenue: sql`SUM(${schema.Booking.totalPrice})`
+            }).from(schema.Booking).innerJoin(schema.Asset, eq(schema.Booking.assetId, schema.Asset.id)).where(and(
+                eq(schema.Asset.tenantId, tenantId),
+                 gte(schema.Booking.createdAt, new Date(year, 0, 1)),
+                lte(schema.Booking.createdAt, new Date(year, 11, 31)),
+                inArray(schema.Asset.assetTypeId, assetTypes.map(assetType => BigInt(assetType.id))),
+            )).groupBy(schema.Asset.assetTypeId).execute();
+            type RevenueResult = {
+                assetType: string;
+                revenue: number;
+            }
+            const revenue: RevenueResult[] = []
+            bookings.forEach(booking => {
+                revenue.push(
+                    {
+                        assetType:assetTypeMap[Number(booking.assetTypeId as bigint)],
+                        revenue: Number(booking.totalRevenue)
+                    }
+                )
+            })
+
+            return revenue
+
         
+        } catch (error) {
+            this.logger.error(`Error getting revenue by asset type for tenant: ${tenantId}`, error);
+            throw error;
+        }
     }
 }

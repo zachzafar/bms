@@ -2,6 +2,7 @@
 
 import { Area, AreaChart, CartesianGrid, XAxis, YAxis, ResponsiveContainer } from "recharts"
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart"
+import { authClient } from "@/lib/api/publicClient"
 
 const data = [
   { month: "Jan", economy: 12500, suv: 18200, luxury: 22400 },
@@ -18,7 +19,11 @@ const data = [
   { month: "Dec", economy: 13500, suv: 19800, luxury: 24200 },
 ]
 
-export default function MaintenanceCostsChart() {
+export default function MaintenanceCostsChart({year}: {year :number}) {
+  const {data: maintenanceCostResponse } =authClient.analytics.getMaintenanceCostByAssetTypePerMonth.useQuery({
+    queryData: { query: { period: year.toString() } },
+    queryKey: ["ANALYTICS", "MAINTENANCE", "MONTH", year]
+  })
   return (
     <ChartContainer
       config={{

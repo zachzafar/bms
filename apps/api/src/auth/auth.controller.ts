@@ -1,4 +1,4 @@
-import { Controller, Logger, UseGuards, Post, Request, Headers } from '@nestjs/common';
+import { Controller, Logger, UseGuards, Post, Request, Headers, InternalServerErrorException } from '@nestjs/common';
 import { contract } from '@repo/api-contract';
 import { TsRestHandler, tsRestHandler } from '@ts-rest/nest';
 import { AuthService } from './auth.service';
@@ -91,6 +91,30 @@ export class AuthController {
                 return { status: 400, body: { message: 'Error occured while creating role' } };
             }
             return { status: 201, body: {message: "role created successfully"} };
+        })
+    }
+
+    @TsRestHandler(contract.auth.updateRole)
+    async updateRole(@Headers() headers:any): Promise<ReturnType<typeof tsRestHandler>> {
+        return tsRestHandler(contract.auth.updateRole, async ({ params, body }) => {
+            const tenantId = headers['x-tenant-id'];
+            const updateSuccessful = await this.authService.updateRole(tenantId,params.roleId,body.name,body.permissions);
+
+            if (!updateSuccessful) {
+                throw new InternalServerErrorException(`Error occured while updating role`);
+            }
+
+            return { status: 201, body: {message: "role updated successfully"} };
+        })
+    }
+
+    @TsRestHandler(contract.auth.deleteRole)
+    async deleteRole(@Headers() headers:any): Promise<ReturnType<typeof tsRestHandler>> {
+        return tsRestHandler(contract.auth.deleteRole, async ({ params }) => {
+            const tenantId = headers['x-tenant-id'];
+            await this.authService.deleteRole(tenantId,params.roleId);
+
+            return { status: 204, body: {message: "role deleted successfully"} };
         })
     }
 

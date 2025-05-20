@@ -35,7 +35,7 @@ type CreateCustomerFormData = z.infer<typeof CreateCustomerSchema>;
 
 export default function Component() {
   const router = useRouter();
-
+  const queryClient = authClient.useQueryClient();
   const { data: customerData } = authClient.users.getCustomers.useQuery({ queryKey: CUSTOMERS_QUERY_KEY });
   const { mutate: createUserMutation, isPending } = authClient.users.createUser.useMutation();
   const [open, setOpen] = useState(false);
@@ -71,7 +71,7 @@ export default function Component() {
         onSuccess: (response) => {
           toast.success('Customer created successfully');
           setOpen(false);
-          router.refresh();
+          queryClient.invalidateQueries({ queryKey: CUSTOMERS_QUERY_KEY });
           createForm.reset();
         },
         onError: (error) => {

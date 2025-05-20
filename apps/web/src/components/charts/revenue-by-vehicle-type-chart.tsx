@@ -2,6 +2,7 @@
 
 import { Bar, BarChart, CartesianGrid, XAxis, YAxis, ResponsiveContainer } from "recharts"
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart"
+import { authClient } from "@/lib/api/publicClient"
 
 const data = [
   { category: "Economy", revenue: 425000 },
@@ -13,7 +14,18 @@ const data = [
   { category: "Van", revenue: 320000 },
 ]
 
-export default function RevenueByVehicleTypeChart() {
+export default function RevenueByVehicleTypeChart({year}: {year:number}) {
+  const {data: revenueResponse } =authClient.analytics.getRevenueByAssetTypePerYear.useQuery({
+    queryData: { query: { period: year.toString() } },
+    queryKey: ["ANALYTICS", "REVENUE", "VEHICLE_TYPE", year]
+  })
+
+  const parsedData = revenueResponse?.status === 200? revenueResponse.body : []
+  const data = parsedData.map((item) => ({
+    category: item.assetType,
+    revenue: item.revenue,
+  }))
+
   return (
     <ChartContainer
       config={{

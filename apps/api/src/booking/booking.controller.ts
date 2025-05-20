@@ -1,12 +1,14 @@
-import { Controller } from '@nestjs/common';
+import { Controller, Headers, Logger } from '@nestjs/common';
 import { contract } from '@repo/api-contract';
 import { tsRestHandler, TsRestHandler } from '@ts-rest/nest';
 import { BookingService } from './booking.service';
+import * as schema from "@repo/api-contract"
+import { TenantService } from 'src/tenant/tenant.service';
 
 @Controller()
 export class BookingController {
-
-    constructor(private bookingService: BookingService) {}
+    private readonly logger = new Logger(BookingController.name);
+    constructor(private bookingService: BookingService,private tenantService: TenantService) {}
     
     @TsRestHandler(contract.booking.createBooking)
     async createBooking(): Promise<ReturnType<typeof tsRestHandler>> {
@@ -18,17 +20,21 @@ export class BookingController {
     }
 
     @TsRestHandler(contract.booking.getBooking)
-    async getBooking(): Promise<ReturnType<typeof tsRestHandler>> {
+    async getBooking(@Headers() headers:any): Promise<ReturnType<typeof tsRestHandler>> {
         return tsRestHandler(contract.booking.getBooking, async ({ params }) => {
+            const tenantId = headers['x-tenant-id'];
             const booking = await this.bookingService.getBooking(params.id);
+            await this.tenantService.validateTenantAccess(tenantId,schema.Asset,booking.asset.id)
             return { status: 200, body:  booking  };
         });
     }
 
     @TsRestHandler(contract.booking.getBookings)
-    async getBookings(): Promise<ReturnType<typeof tsRestHandler>> {
+    async getBookings(@Headers() headers: any): Promise<ReturnType<typeof tsRestHandler>> {
         return tsRestHandler(contract.booking.getBookings, async () => {
-            const bookings = (await this.bookingService.getBookings()).map((booking) => {
+            this.logger.log("Get bookings for tenant: ", headers['x-tenant-id'] || "no tenant")
+            const tenantId = headers['x-tenant-id'];
+            const bookings = (await this.bookingService.getBookings(tenantId)).map((booking) => {
                 let assetTypeId = booking.asset.assetTypeId? Number(booking.asset.assetTypeId): undefined;
 
                 return {

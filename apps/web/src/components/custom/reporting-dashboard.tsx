@@ -20,18 +20,16 @@ import VehicleUtilizationChart from "../charts/vehicle-utilization-chart"
 
 
 export default function ReportingDashboard() {
-  const [date, setDate] = useState<Date | undefined>(new Date())
   const [selectedReport, setSelectedReport] = useState("bookings-by-month")
   const [selectedYear, setSelectedYear] = useState("2023")
 
   // Map of report IDs to their display components
   const reportComponents: Record<string, React.ReactNode> = {
-    "bookings-by-month": <BookingsByMonthChart />,
-    "bookings-by-location": <BookingsByLocationChart />,
-    "vehicle-utilization": <VehicleUtilizationChart />,
-    "revenue-by-vehicle-type": <RevenueByVehicleTypeChart />,
-    // "customer-satisfaction": <CustomerSatisfactionChart />,
-    "maintenance-costs": <MaintenanceCostsChart />,
+    "bookings-by-month": <BookingsByMonthChart year={Number(selectedYear)}/>,
+    "bookings-by-location": <BookingsByLocationChart year={Number(selectedYear)}/>,
+    "vehicle-utilization": <VehicleUtilizationChart year={Number(selectedYear)}/>,
+    "revenue-by-vehicle-type": <RevenueByVehicleTypeChart year={Number(selectedYear)} />,
+    "maintenance-costs": <MaintenanceCostsChart year={Number(selectedYear)}/>,
   }
 
   // Report titles
@@ -55,29 +53,11 @@ export default function ReportingDashboard() {
               <SelectValue placeholder="Select year" />
             </SelectTrigger>
             <SelectContent>
+              <SelectItem value="2025">2025</SelectItem>
+              <SelectItem value="2024">2024</SelectItem>
               <SelectItem value="2023">2023</SelectItem>
-              <SelectItem value="2022">2022</SelectItem>
-              <SelectItem value="2021">2021</SelectItem>
             </SelectContent>
           </Select>
-        </div>
-
-        <div>
-          <label className="mb-1 block text-sm font-medium">Date</label>
-          <Popover>
-            <PopoverTrigger asChild>
-              <Button
-                variant={"outline"}
-                className={cn("w-[180px] justify-start text-left font-normal", !date && "text-muted-foreground")}
-              >
-                <CalendarIcon className="mr-2 h-4 w-4" />
-                {date ? format(date, "PPP") : <span>Pick a date</span>}
-              </Button>
-            </PopoverTrigger>
-            <PopoverContent className="w-auto p-0" align="start">
-              <Calendar mode="single" selected={date} onSelect={setDate} initialFocus />
-            </PopoverContent>
-          </Popover>
         </div>
       </div>
 
@@ -153,24 +133,6 @@ export default function ReportingDashboard() {
               </li>
             </ul>
           </div>
-
-          {/* Customer Reports */}
-          {/* <div className="border-b">
-            <div className="p-3 font-medium">Customers</div>
-            <ul className="space-y-1 px-1">
-              <li>
-                <button
-                  className={cn(
-                    "w-full rounded-md px-3 py-2 text-left text-sm transition-colors",
-                    selectedReport === "customer-satisfaction" ? "bg-primary text-primary-foreground" : "hover:bg-muted",
-                  )}
-                  onClick={() => setSelectedReport("customer-satisfaction")}
-                >
-                  Satisfaction Ratings
-                </button>
-              </li>
-            </ul>
-          </div> */}
         </div>
 
         {/* Chart Area */}

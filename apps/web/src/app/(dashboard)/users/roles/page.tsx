@@ -46,6 +46,7 @@ type RoleFormData = z.infer<typeof RoleFormSchema>;
 
 export default function RolesPage() {
   const [open, setOpen] = useState(false);
+  const queryClient = authClient.useQueryClient();
   const [availablePermissions, setAvailablePermissions] = useState<string[]>([]);
   const [roles, setRoles] = useState<{ roleId: number; name: string; permissions: string[] }[]>([]);
   const [selectedRole, setSelectedRole] = useState<{ roleId: number; name: string; permissions: string[] } | null>(null);
@@ -71,6 +72,9 @@ export default function RolesPage() {
   // Create role mutation
   const { mutate: createRole } = authClient.auth.createRole.useMutation();
 
+  // Update role mutation
+  const { mutate: updateRole } = authClient.auth.updateRole.useMutation();
+  
   useEffect(() => {
     if (permissionsData?.status === 200) {
       setAvailablePermissions(permissionsData.body);

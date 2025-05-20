@@ -83,12 +83,7 @@ export default function Component() {
 
   const handleGenerateReport = () => {
     // In a real application, this would trigger the report generation process
-    console.log('Generating report:', {
-      reportType,
-      startDate,
-      endDate,
-      assetType,
-    });
+
     // For now, we'll just add a new entry to the generatedReports list
     const newReport = {
       id: generatedReports.length + 1,

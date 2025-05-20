@@ -50,22 +50,22 @@ export class SlotService {
   }
 
   // Daily cron job to generate slots for all assets
-  @Cron(CronExpression.EVERY_DAY_AT_MIDNIGHT)
-  async removeSlotsForAllAssets() {  
-    try {
-      await this.db.delete(schema.Slot)
-        .where(
-          and(
-            lte(schema.Slot.date,new Date()),
-          )
-        )
-        .execute();
+  // @Cron(CronExpression.EVERY_DAY_AT_MIDNIGHT)
+  // async removeSlotsForAllAssets() {  
+  //   try {
+  //     await this.db.delete(schema.Slot)
+  //       .where(
+  //         and(
+  //           lte(schema.Slot.date,new Date()),
+  //         )
+  //       )
+  //       .execute();
         
-      this.logger.log('Daily Slot Removal');
-    } catch (error) {
-      this.logger.error('Error in daily slot removal', error);
-    }
-  }
+  //     this.logger.log('Daily Slot Removal');
+  //   } catch (error) {
+  //     this.logger.error('Error in daily slot removal', error);
+  //   }
+  // }
 
   // Get available slots for an asset in a date range
   async getAvailableSlots(assetId: string, startDate: Date, endDate: Date) {

@@ -204,7 +204,7 @@ export class UsersService {
         return this.db.query.User.findFirst({ where: (user, { eq }) => eq(user.email, email) });
     }
 
-    async update(id: string,tenantId: string ,userData: UpdateUser, roles: number[]): Promise<void> {
+    async update(id: string,tenantId: string ,userData: UpdateUser, roles: number[], ownerData?: schema.UpdateOwner,customerData?: schema.UpdateCustomer): Promise<void> {
         await this.db.transaction(async (tx) => {
             // Update user dat
             let hashedPassword: string | undefined;
@@ -222,7 +222,7 @@ export class UsersService {
                 });
 
                 if (!existingCustomer) {
-                    await tx.insert(schema.Customer).values({ userId: id, tenantId: tenantId });
+                    await tx.insert(schema.Customer).values({ userId: id, tenantId: tenantId,...customerData });
                 }
             } else {
                 // Optionally: Remove customer if flag is false
@@ -236,7 +236,7 @@ export class UsersService {
                 });
 
                 if (!existingOwner) {
-                    await tx.insert(schema.Owner).values({ userId: id, tenantId: tenantId });
+                    await tx.insert(schema.Owner).values({ userId: id, tenantId: tenantId, ...ownerData  });
                 }
             } else {
                 // Optionally: Remove owner if flag is false

@@ -31,7 +31,7 @@ export class BookingAnalyticsService {
 
     async getBookingCountByMonth(tenantId: string, year?: number) {
         try {
-            this.logger.log("Getting booking count by month for tenant: ", tenantId, year ? ` for year ${year}` : '')
+            this.logger.log(`Getting booking count by month for tenant:${tenantId} for ${year}`)
             
             // Build the query conditions
             const conditions = [eq(schema.Asset.tenantId, tenantId)];
@@ -58,6 +58,7 @@ export class BookingAnalyticsService {
               .groupBy(sql`MONTH(${schema.Booking.startDate})`)
               .orderBy(sql`MONTH(${schema.Booking.startDate})`);
               
+            console.log(results)
             // Format the results as an array with all months (1-12)
             const monthlyData = Array(12).fill(0).map((_, index) => ({
                 month: index + 1,

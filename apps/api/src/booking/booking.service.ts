@@ -115,13 +115,13 @@ export class BookingService {
     });
   }
 
-  async getBookings() {
+  async getBookings(tenantId?: string) {
     const bookings = await this.db
       .select()
       .from(schema.UserHasBookings)
       .innerJoin(schema.User, eq(schema.UserHasBookings.userId, schema.User.id))
       .innerJoin(schema.Booking, eq(schema.UserHasBookings.bookingId, schema.Booking.id))
-      .innerJoin(schema.Asset, eq(schema.Booking.assetId, schema.Asset.id))
+      .innerJoin(schema.Asset, and(eq(schema.Booking.assetId, schema.Asset.id),tenantId ? eq(schema.Asset.tenantId, tenantId): undefined))
       .innerJoin(schema.Customer, eq(schema.Customer.userId, schema.User.id))
       .execute();
 

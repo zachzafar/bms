@@ -26,4 +26,48 @@ export class AssetsController {
             }
         })
     }
+
+    @TsRestHandler(contract.analytics.getAssetUtilization)
+    async getAssetUtilization(@Headers() headers: any): Promise<ReturnType<typeof tsRestHandler>> {
+        return tsRestHandler(contract.analytics.getAssetUtilization, async ({query}) => {
+            const tenantId = headers['x-tenant-id'];
+            const result = await this.assetAnalyticsService.getAssetUtilization(tenantId,Number(query.period));
+            const resultList = Object.entries(result);
+            return {
+                status: 200,
+                body: resultList.map((result) => {
+                        return {
+                            assetType: result[1].assetType,
+                            utilizationRate: (result[1].bookedSlots/result[1].totalSlots),
+                            booked: result[1].bookedSlots,
+                            total: result[1].totalSlots
+                        }
+                    })
+            }
+        })
+    }
+
+    @TsRestHandler(contract.analytics.getMaintenanceCostByAssetTypePerMonth)
+    async getMaintenanceCostByAssetTypePerMonth(@Headers() headers: any): Promise<ReturnType<typeof tsRestHandler>> {
+        return tsRestHandler(contract.analytics.getMaintenanceCostByAssetTypePerMonth, async ({query}) => {
+            const tenantId = headers['x-tenant-id'];
+            const result = await this.assetAnalyticsService.getMaintenanceCostByAssetTypePerMonth(tenantId,Number(query.period));
+            return {
+                status: 200,
+                body: result
+            }
+        })
+    }
+
+    @TsRestHandler(contract.analytics.getRevenueByAssetTypePerYear)
+    async getRevenueByAssetTypePerYear(@Headers() headers: any): Promise<ReturnType<typeof tsRestHandler>> {
+        return tsRestHandler(contract.analytics.getRevenueByAssetTypePerYear, async ({query}) => {
+            const tenantId = headers['x-tenant-id'];
+            const result = await this.assetAnalyticsService.getRevenueByAssetType(tenantId,Number(query.period));
+            return {
+                status: 200,
+                body: result
+            }
+        })
+    }
 }

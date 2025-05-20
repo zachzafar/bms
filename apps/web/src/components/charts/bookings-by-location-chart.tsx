@@ -11,7 +11,7 @@ const data = [
   { name: "Other", value: 180 },
 ]
 
-export default function BookingsByLocationChart() {
+export default function BookingsByLocationChart({year}: {year: number}) {
   return (
     <ChartContainer
       config={{
