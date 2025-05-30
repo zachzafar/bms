@@ -46,7 +46,7 @@ export class AppModule {
              callback(null, true);
           }
        }))
-       .exclude({ path: '/asset/details', method: RequestMethod.GET })
+       
        .forRoutes('*'); // use .forRoutes('(.*)') if fastify
  }
 

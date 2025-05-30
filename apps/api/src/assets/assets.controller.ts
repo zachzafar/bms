@@ -5,6 +5,7 @@ import { contract } from '@repo/api-contract';
 import { TenantService } from 'src/tenant/tenant.service';
 import * as schema from "@repo/api-contract"
 import { FileFieldsInterceptor } from '@nestjs/platform-express';
+import { Public } from 'src/auth/decorators/public.decorator';
 
 @Controller()
 export class AssetsController {
@@ -146,7 +147,7 @@ export class AssetsController {
         });
     }
 
-
+    @Public()
     @TsRestHandler(contract.assets.getAssetsWithDetails)
     async getAssetsWithDetails(@Headers() headers: any): Promise<ReturnType<typeof tsRestHandler>> {
         return tsRestHandler(contract.assets.getAssetsWithDetails, async ({ query }) => {
