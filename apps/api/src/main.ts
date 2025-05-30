@@ -13,26 +13,11 @@ import { KeysService } from './keys/keys.service';
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
   
-  const CorsDisabledEndpoints = ['/asset/details']
-
-  app.use((req, res, next) => {
-    if (CorsDisabledEndpoints.includes(req.path)) {
-      res.header('Access-Control-Allow-Origin', "*");
-      res.header('Access-Control-Allow-Methods', 'GET,HEAD,PUT,PATCH,POST,DELETE');
-      res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept');
-    }
-    next();
-  });
-
-  // Restrict other endpoints to a specific domain
-  app.use((req, res, next) => {
-    if (!CorsDisabledEndpoints.includes(req.path)) {
-      res.header('Access-Control-Allow-Origin', process.env.CORS_ORIGIN);
-      res.header('Access-Control-Allow-Methods', 'GET,HEAD,PUT,PATCH,POST,DELETE');
-      res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept');
-    }
-    next();
-  });
+  // app.enableCors({
+  //   origin: process.env.CORS_ORIGIN,
+  //   methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
+  //   credentials: true,
+  // });
 
   //
   const document = generateOpenApi(contract, {
