@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { MiddlewareConsumer, Module, RequestMethod,} from '@nestjs/common';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { DrizzleModule } from './drizzle/drizzle.module';
@@ -20,6 +20,13 @@ import { SlotController } from './slot/slot.controller';
 import { SlotModule } from './slot/slot.module';
 import { EventEmitterModule } from '@nestjs/event-emitter';
 import { EmailModule } from './email/email.module';
+var cors = require('cors');
+
+const allowAllCorsEndpoints = [
+  '/api-docs-json',
+  '/api-docs',
+  'assets/details'
+]
 
 @Module({
   imports: [DrizzleModule, SchemaDesignModule, AuthModule, UsersModule,ConfigModule.forRoot({
@@ -29,4 +36,18 @@ import { EmailModule } from './email/email.module';
   controllers: [AppController, SlotController],
   providers: [AppService, ObjectStorageService, SlotService],
 })
-export class AppModule {}
+export class AppModule {
+  configure(consumer: MiddlewareConsumer) {
+    console.log('yes executed app confogure')
+    consumer
+       .apply(cors({
+          origin: (requestOrigin: string, callback: (err: Error | null, origin?: boolean) => void) => {
+             console.log("Exec check");
+             callback(null, true);
+          }
+       }))
+       .exclude({ path: '/asset/details', method: RequestMethod.GET })
+       .forRoutes('*'); // use .forRoutes('(.*)') if fastify
+ }
+
+}
