@@ -116,7 +116,7 @@ export const assetsContract = c.router({
     },
     getAssetsWithDetails: {
         method: 'GET',
-        path: '/asset/details',
+        path: '/asset-details',
         responses: {
             200: z.array(z.object({
                 id: z.string(),
