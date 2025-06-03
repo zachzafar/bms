@@ -140,12 +140,15 @@ export class AssetsService {
 
         const assetsWithDetails = await Promise.all(assets.map(async (asset) => {
             const propertyValues = await this.getPropertyValues(asset.id);
+            const assetImages = await this.getAssetImages(asset.id);
             
             return {
                 ...asset,
+                assetImages,
                 propertyValues
             };
         }));
+ 
         return assetsWithDetails
     }
 }
