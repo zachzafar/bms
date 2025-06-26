@@ -13,8 +13,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 // Schema for updating users
 const UpdateUserSchema = z.object({
   user: InsertUserSchema.partial(),
-  customer: z.boolean().default(false),
-  owner: z.boolean().default(false),
+  // customer: z.boolean().default(false),
+  // owner: z.boolean().default(false),
   roles: z.array(z.number()).default([])
 });
 
@@ -38,8 +38,8 @@ export function EditUserForm({ user, roles, onClose, onSuccess }: EditUserFormPr
         email: user.email,
         password: ''
       },
-      customer: false,
-      owner: false,
+      // customer: false,
+      // owner: false,
       roles: user.roles || []
     },
   });

@@ -15,6 +15,7 @@ import { CreateUserForm } from '@/components/users/CreateUserForm';
 import { EditUserForm } from '@/components/users/EditUserForm';
 import { Pencil } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+// import { queryClient } from '@/lib/react-query';
 
 // Schema extensions
 const ExtendedSelectUserSchema = SelectUserSchema.extend({
@@ -24,6 +25,7 @@ type ExtendedSelectUser = z.infer<typeof ExtendedSelectUserSchema>;
 
 export default function Component() {
   const router = useRouter();
+  const queryClient = authClient.useQueryClient();
   const { data: users } = authClient.users.getUsers.useQuery({ queryKey: USERS_QUERY_KEY });
   const { data: roles } = authClient.auth.getRoles.useQuery({ queryKey: ROLES_QUERY_KEY });
 
@@ -90,30 +92,30 @@ export default function Component() {
                     Add User
                   </Button>
                 </DialogTrigger>
-                
+
                 {selectedUser ? (
-                  <EditUserForm 
-                    user={selectedUser} 
-                    roles={roles?.body || []} 
-                    onClose={handleCloseDialog} 
-                    onSuccess={() => {
-                      handleCloseDialog();
-                      router.refresh();
-                    }}
-                  />
-                ) : (
-                  <CreateUserForm 
-                    roles={roles?.body || []} 
+                  <EditUserForm
+                    user={selectedUser}
+                    roles={roles?.body || []}
                     onClose={handleCloseDialog}
                     onSuccess={() => {
                       handleCloseDialog();
-                      router.refresh();
+                      queryClient.invalidateQueries({ queryKey: USERS_QUERY_KEY });
+                    }}
+                  />
+                ) : (
+                  <CreateUserForm
+                    roles={roles?.body || []}
+                    onClose={handleCloseDialog}
+                    onSuccess={() => {
+                      handleCloseDialog();
+                      queryClient.invalidateQueries({ queryKey: USERS_QUERY_KEY });
                     }}
                   />
                 )}
               </Dialog>
             </div>
-            
+
             <Table>
               <TableHeader>
                 <TableRow>
