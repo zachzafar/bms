@@ -29,7 +29,7 @@ import { StorageService } from '@/lib/api/storage';
 
 export default function AssetsPage() {
     const currentTenant = StorageService.getTenant();
-    const { data: assets } = authClient.assets.getAssets.useQuery({
+    const { data: assets, refetch } = authClient.assets.getAssets.useQuery({
         queryKey: ['assets'],
         enabled: !!currentTenant,
     });
