@@ -129,7 +129,7 @@ export const authContract = c.router({
     path: '/roles',
     responses: {
         200: z.array(z.object({
-          roleId: z.number(),
+          roleId: z.string(),
           name: z.string(),
           permissions: z.array(z.string())
         }))
@@ -162,7 +162,7 @@ export const authContract = c.router({
         })
     },
     pathParams: z.object({
-      roleId: z.number()
+      roleId: z.string()
     })
   },
   deleteRole: {

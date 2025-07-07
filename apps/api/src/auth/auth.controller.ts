@@ -71,7 +71,7 @@ export class AuthController {
             const tenantId = headers['x-tenant-id'];
             const roles = (await this.authService.getRoles(tenantId)).map(role => {
                 return {
-                    roleId: role.id,
+                    roleId: String(role.id),
                     name: role.name,
                     permissions: role.rolesToPermissions.map(permission => permission.permission)
                 }

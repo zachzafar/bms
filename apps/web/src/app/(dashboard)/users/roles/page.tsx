@@ -4,29 +4,9 @@ import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from '@/components/ui/dialog';
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { PlusIcon, Pencil, Save } from 'lucide-react';
 import { toast } from 'sonner';
 import { authClient } from '@/lib/api/publicClient';
@@ -48,8 +28,8 @@ export default function RolesPage() {
   const [open, setOpen] = useState(false);
   const queryClient = authClient.useQueryClient();
   const [availablePermissions, setAvailablePermissions] = useState<string[]>([]);
-  const [roles, setRoles] = useState<{ roleId: number; name: string; permissions: string[] }[]>([]);
-  const [selectedRole, setSelectedRole] = useState<{ roleId: number; name: string; permissions: string[] } | null>(null);
+  const [roles, setRoles] = useState<{ roleId: string; name: string; permissions: string[] }[]>([]);
+  const [selectedRole, setSelectedRole] = useState<{ roleId: string; name: string; permissions: string[] } | null>(null);
 
   const form = useForm<RoleFormData>({
     resolver: zodResolver(RoleFormSchema),
@@ -84,7 +64,7 @@ export default function RolesPage() {
   useEffect(() => {
     if (rolesData?.status === 200) {
       setRoles(rolesData.body);
-    }
+    }6
   }, [rolesData]);
 
   useEffect(() => {
@@ -102,27 +82,38 @@ export default function RolesPage() {
   }, [selectedRole, form]);
 
   const processForm: SubmitHandler<RoleFormData> = (data) => {
-    createRole(
-      {
-        body: {
-          name: data.name,
-          permissions: data.permissions,
-        },
-      },
-      {
-        onSuccess: () => {
-          toast.success(selectedRole ? 'Role updated successfully' : 'Role created successfully');
-          setOpen(false);
-          refetchRoles();
-          resetForm();
-        },
-        onError: (error) => {
-          console.error('Error:', error);
-          toast.error('Failed to save role');
-        },
-      }
-    );
+  const payload = {
+    body: {
+      name: data.name,
+      permissions: data.permissions,
+    },
   };
+
+  const onSuccess = () => {
+    toast.success(selectedRole ? 'Role updated successfully' : 'Role created successfully');
+    setOpen(false);
+    refetchRoles();
+    resetForm();
+  };
+
+  const onError = (error: any) => {
+    console.error('Error:', error);
+    toast.error('Failed to save role');
+  };
+
+  if (selectedRole) {
+    updateRole(
+      {
+        ...payload,
+        params: { roleId: selectedRole.roleId },
+      },
+      { onSuccess, onError }
+    );
+  } else {
+    createRole(payload, { onSuccess, onError });
+  }
+};
+
 
   const resetForm = () => {
     setSelectedRole(null);
@@ -132,7 +123,7 @@ export default function RolesPage() {
     });
   };
 
-  const handleEditRole = (role: { roleId: number; name: string; permissions: string[] }) => {
+  const handleEditRole = (role: { roleId: string; name: string; permissions: string[] }) => {
     setSelectedRole(role);
     setOpen(true);
   };
