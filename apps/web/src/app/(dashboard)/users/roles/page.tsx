@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { PlusIcon, Pencil, Save } from 'lucide-react';
+import { PlusIcon, Pencil, Save, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { authClient } from '@/lib/api/publicClient';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -54,7 +54,10 @@ export default function RolesPage() {
 
   // Update role mutation
   const { mutate: updateRole } = authClient.auth.updateRole.useMutation();
-  
+
+  // Delete role Mutation
+  const { mutate: deleteRole } = authClient.auth.deleteRole.useMutation();
+
   useEffect(() => {
     if (permissionsData?.status === 200) {
       setAvailablePermissions(permissionsData.body);
@@ -64,7 +67,7 @@ export default function RolesPage() {
   useEffect(() => {
     if (rolesData?.status === 200) {
       setRoles(rolesData.body);
-    }6
+    }
   }, [rolesData]);
 
   useEffect(() => {
@@ -82,37 +85,37 @@ export default function RolesPage() {
   }, [selectedRole, form]);
 
   const processForm: SubmitHandler<RoleFormData> = (data) => {
-  const payload = {
-    body: {
-      name: data.name,
-      permissions: data.permissions,
-    },
-  };
-
-  const onSuccess = () => {
-    toast.success(selectedRole ? 'Role updated successfully' : 'Role created successfully');
-    setOpen(false);
-    refetchRoles();
-    resetForm();
-  };
-
-  const onError = (error: any) => {
-    console.error('Error:', error);
-    toast.error('Failed to save role');
-  };
-
-  if (selectedRole) {
-    updateRole(
-      {
-        ...payload,
-        params: { roleId: selectedRole.roleId },
+    const payload = {
+      body: {
+        name: data.name,
+        permissions: data.permissions,
       },
-      { onSuccess, onError }
-    );
-  } else {
-    createRole(payload, { onSuccess, onError });
-  }
-};
+    };
+
+    const onSuccess = () => {
+      toast.success(selectedRole ? 'Role updated successfully' : 'Role created successfully');
+      setOpen(false);
+      refetchRoles();
+      resetForm();
+    };
+
+    const onError = (error: any) => {
+      console.error('Error:', error);
+      toast.error('Failed to save role');
+    };
+
+    if (selectedRole) {
+      updateRole(
+        {
+          ...payload,
+          params: { roleId: selectedRole.roleId },
+        },
+        { onSuccess, onError }
+      );
+    } else {
+      createRole(payload, { onSuccess, onError });
+    }
+  };
 
 
   const resetForm = () => {
@@ -262,6 +265,33 @@ export default function RolesPage() {
                       <Button variant="ghost" size="sm" onClick={() => handleEditRole(role)}>
                         <Pencil className="mr-2 h-4 w-4" />
                         Edit
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="text-red-600 hover:text-red-800"
+                        onClick={() => {
+                          const confirmed = confirm(`Are you sure you want to delete the role "${role.name}"?`)
+                          if (confirmed) {
+                            deleteRole(
+                              { 
+                                params: { roleId: role.roleId },
+                                body: {}
+                              },
+                              {
+                                onSuccess: () => {
+                                  toast.success(`Role "${role.name}" deleted.`);
+                                  refetchRoles();
+                                },
+                                onError: () => {
+                                  toast.error(`Failed to delete role "${role.name}".`);
+                                },
+                              }
+                            );
+                          }
+                        }}
+                      >
+                        <Trash2 className="h-4 w-4" />
                       </Button>
                     </TableCell>
                   </TableRow>

@@ -1,6 +1,7 @@
 'use client'
 
-import { Button } from '@/components/ui/button';
+import { useState } from 'react'
+import { Button } from '@/components/ui/button'
 import {
   Table,
   TableBody,
@@ -8,7 +9,7 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from '@/components/ui/table';
+} from '@/components/ui/table'
 import {
   Dialog,
   DialogContent,
@@ -16,33 +17,33 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
-} from '@/components/ui/dialog';
-import { PlusIcon, Pencil } from 'lucide-react';
+} from '@/components/ui/dialog'
+import { PlusIcon, Pencil, Trash2 as TrashIcon } from 'lucide-react'
 
-import AddAssetForm from './AddAssetForm';
+import AddAssetForm from './AddAssetForm'
 
-import { authClient } from '@/lib/api/publicClient';
-import { SelectAsset } from '@repo/api-contract';
-import Link from 'next/link';
-import { StorageService } from '@/lib/api/storage';
-
+import { authClient } from '@/lib/api/publicClient'
+import { SelectAsset } from '@repo/api-contract'
+import Link from 'next/link'
+import { StorageService } from '@/lib/api/storage'
+import { toast } from 'sonner'
 
 export default function AssetsPage() {
-    const currentTenant = StorageService.getTenant();
-    const { data: assets, refetch } = authClient.assets.getAssets.useQuery({
-        queryKey: ['assets'],
-        enabled: !!currentTenant,
-    });
-
+  const currentTenant = StorageService.getTenant()
+  const { data: assets, refetch } = authClient.assets.getAssets.useQuery({
+    queryKey: ['assets'],
+    enabled: !!currentTenant,
+  })
+  const { mutate: deleteAsset } = (authClient.assets as any).deleteAsset.useMutation();
 
   return (
     <>
-      <div className='flex items-center'>
-        <h1 className='font-semibold text-lg md:text-2xl'>Assets</h1>
+      <div className="flex items-center">
+        <h1 className="font-semibold text-lg md:text-2xl">Assets</h1>
         <Dialog>
           <DialogTrigger asChild>
-            <Button className='ml-auto' size='sm'>
-              <PlusIcon className='mr-2 h-4 w-4' />
+            <Button className="ml-auto" size="sm">
+              <PlusIcon className="mr-2 h-4 w-4" />
               Add Asset
             </Button>
           </DialogTrigger>
@@ -56,53 +57,81 @@ export default function AssetsPage() {
           </DialogContent>
         </Dialog>
       </div>
-      <div className='border shadow-sm rounded-lg'>
+      <div className="border shadow-sm rounded-lg mt-4">
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead className='w-[100px]'>ID</TableHead>
+              <TableHead className="w-[100px]">ID</TableHead>
               <TableHead>Name</TableHead>
               <TableHead>Type</TableHead>
-              <TableHead>Status</TableHead>
               <TableHead>Requires Approval</TableHead>
-              <TableHead className='text-right'>Actions</TableHead>
+              <TableHead className="text-right">Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
-            {assets?.status === 200 ? assets.body.map((asset) => (
-              <Row asset={asset}/>
-            )): <TableRow><TableCell colSpan={7}>No assets found</TableCell></TableRow>}
+            {assets?.status === 200 ? (
+              assets.body.map((asset) => (
+                <Row key={asset.id} asset={asset} refetch={refetch} />
+              ))
+            ) : (
+              <TableRow>
+                <TableCell colSpan={6}>No assets found</TableCell>
+              </TableRow>
+            )}
           </TableBody>
         </Table>
       </div>
     </>
-  );
+  )
 }
 
-
-const Row = ({ asset }: { asset: SelectAsset }) => {
-  const { data: status, isLoading: statusIsLoading } = authClient.slots.getAssetStatus.useQuery({
-    queryKey: ['asset-status', asset.id], 
-    queryData: { 
-      params: { id: asset.id },
-      query: { start: new Date().toISOString(), end: new Date().toISOString() }
-    }
+export const Row = ({
+  asset,
+  refetch,
+}: {
+  asset: SelectAsset;
+  refetch: () => void;
+}) => {
+  const { mutate: deleteAsset, isPending } = authClient.assets.deleteAsset.useMutation({
+    onSuccess: () => {
+      toast.success(`Asset "${asset.name}" deleted.`);  
+      refetch();
+    },
+    onError: () => {
+      toast.error(`Failed to delete "${asset.name}".`);
+    },
   });
+
+  const handleDelete = () => {
+    const confirmed = confirm(`Delete asset "${asset.name}"?`);
+    if (confirmed) {
+      deleteAsset({ params: { id: String(asset.id) } }); // Ensure `id` is a string
+    }
+  };
+
   return (
-    <TableRow key={asset.id}>
-      <TableCell>{asset.id}</TableCell>
-      <TableCell>{asset.name}</TableCell>
-      <TableCell>{asset.assetTypeId}</TableCell>
-      <TableCell>{statusIsLoading ? "Loading Status..." : status?.body.status ?? "Unknown"}</TableCell>
-      <TableCell>{asset.requiresApproval ? 'Yes' : 'No'}</TableCell>
-      <TableCell>
+    <tr>
+      <td>{asset.id}</td>
+      <td>{asset.name}</td>
+      <td>{asset.assetTypeId}</td>
+      <td>{asset.requiresApproval ? 'Yes' : 'No'}</td>
+      <td className="flex justify-end gap-2">
         <Link href={`/assets/${asset.id}`}>
-        <Button variant='ghost' size='sm'>
-          <Pencil className='mr-2 h-4 w-4' />
-          Edit
-        </Button>
+          <Button variant="ghost" size="sm">
+            <Pencil className="mr-2 h-4 w-4" />
+            Edit
+          </Button>
         </Link>
-      </TableCell>
-    </TableRow>
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={handleDelete}
+          disabled={isPending}
+        >
+          <TrashIcon className="h-4 w-4 text-red-500" />
+        </Button>
+      </td>
+    </tr>
   );
-}
+};
+
