@@ -31,6 +31,9 @@ export class PropertyService {
     }
 
     async deleteProperty(id: number) {
-        return this.db.delete(schema.assetProperty).where(eq(schema.assetProperty.id, id));
-    }
+  await this.db.transaction(async (tx) => {
+    await tx.delete(schema.AssetHasProperties).where(eq(schema.AssetHasProperties.assetPropertyId, BigInt(id)));
+    await tx.delete(schema.assetProperty).where(eq(schema.assetProperty.id, id));
+  });
+}
 }

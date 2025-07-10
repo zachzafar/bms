@@ -67,10 +67,10 @@ export class PropertyController {
     @TsRestHandler(c.settings.properties.deleteProperty)
     async deleteProperty(@Headers() headers: any): Promise<ReturnType<typeof tsRestHandler>>  {
       return tsRestHandler(c.settings.properties.deleteProperty, async ({ params }) => {
-        const property = await this.PropertyService.deleteProperty(params.id);
-        if (!property) {
-          return { status: 404, body: { message: 'Property not found' } };
-        }
+        const property = await this.PropertyService.deleteProperty(Number(params.id));
+        // if (!property) {
+        //   return { status: 404, body: { message: 'Property not found' } };
+        // }
         return { status: 200, body: { message: 'Property deleted'}};
       });
     }

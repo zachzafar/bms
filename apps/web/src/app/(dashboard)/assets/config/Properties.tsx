@@ -169,7 +169,7 @@ export default function Properties() {
                       <Button
                         variant="ghost"
                         size="sm"
-                        onClick={() => deleteProperty({ params: { id: property.id } })}
+                        onClick={() => deleteProperty({ params: { id: String(property.id) }, body: {} })}
                       >
                         <Trash2 className="h-4 w-4" />
                       </Button>
