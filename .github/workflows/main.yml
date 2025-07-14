@@ -34,10 +34,9 @@ jobs:
 
       - name: Create deployment archive
         run: |
-          tar --exclude='node_modules' \
+              tar --exclude='node_modules' \
               --exclude='.git' \
-              --no-xattrs \
-              --no-mac-metadata \
+              --exclude='.DS_Store' \
               -czf deploy.tar.gz .
 
       - name: Copy archive to VPS
