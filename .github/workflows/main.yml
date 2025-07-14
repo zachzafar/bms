@@ -22,6 +22,11 @@ jobs:
       - name: Install PNPM
         run: npm install -g pnpm
 
+      - name: Build api contract
+        run: |  
+            pnpm install
+            pnpm --filter=@repo/api-contract build
+
       - name: Install dependencies and build
         run: |
           pnpm install
