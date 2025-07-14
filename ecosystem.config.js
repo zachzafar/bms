@@ -18,7 +18,7 @@ module.exports = {
           REFRESH_JWT_EXPIRES_IN:"1d",
           JWT_EXPIRES_IN:"5m",
           SPACES_ENDPOINT:"https://nyc3.digitaloceanspaces.com",
-          SPACES_KEY:"O801XR9LCLCALDM8PGT", 
+          SPACES_KEY:"DO801XR9LCLCALDM8PGT", 
           SPACES_SECRET:"RGgk9lSeGiCkG4jrFEiB5qW8sgmbz3YxDbYsc58gXhM",
           SPACES_REGION:"nyc3",
           FRONTEND_URL:"https://bookos.xyz",
