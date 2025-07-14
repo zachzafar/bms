@@ -40,7 +40,7 @@ jobs:
               -czf deploy.tar.gz .
 
       - name: Copy archive to VPS
-        uses: appleboy/scp-action@v0.1.10
+        uses: appleboy/scp-action@v0.1.4
         with:
           host: ${{ secrets.VPS_HOST }}
           username: ${{ secrets.VPS_USER }}
@@ -49,7 +49,7 @@ jobs:
           target: "/root/bms"
 
       - name: Deploy on VPS via SSH
-        uses: appleboy/ssh-action@v0.1.10
+        uses: appleboy/ssh-action@v0.1.4
         with:
           host: ${{ secrets.VPS_HOST }}
           username: ${{ secrets.VPS_USER }}
