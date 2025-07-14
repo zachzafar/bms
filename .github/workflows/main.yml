@@ -27,10 +27,12 @@ jobs:
             pnpm install
             pnpm --filter=@repo/api-contract build
 
-      - name: Install dependencies and build
-        run: |
-          pnpm install
-          pnpm build
+      - name: Install dependencies
+        run: pnpm install
+          
+
+      - name: Build
+        run: pnpm build
 
       - name: Create deployment archive
         run: |
@@ -40,7 +42,7 @@ jobs:
               -czf deploy.tar.gz .
 
       - name: Copy archive to VPS
-        uses: appleboy/scp-action@v0.1.4
+        uses: appleboy/scp-action@v0.1.7
         with:
           host: ${{ secrets.VPS_HOST }}
           username: ${{ secrets.VPS_USER }}
