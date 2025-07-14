@@ -45,6 +45,13 @@ jobs:
       - name: Verify archive exists
         run: test -f deploy.tar.gz
 
+      - name: Setup SSH key
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
+          ssh-keyscan -H ${{ secrets.VPS_HOST }} >> ~/.ssh/known_hosts
+
       - name: Copy archive to VPS
         uses: appleboy/scp-action@v0.1.7
         with:
