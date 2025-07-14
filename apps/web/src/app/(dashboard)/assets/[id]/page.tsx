@@ -16,7 +16,7 @@ export default function AssetDetailsPage() {
   const tenant = StorageService.getTenant();
   const [activeTab,setActiveTab] = useState("basic-information")
   const params = useParams();
-  const { data, isLoading} = authClient.assets.getAsset.useQuery({
+  const { data, isLoading, refetch} = authClient.assets.getAsset.useQuery({
     queryKey: ["assets", params.id as string],
     queryData:  {
       params: {
@@ -48,7 +48,7 @@ return (
               <TabsTrigger value="images">Images</TabsTrigger>
             </TabsList>
             <TabsContent value='basic-information'>
-              <BasicInfo asset={asset}/>
+              <BasicInfo asset={asset} refetch={refetch}/>
             </TabsContent>
             <TabsContent value='detailed-information'>
               <AssetTypePropertiesForm asset={asset}/>

@@ -215,12 +215,12 @@ export class AuthService {
     return roleId;
   }
 
-  async updateRole(tenantId: string, roleId: number, roleName: string, permissions: string[]) {
+  async updateRole(tenantId: string, roleId: string, roleName: string, permissions: string[]) {
     await this.db.transaction(async (tx) => {
       this.loggger.log('Updating a role');
       await tx.update(schema.Roles).set({
         name: roleName,
-      }).where(eq(schema.Roles.id, roleId))
+      }).where(eq(schema.Roles.id, Number(roleId)))
       this.loggger.log('Updating a role permissions relationship');
       await tx.delete(schema.RoleHasPermissions).where(eq(schema.RoleHasPermissions.roleId, BigInt(roleId)))
       await tx.insert(schema.RoleHasPermissions).values(permissions.map(permission => ({
@@ -232,9 +232,15 @@ export class AuthService {
     return true
   }
 
-  async deleteRole(tenantId: string, roleId: number) {
-    await this.db.delete(schema.Roles).where(eq(schema.Roles.id, roleId))
-  }
+  async deleteRole(tenantId: string, roleId: string) {
+    await this.db.transaction(async (tx) => {
+    // First remove the role from the junction table
+    await tx.delete(schema.RoleHasPermissions).where(
+      eq(schema.RoleHasPermissions.roleId, BigInt(roleId))
+    );
+    await tx.delete(schema.Roles).where(eq(schema.Roles.id, Number(roleId)));
+})
+}
 
   async getPermissions() {
     return getAllScopes();

@@ -1,11 +1,11 @@
 'use client';
 
-import {  useState } from 'react';
+import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger, } from '@/components/ui/dialog';
-import { Search, PlusCircle, } from 'lucide-react';
+import { Search, PlusCircle, Pencil, } from 'lucide-react';
 import { useForm, SubmitHandler } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { toast } from 'sonner';
@@ -14,13 +14,36 @@ import { authClient } from '@/lib/api/publicClient';
 import { CUSTOMERS_QUERY_KEY, } from '@/lib/api/queryKeys';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
-import { InsertCustomerSchema, InsertUserSchema } from '@repo/api-contract';
+import { InsertCustomerSchema, InsertUserSchema, SelectCustomer, SelectCustomerSchema } from '@repo/api-contract';
 import { date, z } from 'zod';
+import { EditCustomerForm } from '@/components/users/EditCustomerForm';
 
 // Schema for creating customers
 // const CreateCustomerSchema = InsertUserSchema.merge(InsertCustomerSchema.omit({ id: true, dateOfBirth: true})).extend({
 //   dateOfBirth: z.string().optional(),
 // })
+
+
+type EditableCustomer = {
+  id: string; // user ID
+  name: string;
+  email: string;
+  createdAt: Date | null;
+  updatedAt: Date | null;
+  customerDetails: {
+    id?: number;
+    userId: string; // 👈 ADD THIS
+    phone: string | null;
+    address: string | null;
+    dateOfBirth: Date | null;
+    createdAt?: Date | null;
+    updatedAt?: Date | null;
+  };
+};
+
+
+
+
 
 const CreateCustomerSchema = z.object({
   name: z.string().min(1, 'Name is required'),
@@ -32,13 +55,20 @@ const CreateCustomerSchema = z.object({
 })
 
 type CreateCustomerFormData = z.infer<typeof CreateCustomerSchema>;
+const ExtendedSelectCustomerSchema = SelectCustomerSchema.extend({
+  roles: z.array(z.number()).default([])
+});
+type ExtendedSelectCustomer = z.infer<typeof ExtendedSelectCustomerSchema>;
 
 export default function Component() {
   const router = useRouter();
+
   const queryClient = authClient.useQueryClient();
   const { data: customerData } = authClient.users.getCustomers.useQuery({ queryKey: CUSTOMERS_QUERY_KEY });
   const { mutate: createUserMutation, isPending } = authClient.users.createUser.useMutation();
+
   const [open, setOpen] = useState(false);
+  const [selectedCustomer, setSelectedCustomer] = useState<EditableCustomer | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
 
   const customers = customerData?.body || []
@@ -58,7 +88,7 @@ export default function Component() {
         body: {
           ...data,
           password: 'password',
-          userType: ['customer'], 
+          userType: ['customer'],
           roles: [],
           customerDetails: {
             phone: data?.phone || null,
@@ -80,6 +110,11 @@ export default function Component() {
         },
       }
     );
+  };
+
+  const handleEditCustomer = (customer: EditableCustomer) => {
+    setSelectedCustomer(customer); // open modal or route to edit form
+    setOpen(true);
   };
 
   // const handleUpdateCustomer: SubmitHandler<> = async (data) => {
@@ -137,16 +172,24 @@ export default function Component() {
                     Add Customer
                   </Button>
                 </DialogTrigger>
-                <DialogContent>
-                  <DialogHeader>
-                    <DialogTitle>
-                   Add New Customer
-                    </DialogTitle>
-                    <DialogDescription>
-                      Enter customer details below
-                    </DialogDescription>
-                  </DialogHeader>
-                  
+
+                {selectedCustomer ? (
+                  <DialogContent>
+                    <EditCustomerForm
+                      customer={selectedCustomer}
+                      onClose={() => {
+                        setOpen(false);
+                        setSelectedCustomer(null);
+                      }}
+                      onSuccess={() => {
+                        queryClient.invalidateQueries({ queryKey: CUSTOMERS_QUERY_KEY });
+                        setOpen(false);
+                        setSelectedCustomer(null);
+                      }}
+                    />
+                  </DialogContent>
+                ) : (
+                  <DialogContent>
                     <Form {...createForm}>
                       <form onSubmit={createForm.handleSubmit(handleCreateCustomer)} className='space-y-4'>
                         <div className='grid grid-cols-1 md:grid-cols-2 gap-4'>
@@ -209,9 +252,9 @@ export default function Component() {
                               <FormItem>
                                 <FormLabel>Date of Birth</FormLabel>
                                 <FormControl>
-                                  <Input 
-                                    type="date" 
-                                    {...field} 
+                                  <Input
+                                    type="date"
+                                    {...field}
                                     value={field.value ? new Date(field.value).toISOString().split('T')[0] : ''}
                                   />
                                 </FormControl>
@@ -225,7 +268,7 @@ export default function Component() {
                           <Button
                             type='button'
                             variant='outline'
-                            onClick={() => {                        
+                            onClick={() => {
                               setOpen(false);
                             }}
                           >
@@ -237,10 +280,12 @@ export default function Component() {
                         </div>
                       </form>
                     </Form>
-                </DialogContent>
+                  </DialogContent>
+                )}
               </Dialog>
+
             </div>
-            
+
             <Table>
               <TableHeader>
                 <TableRow>
@@ -258,66 +303,32 @@ export default function Component() {
                       <TableCell>{customer.user.email}</TableCell>
                       <TableCell>{customer.customer?.phone || '-'}</TableCell>
                       <TableCell>
-                        {/* <Dialog>
-                          <DialogTrigger asChild>
-                            <Button
-                              variant='ghost'
-                              size='icon'
-                              aria-label={`View details for ${customer.name}`}
-                            >
-                              <Search className='h-4 w-4' />
-                            </Button>
-                          </DialogTrigger>
-                          <DialogContent>
-                            <DialogHeader>
-                              <DialogTitle>Customer Details</DialogTitle>
-                            </DialogHeader>
-                            <div className='space-y-4'>
-                              <div>
-                                <h3 className='font-semibold'>
-                                  Basic Information
-                                </h3>
-                                <p>Name: {customer.name}</p>
-                                <p>Email: {customer.email}</p>
-                              </div>
-                              {customer.customerDetails && (
-                                <div>
-                                  <h3 className='font-semibold'>
-                                    Customer Details
-                                  </h3>
-                                  <p>Phone: {customer.customerDetails.phone || 'Not provided'}</p>
-                                  <p>Address: {customer.customerDetails.address || 'Not provided'}</p>
-                                  {customer.customerDetails.firstName && (
-                                    <p>First Name: {customer.customerDetails.firstName}</p>
-                                  )}
-                                  {customer.customerDetails.lastName && (
-                                    <p>Last Name: {customer.customerDetails.lastName}</p>
-                                  )}
-                                  {customer.customerDetails.dateOfBirth && (
-                                    <p>Date of Birth: {customer.customerDetails.dateOfBirth}</p>
-                                  )}
-                                </div>
-                              )}
-                            </div>
-                          </DialogContent>
-                        </Dialog> */}
-                        {/* <Button
+                        <Button
                           variant='ghost'
                           size='icon'
-                          onClick={() => editCustomer(customer)}
-                          aria-label={`Edit ${customer.name}`}
+                          onClick={() =>
+                            handleEditCustomer({
+                              id: customer.user.id,
+                              name: customer.user.name,
+                              email: customer.user.email,
+                              createdAt: customer.user.createdAt,
+                              updatedAt: customer.user.updatedAt,
+                              customerDetails: {
+                                id: customer.customer.id,
+                                userId: customer.user.id, // 👈 Include this!
+                                phone: customer.customer.phone,
+                                address: customer.customer.address,
+                                dateOfBirth: customer.customer.dateOfBirth,
+                                createdAt: customer.customer.createdAt,
+                                updatedAt: customer.customer.updatedAt,
+                              },
+                            })
+
+                          }
+                          aria-label={`Edit ${customer.user.name}`}
                         >
                           <Pencil className='h-4 w-4' />
-                        </Button> */}
-                        {/* <Button
-                          variant='ghost'
-                          size='icon'
-                          onClick={() => deleteCustomer(customer.id)}
-                          aria-label={`Delete ${customer.name}`}
-                          disabled={isDeleting}
-                        >
-                          <Trash2 className='h-4 w-4' />
-                        </Button> */}
+                        </Button>
                       </TableCell>
                     </TableRow>
                   ))

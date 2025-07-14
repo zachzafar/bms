@@ -53,7 +53,7 @@ export const propertiesContract = c.router({
     deleteProperty: {
         method: 'DELETE',
         path: '/properties/:id',
-        body: z.undefined(),
+        body: z.object({}).optional(),
         responses: {
             200: z.object({
                 message: z.string(),
@@ -63,7 +63,7 @@ export const propertiesContract = c.router({
             })
         },
         pathParams: z.object({
-            id: z.number()
+            id: z.string()
         }),
         summary: 'Delete a asset property'
     },

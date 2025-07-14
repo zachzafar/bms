@@ -4,30 +4,10 @@ import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from '@/components/ui/dialog';
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table';
-import { PlusIcon, Pencil, Save } from 'lucide-react';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { PlusIcon, Pencil, Save, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { authClient } from '@/lib/api/publicClient';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -48,8 +28,8 @@ export default function RolesPage() {
   const [open, setOpen] = useState(false);
   const queryClient = authClient.useQueryClient();
   const [availablePermissions, setAvailablePermissions] = useState<string[]>([]);
-  const [roles, setRoles] = useState<{ roleId: number; name: string; permissions: string[] }[]>([]);
-  const [selectedRole, setSelectedRole] = useState<{ roleId: number; name: string; permissions: string[] } | null>(null);
+  const [roles, setRoles] = useState<{ roleId: string; name: string; permissions: string[] }[]>([]);
+  const [selectedRole, setSelectedRole] = useState<{ roleId: string; name: string; permissions: string[] } | null>(null);
 
   const form = useForm<RoleFormData>({
     resolver: zodResolver(RoleFormSchema),
@@ -74,7 +54,10 @@ export default function RolesPage() {
 
   // Update role mutation
   const { mutate: updateRole } = authClient.auth.updateRole.useMutation();
-  
+
+  // Delete role Mutation
+  const { mutate: deleteRole } = authClient.auth.deleteRole.useMutation();
+
   useEffect(() => {
     if (permissionsData?.status === 200) {
       setAvailablePermissions(permissionsData.body);
@@ -102,27 +85,38 @@ export default function RolesPage() {
   }, [selectedRole, form]);
 
   const processForm: SubmitHandler<RoleFormData> = (data) => {
-    createRole(
-      {
-        body: {
-          name: data.name,
-          permissions: data.permissions,
-        },
+    const payload = {
+      body: {
+        name: data.name,
+        permissions: data.permissions,
       },
-      {
-        onSuccess: () => {
-          toast.success(selectedRole ? 'Role updated successfully' : 'Role created successfully');
-          setOpen(false);
-          refetchRoles();
-          resetForm();
+    };
+
+    const onSuccess = () => {
+      toast.success(selectedRole ? 'Role updated successfully' : 'Role created successfully');
+      setOpen(false);
+      refetchRoles();
+      resetForm();
+    };
+
+    const onError = (error: any) => {
+      console.error('Error:', error);
+      toast.error('Failed to save role');
+    };
+
+    if (selectedRole) {
+      updateRole(
+        {
+          ...payload,
+          params: { roleId: selectedRole.roleId },
         },
-        onError: (error) => {
-          console.error('Error:', error);
-          toast.error('Failed to save role');
-        },
-      }
-    );
+        { onSuccess, onError }
+      );
+    } else {
+      createRole(payload, { onSuccess, onError });
+    }
   };
+
 
   const resetForm = () => {
     setSelectedRole(null);
@@ -132,7 +126,7 @@ export default function RolesPage() {
     });
   };
 
-  const handleEditRole = (role: { roleId: number; name: string; permissions: string[] }) => {
+  const handleEditRole = (role: { roleId: string; name: string; permissions: string[] }) => {
     setSelectedRole(role);
     setOpen(true);
   };
@@ -271,6 +265,33 @@ export default function RolesPage() {
                       <Button variant="ghost" size="sm" onClick={() => handleEditRole(role)}>
                         <Pencil className="mr-2 h-4 w-4" />
                         Edit
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="text-red-600 hover:text-red-800"
+                        onClick={() => {
+                          const confirmed = confirm(`Are you sure you want to delete the role "${role.name}"?`)
+                          if (confirmed) {
+                            deleteRole(
+                              { 
+                                params: { roleId: role.roleId },
+                                body: {}
+                              },
+                              {
+                                onSuccess: () => {
+                                  toast.success(`Role "${role.name}" deleted.`);
+                                  refetchRoles();
+                                },
+                                onError: () => {
+                                  toast.error(`Failed to delete role "${role.name}".`);
+                                },
+                              }
+                            );
+                          }
+                        }}
+                      >
+                        <Trash2 className="h-4 w-4" />
                       </Button>
                     </TableCell>
                   </TableRow>

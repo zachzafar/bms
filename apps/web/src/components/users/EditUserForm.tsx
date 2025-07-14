@@ -13,8 +13,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 // Schema for updating users
 const UpdateUserSchema = z.object({
   user: InsertUserSchema.partial(),
-  customer: z.boolean().default(false),
-  owner: z.boolean().default(false),
+  // customer: z.boolean().default(false),
+  // owner: z.boolean().default(false),
   roles: z.array(z.number()).default([])
 });
 
@@ -22,7 +22,7 @@ type UpdateUserFormData = z.infer<typeof UpdateUserSchema>;
 
 interface EditUserFormProps {
   user: SelectUser & { roles?: number[] };
-  roles: { roleId: number; name: string }[];
+  roles: { roleId: string; name: string }[];
   onClose: () => void;
   onSuccess: () => void;
 }
@@ -38,8 +38,8 @@ export function EditUserForm({ user, roles, onClose, onSuccess }: EditUserFormPr
         email: user.email,
         password: ''
       },
-      customer: false,
-      owner: false,
+      // customer: false,
+      // owner: false,
       roles: user.roles || []
     },
   });
@@ -144,7 +144,7 @@ export function EditUserForm({ user, roles, onClose, onSuccess }: EditUserFormPr
                     </SelectTrigger>
                     <SelectContent>
                       {roles.map((role) => (
-                        <SelectItem key={role.roleId} value={role.roleId.toString()}>
+                        <SelectItem key={role.roleId} value={role.roleId}>
                           {role.name}
                         </SelectItem>
                       ))}
@@ -153,7 +153,7 @@ export function EditUserForm({ user, roles, onClose, onSuccess }: EditUserFormPr
                 </FormControl>
                 <div className="mt-2 flex flex-wrap gap-2">
                   {field.value?.map((roleId, index) => {
-                    const roleName = roles.find(r => r.roleId === roleId)?.name || roleId;
+                    const roleName = roles.find(r => r.roleId)?.name || roleId;
                     return (
                       <div key={index} className="bg-gray-100 px-2 py-1 rounded-md flex items-center">
                         <span>{roleName}</span>

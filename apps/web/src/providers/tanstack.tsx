@@ -1,15 +1,19 @@
-// app/providers.tsx
-'use client'
-import { authClient } from '@/lib/api/publicClient'
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+'use client';
 
+import { authClient } from '@/lib/api/publicClient';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+
+const queryClient = new QueryClient();
+
+// ✅ Extract the properly-cased provider
+const TsRestProvider = authClient.ReactQueryProvider;
 
 export default function TanstackProvider({ children }: { children: React.ReactNode }) {
-    const queryClient = new QueryClient()
-
   return (
     <QueryClientProvider client={queryClient}>
-     <authClient.ReactQueryProvider>{children}</authClient.ReactQueryProvider> 
+      <TsRestProvider>
+        {children}
+      </TsRestProvider>
     </QueryClientProvider>
-  )
+  );
 }

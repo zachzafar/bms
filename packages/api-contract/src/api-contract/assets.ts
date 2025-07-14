@@ -60,6 +60,7 @@ export const assetsContract = c.router({
     deleteAsset: {
         method: 'DELETE',
         path: '/asset/:id',
+        body: z.undefined(),
         responses: {
             204: z.undefined()
         },
