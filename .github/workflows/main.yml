@@ -36,10 +36,12 @@ jobs:
 
       - name: Create deployment archive
         run: |
-              tar --exclude='node_modules' \
-              --exclude='.git' \
-              --exclude='.DS_Store' \
-              -czf deploy.tar.gz .
+          tar --exclude='node_modules' \
+          --exclude='.git' \
+          --exclude='.DS_Store' \
+          --warning=no-file-changed \
+          -czf deploy.tar.gz .
+
 
       - name: Copy archive to VPS
         uses: appleboy/scp-action@v0.1.7
