@@ -46,31 +46,18 @@ jobs:
       - name: Verify archive exists
         run: test -f deploy.tar.gz
 
-      - name: Setup SSH key
+      - name: Set up SSH Agent
+        uses: webfactory/ssh-agent@v0.8.1
+        with:
+          ssh-private-key: ${{ secrets.VPS_SSH_KEY }}
+
+      - name: Upload archive to VPS
         run: |
-          mkdir -p ~/.ssh
-          echo "${{ secrets.VPS_SSH_KEY }}" > ~/.ssh/id_rsa
-          chmod 600 ~/.ssh/id_rsa
-          ssh-keyscan -H ${{ secrets.VPS_HOST }} >> ~/.ssh/known_hosts
+          scp -o StrictHostKeyChecking=no -P 22 deploy.tar.gz ${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }}:/root/bms/
 
-      - name: Copy archive to VPS
-        uses: appleboy/scp-action@v0.1.7
-        with:
-          host: ${{ secrets.VPS_HOST }}
-          username: ${{ secrets.VPS_USER }}
-          key: ${{ secrets.VPS_SSH_KEY }}
-          source: "deploy.tar.gz"
-          target: "/root/bms"
-
-      - name: Deploy on VPS via SSH
-        uses: appleboy/ssh-action@v0.1.4
-        env:
-            PRIVATE_KEY: ${{ secrets.VPS_SSH_KEY }}
-        with:
-          host: ${{ secrets.VPS_HOST }}
-          username: ${{ secrets.VPS_USER }}
-          key_path: ~/.ssh/id_rsa
-          script: |
+      - name: SSH into VPS and deploy
+        run: |
+          ssh -o StrictHostKeyChecking=no -p 22 ${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }} << 'EOF'
             cd /root/bms
             rm -rf ./*
             tar -xzf deploy.tar.gz
@@ -78,3 +65,4 @@ jobs:
             pnpm install
             pm2 delete all || true
             pm2 start ecosystem.config.js
+          EOF
