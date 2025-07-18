@@ -13,4 +13,4 @@ export const ROLES_QUERY_KEY = ['roles'];
 export const PERMISSIONS_QUERY_KEY = ['permissions'];
 export const PROPERTY_VALUES_QUERY_KEY = ['propertyValues'];
 export const ASSET_IMAGES_QUERY_KEY = ['assetImages'];
-
+export const ASSET_TAGS_QUERY_KEY = ['tags'];

@@ -26,30 +26,37 @@ import { authClient } from '@/lib/api/publicClient';
 import { toast } from 'sonner';
 import { InsertTag, InsertTagSchema } from '@repo/api-contract';
 import { Textarea } from '@/components/ui/textarea';
+import { useQueryClient } from '@tanstack/react-query';
+
 
 export default function Tags() {
+
+  const queryClient = useQueryClient();
+
   const { data: tags, isLoading } = authClient.settings.tags.getTags.useQuery({
     queryKey: ['tags']
   });
 
   const { mutate: createTag } = authClient.settings.tags.createTag.useMutation({
-    onSuccess: () => {
-      toast('Tag created successfully');
-      form.reset();
-    },
-    onError: (error) => {
-      toast(`Error creating tag: ${error}`);
-    }
-  });
+  onSuccess: () => {
+    toast('Tag created successfully');
+    queryClient.invalidateQueries({ queryKey: ['tags'] });
+    form.reset();
+  },
+  onError: (error) => {
+    toast(`Error creating tag: ${error}`);
+  }
+});
 
   const { mutate: deleteTag } = authClient.settings.tags.deleteTag.useMutation({
-    onSuccess: () => {
-      toast('Tag deleted successfully');
-    },
-    onError: (error: any) => {
-      toast(`Error deleting tag: ${error.message}`);
-    }
-  });
+  onSuccess: () => {
+    toast('Tag deleted successfully');
+    queryClient.invalidateQueries({ queryKey: ['tags'] }); // refetch tags
+  },
+  onError: (error: any) => {
+    toast(`Error deleting tag: ${error.message}`);
+  }
+});
 
   const form = useForm<InsertTag>({
     resolver: zodResolver(InsertTagSchema),
@@ -142,7 +149,7 @@ export default function Tags() {
                       <Button
                         variant="ghost"
                         size="sm"
-                        onClick={() => deleteTag({ params: { id: tag.id } })}
+                        onClick={() => deleteTag({ params: { id: String(tag.id) }, body: {} })}
                       >
                         <Trash2 className="h-4 w-4" />
                       </Button>

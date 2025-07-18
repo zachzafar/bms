@@ -1,4 +1,4 @@
-import { Controller, Headers, Logger,MaxFileSizeValidator,ParseFilePipe,ParseFilePipeBuilder,UploadedFiles,UseInterceptors } from '@nestjs/common';
+import { Controller, Headers, Logger, MaxFileSizeValidator, ParseFilePipe, ParseFilePipeBuilder, UploadedFiles, UseInterceptors } from '@nestjs/common';
 import { AssetsService } from './assets.service';
 import { TsRestHandler, tsRestHandler } from '@ts-rest/nest';
 import { contract } from '@repo/api-contract';
@@ -10,21 +10,25 @@ import { Public } from 'src/auth/decorators/public.decorator';
 @Controller()
 export class AssetsController {
     private readonly logger = new Logger(AssetsController.name);
-    constructor(private assetService: AssetsService,private tenantService: TenantService) {
-        
+    constructor(private assetService: AssetsService, private tenantService: TenantService) {
+
     }
 
     @TsRestHandler(contract.assets.getAssets)
     async getAssets(@Headers() headers: any): Promise<ReturnType<typeof tsRestHandler>> {
         return tsRestHandler(contract.assets.getAssets, async ({ query }) => {
-            this.logger.log("Get assets for tenant: ", headers['x-tenant-id'] || "no tenant")
+            this.logger.log('Get assets for tenant: ', headers['x-tenant-id'] || 'no tenant');
             const tenantId = headers['x-tenant-id'];
-            
-            const assets = (await this.assetService.getAssets(query,tenantId)).map((asset) => {
-                let assetTypeId = asset.assetTypeId? Number(asset.assetTypeId): undefined;
-                return {...asset, assetTypeId};
+
+            const assets = await this.assetService.getAssets(query, tenantId);
+
+            // Convert assetTypeId to number (optional)
+            const assetsWithTypeId = assets.map((asset) => {
+                let assetTypeId = asset.assetTypeId ? Number(asset.assetTypeId) : undefined;
+                return { ...asset, assetTypeId };
             });
-            return { status: 200, body: assets };
+
+            return { status: 200, body: assetsWithTypeId };
         });
     }
 
@@ -32,14 +36,15 @@ export class AssetsController {
     async getAssetById(@Headers() headers: any): Promise<ReturnType<typeof tsRestHandler>> {
         return tsRestHandler(contract.assets.getAsset, async ({ params }) => {
             const tenantId = headers['x-tenant-id'];
-            await this.tenantService.validateTenantAccess(tenantId,schema.Asset,params.id)
+            await this.tenantService.validateTenantAccess(tenantId, schema.Asset, params.id);
             const asset = await this.assetService.getAssetById(params.id);
+
             if (!asset) {
                 return { status: 404, message: 'Asset not found' };
             }
-            let assetTypeId = asset.assetTypeId ? Number(asset.assetTypeId): undefined;
+            let assetTypeId = asset.assetTypeId ? Number(asset.assetTypeId) : undefined;
 
-            return { status: 200, body: {...asset, assetTypeId} };
+            return { status: 200, body: { ...asset, assetTypeId } };
         });
     }
 
@@ -48,8 +53,13 @@ export class AssetsController {
         return tsRestHandler(contract.assets.createAsset, async ({ body }) => {
             const tenantId = headers['x-tenant-id'];
             this.logger.log(`Creating a new asset for tenant:${tenantId}`);
-             const id = await this.assetService.createAsset({...body.asset,tenantId});
-             this.logger.log(`Created asset with id: ${id}`);
+
+            const id = await this.assetService.createAsset(
+                { ...body.asset, tenantId },
+                body.tagIds // pass tags here
+            );
+
+            this.logger.log(`Created asset with id: ${id}`);
             return { status: 201, body: { id } };
         });
     }
@@ -58,14 +68,14 @@ export class AssetsController {
     async updateAsset(@Headers() headers: any): Promise<ReturnType<typeof tsRestHandler>> {
         return tsRestHandler(contract.assets.updateAsset, async ({ params, body }) => {
             const tenantId = headers['x-tenant-id'];
-            await this.tenantService.validateTenantAccess(tenantId,schema.Asset,params.id)
+            await this.tenantService.validateTenantAccess(tenantId, schema.Asset, params.id)
             const asset = await this.assetService.updateAsset(params.id, body);
 
             if (!asset) {
                 return { status: 500, body: { message: 'Error updating asset' } };
             }
 
-            return { status: 200, body: {...asset, assetTypeId: Number(asset.assetTypeId)} };
+            return { status: 200, body: { ...asset, assetTypeId: Number(asset.assetTypeId) } };
         });
     }
 
@@ -73,30 +83,30 @@ export class AssetsController {
     async deleteAsset(@Headers() headers: any): Promise<ReturnType<typeof tsRestHandler>> {
         return tsRestHandler(contract.assets.deleteAsset, async ({ params }) => {
             const tenantId = headers['x-tenant-id'];
-            await this.tenantService.validateTenantAccess(tenantId,schema.Asset,params.id)
+            await this.tenantService.validateTenantAccess(tenantId, schema.Asset, params.id)
             const result = await this.assetService.deleteAsset(params.id);
 
-            if (!result) {
-                return { status: 500, body: { message: 'Error deleting asset' } };
-            }
+            // if (!result) {
+            //     return { status: 500, body: { message: 'Error deleting asset' } };
+            // }
 
-            return { status: 204 };
+            return { status: 204, body: undefined };
         });
     }
 
     @TsRestHandler(contract.assets.addAssetProperties)
-        async addAssetProperties(@Headers() headers: any): Promise<ReturnType<typeof tsRestHandler>> {
-            return tsRestHandler(contract.assets.addAssetProperties, async ({ params, body }) => {
-                const tenantId = headers['x-tenant-id'];
-                await this.tenantService.validateTenantAccess(tenantId,schema.Asset,params.id)
-                const [{id}]= await this.assetService.addPropertyValues( params.id, body.properties);
+    async addAssetProperties(@Headers() headers: any): Promise<ReturnType<typeof tsRestHandler>> {
+        return tsRestHandler(contract.assets.addAssetProperties, async ({ params, body }) => {
+            const tenantId = headers['x-tenant-id'];
+            await this.tenantService.validateTenantAccess(tenantId, schema.Asset, params.id)
+            const [{ id }] = await this.assetService.addPropertyValues(params.id, body.properties);
 
-                if (id) {
-                    return { status: 200, body: { message: "sucessfully added properties" } };
-                }
+            if (id) {
+                return { status: 200, body: { message: "sucessfully added properties" } };
+            }
 
-                return { status: 500, body: { message: 'Error adding properties to asset' } };
-            
+            return { status: 500, body: { message: 'Error adding properties to asset' } };
+
         })
     }
 
@@ -110,9 +120,9 @@ export class AssetsController {
             if (!properties) {
                 return { status: 500, body: { message: 'Error getting properties for asset' } };
             }
-            
-            return { 
-                status: 200, 
+
+            return {
+                status: 200,
                 body: properties.map((property) => ({
                     ...property,
                     assetPropertyId: Number(property.assetPropertyId),
@@ -133,16 +143,16 @@ export class AssetsController {
         return tsRestHandler(contract.assets.uploadAssetImages, async ({ params }) => {
             const tenantId = headers['x-tenant-id'];
             await this.tenantService.validateTenantAccess(tenantId, schema.Asset, params.id);
-            
+
             if (!files.images || files.images.length === 0) {
                 return { status: 400, body: { message: 'No images uploaded' } };
             }
             this.logger.log(`Uploading images for asset: ${params.id}`);
             // Convert the uploaded files to buffers
             const imageBuffers = files.images.map(file => file.buffer);
-            
+
             await this.assetService.uploadAssetImages(tenantId, params.id, imageBuffers);
-            
+
             return { status: 200, body: { message: 'Successfully uploaded images' } };
         });
     }
@@ -152,34 +162,37 @@ export class AssetsController {
     async getAssetsWithDetails(@Headers() headers: any): Promise<ReturnType<typeof tsRestHandler>> {
         return tsRestHandler(contract.assets.getAssetsWithDetails, async ({ query }) => {
             const tenantId = headers['x-tenant-id'];
-            const assets = await this.assetService.getAssetsWithDetails( tenantId, query.assetTypes)
+            const assets = await this.assetService.getAssetsWithDetails(tenantId, query.assetTypes);
+
             const assetsReshaped = assets.map((asset) => {
                 return {
                     id: asset.id,
                     name: asset.name,
                     description: asset.description ?? undefined,
-                    images: asset.assetImages.map((image) => {
-                        return image.filePath;
-                    }),
-                    properties: asset.propertyValues.map((property) => {
-                        return {
-                            id: property.assetProperty.id,
-                            name: property.assetProperty.name,
-                            value: property.value
-                        }
-                  
-                    })
-                }
-            })
-            return { status: 200, body: assetsReshaped }
-    })}
-    
+                    images: asset.assetImages.map((image) => image.filePath),
+                    properties: asset.propertyValues.map((property) => ({
+                        id: property.assetProperty.id,
+                        name: property.assetProperty.name,
+                        value: property.value,
+                    })),
+                    tags: asset.tags?.map((tag) => ({
+                        id: tag.id,
+                        name: tag.name,
+                    })) ?? [],
+                };
+            });
+
+            return { status: 200, body: assetsReshaped };
+        });
+    }
+
+
     @TsRestHandler(contract.assets.deleteAssetImages)
     async deleteAssetImage(@Headers() headers: any): Promise<ReturnType<typeof tsRestHandler>> {
         return tsRestHandler(contract.assets.deleteAssetImages, async ({ params, body }) => {
             const tenantId = headers['x-tenant-id'];
-            await this.tenantService.validateTenantAccess(tenantId,schema.Asset,params.id)
-            const unsuccessfulDeletes = await this.assetService.deleteAssetImages(body.images,params.id);
+            await this.tenantService.validateTenantAccess(tenantId, schema.Asset, params.id)
+            const unsuccessfulDeletes = await this.assetService.deleteAssetImages(body.images, params.id);
             if (unsuccessfulDeletes.length > 0) {
                 return { status: 200, body: { message: 'Error deleting some images', failedIds: unsuccessfulDeletes } };
             }
@@ -191,7 +204,7 @@ export class AssetsController {
     async getAssetImages(@Headers() headers: any): Promise<ReturnType<typeof tsRestHandler>> {
         return tsRestHandler(contract.assets.getAssetImages, async ({ params }) => {
             const tenantId = headers['x-tenant-id'];
-            await this.tenantService.validateTenantAccess(tenantId,schema.Asset,params.id)
+            await this.tenantService.validateTenantAccess(tenantId, schema.Asset, params.id)
             const images = await this.assetService.getAssetImages(params.id);
             return { status: 200, body: images };
         });

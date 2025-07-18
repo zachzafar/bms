@@ -12,7 +12,7 @@ export const tagsContract = c.router({
         body: InsertTagSchema,
         responses: {
             201: z.object({
-                id: z.number(),
+                id: z.string(),
             })
         },
         summary: 'Create a new tag'
@@ -27,14 +27,14 @@ export const tagsContract = c.router({
             })
         },
         pathParams: z.object({
-            id: z.number()
+            id: z.string()
         }),
         summary: 'Get a tag'
     },
     deleteTag: {
         method: 'DELETE',
         path: '/tags/:id',
-        body: z.undefined(),
+        body: z.object({}).optional(),
         responses: {
             200: z.object({
                 message: z.string(),
@@ -44,7 +44,7 @@ export const tagsContract = c.router({
             })
         },
         pathParams: z.object({
-            id: z.number()
+            id: z.string()
         }),
         summary: 'Delete a tag'
     },

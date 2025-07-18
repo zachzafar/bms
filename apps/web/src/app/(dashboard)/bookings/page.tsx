@@ -52,11 +52,17 @@ export default function Component() {
   const { data: bookings } = authClient.booking.getBookings.useQuery({
     queryKey: BOOKINGS_QUERY_KEY,
   });
+  
+  const { data: tagsResponse } = authClient.settings.tags.getTags.useQuery({ queryKey: ['tags'] });
+  const tagList = tagsResponse?.body ?? [];
+
   const { mutate: createBooking } = authClient.booking.createBooking.useMutation();
-  const { data: assets} = authClient.assets.getAssets.useQuery({ queryKey: ['assets']});
+  const { mutate: createBookingByTag } = authClient.booking.createBookingByTag.useMutation();
+
+  const { data: assets } = authClient.assets.getAssets.useQuery({ queryKey: ['assets'] });
   const assetList = assets?.body ?? [];
-  const { data: customerResponse } = authClient.users.getCustomers.useQuery({ queryKey: ['customers']})
-  const customerList = customerResponse?.body?? [];
+  const { data: customerResponse } = authClient.users.getCustomers.useQuery({ queryKey: ['customers'] })
+  const customerList = customerResponse?.body ?? [];
   const [customers, setCustomers] = useState<string[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [filterType, setFilterType] = useState('All');
@@ -71,6 +77,7 @@ export default function Component() {
     resolver: zodResolver(bookingFormSchema),
     defaultValues: {
       assetId: '',
+      // tagId: '',
       startDate: '',
       endDate: '',
     },
@@ -89,15 +96,37 @@ export default function Component() {
     // Implement cancel booking logic here
   };
 
+//   const onSubmit = (values: BookingFormValues) => {
+//   createBookingByTag({
+//     body: {
+//       tagId: parseInt(values.tagId),
+//       startDate: values.startDate,
+//       endDate: values.endDate,
+//       customerIds: customers.map((id) => parseInt(id)),
+//     }
+//   }, {
+//     onSuccess: () => {
+//       toast.success('Booking created successfully');
+//       queryClient.invalidateQueries({ queryKey: BOOKINGS_QUERY_KEY });
+//       setIsCreateDialogOpen(false);
+//       form.reset();
+//     },
+//     onError: (error) => {
+//       toast.error('Failed to create booking');
+//       console.error(error);
+//     }
+//   });
+// };
+
   const onSubmit = (values: BookingFormValues) => {
     createBooking({
       body: {
         booking: {
           assetId: values.assetId,
-        startDate: values.startDate,
-        endDate: values.endDate,
+          startDate: values.startDate,
+          endDate: values.endDate,
         },
-        customers:  customers.map((customerId) => parseInt(customerId)),
+        customers: customers.map((customerId) => parseInt(customerId)),
       }
     }, {
       onSuccess: () => {
@@ -136,8 +165,8 @@ export default function Component() {
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Asset</FormLabel>
-                      <Select 
-                        onValueChange={field.onChange} 
+                      <Select
+                        onValueChange={field.onChange}
                         defaultValue={field.value}
                       >
                         <FormControl>
@@ -147,7 +176,7 @@ export default function Component() {
                         </FormControl>
                         <SelectContent>
                           {assetList.map((asset) => (
-                            <SelectItem key={asset.id} value={asset.id}>
+                            <SelectItem key={asset.id} value={asset.id.toString()}>
                               {asset.name}
                             </SelectItem>
                           ))}
@@ -158,29 +187,29 @@ export default function Component() {
                   )}
                 />
                 <FormItem>
-                <FormLabel>Customers</FormLabel>
-                <MultiSelector
-                  values={customers}
-                  onValuesChange={setCustomers}
-                >
-                  <MultiSelectorTrigger>
-                    <MultiSelectorInput placeholder="Select Customers..." />
-                  </MultiSelectorTrigger>
-                  <MultiSelectorContent>
-                    <MultiSelectorList>
-                      {customerList.map((customer) => (
-                        <MultiSelectorItem
-                          key={customer.customer.id}
-                          value={customer.customer.id.toString()}
-                        >
-                          {customer.user.name}
-                        </MultiSelectorItem>
-                      ))}
-                    </MultiSelectorList>
-                  </MultiSelectorContent>
-                </MultiSelector>
-                <FormMessage />
-              </FormItem>
+                  <FormLabel>Customers</FormLabel>
+                  <MultiSelector
+                    values={customers}
+                    onValuesChange={setCustomers}
+                  >
+                    <MultiSelectorTrigger>
+                      <MultiSelectorInput placeholder="Select Customers..." />
+                    </MultiSelectorTrigger>
+                    <MultiSelectorContent>
+                      <MultiSelectorList>
+                        {customerList.map((customer) => (
+                          <MultiSelectorItem
+                            key={customer.customer.id}
+                            value={customer.customer.id.toString()}
+                          >
+                            {customer.user.name}
+                          </MultiSelectorItem>
+                        ))}
+                      </MultiSelectorList>
+                    </MultiSelectorContent>
+                  </MultiSelector>
+                  <FormMessage />
+                </FormItem>
                 <FormField
                   control={form.control}
                   name="startDate"
