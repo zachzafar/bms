@@ -28,5 +28,17 @@ export const keysContract = c.router({
             200: z.array(SelectKeySchema)
         },
         summary: 'Get all API keys for a tenant',
-    }
+    },
+    deleteKey: {
+        method: 'DELETE',
+        path: '/keys/:keyId',
+        pathParams: z.object({
+            keyId: z.string()
+        }),
+        responses: {
+            204: z.null()
+        },
+        summary: 'Delete an API key by ID',
+    },
+
 })

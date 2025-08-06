@@ -1,4 +1,4 @@
-import { Controller, Headers, Logger } from '@nestjs/common';
+import { Controller, Headers, Logger, Query } from '@nestjs/common';
 import { contract } from '@repo/api-contract';
 import { tsRestHandler, TsRestHandler } from '@ts-rest/nest';
 import { BookingService } from './booking.service';
@@ -66,5 +66,29 @@ export class BookingController {
         });
     }
 
-    
+    @TsRestHandler(contract.booking.createBookingByTag)
+async createBookingByTag(@Headers() headers: any): Promise<ReturnType<typeof tsRestHandler>> {
+  return tsRestHandler(contract.booking.createBookingByTag, async ({ body }) => {
+    const tenantId = headers['x-tenant-id'];
+    const result = await this.bookingService.createBookingByTag(body, tenantId);
+    return { status: 201, body: result };
+  });
+}
+
+@TsRestHandler(contract.booking.checkTagAvailability)
+async checkTagAvailability(@Headers() headers: any): Promise<ReturnType<typeof tsRestHandler>> {
+  return tsRestHandler(contract.booking.checkTagAvailability, async ({ query }) => {
+    const tenantId = headers['x-tenant-id'];
+
+    const tagId = Number(query.tagId);
+    if (isNaN(tagId)) {
+      return { status: 400, body: { message: "Invalid tagId" } };
+    }
+
+    const result = await this.bookingService.checkAvailabilityByTag({ tagId });
+
+    return { status: 200, body: result };
+  });
+}
+
 }

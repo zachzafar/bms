@@ -7,6 +7,7 @@ import { createSelectSchema, createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 import { v4 as uuid } from "uuid";
 import { MaintenanceTask } from "../maintenance";
+import { Rate } from "../booking";
 
 // Asset Model
 export const Asset = mysqlTable("assets", {
@@ -42,23 +43,24 @@ export type InsertAsset = z.infer<typeof InsertAssetSchema>;
 export type UpdateAsset = z.infer<typeof UpdateAssetSchema>;
 
 export const AssetRelations = relations(Asset, ({ one, many }) => ({
-    tenant: one(Tenant, {
-        fields: [Asset.tenantId],
-        references: [Tenant.id],
-    }),
-    assetType: one(AssetType, {
-        fields: [Asset.assetTypeId],
-        references: [AssetType.id],
-    }),
-    maintenances: many(MaintenanceTask),
-    user: many(UserHasAssets),
-    tags: many(AssetHasTags),
-    bookingForms: many(AssetHasBookingForms),
-    assetImages: many(AssetImages),
-    properties: many(AssetHasProperties),
-    tenantTeamToAsset: many(TenantTeamHasAssets)
-})
-)
+  tenant: one(Tenant, {
+    fields: [Asset.tenantId],
+    references: [Tenant.id],
+  }),
+  assetType: one(AssetType, {
+    fields: [Asset.assetTypeId],
+    references: [AssetType.id],
+  }),
+  maintenances: many(MaintenanceTask),
+  user: many(UserHasAssets),
+  tags: many(AssetHasTags),
+  bookingForms: many(AssetHasBookingForms),
+  assetImages: many(AssetImages),
+  properties: many(AssetHasProperties),
+  tenantTeamToAsset: many(TenantTeamHasAssets),
+  rates: many(AssetHasRates),
+}));
+
 
 
 export const AssetImages = mysqlTable("asset_images",{
@@ -136,4 +138,28 @@ export const AssetHasBookingFormsRelations = relations(AssetHasBookingForms, ({ 
         references: [BookingForm.id],
     }),
 }))
+
+export const AssetHasRates = mysqlTable("asset_has_rates", {
+  id: serial("id").primaryKey(),
+  rateId: bigint("rate_id", { mode: "bigint", unsigned: true })
+    .notNull()
+    .references(() => Rate.id),
+  assetId: varchar("asset_id", { length: 255 })
+    .notNull()
+    .references(() => Asset.id),
+});
+
+export const AssetHasRatesRelations = relations(AssetHasRates, ({ one }) => ({
+  asset: one(Asset, {
+    fields: [AssetHasRates.assetId],
+    references: [Asset.id],
+  }),
+  rate: one(Rate, {
+    fields: [AssetHasRates.rateId],
+    references: [Rate.id],
+  }),
+}));
+
+
+
 

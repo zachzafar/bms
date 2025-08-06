@@ -21,6 +21,7 @@ export default function Settings() {
           <TabsTrigger value='asset-types'>Asset Types</TabsTrigger>
           <TabsTrigger value='booking-forms'>Booking Forms</TabsTrigger>
           <TabsTrigger value="properties">Fields</TabsTrigger>
+          <TabsTrigger value="tags">Tags</TabsTrigger>
         </TabsList>
         <TabsContent value='asset-types'>
           <AssetTypes />
@@ -30,6 +31,9 @@ export default function Settings() {
         </TabsContent>
         <TabsContent value="properties">
            <Properties/>
+        </TabsContent>
+        <TabsContent value="tags">
+           <Tags/>
         </TabsContent>
       </Tabs>
     </>

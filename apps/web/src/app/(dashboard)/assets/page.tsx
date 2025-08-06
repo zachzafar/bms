@@ -105,7 +105,7 @@ export const Row = ({
   const handleDelete = () => {
     const confirmed = confirm(`Delete asset "${asset.name}"?`);
     if (confirmed) {
-      deleteAsset({ params: { id: String(asset.id) } }); // Ensure `id` is a string
+      deleteAsset({ params: { id: String(asset.id) }, body:{} }); // Ensure `id` is a string
     }
   };
 
