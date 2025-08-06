@@ -58,7 +58,7 @@ export const bookingContract = c.router({
         summary: 'Get a booking by id'
     },
     cancelBooking: {
-        method: 'GET',
+        method: 'DELETE',
         path: '/booking/:id',
         responses: {
             204: z.undefined()
@@ -66,6 +66,7 @@ export const bookingContract = c.router({
         pathParams: z.object({
             id: z.string()
         }),
+        body: z.object({}).optional(),
         summary: 'Delete a booking by id'
     },
     updateBooking: {
@@ -113,7 +114,5 @@ export const bookingContract = c.router({
             400: z.object({ message: z.string() }),
         },
         summary: 'Get blocked date ranges for a tag',
-    }
-
-
+    },
 })

@@ -18,13 +18,17 @@ export default function Settings() {
   const [newKeyName, setNewKeyName] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [newKey, setNewKey] = useState<string | null>(null);
-  const {data} = authClient.keys.getKeys.useQuery({
-    queryKey: ["keys"]})
+  const { data } = authClient.keys.getKeys.useQuery({
+    queryKey: ["keys"]
+  })
 
   const apiKeys = data?.status === 200 ? data.body : [];
   const queryClient = authClient.useQueryClient();
   const { mutate: create } = authClient.keys.createKey.useMutation({})
-  
+
+  const { mutate: deleteKey } = (authClient.keys.deleteKey as any).useMutation();
+
+
   const createApiKey = async () => {
     if (!newKeyName) {
       toast("Key name is required.");
@@ -38,33 +42,34 @@ export default function Settings() {
     }, {
       onSuccess: (data) => {
         queryClient.invalidateQueries({ queryKey: ["keys"] });
-        toast.success( "API key created successfully.");
+        toast.success("API key created successfully.");
       },
       onError: (error) => {
         toast.error("Failed to create API key. Please try again.");
       }
     });
   }
-  
 
-  const revokeApiKey = async (keyId: number) => {
+
+  const revokeApiKey = async (keyId: string) => {
     if (!confirm("Are you sure you want to revoke this API key? This action cannot be undone.")) {
       return;
     }
-    
-    try {
-      const response = await fetch(`/api/keys/${keyId}`, {
-        method: 'DELETE',
-      });
-      
-      if (!response.ok) throw new Error('Failed to revoke API key');
-      
-     
-      toast("API key revoked successfully.");
-    } catch (error) {
-      console.error('Error revoking API key:', error);
-      toast("Failed to revoke API key. Please try again.");
-    }
+
+    deleteKey(
+      {
+        params: { keyId }
+      },
+      {
+        onSuccess: () => {
+          queryClient.invalidateQueries({ queryKey: ["keys"] });
+          toast.success("API key revoked successfully.");
+        },
+        onError: () => {
+          toast.error("Failed to revoke API key. Please try again.");
+        }
+      }
+    );
   };
 
   const copyToClipboard = (text: string) => {
@@ -94,14 +99,14 @@ export default function Settings() {
           </CardHeader>
           <CardContent>
             <div className="flex items-center gap-2">
-              <Input 
-                value={newKey} 
-                readOnly 
+              <Input
+                value={newKey}
+                readOnly
                 className="font-mono bg-white dark:bg-gray-800"
               />
-              <Button 
-                variant="outline" 
-                size="icon" 
+              <Button
+                variant="outline"
+                size="icon"
                 onClick={() => copyToClipboard(newKey)}
               >
                 <Copy className="h-4 w-4" />
@@ -177,7 +182,7 @@ export default function Settings() {
                       <Button
                         variant="destructive"
                         size="sm"
-                        onClick={() => {}}
+                        onClick={() => revokeApiKey(key.id)}
                       >
                         <Trash2 className="h-4 w-4" />
                         <span className="sr-only">Revoke</span>

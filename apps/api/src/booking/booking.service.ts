@@ -179,25 +179,31 @@ export class BookingService {
   }
 
   async deleteBooking(bookingId: string) {
-    const existingBooking = await this.getBooking(bookingId);
-    if (!existingBooking) {
-      throw new NotFoundException('Booking not found');
-    }
-
-    // Release slots associated with this booking
-    await this.db.update(schema.Slot)
-      .set({
-        status: 'available',
-        bookingId: null
-      })
-      .where(eq(schema.Slot.bookingId, bookingId))
-      .execute();
-
-    // Delete the booking
-    await this.db.delete(schema.Booking)
-      .where(eq(schema.Booking.id, bookingId))
-      .execute();
+  const existingBooking = await this.getBooking(bookingId);
+  if (!existingBooking) {
+    throw new NotFoundException('Booking not found');
   }
+
+  // Delete dependent user_has_bookings rows first
+  await this.db.delete(schema.UserHasBookings)
+    .where(eq(schema.UserHasBookings.bookingId, bookingId))
+    .execute();
+
+  // Release slots associated with this booking
+  await this.db.update(schema.Slot)
+    .set({
+      status: 'available',
+      bookingId: null
+    })
+    .where(eq(schema.Slot.bookingId, bookingId))
+    .execute();
+
+  // Delete the booking
+  await this.db.delete(schema.Booking)
+    .where(eq(schema.Booking.id, bookingId))
+    .execute();
+}
+
 
   // Check availability excluding a specific booking
 

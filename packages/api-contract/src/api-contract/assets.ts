@@ -178,4 +178,21 @@ export const assetsContract = c.router({
     }),
     summary: 'Delete images for an asset'
   },
+  getAvailableAssets: {
+        method: 'GET',
+        path: '/assets/available',
+        summary: 'Get all assets available between a date range',
+        query: z.object({
+            startDate: z.string(), // ISO date
+            endDate: z.string()
+        }),
+        responses: {
+            200: z.array(
+                z.object({
+                    id: z.string(),
+                    name: z.string(),
+                })
+            )
+        }
+    }
 })

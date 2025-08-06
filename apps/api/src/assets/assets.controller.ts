@@ -1,4 +1,4 @@
-import { Controller, Headers, Logger, MaxFileSizeValidator, ParseFilePipe, ParseFilePipeBuilder, UploadedFiles, UseInterceptors } from '@nestjs/common';
+import { Controller, Headers, Logger, MaxFileSizeValidator, ParseFilePipe, ParseFilePipeBuilder, Query, UploadedFiles, UseInterceptors } from '@nestjs/common';
 import { AssetsService } from './assets.service';
 import { TsRestHandler, tsRestHandler } from '@ts-rest/nest';
 import { contract } from '@repo/api-contract';
@@ -22,7 +22,7 @@ export class AssetsController {
 
             const assets = await this.assetService.getAssets(query, tenantId);
 
-            // Convert assetTypeId to number (optional)
+            // Convert assetTypeId to number
             const assetsWithTypeId = assets.map((asset) => {
                 let assetTypeId = asset.assetTypeId ? Number(asset.assetTypeId) : undefined;
                 return { ...asset, assetTypeId };
@@ -209,6 +209,15 @@ export class AssetsController {
             return { status: 200, body: images };
         });
     }
+
+    @TsRestHandler(contract.assets.getAvailableAssets)
+    async getAvailableAssets(@Headers() headers: any): Promise<ReturnType<typeof tsRestHandler>> {
+        return tsRestHandler(contract.assets.getAvailableAssets, async ({ query }) => {
+            const availableAssets = await this.assetService.getAvailableAssets(query.startDate, query.endDate);
+            return { status: 200, body: availableAssets };
+        });
+    }
+
 
 
 }

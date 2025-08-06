@@ -7,11 +7,11 @@ import { contract } from '@repo/api-contract';
 export class KeysController {
     private readonly logger = new Logger(KeysController.name);
 
-    constructor(private keysService: KeysService){}
+    constructor(private keysService: KeysService) { }
 
     @TsRestHandler(contract.keys.createKey)
-    async createKey(@Headers() headers: any,): Promise<ReturnType<typeof tsRestHandler>>{
-        return tsRestHandler(contract.keys.createKey, async ({body}) => {
+    async createKey(@Headers() headers: any,): Promise<ReturnType<typeof tsRestHandler>> {
+        return tsRestHandler(contract.keys.createKey, async ({ body }) => {
             const tenantId = headers['x-tenant-id'];
             const key = await this.keysService.createKey(tenantId, body.name)
 
@@ -26,7 +26,7 @@ export class KeysController {
     }
 
     @TsRestHandler(contract.keys.getKeys)
-    async getKeys(@Headers() headers: any,): Promise<ReturnType<typeof tsRestHandler>>{
+    async getKeys(@Headers() headers: any,): Promise<ReturnType<typeof tsRestHandler>> {
         return tsRestHandler(contract.keys.getKeys, async () => {
             const tenantId = headers['x-tenant-id'];
             const keys = await this.keysService.getKeys(tenantId)
@@ -37,4 +37,18 @@ export class KeysController {
             }
         })
     }
+
+    @TsRestHandler(contract.keys.deleteKey)
+    async deleteKey(@Headers() headers: any): Promise<ReturnType<typeof tsRestHandler>> {
+        return tsRestHandler(contract.keys.deleteKey, async ({ params }) => {
+            const tenantId = headers['x-tenant-id'];
+            await this.keysService.deleteKey(tenantId, params.keyId);
+
+            return {
+                status: 204,
+                body: null
+            };
+        });
+    }
+
 }

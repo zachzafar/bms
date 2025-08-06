@@ -1,7 +1,7 @@
 import { relations} from "drizzle-orm";
 import { mysqlTable, varchar, datetime, decimal, text, timestamp, int, index, serial, boolean, bigint, date } from "drizzle-orm/mysql-core";
 import { UserHasBookings } from "../users";
-import { Asset } from "../asset";
+import { Asset, AssetHasRates } from "../asset";
 import { createInsertSchema, createSelectSchema } from "drizzle-zod";
 import { z } from "zod";
 import { BookingFormField } from "../settings";
@@ -94,14 +94,35 @@ export const SlotRelations = relations(Slot, ({ one }) => ({
 
 export const Rate = mysqlTable("rate", {
   id: serial("id").primaryKey(),
-  assetId: varchar("asset_id", { length: 255 }).notNull().references(() => Asset.id),
-  name: varchar("name", { length: 255 }),
-  startDate: date("start_date"),         // For seasonal rates
-  endDate: date("end_date"),
-  minNights: int("min_nights"),          // For stay length tiers
+  name: varchar("name", { length: 255 }).notNull(),
+  description: text("description"),
+  startDate: date("start_date").notNull(),
+  endDate: date("end_date").notNull(),
+  minNights: int("min_nights"),
   maxNights: int("max_nights"),
-  pricePerNight: decimal("price_per_night", { precision: 10, scale: 2 }),
-  priority: int("priority").default(100), // Lower = higher priority
+  pricePerNight: decimal("price_per_night"),
+  priority: int("priority").default(100),
 });
+
+
+export const InsertRateSchema = createInsertSchema(Rate)
+  .omit({ startDate: true, endDate: true })
+  .extend({
+    startDate: z.string(),
+    endDate: z.string(),
+    assetIds: z.array(z.string()).optional(),
+  });
+export const SelectRateSchema = createSelectSchema(Rate);
+export const UpdateRateSchema = InsertRateSchema.partial();
+
+export type InsertRate = z.infer<typeof InsertRateSchema>;
+export type SelectRate = z.infer<typeof SelectRateSchema>;
+export type UpdateRate = z.infer<typeof UpdateRateSchema>;
+
+export const RatesRelations = relations(Rate, ({ many }) => ({
+  assets: many(AssetHasRates),
+}));
+
+
 
 

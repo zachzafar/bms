@@ -1,104 +1,115 @@
 import {
-    Sidebar,
-    SidebarContent,
-    SidebarGroup,
-    SidebarGroupContent,
-    SidebarGroupLabel,
-    SidebarMenu,
-    SidebarMenuButton,
-    SidebarMenuItem,
-    SidebarMenuSub,
-    SidebarMenuSubItem,
-  } from "@/components/ui/sidebar"
+  Sidebar,
+  SidebarContent,
+  SidebarGroup,
+  SidebarGroupContent,
+  SidebarGroupLabel,
+  SidebarMenu,
+  SidebarMenuButton,
+  SidebarMenuItem,
+  SidebarMenuSub,
+  SidebarMenuSubItem,
+} from "@/components/ui/sidebar"
 import { Collapsible, CollapsibleTrigger, CollapsibleContent } from "@radix-ui/react-collapsible"
-import { Home, Box, Calendar, Clipboard,Cog, Settings, User2 } from "lucide-react"
+import { Home, Box, Calendar, Clipboard, Cog, Settings, User2, CircleDollarSign } from "lucide-react"
 
 
 
 // Menu items.
 const items = [
-    {
-      title: "Dashboard",
-      url: "/dashboard",
-      icon: Home,
-    },
-    {
-      title: "Bookings",
-      url: "/bookings",
-      icon: Calendar,
-    },
-    {
-      title: "Maintenance",
-      url: "/maintenance",
-      icon: Cog,
-    },
-    {
-      title: "Assets",
-      icon: Box,
-      children: [
-        {
-          title: "Asset List",
-          url: "/assets",
-          icon: Box,
-        },
-        {
-          title: "Config",
-          url: "/assets/config",
-          icon: Settings
-        },
-      ],
-    },
-    {
-        title: "Reports",
-        url: "/reports",
-        icon: Clipboard,
+  {
+    title: "Dashboard",
+    url: "/dashboard",
+    icon: Home,
+  },
+  {
+    title: "Bookings",
+    icon: Calendar,
+    children: [
+      {
+        title: "Rates",
+        url: "/bookings/rates",
+        icon: CircleDollarSign,
       },
-    {
-        title:"Users",
+      {
+        title: "Bookings",
+        url: "/bookings",
+        icon: Calendar,
+      }
+    ]
+  },
+  {
+    title: "Maintenance",
+    url: "/maintenance",
+    icon: Cog,
+  },
+  {
+    title: "Assets",
+    icon: Box,
+    children: [
+      {
+        title: "Asset List",
+        url: "/assets",
+        icon: Box,
+      },
+      {
+        title: "Config",
+        url: "/assets/config",
+        icon: Settings
+      },
+    ],
+  },
+  {
+    title: "Reports",
+    url: "/reports",
+    icon: Clipboard,
+  },
+  {
+    title: "Users",
+    icon: User2,
+    children: [
+      {
+        title: "User List",
+        url: "/users",
         icon: User2,
-        children: [  
-          {
-            title: "User List",
-            url: "/users",
-            icon: User2,
-          },
-          {
-            title: "User Roles",
-            url: "/users/roles",
-            icon: Settings,
-          },
-          {
-            title: "Owners",
-            url: "/users/owners",
-            icon: User2,
-          },
-          {
-            title: "Customers",
-            url: "/users/customers",
-            icon: User2,
-          },
-          // {
-          //   title:"Teams",
-          //   url:"/teams",
-          //   icon: User2
-          // },
-        ]
       },
-    {
-      title: "Settings",
-      url: "/settings",
-      icon: Settings,
-    },
-  ]
-   
-  export function AppSidebar() {
-    return (
-      <Sidebar>
-        <SidebarContent>
-          <SidebarGroup>
-            <SidebarGroupLabel>Application</SidebarGroupLabel>
-            <SidebarGroupContent>
-              <SidebarMenu>
+      {
+        title: "User Roles",
+        url: "/users/roles",
+        icon: Settings,
+      },
+      {
+        title: "Owners",
+        url: "/users/owners",
+        icon: User2,
+      },
+      {
+        title: "Customers",
+        url: "/users/customers",
+        icon: User2,
+      },
+      // {
+      //   title:"Teams",
+      //   url:"/teams",
+      //   icon: User2
+      // },
+    ]
+  },
+  {
+    title: "Settings",
+    url: "/settings",
+    icon: Settings,
+  },
+]
+
+export function AppSidebar() {
+  return (
+    <Sidebar>
+      <SidebarContent>
+        <SidebarGroup>
+          <SidebarGroupLabel>Application</SidebarGroupLabel>
+          <SidebarGroupContent>
+            <SidebarMenu>
               {items.map((item) => (
                 <SidebarMenuItem key={item.title}>
                   {item.children ? (

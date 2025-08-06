@@ -2,7 +2,7 @@ import { Inject, Injectable, InternalServerErrorException, Logger } from '@nestj
 import { MySql2Database } from 'drizzle-orm/mysql2';
 import { DrizzleAsyncProvider } from 'src/drizzle/drizzle.provider';
 import * as schema from '@repo/api-contract';
-import { and, eq, inArray } from 'drizzle-orm';
+import { and, eq, gte, inArray, lte } from 'drizzle-orm';
 import type { InsertAsset, UpdateAsset } from '@repo/api-contract';
 import { ObjectStorageService } from 'src/object-storage/object-storage.service';
 
@@ -249,5 +249,42 @@ export class AssetsService {
 
     return assetsWithDetails;
   }
+
+  async getAvailableAssets(startDate: string, endDate: string) {
+  const start = new Date(startDate);
+  const end = new Date(endDate);
+
+  // 1. Get all assets
+  const allAssets = await this.db
+    .select({
+      id: schema.Asset.id,
+      name: schema.Asset.name
+    })
+    .from(schema.Asset);
+
+  const allAssetIds = allAssets.map((a) => a.id);
+
+  // 2. Get bookings that overlap with the range
+  const bookings = await this.db
+    .select({ assetId: schema.Booking.assetId })
+    .from(schema.Booking)
+    .where(
+      and(
+        inArray(schema.Booking.assetId, allAssetIds),
+        lte(schema.Booking.startDate, end),
+        gte(schema.Booking.endDate, start)
+      )
+    );
+
+  const bookedAssetIds = new Set(bookings.map((b) => b.assetId));
+
+  // 3. Filter available
+  const availableAssets = allAssets.filter(
+    (asset) => !bookedAssetIds.has(asset.id)
+  );
+
+  return availableAssets;
+}
+
 
 }
