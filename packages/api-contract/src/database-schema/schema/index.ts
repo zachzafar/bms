@@ -2,9 +2,10 @@ export * from './users';
 export * from './maintenance';
 export * from './asset'
 export * from './booking'
-// export * from './finance'
+export * from './finance'
 export * from './settings'
 export * from './tenant'
 export * from './auth'
 export * from './file'
 export * from './keys'
+export * from './crm'

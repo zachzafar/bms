@@ -1,15 +1,16 @@
 import { relations } from "drizzle-orm";
-import { bigint, datetime, json, mysqlEnum, mysqlTable, serial, text, timestamp, uniqueIndex, varchar } from "drizzle-orm/mysql-core";
+import { bigint, datetime, int, json, mysqlEnum, mysqlTable, serial, text, timestamp, uniqueIndex, varchar } from "drizzle-orm/mysql-core";
 import { Asset } from "../asset";
 import { createInsertSchema, createSelectSchema } from "drizzle-zod";
 import { z } from "zod";
 import { Booking } from "../booking";
 import { v4 as uuid } from "uuid";
 import { Tenant } from "../tenant";
+import { CommunicationLog, Contact, Document, Inquiry, Task } from "../crm";
 
 
-const userTypes = ["customer", "owner","system"] as const;
-type UserType = (typeof userTypes)[number]; 
+const userTypes = ["customer", "owner", "system"] as const;
+type UserType = (typeof userTypes)[number];
 
 // User Model
 export const User = mysqlTable("users", {
@@ -18,13 +19,13 @@ export const User = mysqlTable("users", {
     email: varchar("email", { length: 255 }).notNull().unique(),
     password: varchar("password", { length: 255 }).notNull(), // Enum as string
     userType: json("user_type").$type<UserType[]>().notNull(),
-    createdAt: timestamp('createdAt', {mode: 'date'}).defaultNow(),
+    createdAt: timestamp('createdAt', { mode: 'date' }).defaultNow(),
     updatedAt: timestamp('updated_at', { mode: 'date', }).$onUpdate(() => new Date()),
 }, (table) => ({
     emailUniqueIdx: uniqueIndex("email_unique").on(table.email),
 }));
 
-export const userRelations = relations(User, ({ one,many }) => ({
+export const userRelations = relations(User, ({ one, many }) => ({
     customer: one(Customer, {
         fields: [User.id],
         references: [Customer.userId],
@@ -35,21 +36,25 @@ export const userRelations = relations(User, ({ one,many }) => ({
     }),
     userToRoles: many(UserHasRoles),
     usersToAssets: many(UserHasAssets),
+    inquiries: many(Inquiry),
+    communications: many(CommunicationLog),
+    tasks: many(Task),
+    documentsUploaded: many(Document),
 }));
 
-export const InsertUserSchema = createInsertSchema(User).omit({ userType: true}).extend({
+export const InsertUserSchema = createInsertSchema(User).omit({ userType: true }).extend({
     userType: z.array(z.enum(userTypes)).min(1)
 });
-export const SelectUserSchema = createSelectSchema(User).extend({roles: z.array(z.number())});
+export const SelectUserSchema = createSelectSchema(User).extend({ roles: z.array(z.number()) });
 export const UpdateUserSchema = InsertUserSchema.partial();
 
 export type InsertUser = z.infer<typeof InsertUserSchema>
 export type SelectUser = z.infer<typeof SelectUserSchema>
 export type UpdateUser = z.infer<typeof UpdateUserSchema>
 
-export const UserHasBookings = mysqlTable("user_has_bookings",{
+export const UserHasBookings = mysqlTable("user_has_bookings", {
     id: serial("id").primaryKey(),
-    userId: varchar("user_id", {length: 255}).notNull().references(() => User.id, { onDelete: 'cascade' }),
+    userId: varchar("user_id", { length: 255 }).notNull().references(() => User.id, { onDelete: 'cascade' }),
     bookingId: varchar("booking_id", { length: 255 }).notNull().references(() => Booking.id)
 })
 
@@ -60,19 +65,19 @@ export type InsertUserHasBookings = z.infer<typeof InsertUserHasBookingsSchema>
 export type SelectUserHasBookings = z.infer<typeof SelectUserHasBookingsSchema>
 
 export const UserHasBookingsRelations = relations(UserHasBookings, ({ one }) => ({
-    one: one(User,{
+    one: one(User, {
         fields: [UserHasBookings.userId],
         references: [User.id]
     }),
-    booking: one(Booking,{
+    booking: one(Booking, {
         fields: [UserHasBookings.bookingId],
         references: [Booking.id]
     })
 }))
 
-export const UserHasAssets = mysqlTable("user_has_assets",{
+export const UserHasAssets = mysqlTable("user_has_assets", {
     id: serial("id").primaryKey(),
-    userId: varchar("user_id", {length: 255}).notNull().references(() => User.id, { onDelete: 'cascade' }).notNull(),
+    userId: varchar("user_id", { length: 255 }).notNull().references(() => User.id, { onDelete: 'cascade' }).notNull(),
     assetId: varchar("asset_id", { length: 255 }).notNull().references(() => Asset.id),
     type: mysqlEnum("type", ["owner", "manager"]).notNull().default("manager")
 })
@@ -84,11 +89,11 @@ export type InsertUserHasAssets = z.infer<typeof InsertUserHasAssetsSchema>
 export type SelectUserHasAssets = z.infer<typeof SelectUserHasAssetsSchema>
 
 export const UserHasAssetsRelations = relations(UserHasAssets, ({ one }) => ({
-    one: one(User,{
+    one: one(User, {
         fields: [UserHasAssets.userId],
         references: [User.id]
     }),
-    asset: one(Asset,{
+    asset: one(Asset, {
         fields: [UserHasAssets.assetId],
         references: [Asset.id]
     })
@@ -99,6 +104,8 @@ export const Customer = mysqlTable("customer_details", {
     id: serial("id").primaryKey(),
     phone: varchar("phone", { length: 255 }),
     address: varchar("address", { length: 255 }),
+    contactId: int("contact_id")
+      .references(() => Contact.id),
     dateOfBirth: datetime("date_of_birth"),
     createdAt: timestamp('createdAt').notNull().defaultNow(),
     updatedAt: timestamp('updated_at', { mode: 'date', }).$onUpdate(() => new Date()),
@@ -110,7 +117,7 @@ export const Customer = mysqlTable("customer_details", {
 
 export const InsertCustomerSchema = createInsertSchema(Customer);
 export const SelectCustomerSchema = createSelectSchema(Customer);
-export const UpdateCustomerSchema = InsertCustomerSchema.partial().required({  userId: true });
+export const UpdateCustomerSchema = InsertCustomerSchema.partial().required({ userId: true });
 
 export type InsertCustomer = z.infer<typeof InsertCustomerSchema>;
 export type SelectCustomer = z.infer<typeof SelectCustomerSchema>;
@@ -130,6 +137,8 @@ export const Owner = mysqlTable("owner_details", {
     phone: varchar("phone", { length: 255 }),
     address: varchar("address", { length: 255 }),
     companyName: varchar("company_name", { length: 255 }),
+    contactId: int("contact_id")
+      .references(() => Contact.id),
     taxId: varchar("tax_id", { length: 255 }),
     createdAt: timestamp('createdAt').notNull().defaultNow(),
     updatedAt: timestamp('updated_at', { mode: 'date', }).$onUpdate(() => new Date()),
@@ -156,11 +165,11 @@ export const ownerRelations = relations(Owner, ({ one, many }) => ({
 
 export const Roles = mysqlTable("roles", {
     id: serial("id").primaryKey(),
-    name: varchar("name", {length: 255}).notNull(),
+    name: varchar("name", { length: 255 }).notNull(),
     description: text("description"),
     createdAt: timestamp('createdAt').notNull().defaultNow(),
     updatedAt: timestamp('updated_at', { mode: 'date', }).$onUpdate(() => new Date()),
-    tenantId: varchar("tenant_id", {length: 255}).references(() => Tenant.id),
+    tenantId: varchar("tenant_id", { length: 255 }).references(() => Tenant.id),
 })
 
 export const InsertRoleSchema = createInsertSchema(Roles);
@@ -175,11 +184,11 @@ export const RoleRelations = relations(Roles, ({ many }) => ({
 }));
 
 
-export const UserHasRoles = mysqlTable("user_has_roles",{
+export const UserHasRoles = mysqlTable("user_has_roles", {
     id: serial("id").primaryKey(),
-    roleId: bigint("roles_id", { mode: 'bigint', unsigned: true}).notNull().references(() => Roles.id),
-    userId: varchar("user_id", { length: 255}).references(() => User.id, { onDelete: 'cascade' }).notNull(),
-    tenantId: varchar("tenant_id", { length: 255}).notNull().references(() => Tenant.id), // Add tenantId here als
+    roleId: bigint("roles_id", { mode: 'bigint', unsigned: true }).notNull().references(() => Roles.id),
+    userId: varchar("user_id", { length: 255 }).references(() => User.id, { onDelete: 'cascade' }).notNull(),
+    tenantId: varchar("tenant_id", { length: 255 }).notNull().references(() => Tenant.id), // Add tenantId here als
     createdAt: timestamp('createdAt').notNull().defaultNow(),
     updatedAt: timestamp('updated_at', { mode: 'date', }).$onUpdate(() => new Date()),
 })
@@ -191,27 +200,27 @@ export type InsertUserHasRoles = z.infer<typeof InsertUserHasRolesSchema>
 export type SelectUserHasRoles = z.infer<typeof SelectUserHasRolesSchema>
 
 export const UserHasRolesRelations = relations(UserHasRoles, ({ one }) => ({
-    role: one(Roles,{
+    role: one(Roles, {
         fields: [UserHasRoles.roleId],
         references: [Roles.id]
     }),
-    user: one(User,{
+    user: one(User, {
         fields: [UserHasRoles.userId],
         references: [User.id]
-    })  
+    })
 }))
 
 
-export const RoleHasPermissions = mysqlTable("role_has_permissions",{
+export const RoleHasPermissions = mysqlTable("role_has_permissions", {
     id: serial("id").primaryKey(),
-    roleId: bigint("role_id", { mode: 'bigint', unsigned: true}).references(() => Roles.id).notNull(),
-    permission: varchar("permission", { length: 255}).notNull(),
+    roleId: bigint("role_id", { mode: 'bigint', unsigned: true }).references(() => Roles.id).notNull(),
+    permission: varchar("permission", { length: 255 }).notNull(),
     createdAt: timestamp('createdAt').notNull().defaultNow(),
     updatedAt: timestamp('updated_at', { mode: 'date', }).$onUpdate(() => new Date()),
 })
 
 export const RoleHasPermissionsRelations = relations(RoleHasPermissions, ({ one }) => ({
-    role: one(Roles,{
+    role: one(Roles, {
         fields: [RoleHasPermissions.roleId],
         references: [Roles.id]
     })
