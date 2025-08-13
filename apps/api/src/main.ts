@@ -37,7 +37,7 @@ async function bootstrap() {
   
   app.useGlobalGuards(new UniversalGuard(reflector),new TenantGuard(reflector,tenantService,keysService));
 
-  await app.listen(process.env.PORT ?? 3001);
+  await app.listen(process.env.PORT ?? 4000);
   logger.log(`Application is running on: ${await app.getUrl()}`);
 }
 bootstrap();
