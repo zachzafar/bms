@@ -22,6 +22,8 @@ import { EventEmitterModule } from '@nestjs/event-emitter';
 import { EmailModule } from './email/email.module';
 import { RatesModule } from './rates/rates.module';
 import { TagsModule } from './tags/tags.module';
+import { BillingModule } from './billing/billing.module';
+// import { CrmModule } from './crm/crm.module';
 var cors = require('cors');
 
 const allowAllCorsEndpoints = [
@@ -34,7 +36,7 @@ const allowAllCorsEndpoints = [
   imports: [DrizzleModule, SchemaDesignModule, AuthModule, UsersModule,ConfigModule.forRoot({
     isGlobal: true, // Makes ConfigService globally available
     envFilePath: '.env', // Path to your environment file
-  }), AssetsModule, BookingModule, MaintenanceModule, TeamsModule, TenantModule, ObjectStorageModule, KeysModule, AnalyticsModule, SlotModule, EventEmitterModule.forRoot(), EmailModule, RatesModule, TagsModule],
+  }), AssetsModule, BookingModule, MaintenanceModule, TeamsModule, TenantModule, ObjectStorageModule, KeysModule, AnalyticsModule, SlotModule, EventEmitterModule.forRoot(), EmailModule, RatesModule, TagsModule, BillingModule,],
   controllers: [AppController, SlotController],
   providers: [AppService, ObjectStorageService, SlotService],
 })
