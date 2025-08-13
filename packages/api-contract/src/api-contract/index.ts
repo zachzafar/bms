@@ -11,6 +11,9 @@ import { keysContract } from './keys';
 import { analyticsContract } from './analytics';
 import { slotContract } from './slots';
 import { rateContract } from './rates';
+// import { billingContract } from './billing';
+import { crmContract } from './crm';
+import { billingContract } from './billing';
 
 
 const c = initContract();
@@ -29,6 +32,8 @@ export const contract = c.router({
   analytics: analyticsContract,
   slots: slotContract,
   rates: rateContract,
+  billing: billingContract,
+  crm: crmContract,
 });
 
 export * from './auth';
@@ -39,6 +44,8 @@ export * from './maintenance';
 export * from './users';
 export * from './teams';
 export * from './tenants';
-export * from './keys'
+export * from './keys';
 export * from './analytics';
 export * from './rates';
+export * from './billing';
+export * from './crm';
