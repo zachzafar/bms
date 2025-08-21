@@ -1,13 +1,15 @@
-import { ConflictException, Inject, Injectable, NotFoundException } from '@nestjs/common';
+import { ConflictException, Inject, Injectable, NotFoundException, UnauthorizedException } from '@nestjs/common';
 import { MySql2Database } from 'drizzle-orm/mysql2';
 import { and, eq, gte, lte } from 'drizzle-orm';
 import * as schema from '@repo/api-contract';
 import { DrizzleAsyncProvider } from 'src/drizzle/drizzle.provider';
 import { InsertRate, UpdateRate } from '@repo/api-contract';
+import { TenantService } from 'src/tenant/tenant.service';
 
 @Injectable()
 export class RatesService {
   constructor(
+    private readonly tenantService: TenantService,
     @Inject(DrizzleAsyncProvider) private db: MySql2Database<typeof schema>,
   ) {}
 
@@ -180,36 +182,5 @@ async deleteRate(id: string) {
   // Then delete the rate itself
   await this.db.delete(schema.Rate)
     .where(eq(schema.Rate.id, numericId));
-}
-
-// For getRatesInRange, now need to check the join table and filter by assetId + date range
-async getRatesInRange({
-  assetId,
-  startDate,
-  endDate
-}: {
-  assetId: string;
-  startDate: string;
-  endDate: string;
-}) {
-  const start = new Date(startDate);
-  const end = new Date(endDate);
-
-  const rates = await this.db
-    .select({ rate: schema.Rate })
-    .from(schema.Rate)
-    .innerJoin(
-      schema.AssetHasRates,
-      eq(schema.Rate.id, schema.AssetHasRates.rateId)
-    )
-    .where(
-      and(
-        eq(schema.AssetHasRates.assetId, assetId),
-        lte(schema.Rate.startDate, end),
-        gte(schema.Rate.endDate, start)
-      )
-    );
-
-  return rates.map(({ rate }) => rate);
 }
 }

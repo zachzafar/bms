@@ -27,48 +27,56 @@ import { toast } from 'sonner';
 import { InsertTag, InsertTagSchema } from '@repo/api-contract';
 import { Textarea } from '@/components/ui/textarea';
 import { useQueryClient } from '@tanstack/react-query';
+import { StorageService } from '@/lib/api/storage';
+
 
 
 export default function Tags() {
+  const tenantId = StorageService.getTenant()?.id;
+  console.log('tenantId:', tenantId);
 
   const queryClient = useQueryClient();
 
-  const { data: tags, isLoading } = authClient.settings.tags.getTags.useQuery({
-    queryKey: ['tags']
+  const { mutate: createTag } = authClient.settings.tags.createTag.useMutation({
+    onSuccess: () => {
+      toast('Tag created successfully');
+      queryClient.invalidateQueries({ queryKey: ['tags'] });
+      form.reset();
+    },
+    onError: (error) => {
+      toast(`Error creating tag: ${error}`);
+    }
   });
 
-  const { mutate: createTag } = authClient.settings.tags.createTag.useMutation({
-  onSuccess: () => {
-    toast('Tag created successfully');
-    queryClient.invalidateQueries({ queryKey: ['tags'] });
-    form.reset();
-  },
-  onError: (error) => {
-    toast(`Error creating tag: ${error}`);
-  }
-});
+  const { data: tags, isLoading } = authClient.settings.tags.getTags.useQuery({
+    queryKey: ['tags']
+  })
 
   const { mutate: deleteTag } = authClient.settings.tags.deleteTag.useMutation({
-  onSuccess: () => {
-    toast('Tag deleted successfully');
-    queryClient.invalidateQueries({ queryKey: ['tags'] }); // refetch tags
-  },
-  onError: (error: any) => {
-    toast(`Error deleting tag: ${error.message}`);
-  }
-});
+    onSuccess: () => {
+      toast('Tag deleted successfully');
+      queryClient.invalidateQueries({ queryKey: ['tags'] }); // refetch tags
+    },
+    onError: (error: any) => {
+      toast(`Error deleting tag: ${error.message}`);
+    }
+  });
 
   const form = useForm<InsertTag>({
     resolver: zodResolver(InsertTagSchema),
   });
 
-  const processForm: SubmitHandler<InsertTag> = async (data) => {
+  console.log(form.formState.errors); // Log the errors in the form
+
+  const processForm: SubmitHandler<InsertTag> = (data) => {
+    console.log("Form Data inside processForm:", data);
+    
+    const body = { ...data}; // Create the payload
+
+    console.log('Creating tag with data:', { body });
+
     createTag({
-      body: data
-    }, {
-      onSuccess: (response) => {
-        console.log('response', response);
-      }
+      body
     });
   };
 
@@ -92,7 +100,7 @@ export default function Tags() {
                   <FormItem>
                     <FormLabel>Name</FormLabel>
                     <FormControl>
-                      <Input placeholder="Enter tag name" {...field} />
+                      <Input {...field} value={field.value ?? ''} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -106,11 +114,7 @@ export default function Tags() {
                   <FormItem>
                     <FormLabel>Description</FormLabel>
                     <FormControl>
-                      <Textarea
-                        placeholder="Enter tag description" 
-                        {...field}
-                        value={field.value ?? ''} // Convert null to empty string
-                      />
+                      <Textarea {...field} value={field.value ?? ''} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>

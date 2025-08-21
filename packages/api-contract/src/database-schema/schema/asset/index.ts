@@ -105,11 +105,17 @@ export const AssetHasPropertiesRelations = relations(AssetHasProperties, ({ one 
     }),
 }))
 
-export const AssetHasTags = mysqlTable("asset_has_tags",{
+export const AssetHasTags = mysqlTable("asset_has_tags", {
     id: serial("id").primaryKey(),
-    tagId: bigint("tag_id",{mode: 'bigint', unsigned: true}).references(() => Tags.id),
-    assetId: varchar("asset_id", {length: 255}).notNull().references(() => Asset.id)
-})
+    tagId: bigint("tag_id", { mode: 'bigint', unsigned: true })
+        .notNull()
+        .references(() => Tags.id, { onDelete: 'cascade' }), // lowercase 'cascade'
+    assetId: varchar("asset_id", { length: 255 })
+        .notNull()
+        .references(() => Asset.id, { onDelete: 'cascade' }), // lowercase 'cascade'
+});
+
+
 
 export const AssetHasTagsRelations = relations(AssetHasTags, ({ one }) => ({
     asset: one(Asset, {
