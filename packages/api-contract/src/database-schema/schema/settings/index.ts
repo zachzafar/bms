@@ -8,22 +8,38 @@ import { AssetHasBookingForms, AssetHasTags } from "../asset";
 
 
 
-export const Tags = mysqlTable("tags", {
+export const Tags = mysqlTable(
+  "tags",
+  {
     id: serial("id").primaryKey(),
     name: varchar("name", { length: 255 }).notNull(),
     description: text("description"),
-    createdAt: timestamp('createdAt').notNull().defaultNow(),
-    updatedAt: timestamp('updated_at', { mode: 'date', }).$onUpdate(() => new Date()),
-});
+    tenantId: varchar("tenant_id", { length: 255 }).references(() => Tenant.id),
+    createdAt: timestamp("createdAt").notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { mode: "date" }).$onUpdate(() => new Date()),
+  },
+  (table) => ({
+    nameUniqueIdx: uniqueIndex("name_unique").on(table.name, table.tenantId),
+  })
+);
 
-export const InsertTagSchema = createInsertSchema(Tags)
-export const SelectTagSchema = createSelectSchema(Tags)
+// Define InsertTag schema, tenantId is optional, backend will fill it
+export const InsertTagSchema = createInsertSchema(Tags).extend({
+  name: z.string().min(1, "Tag name is required"),  // Ensure that name is always required
+  description: z.string().optional(),  // Optional field for description
+  tenantId: z.string().optional(),  // Optional as it's automatically filled by backend
+});
+export const SelectTagSchema = createSelectSchema(Tags);
 
 export type InsertTag = z.infer<typeof InsertTagSchema>;
 export type SelectTag = z.infer<typeof SelectTagSchema>;
 
-export const TagsRelations = relations(Tags, ({ many }) => ({
-    asset: many(AssetHasTags)
+export const TagsRelations = relations(Tags, ({ many, one }) => ({
+  asset: many(AssetHasTags),
+  tenant: one(Tenant, {
+    fields: [Tags.tenantId],
+    references: [Tenant.id],
+  }),
 }));
 
 

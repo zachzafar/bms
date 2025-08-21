@@ -1,55 +1,70 @@
 import { Controller, Headers } from '@nestjs/common';
 import { contract } from '@repo/api-contract';
-import { tsRestHandler, TsRestHandler, TsRestRequest, } from '@ts-rest/nest';
+import { tsRestHandler, TsRestHandler } from '@ts-rest/nest';
 import { TagsService } from './tags.service';
-
-// const c = tagsContract;
+import { TenantService } from 'src/tenant/tenant.service';
+import * as schema from '@repo/api-contract';
 
 @Controller()
 export class TagsController {
-  constructor(private readonly tagsService: TagsService) {
-
-  }
-
+  constructor(
+    private readonly tagsService: TagsService,
+    private readonly tenantService: TenantService // ✅ now injected
+  ) {}
 
   @TsRestHandler(contract.settings.tags.createTag)
-  async createTag(@Headers() headers: any): Promise<ReturnType<typeof tsRestHandler>> {
-    return tsRestHandler(contract.settings.tags.createTag, async ({ body }) => {
-      const tag = await this.tagsService.createTag(body);
-      return { status: 201, body: { id: String(tag.id) } };
-    });
-  }
+async createTag(@Headers() headers: any): Promise<ReturnType<typeof tsRestHandler>> {
+  return tsRestHandler(contract.settings.tags.createTag, async ({ body }) => {
+    const tenantId = body.tenantId || headers['x-tenant-id'];
 
+    if (!tenantId) {
+      throw new Error('Tenant ID is missing from headers'); // Ensure tenantId exists
+    }
+
+    // Add tenantId to the request body before passing it to the service
+    const tagData = { ...body, tenantId };
+
+    // Call the service with the complete data
+    const tag = await this.tagsService.createTag(tagData);
+    
+    return { status: 201, body: { id: String(tag.id) } };
+  });
+}
 
   @TsRestHandler(contract.settings.tags.getTags)
-  async getTags(): Promise<ReturnType<typeof tsRestHandler>> {
+  async getTags(@Headers() headers: any): Promise<ReturnType<typeof tsRestHandler>> {
     return tsRestHandler(contract.settings.tags.getTags, async () => {
-      const tags = await this.tagsService.getTags();
+      const tenantId = headers['x-tenant-id'];
+      // Fetch only tags belonging to this tenant
+      const tags = await this.tagsService.getTags(tenantId);
       return { status: 200, body: tags };
     });
   }
 
   @TsRestHandler(contract.settings.tags.getTag)
-  async getTag(): Promise<ReturnType<typeof tsRestHandler>> {
+  async getTag(@Headers() headers: any): Promise<ReturnType<typeof tsRestHandler>> {
     return tsRestHandler(contract.settings.tags.getTag, async ({ params }) => {
-      try {
-        const tag = await this.tagsService.getTag(Number(params.id));
-        return { status: 200, body: tag };
-      } catch {
-        return { status: 404, body: { message: 'Tag not found' } };
-      }
+      const tenantId = headers['x-tenant-id'];
+      const tag = await this.tagsService.getTag(Number(params.id));
+
+      // Validate tenant access
+      await this.tenantService.validateTenantAccess(tenantId, schema.Tags, tag.id);
+
+      return { status: 200, body: tag };
     });
   }
 
   @TsRestHandler(contract.settings.tags.deleteTag)
-  async deleteTag(): Promise<ReturnType<typeof tsRestHandler>> {
+  async deleteTag(@Headers() headers: any): Promise<ReturnType<typeof tsRestHandler>> {
     return tsRestHandler(contract.settings.tags.deleteTag, async ({ params }) => {
-      try {
-        const result = await this.tagsService.deleteTag(Number(params.id));
-        return { status: 200, body: result };
-      } catch {
-        return { status: 404, body: { message: 'Tag not found' } };
-      }
+      const tenantId = headers['x-tenant-id'];
+      const tag = await this.tagsService.getTag(Number(params.id));
+
+      // Validate tenant access before deleting
+      await this.tenantService.validateTenantAccess(tenantId, schema.Tags, tag.id);
+
+      const result = await this.tagsService.deleteTag(Number(params.id));
+      return { status: 200, body: result };
     });
   }
 }

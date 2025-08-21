@@ -250,21 +250,25 @@ export class AssetsService {
     return assetsWithDetails;
   }
 
-  async getAvailableAssets(startDate: string, endDate: string) {
+  async getAvailableAssets(startDate: string, endDate: string, tenantId: string) {
   const start = new Date(startDate);
   const end = new Date(endDate);
 
-  // 1. Get all assets
+  // 1. Get all assets for the current tenant
   const allAssets = await this.db
     .select({
       id: schema.Asset.id,
-      name: schema.Asset.name
+      name: schema.Asset.name,
+      tenantId: schema.Asset.tenantId,
     })
-    .from(schema.Asset);
+    .from(schema.Asset)
+    .where(eq(schema.Asset.tenantId, tenantId)); // Filter by tenant
+
+  console.log('Fetched Assets for Tenant:', allAssets); // Debugging log
 
   const allAssetIds = allAssets.map((a) => a.id);
 
-  // 2. Get bookings that overlap with the range
+  // 2. Get bookings that overlap with the range for the current tenant's assets
   const bookings = await this.db
     .select({ assetId: schema.Booking.assetId })
     .from(schema.Booking)
@@ -276,15 +280,20 @@ export class AssetsService {
       )
     );
 
+  console.log('Bookings Found:', bookings); // Debugging log
+
   const bookedAssetIds = new Set(bookings.map((b) => b.assetId));
 
-  // 3. Filter available
+  // 3. Filter available assets for the tenant
   const availableAssets = allAssets.filter(
     (asset) => !bookedAssetIds.has(asset.id)
   );
 
+  console.log('Filtered Available Assets:', availableAssets); // Debugging log
+
   return availableAssets;
 }
+
 
 
 }

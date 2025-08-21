@@ -17,6 +17,7 @@ import { z } from 'zod';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage, } from '@/components/ui/form';
 import { toast } from 'sonner';
 import { MultiSelector, MultiSelectorTrigger, MultiSelectorInput, MultiSelectorContent, MultiSelectorList, MultiSelectorItem, } from '@/components/extension/multi-select';
+import { StorageService } from '@/lib/api/storage';
 
 // Booking form schema
 const bookingFormSchema = z.object({
@@ -59,6 +60,8 @@ function getApplicableRate(
 }
 
 export default function Component() {
+  const currentTenant = StorageService.getTenant();
+
   const queryClient = authClient.useQueryClient();
   const { data: bookings, refetch } = authClient.booking.getBookings.useQuery({
     queryKey: BOOKINGS_QUERY_KEY,
@@ -87,7 +90,7 @@ export default function Component() {
 
   const [dateRangeReady, setDateRangeReady] = useState(false);
 
-  const { data: assets } = authClient.assets.getAssets.useQuery({ queryKey: ['assets'] });
+  const { data: assets } = authClient.assets.getAssets.useQuery({ queryKey: ['assets'], enabled: !!currentTenant });
   const assetList = assets?.body ?? [];
 
   const { data: customerResponse } = authClient.users.getCustomers.useQuery({ queryKey: ['customers'] });
@@ -153,61 +156,61 @@ export default function Component() {
 
   // When dates change, fetch available assets and assign applicable rates
   useEffect(() => {
-    if (startDate && endDate) {
-      setDateRangeReady(true);
+  if (startDate && endDate) {
+    setDateRangeReady(true);
 
-      authClient.assets
-        .getAvailableAssets.query({
-          query: {
-            startDate,
-            endDate,
-          },
-        })
-        .then((res) => {
-          if (res.status === 200) {
-            const nights = Math.ceil(
-              (new Date(endDate).getTime() - new Date(startDate).getTime()) /
-              (1000 * 60 * 60 * 24)
+    authClient.assets
+      .getAvailableAssets.query({
+        query: {
+          startDate,
+          endDate,
+        },
+      })
+      .then((res) => {
+        console.log('API Response:', res);  // Log the response for debugging
+
+        if (res.status === 200) {
+          const nights = Math.ceil(
+            (new Date(endDate).getTime() - new Date(startDate).getTime()) / 
+            (1000 * 60 * 60 * 24)
+          );
+
+          const assetsWithRates = res.body.map((asset) => {
+            const applicableRates = rates.filter(
+              (rate) =>
+                rate.assetId === asset.id &&
+                (!rate.minNights || rate.minNights <= nights) &&
+                (!rate.maxNights || rate.maxNights >= nights)
             );
 
-            const assetsWithRates = res.body.map((asset: any) => {
-              const applicableRates = rates.filter(
-                (rate) =>
-                  rate.assetId === asset.id &&
-                  (!rate.minNights || rate.minNights <= nights) &&
-                  (!rate.maxNights || rate.maxNights >= nights)
-              );
-
-              // Choose rate with highest priority (lowest number)
-              const selectedRate =
-                applicableRates.length > 0
-                  ? applicableRates.reduce((prev, curr) =>
-                    (prev.priority ?? 100) < (curr.priority ?? 100)
-                      ? prev
-                      : curr
+            const selectedRate =
+              applicableRates.length > 0
+                ? applicableRates.reduce((prev, curr) =>
+                    (prev.priority ?? 100) < (curr.priority ?? 100) ? prev : curr
                   )
-                  : null;
+                : null;
 
-              return {
-                ...asset,
-                applicableRate: selectedRate || undefined,
-              };
-            });
+            return {
+              ...asset,
+              applicableRate: selectedRate || undefined,
+            };
+          });
 
-            setAvailableAssets(assetsWithRates);
-          } else {
-            setAvailableAssets([]);
-          }
-        })
-        .catch((err) => {
-          console.error('Failed to fetch available assets:', err);
+          setAvailableAssets(assetsWithRates);
+        } else {
           setAvailableAssets([]);
-        });
-    } else {
-      setDateRangeReady(false);
-      setAvailableAssets([]);
-    }
-  }, [startDate, endDate, rates]);
+        }
+      })
+      .catch((err) => {
+        console.error('Failed to fetch available assets:', err);
+        setAvailableAssets([]);
+      });
+  } else {
+    setDateRangeReady(false);
+    setAvailableAssets([]);
+  }
+}, [startDate, endDate, rates]);
+
 
   const onSubmit = (values: BookingFormValues) => {
     createBooking(
