@@ -21,7 +21,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 const CreateOwnerSchema = InsertUserSchema.extend({
   roles: z.array(z.number()).default([]),
   companyName: z.string().optional(),
-  taxId: z.string().optional(),
+  // taxId: z.string().optional(),
   userType: z.array(z.string()).default(["owner"])
 });
 
@@ -42,7 +42,7 @@ export default function Component() {
       password: '',
       roles: [],
       companyName: '',
-      taxId: '',
+      // taxId: '',
       userType: ["owner"]
     },
   });
@@ -54,7 +54,7 @@ export default function Component() {
 
   const handleCreateOwner: SubmitHandler<CreateOwnerFormData> = async (data) => {
     // Extract owner-specific fields
-    const { companyName, taxId, ...userData } = data;
+    const { companyName, ...userData } = data;
     
     createUserMutation(
       {
@@ -74,7 +74,7 @@ export default function Component() {
             password: '',
             roles: [],
             companyName: '',
-            taxId: '',
+            // taxId: '',
             userType: ["owner"]
           });
         },
@@ -91,7 +91,7 @@ export default function Component() {
     name: item.user.name,
     email: item.user.email,
     companyName: item.owner?.companyName,
-    taxId: item.owner?.taxId
+    // taxId: item.owner?.taxId
   })) || [];
 
   const filteredOwners = parsedOwners.filter(
@@ -202,7 +202,7 @@ export default function Component() {
                             </FormItem>
                           )}
                         />
-                        <FormField
+                        {/* <FormField
                           control={createForm.control}
                           name="taxId"
                           render={({ field }) => (
@@ -214,7 +214,7 @@ export default function Component() {
                               <FormMessage />
                             </FormItem>
                           )}
-                        />
+                        /> */}
                       </div>
                       
                       

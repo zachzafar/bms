@@ -374,7 +374,7 @@ export default function Component() {
                         {customerList.map((customer) => (
                           <MultiSelectorItem
                             key={customer.customer.id}
-                            value={customer.customer.id.toString()}
+                            value={customer.user.name}
                           >
                             {customer.user.name}
                           </MultiSelectorItem>

@@ -42,6 +42,12 @@ export default function Component() {
     roles: user.roles
   }));
 
+  const rolesMap: Record<string, string | undefined> =
+    roles?.body?.reduce((acc, type) => {
+      acc[type.roleId] = type.name;
+      return acc;
+    }, {} as Record<string, string | undefined>) ?? {};
+
   const filteredUsers = parsedUsers?.filter(
     (user) =>
       user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -130,7 +136,9 @@ export default function Component() {
                   <TableRow key={user.id}>
                     <TableCell>{user.name}</TableCell>
                     <TableCell>{user.email}</TableCell>
-                    <TableCell>{user.roles}</TableCell>
+                    <TableCell>{user.roles.toString() != null
+                      ? rolesMap?.[user.roles.toString()] ?? "-"
+                      : "-"}</TableCell>
                     <TableCell>
                       <Button
                         variant='ghost'
