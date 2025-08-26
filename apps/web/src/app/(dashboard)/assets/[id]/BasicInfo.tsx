@@ -14,6 +14,17 @@ function BasicInfo({ asset, refetch }: { asset: SelectAsset; refetch: () => void
   const [initialName, setInitialName] = useState(asset.name ?? '');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  const { data: assetTypes } = authClient.settings.assetType.getAssetTypes.useQuery({
+  queryKey: ['assetType'],
+});
+
+const assetTypeMap: Record<number, string | undefined> =
+  assetTypes?.body?.reduce((acc, type) => {
+    acc[type.id] = type.name;
+    return acc;
+  }, {} as Record<number, string | undefined>) ?? {};
+
+
   const { mutate: updateAssetName } = authClient.assets.updateAsset.useMutation({
     onSuccess: async () => {
       toast.success('Asset name updated');
@@ -42,6 +53,8 @@ function BasicInfo({ asset, refetch }: { asset: SelectAsset; refetch: () => void
     }
   };
 
+
+
   return (
     <Card>
       <CardHeader>
@@ -64,7 +77,7 @@ function BasicInfo({ asset, refetch }: { asset: SelectAsset; refetch: () => void
           <Input
             id="type"
             name="type"
-            value={asset.assetTypeId}
+            value={assetTypeMap[asset.assetTypeId!] ?? "Unknown"}
             readOnly
           />
         </div>

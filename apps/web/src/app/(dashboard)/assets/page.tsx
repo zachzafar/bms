@@ -36,6 +36,10 @@ export default function AssetsPage() {
   })
   const { mutate: deleteAsset } = (authClient.assets as any).deleteAsset.useMutation();
 
+  const { data: assetType } = authClient.settings.assetType.getAssetTypes.useQuery({
+    queryKey: ['assetType']
+  })
+
   return (
     <>
       <div className="flex items-center">
@@ -109,29 +113,43 @@ export const Row = ({
     }
   };
 
+  const { data: assetType } = authClient.settings.assetType.getAssetTypes.useQuery({
+    queryKey: ['assetType']
+  })
+
+  const assetTypeMap: Record<number, string | undefined> =
+  assetType?.body?.reduce((acc, type) => {
+    acc[type.id] = type.name;
+    return acc;
+  }, {} as Record<number, string | undefined>) ?? {};
+
   return (
     <tr>
-      <td>{asset.id}</td>
-      <td>{asset.name}</td>
-      <td>{asset.assetTypeId}</td>
-      <td>{asset.requiresApproval ? 'Yes' : 'No'}</td>
-      <td className="flex justify-end gap-2">
-        <Link href={`/assets/${asset.id}`}>
-          <Button variant="ghost" size="sm">
-            <Pencil className="mr-2 h-4 w-4" />
-            Edit
-          </Button>
-        </Link>
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={handleDelete}
-          disabled={isPending}
-        >
-          <TrashIcon className="h-4 w-4 text-red-500" />
-        </Button>
-      </td>
-    </tr>
+  <td>{asset.id}</td>
+  <td>{asset.name}</td>
+  <td>
+    {asset.assetTypeId != null
+      ? assetTypeMap?.[asset.assetTypeId] ?? "Unknown"
+      : "Unknown"}
+  </td>
+  <td>{asset.requiresApproval ? "Yes" : "No"}</td>
+  <td className="flex justify-end gap-2">
+    <Link href={`/assets/${asset.id}`}>
+      <Button variant="ghost" size="sm">
+        <Pencil className="mr-2 h-4 w-4" />
+        Edit
+      </Button>
+    </Link>
+    <Button
+      variant="ghost"
+      size="sm"
+      onClick={handleDelete}
+      disabled={isPending}
+    >
+      <TrashIcon className="h-4 w-4 text-red-500" />
+    </Button>
+  </td>
+</tr>
   );
 };
 

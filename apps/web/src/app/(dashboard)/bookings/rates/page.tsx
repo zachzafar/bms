@@ -37,7 +37,7 @@ const rateSchema = z.object({
   minNights: z.coerce.number().optional(),
   maxNights: z.coerce.number().optional(),
   pricePerNight: z.coerce.number().optional(),
-  priority: z.coerce.number().default(100),
+  // priority: z.coerce.number().default(100),
   assetIds: z.array(z.string()).optional(), // optional bulk assign
 });
 
@@ -51,7 +51,7 @@ const defaultFormValues: RateFormValues = {
   minNights: undefined,
   maxNights: undefined,
   pricePerNight: undefined,
-  priority: 100,
+  // priority: 100,
   assetIds: [],
 };
 
@@ -137,7 +137,7 @@ export default function RatesPage() {
       minNights: rate.minNights ?? undefined,
       maxNights: rate.maxNights ?? undefined,
       pricePerNight: rate.pricePerNight ?? undefined,
-      priority: rate.priority ?? 100,
+      // priority: rate.priority ?? 100,
       assetIds,
     });
     setEditingRateId(rate.id);
@@ -216,7 +216,7 @@ export default function RatesPage() {
                     </FormItem>
                   )}
                 />
-                {['name', 'description', 'startDate', 'endDate', 'minNights', 'maxNights', 'pricePerNight', 'priority'].map((fieldName) => (
+                {['name', 'description', 'startDate', 'endDate', 'minNights', 'maxNights', 'pricePerNight',].map((fieldName) => (
                   <FormField
                     key={fieldName}
                     control={form.control}
@@ -250,7 +250,7 @@ export default function RatesPage() {
               <TableHead>Start Date</TableHead>
               <TableHead>End Date</TableHead>
               <TableHead>Price/Night</TableHead>
-              <TableHead>Priority</TableHead>
+              {/* <TableHead>Priority</TableHead> */}
               <TableHead>Actions</TableHead>
             </TableRow>
           </TableHeader>
@@ -272,7 +272,7 @@ export default function RatesPage() {
                     <TableCell>{toDateInputFormat(rate.startDate)}</TableCell>
                     <TableCell>{toDateInputFormat(rate.endDate)}</TableCell>
                     <TableCell>{rate.pricePerNight}</TableCell>
-                    <TableCell>{rate.priority}</TableCell>
+                    {/* <TableCell>{rate.priority}</TableCell> */}
                     <TableCell>
                       <div className="flex gap-2">
                         <Button
