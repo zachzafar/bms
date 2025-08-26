@@ -3,29 +3,9 @@
 import { useEffect, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from '@/components/ui/dialog';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue, } from '@/components/ui/select';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow, } from '@/components/ui/table';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { SearchIcon } from 'lucide-react';
 import { Label } from '@/components/ui/label';
 import { authClient } from '@/lib/api/publicClient';
@@ -34,23 +14,10 @@ import { ExtendedSelectBooking } from '@repo/api-contract/src/api-contract/booki
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import {
-  Form,
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from '@/components/ui/form';
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage, } from '@/components/ui/form';
 import { toast } from 'sonner';
-import {
-  MultiSelector,
-  MultiSelectorTrigger,
-  MultiSelectorInput,
-  MultiSelectorContent,
-  MultiSelectorList,
-  MultiSelectorItem,
-} from '@/components/extension/multi-select';
+import { MultiSelector, MultiSelectorTrigger, MultiSelectorInput, MultiSelectorContent, MultiSelectorList, MultiSelectorItem, } from '@/components/extension/multi-select';
+import { StorageService } from '@/lib/api/storage';
 
 // Booking form schema
 const bookingFormSchema = z.object({
@@ -93,6 +60,8 @@ function getApplicableRate(
 }
 
 export default function Component() {
+  const currentTenant = StorageService.getTenant();
+
   const queryClient = authClient.useQueryClient();
   const { data: bookings, refetch } = authClient.booking.getBookings.useQuery({
     queryKey: BOOKINGS_QUERY_KEY,
@@ -121,7 +90,7 @@ export default function Component() {
 
   const [dateRangeReady, setDateRangeReady] = useState(false);
 
-  const { data: assets } = authClient.assets.getAssets.useQuery({ queryKey: ['assets'] });
+  const { data: assets } = authClient.assets.getAssets.useQuery({ queryKey: ['assets'], enabled: !!currentTenant });
   const assetList = assets?.body ?? [];
 
   const { data: customerResponse } = authClient.users.getCustomers.useQuery({ queryKey: ['customers'] });
@@ -187,61 +156,61 @@ export default function Component() {
 
   // When dates change, fetch available assets and assign applicable rates
   useEffect(() => {
-    if (startDate && endDate) {
-      setDateRangeReady(true);
+  if (startDate && endDate) {
+    setDateRangeReady(true);
 
-      authClient.assets
-        .getAvailableAssets.query({
-          query: {
-            startDate,
-            endDate,
-          },
-        })
-        .then((res) => {
-          if (res.status === 200) {
-            const nights = Math.ceil(
-              (new Date(endDate).getTime() - new Date(startDate).getTime()) /
-                (1000 * 60 * 60 * 24)
+    authClient.assets
+      .getAvailableAssets.query({
+        query: {
+          startDate,
+          endDate,
+        },
+      })
+      .then((res) => {
+        console.log('API Response:', res);  // Log the response for debugging
+
+        if (res.status === 200) {
+          const nights = Math.ceil(
+            (new Date(endDate).getTime() - new Date(startDate).getTime()) / 
+            (1000 * 60 * 60 * 24)
+          );
+
+          const assetsWithRates = res.body.map((asset) => {
+            const applicableRates = rates.filter(
+              (rate) =>
+                rate.assetId === asset.id &&
+                (!rate.minNights || rate.minNights <= nights) &&
+                (!rate.maxNights || rate.maxNights >= nights)
             );
 
-            const assetsWithRates = res.body.map((asset: any) => {
-              const applicableRates = rates.filter(
-                (rate) =>
-                  rate.assetId === asset.id &&
-                  (!rate.minNights || rate.minNights <= nights) &&
-                  (!rate.maxNights || rate.maxNights >= nights)
-              );
+            const selectedRate =
+              applicableRates.length > 0
+                ? applicableRates.reduce((prev, curr) =>
+                    (prev.priority ?? 100) < (curr.priority ?? 100) ? prev : curr
+                  )
+                : null;
 
-              // Choose rate with highest priority (lowest number)
-              const selectedRate =
-                applicableRates.length > 0
-                  ? applicableRates.reduce((prev, curr) =>
-                      (prev.priority ?? 100) < (curr.priority ?? 100)
-                        ? prev
-                        : curr
-                    )
-                  : null;
+            return {
+              ...asset,
+              applicableRate: selectedRate || undefined,
+            };
+          });
 
-              return {
-                ...asset,
-                applicableRate: selectedRate || undefined,
-              };
-            });
-
-            setAvailableAssets(assetsWithRates);
-          } else {
-            setAvailableAssets([]);
-          }
-        })
-        .catch((err) => {
-          console.error('Failed to fetch available assets:', err);
+          setAvailableAssets(assetsWithRates);
+        } else {
           setAvailableAssets([]);
-        });
-    } else {
-      setDateRangeReady(false);
-      setAvailableAssets([]);
-    }
-  }, [startDate, endDate, rates]);
+        }
+      })
+      .catch((err) => {
+        console.error('Failed to fetch available assets:', err);
+        setAvailableAssets([]);
+      });
+  } else {
+    setDateRangeReady(false);
+    setAvailableAssets([]);
+  }
+}, [startDate, endDate, rates]);
+
 
   const onSubmit = (values: BookingFormValues) => {
     createBooking(
@@ -327,29 +296,73 @@ export default function Component() {
                 <FormField
                   control={form.control}
                   name="startDate"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Start Date</FormLabel>
-                      <FormControl>
-                        <Input type="date" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
+                  render={({ field }) => {
+                    // Split current value into date/time parts or defaults
+                    const [datePart, timePart] = (field.value || '').split('T');
+                    return (
+                      <FormItem>
+                        <FormLabel>Start Date & Time</FormLabel>
+                        <div className="flex gap-2">
+                          <Input
+                            type="date"
+                            value={datePart || ''}
+                            onChange={(e) => {
+                              const newDate = e.target.value;
+                              const time = timePart || '00:00';
+                              field.onChange(`${newDate}T${time}`);
+                            }}
+                          />
+                          <Input
+                            type="time"
+                            value={timePart || '00:00'}
+                            onChange={(e) => {
+                              const newTime = e.target.value;
+                              const date = datePart || '';
+                              field.onChange(`${date}T${newTime}`);
+                            }}
+                          />
+                        </div>
+                        <FormMessage />
+                      </FormItem>
+                    );
+                  }}
                 />
+
                 <FormField
                   control={form.control}
                   name="endDate"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>End Date</FormLabel>
-                      <FormControl>
-                        <Input type="date" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
+                  render={({ field }) => {
+                    // Split current value into date/time parts or defaults
+                    const [datePart, timePart] = (field.value || '').split('T');
+                    return (
+                      <FormItem>
+                        <FormLabel>End Date & Time</FormLabel>
+                        <div className="flex gap-2">
+                          <Input
+                            type="date"
+                            value={datePart || ''}
+                            onChange={(e) => {
+                              const newDate = e.target.value;
+                              const time = timePart || '00:00';
+                              field.onChange(`${newDate}T${time}`);
+                            }}
+                          />
+                          <Input
+                            type="time"
+                            value={timePart || '00:00'}
+                            onChange={(e) => {
+                              const newTime = e.target.value;
+                              const date = datePart || '';
+                              field.onChange(`${date}T${newTime}`);
+                            }}
+                          />
+                        </div>
+                        <FormMessage />
+                      </FormItem>
+                    );
+                  }}
                 />
+
                 <FormItem>
                   <FormLabel>Customers</FormLabel>
                   <MultiSelector values={customers} onValuesChange={setCustomers}>
@@ -361,7 +374,7 @@ export default function Component() {
                         {customerList.map((customer) => (
                           <MultiSelectorItem
                             key={customer.customer.id}
-                            value={customer.customer.id.toString()}
+                            value={customer.user.name}
                           >
                             {customer.user.name}
                           </MultiSelectorItem>
@@ -398,8 +411,8 @@ export default function Component() {
                               {asset.name}
                               {asset.applicableRate?.pricePerNight !== undefined
                                 ? ` - $${asset.applicableRate.pricePerNight.toFixed(
-                                    2
-                                  )} per night`
+                                  2
+                                )} per night`
                                 : ''}
                             </SelectItem>
                           ))}
@@ -557,13 +570,14 @@ export default function Component() {
 
                                   <Label className="text-right font-semibold">Start Date:</Label>
                                   <div className="col-span-3">
-                                    {new Date(selectedBooking.startDate).toLocaleDateString()}
+                                    {new Date(selectedBooking.startDate).toLocaleString()}
                                   </div>
 
                                   <Label className="text-right font-semibold">End Date:</Label>
                                   <div className="col-span-3">
-                                    {new Date(selectedBooking.endDate).toLocaleDateString()}
+                                    {new Date(selectedBooking.endDate).toLocaleString()}
                                   </div>
+
 
                                   <Label className="text-right font-semibold">Status:</Label>
                                   <div className="col-span-3">{selectedBooking.status}</div>

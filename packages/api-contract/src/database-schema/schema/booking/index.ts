@@ -57,8 +57,8 @@ export const Slot = mysqlTable("slots", {
     id: serial("id").primaryKey(),
     assetId: varchar("asset_id", { length: 255 }).notNull().references(() => Asset.id),
     date: date("date").notNull(),
-    startTime: varchar("start_time", { length: 8 }).notNull(), // Format: HH:MM:SS
-    endTime: varchar("end_time", { length: 8 }).notNull(),     // Format: HH:MM:SS
+    startTime: datetime("start_time").notNull(), // Format: HH:MM:SS
+    endTime: datetime("end_time").notNull(),     // Format: HH:MM:SS
     status: varchar("status", { length: 20 }).notNull().$default(() => 'available'), // available, booked, unavailable
     bookingId: varchar("booking_id", { length: 36 }).references(() => Booking.id),
     price: decimal("price", { precision: 10, scale: 2 }),

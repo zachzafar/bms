@@ -1,4 +1,4 @@
-import { Controller, Headers, Logger, MaxFileSizeValidator, ParseFilePipe, ParseFilePipeBuilder, Query, UploadedFiles, UseInterceptors } from '@nestjs/common';
+import { BadRequestException, Controller, Headers, Logger, MaxFileSizeValidator, ParseFilePipe, ParseFilePipeBuilder, Query, UploadedFiles, UseInterceptors } from '@nestjs/common';
 import { AssetsService } from './assets.service';
 import { TsRestHandler, tsRestHandler } from '@ts-rest/nest';
 import { contract } from '@repo/api-contract';
@@ -212,8 +212,19 @@ export class AssetsController {
 
     @TsRestHandler(contract.assets.getAvailableAssets)
     async getAvailableAssets(@Headers() headers: any): Promise<ReturnType<typeof tsRestHandler>> {
+        const tenantId = headers['x-tenant-id'];
+
+        if (!tenantId) {
+            throw new BadRequestException('Tenant ID is required');  
+        }
+
+        console.log('Tenant ID from authentication context:', tenantId);  // For debugging
+
         return tsRestHandler(contract.assets.getAvailableAssets, async ({ query }) => {
-            const availableAssets = await this.assetService.getAvailableAssets(query.startDate, query.endDate);
+            const availableAssets = await this.assetService.getAvailableAssets(query.startDate, query.endDate, tenantId);
+
+            console.log('Available Assets:', availableAssets);  // For debugging
+
             return { status: 200, body: availableAssets };
         });
     }

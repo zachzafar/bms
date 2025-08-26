@@ -7,6 +7,10 @@ settings:
 importers:
 
   .:
+    dependencies:
+      luxon:
+        specifier: ^3.7.1
+        version: 3.7.1
     devDependencies:
       prettier:
         specifier: ^3.2.5
@@ -5386,6 +5390,10 @@ packages:
 
   luxon@3.5.0:
     resolution: {integrity: sha512-rh+Zjr6DNfUYR3bPwJEnuwDdqMbxZW7LOQfUN4B54+Cl+0o5zaU9RJ6bcidfDtC1cWCZXQ+nvX8bf6bAji37QQ==}
+    engines: {node: '>=12'}
+
+  luxon@3.7.1:
+    resolution: {integrity: sha512-RkRWjA926cTvz5rAb1BqyWkKbbjzCGchDUIKMCUvNi17j6f6j8uHGDV82Aqcqtzd+icoYpELmG3ksgGiFNNcNg==}
     engines: {node: '>=12'}
 
   magic-string@0.30.8:
@@ -13077,6 +13085,8 @@ snapshots:
       react: 18.3.1
 
   luxon@3.5.0: {}
+
+  luxon@3.7.1: {}
 
   magic-string@0.30.8:
     dependencies:

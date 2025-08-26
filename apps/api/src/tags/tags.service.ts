@@ -12,21 +12,27 @@ export class TagsService {
   ) {}
 
   async createTag(data: InsertTag) {
-    try {
-      const result = await this.db
-        .insert(schema.Tags)
-        .values(data)
-        .$returningId();
-
-      return result[0]; // { id, name }
-    } catch (error) {
-        console.error('Create tag error:', error);
-      throw new InternalServerErrorException('Failed to create tag');
-    }
+  try {
+    const result = await this.db
+      .insert(schema.Tags)
+      .values(data)
+      .$returningId();
+    
+    return result[0]; // { id, name }
+  } catch (error: any) {
+    console.error('Create tag error:', error);
+    throw new InternalServerErrorException(error?.message || 'Failed to create tag');
   }
+}
 
-  async getTags() {
-    return this.db.select().from(schema.Tags).execute(); // returns array of tags
+
+  // ✅ Accept tenantId to filter tags
+  async getTags(tenantId: string) {
+    return this.db
+      .select()
+      .from(schema.Tags)
+      .where(eq(schema.Tags.tenantId, tenantId)) // filter by tenantId
+      .execute(); // returns array of tags
   }
 
   async getTag(id: number) {
@@ -45,10 +51,6 @@ export class TagsService {
     const deleted = await this.db
       .delete(schema.Tags)
       .where(eq(schema.Tags.id, Number(id)));
-
-    // if (deleted.length === 0) {
-    //   throw new NotFoundException('Tag not found or already deleted');
-    // }
 
     return { message: 'Tag deleted' };
   }
