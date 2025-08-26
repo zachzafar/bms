@@ -11,20 +11,32 @@ export default function Logout() {
     const { user } = useStorage()
     const router = useRouter();
 
-    
-  return (
-    <Button disabled={isPending || user == null} onClick={() => user ? mutate({
-      body: {
-        userId: user?.id
-      }
-    },{
-        onSuccess:  async (response) => {
-            await deleteSession();
-            router.push('/login');
+    const handleLogout = () => {
+        if (user) {
+            mutate({
+                body: {
+                    userId: user.id
+                }
+            }, {
+                onSuccess: async (response) => {
+                    await deleteSession();
+                    // Redirect to auth app instead of /login
+                    const authUrl = process.env.NODE_ENV === 'production' 
+                        ? 'https://bookos.xyz'
+                        : 'http://localhost:3002';
+                    window.location.href = authUrl;
+                }
+            });
         }
-    }): null}>
-                Logout
-    </Button>
-  )
+    };
+    
+    return (
+        <Button 
+            disabled={isPending || user == null} 
+            onClick={handleLogout}
+        >
+            Logout
+        </Button>
+    );
 }
 

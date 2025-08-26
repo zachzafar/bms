@@ -24,13 +24,14 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
 
   async validate(payload: AuthJwtPayload) {
     this.logger.debug(`Validating JWT payload: ${JSON.stringify(payload)}`);
-    const userId = payload.sub;
-    const user = await this.authService.validateJwtUser(userId);
-    if (!user) {
-      this.logger.warn(`User not found for ID: ${userId}`);
-    } else {
-      this.logger.log(`User validated: ${userId}`);
-    }
-    return user;
+    
+    // Return the JWT payload directly instead of calling the database
+    // This preserves the tenants and roles data needed by the permissions guard
+    // The payload structure is: { sub: userId, tenants: string[], roles: Record<string, Array> }
+    return {
+      sub: payload.sub,
+      tenants: payload.tenants,
+      roles: payload.roles
+    };
   }
 }

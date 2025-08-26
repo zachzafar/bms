@@ -9,16 +9,13 @@ import { Tenant } from "../tenant";
 import { CommunicationLog, Contact, Document, Inquiry, Task } from "../crm";
 
 
-const userTypes = ["customer", "owner", "system"] as const;
-type UserType = (typeof userTypes)[number];
-
 // User Model
 export const User = mysqlTable("users", {
     id: varchar("id", { length: 36 }).primaryKey().$default(() => uuid()),
     name: varchar("name", { length: 255 }).notNull(),
     email: varchar("email", { length: 255 }).notNull().unique(),
     password: varchar("password", { length: 255 }).notNull(), // Enum as string
-    userType: json("user_type").$type<UserType[]>().notNull(),
+    userType: mysqlEnum("user_type", ["customer", "owner", "system","admin"]).notNull(),
     createdAt: timestamp('createdAt', { mode: 'date' }).defaultNow(),
     updatedAt: timestamp('updated_at', { mode: 'date', }).$onUpdate(() => new Date()),
 }, (table) => ({
@@ -42,9 +39,7 @@ export const userRelations = relations(User, ({ one, many }) => ({
     documentsUploaded: many(Document),
 }));
 
-export const InsertUserSchema = createInsertSchema(User).omit({ userType: true }).extend({
-    userType: z.array(z.enum(userTypes)).min(1)
-});
+export const InsertUserSchema = createInsertSchema(User)
 export const SelectUserSchema = createSelectSchema(User).extend({ roles: z.array(z.number()) });
 export const UpdateUserSchema = InsertUserSchema.partial();
 
@@ -104,7 +99,7 @@ export const Customer = mysqlTable("customer_details", {
     id: serial("id").primaryKey(),
     phone: varchar("phone", { length: 255 }),
     address: varchar("address", { length: 255 }),
-    contactId: int("contact_id")
+    contactId: bigint("contact_id", { mode: 'bigint', unsigned: true })
       .references(() => Contact.id),
     dateOfBirth: datetime("date_of_birth"),
     createdAt: timestamp('createdAt').notNull().defaultNow(),
@@ -128,6 +123,11 @@ export const customerRelations = relations(Customer, ({ one }) => ({
         fields: [Customer.userId],
         references: [User.id],
     }),
+    contact: one(Contact, {
+        fields: [Customer.contactId],
+        references: [Contact.id],
+    }),
+
 }));
 
 
@@ -137,7 +137,7 @@ export const Owner = mysqlTable("owner_details", {
     phone: varchar("phone", { length: 255 }),
     address: varchar("address", { length: 255 }),
     companyName: varchar("company_name", { length: 255 }),
-    contactId: int("contact_id")
+    contactId: bigint("contact_id", { mode: 'bigint', unsigned: true })
       .references(() => Contact.id),
     taxId: varchar("tax_id", { length: 255 }),
     createdAt: timestamp('createdAt').notNull().defaultNow(),
@@ -159,6 +159,10 @@ export const ownerRelations = relations(Owner, ({ one, many }) => ({
     user: one(User, {
         fields: [Owner.userId],
         references: [User.id],
+    }),
+    contact: one(Contact, {
+        fields: [Owner.contactId],
+        references: [Contact.id],
     }),
 }))
 

@@ -6,13 +6,33 @@ const c = initContract();
 
 // Extended schema for invoice with items
 const ExtendedInvoiceSchema = SelectInvoiceSchema.extend({
+  id: z.number(),
+  customerId: z.number(),
   items: z.array(z.object({
     id: z.number(),
     description: z.string(),
     quantity: z.number(),
     unitPrice: z.string(),
     totalPrice: z.string(),
+    invoiceId: z.number(),
   })),
+});
+
+// Extended schema for payment with invoices
+const ExtendedPaymentSchema = SelectPaymentSchema.extend({
+  id: z.number(),
+  customerId: z.number(),
+  invoices: z.array(z.object({
+    invoiceId: z.number(),
+    amountApplied: z.string(),
+    invoiceNumber: z.string(),
+  })),
+});
+
+// Extended schema for payment list (without invoices)
+const ExtendedPaymentListSchema = SelectPaymentSchema.extend({
+  id: z.number(),
+  customerId: z.number(),
 });
 
 export const billingContract = c.router({
@@ -115,7 +135,7 @@ export const billingContract = c.router({
       customerId: z.string().optional(),
     }),
     responses: {
-      200: z.array(SelectPaymentSchema),
+      200: z.array(ExtendedPaymentListSchema),
     },
   },
 
@@ -127,13 +147,7 @@ export const billingContract = c.router({
       id: z.string(),
     }),
     responses: {
-      200: SelectPaymentSchema.extend({
-        invoices: z.array(z.object({
-          invoiceId: z.number(),
-          amountApplied: z.string(),
-          invoiceNumber: z.string(),
-        })),
-      }),
+      200: ExtendedPaymentSchema,
       404: z.undefined(),
     },
   },

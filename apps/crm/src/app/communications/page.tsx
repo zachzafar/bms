@@ -3,8 +3,8 @@ import { CommunicationManagement } from "@/components/communication-management"
 
 export default function CommunicationsPage() {
   return (
-    <DashboardLayout>
+
       <CommunicationManagement />
-    </DashboardLayout>
+
   )
 }

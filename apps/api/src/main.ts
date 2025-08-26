@@ -9,20 +9,42 @@ import { TenantGuard } from './auth/guards/tenant/tenant.guard';
 import { TenantService } from './tenant/tenant.service';
 import { UniversalGuard } from './auth/guards/universal-guard/universal-guard.guard';
 import { KeysService } from './keys/keys.service';
+import { PermissionsGuard } from './auth/guards/permissions/permissions.guard';
+import { AdminGuard } from './auth/guards/admin/admin.guard';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
   
-  // app.enableCors({
-  //   origin: process.env.CORS_ORIGIN,
-  //   methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
-  //   credentials: true,
-  // });
+  // Get CORS origins from environment or use defaults
+  const corsOrigins = process.env.CORS_ORIGINS 
+    ? process.env.CORS_ORIGINS.split(',')
+    : [
+        'http://localhost:3000', // Web app
+        'http://localhost:3001', // CRM app
+        'http://localhost:3002', // Auth app
+        'http://localhost:3003', // System Admin app
+        'http://localhost:4000', // API itself
+      ];
+
+  // Enable CORS for development
+  app.enableCors({
+    origin: corsOrigins,
+    methods: 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS',
+    credentials: true,
+    allowedHeaders: [
+      'Origin',
+      'X-Requested-With',
+      'Content-Type',
+      'Accept',
+      'Authorization',
+      'x-tenant-id',
+    ],
+  });
 
   //
   const document = generateOpenApi(contract, {
     info: {
-      title: 'Posts API',
+      title: 'BookOS API',
       version: '1.0.0',
     },
   });

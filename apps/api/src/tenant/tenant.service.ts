@@ -28,15 +28,20 @@ export class TenantService {
         
     }
 
+    async getTenants(){
+        return await this.db.query.Tenant.findMany()
+    }
+
     async tenantHasUser(tenantId: string, userId: string){
         const row = await this.db.query.TenantHasUsers.findFirst({
             where: (tu, {eq, and}) => and(eq(tu.tenantId,tenantId),eq(tu.userId,userId))
         })
 
         if (!row) {
+            this.logger.warn(`Tenant ${tenantId} does not have user ${userId}`)
             return false;
         }
-
+        this.logger.log(`Tenant ${tenantId} has user ${userId}`)
         return true
     }
 

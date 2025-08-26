@@ -11,6 +11,7 @@ import {
   mysqlEnum,
   index,
   uniqueIndex,
+  bigint,
 } from "drizzle-orm/mysql-core";
 import { z } from "zod";
 import { createInsertSchema, createSelectSchema } from "drizzle-zod";
@@ -75,7 +76,7 @@ export const Inquiry = mysqlTable(
     id: serial("id").primaryKey(),
     tenantId: varchar("tenant_id", { length: 36 }).notNull()
       .references(() => Tenant.id, { onDelete: "cascade" }),
-    contactId: int("contact_id").notNull()
+    contactId: bigint("contact_id", { mode: 'bigint', unsigned: true }).notNull()
       .references(() => Contact.id, { onDelete: "cascade" }),
     assetId: varchar("asset_id", { length: 255 }).notNull()
       .references(() => Asset.id, { onDelete: "cascade" }),
@@ -110,7 +111,7 @@ export const Feedback = mysqlTable(
     id: serial("id").primaryKey(),
     tenantId: varchar("tenant_id", { length: 36 }).notNull()
       .references(() => Tenant.id, { onDelete: "cascade" }),
-    contactId: int("contact_id").notNull()
+    contactId: bigint("contact_id", { mode: 'bigint', unsigned: true }).notNull()
       .references(() => Contact.id, { onDelete: "cascade" }),
     assetId: varchar("asset_id", { length: 255 }).notNull()
       .references(() => Asset.id, { onDelete: "cascade" }),
@@ -140,7 +141,7 @@ export const Brochure = mysqlTable(
     id: serial("id").primaryKey(),
     tenantId: varchar("tenant_id", { length: 36 }).notNull()
       .references(() => Tenant.id, { onDelete: "cascade" }),
-    contactId: int("contact_id").notNull()
+    contactId: bigint("contact_id", { mode: 'bigint', unsigned: true }).notNull()
       .references(() => Contact.id, { onDelete: "cascade" }),
     createdAt: timestamp("createdAt").notNull().defaultNow(),
     updatedAt: timestamp("updated_at", { mode: "date" }).$onUpdate(() => new Date()),
@@ -157,7 +158,7 @@ export const BrochureAsset = mysqlTable(
     id: serial("id").primaryKey(),
     tenantId: varchar("tenant_id", { length: 36 }).notNull()
       .references(() => Tenant.id, { onDelete: "cascade" }),
-    brochureId: int("brochure_id").notNull()
+    brochureId: bigint("brochure_id", { mode: 'bigint', unsigned: true }).notNull()
       .references(() => Brochure.id, { onDelete: "cascade" }),
     assetId: varchar("asset_id", { length: 255 }).notNull()
       .references(() => Asset.id, { onDelete: "cascade" }),
@@ -188,7 +189,7 @@ export const CommunicationLog = mysqlTable(
     id: serial("id").primaryKey(),
     tenantId: varchar("tenant_id", { length: 36 }).notNull()
       .references(() => Tenant.id, { onDelete: "cascade" }),
-    contactId: int("contact_id").notNull()
+    contactId: bigint("contact_id", { mode: 'bigint', unsigned: true }).notNull()
       .references(() => Contact.id, { onDelete: "cascade" }),
     userId: varchar("user_id", { length: 36 }).notNull()
       .references(() => User.id, { onDelete: "cascade" }),
@@ -222,7 +223,7 @@ export const Task = mysqlTable(
     userId: varchar("user_id", { length: 36 }).notNull()
       .references(() => User.id, { onDelete: "cascade" }),
     /** Tasks may or may not be tied to a specific contact */
-    contactId: int("contact_id")
+    contactId: bigint("contact_id", { mode: 'bigint', unsigned: true })
       .references(() => Contact.id, { onDelete: "set null" }),
     description: text("description").notNull(),
     dueDate: datetime("due_date").notNull(),
@@ -251,7 +252,7 @@ export const Document = mysqlTable(
     id: serial("id").primaryKey(),
     tenantId: varchar("tenant_id", { length: 36 }).notNull()
       .references(() => Tenant.id, { onDelete: "cascade" }),
-    contactId: int("contact_id").notNull()
+    contactId: bigint("contact_id", { mode: 'bigint', unsigned: true }).notNull()
       .references(() => Contact.id, { onDelete: "cascade" }),
     documentType: documentType.notNull().default("Other"),
     filePath: varchar("file_path", { length: 2048 }).notNull(),

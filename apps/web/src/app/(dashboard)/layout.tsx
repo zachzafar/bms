@@ -1,6 +1,6 @@
-import Logout from '@/components/custom/Logout';
 import { SidebarProvider, SidebarTrigger } from '@/components/ui/sidebar';
 import { AppSidebar } from '@/components/custom/AppSidebar';
+import { AppHeader } from '@/components/app-header';
 
 export default function RootLayout({
   children,
@@ -16,9 +16,7 @@ export default function RootLayout({
             <SidebarTrigger />
             <h1 className="font-semibold text-lg">BookingOS</h1>
           </div>
-          <div className="flex items-center gap-4">
-            <Logout />
-          </div>
+          <AppHeader />
         </nav>
         <div className="flex-1 p-4 md:p-6 flex flex-col gap-4 md:gap-8 overflow-auto">
           {children}

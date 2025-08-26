@@ -109,6 +109,17 @@ export const TenantHasUsers = mysqlTable("tenant_has_users", {
     tenantIdx: uniqueIndex("tenant_idx").on(table.tenantId, table.userId),
 }));
 
+export const TenantHasUsersRelations = relations(TenantHasUsers, ({ one }) => ({
+  user: one(User, {
+    fields: [TenantHasUsers.userId],
+    references: [User.id],
+  }),
+  tenant: one(Tenant, {
+    fields: [TenantHasUsers.tenantId],
+    references: [Tenant.id],
+  }),
+}));
+
 export const InsertTenantHasUsersSchema = createInsertSchema(TenantHasUsers);
 export const SelectTenantHasUsersSchema = createSelectSchema(TenantHasUsers)
 

@@ -6,6 +6,7 @@ import { RefreshAuthGuard } from './guards/refresh-auth/refresh-auth.guard';
 import { LocalAuthGuard } from './guards/local-auth/local-auth.guard';
 import { Public } from './decorators/public.decorator';
 import { PasswordRestService } from './password-rest/password-rest.service';
+import { RequireAdmin, RequireAdminPermission } from './guards/admin/admin.guard';
 
 @Controller()
 export class AuthController {
@@ -13,6 +14,7 @@ export class AuthController {
     constructor(private authService: AuthService, private passwordResetService: PasswordRestService) {}
 
     @Public()
+    @RequireAdminPermission('tenant:create')
     @TsRestHandler(contract.auth.registerTenant)
     async createTenant(): Promise<ReturnType<typeof tsRestHandler>> {
         return tsRestHandler(contract.auth.registerTenant, async ({ body }) => {
@@ -41,8 +43,10 @@ export class AuthController {
     @UseGuards(RefreshAuthGuard)
     @Post('refresh')
     async refreshToken(@Request() req) {
-        const { user, accessToken, refreshToken } = await this.authService.refreshToken(req.user.id);
-            this.logger.log(`Token refreshed for user ID: ${user.id}`);
+        const { user, accessToken, refreshToken } = await this.authService.refreshToken(req.user.sub);
+
+        
+            this.logger.log(`Token refreshed for user ID: ${req.user.sub}`);
             return { status: 200, body: { user, token:accessToken,refreshToken } };
     }
 
@@ -137,5 +141,48 @@ export class AuthController {
             return { status: 200, body: { message: 'Password reset successfully' } };
         })
     }
+
+    @Public()
+    @TsRestHandler(contract.auth.registerAdmin)
+    async registerAdmin(): Promise<ReturnType<typeof tsRestHandler>> {
+        return tsRestHandler(contract.auth.registerAdmin, async ({ body }) => {
+            const { userId, email } = await this.authService.registerAdmin(body);
+            this.logger.log(`Admin user registered: ${email} with ID: ${userId}`);
+            return { status: 201, body: { message: 'Admin registration successful. Check your email to set your password.', userId, email } };
+        });
+    }
+
+    @Public()
+    @TsRestHandler(contract.auth.validateAdmin)
+    async validateAdmin(): Promise<ReturnType<typeof tsRestHandler>> {
+        return tsRestHandler(contract.auth.validateAdmin, async ({ body }) => {
+            const isValid = await this.authService.validateAdminToken(body.token);
+            this.logger.log(`Admin token validation: ${isValid ? 'valid' : 'invalid'}`);
+            return { status: 200, body: { isAdmin: isValid, valid: isValid } };
+        });
+    }
+
+    // @RequireAdmin()
+    // @TsRestHandler(contract.auth.testAdmin)
+    // async testAdmin(): Promise<ReturnType<typeof tsRestHandler>> {
+    //     this.logger.log('Admin test endpoint accessed successfully');
+    //     return { status: 200, body: { message: 'Admin access confirmed', timestamp: new Date().toISOString() } };
+    // }
+
+    // @RequireAdmin()
+    // @TsRestHandler(contract.auth.adminInfo)
+    // async adminInfo(): Promise<ReturnType<typeof tsRestHandler>> {
+    //     return tsRestHandler(contract.auth.adminInfo, async () => {
+    //         // This is a simple admin test endpoint
+    //         this.logger.log('Admin info endpoint accessed successfully');
+    //         return { 
+    //             status: 200, 
+    //             body: { 
+    //                 message: 'Admin info retrieved', 
+    //                 timestamp: new Date().toISOString() 
+    //             } 
+    //         };
+    //     });
+    // }
 
 }

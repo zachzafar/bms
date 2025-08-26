@@ -6,6 +6,7 @@ import { TenantService } from 'src/tenant/tenant.service';
 import * as schema from "@repo/api-contract"
 import { FileFieldsInterceptor } from '@nestjs/platform-express';
 import { Public } from 'src/auth/decorators/public.decorator';
+import { RequireRead, RequireWrite, RequireDelete, RequirePermissionsDecorator } from 'src/auth/decorators/permissions.decorator';
 
 @Controller()
 export class AssetsController {
@@ -15,6 +16,7 @@ export class AssetsController {
     }
 
     @TsRestHandler(contract.assets.getAssets)
+    @RequireRead('assets')
     async getAssets(@Headers() headers: any): Promise<ReturnType<typeof tsRestHandler>> {
         return tsRestHandler(contract.assets.getAssets, async ({ query }) => {
             this.logger.log('Get assets for tenant: ', headers['x-tenant-id'] || 'no tenant');
@@ -33,6 +35,7 @@ export class AssetsController {
     }
 
     @TsRestHandler(contract.assets.getAsset)
+    @RequireRead('assets')
     async getAssetById(@Headers() headers: any): Promise<ReturnType<typeof tsRestHandler>> {
         return tsRestHandler(contract.assets.getAsset, async ({ params }) => {
             const tenantId = headers['x-tenant-id'];
@@ -49,6 +52,7 @@ export class AssetsController {
     }
 
     @TsRestHandler(contract.assets.createAsset)
+    @RequireWrite('assets')
     async createAsset(@Headers() headers: any): Promise<ReturnType<typeof tsRestHandler>> {
         return tsRestHandler(contract.assets.createAsset, async ({ body }) => {
             const tenantId = headers['x-tenant-id'];
@@ -65,6 +69,7 @@ export class AssetsController {
     }
 
     @TsRestHandler(contract.assets.updateAsset)
+    @RequireWrite('assets')
     async updateAsset(@Headers() headers: any): Promise<ReturnType<typeof tsRestHandler>> {
         return tsRestHandler(contract.assets.updateAsset, async ({ params, body }) => {
             const tenantId = headers['x-tenant-id'];
@@ -80,6 +85,7 @@ export class AssetsController {
     }
 
     @TsRestHandler(contract.assets.deleteAsset)
+    @RequireDelete('assets')
     async deleteAsset(@Headers() headers: any): Promise<ReturnType<typeof tsRestHandler>> {
         return tsRestHandler(contract.assets.deleteAsset, async ({ params }) => {
             const tenantId = headers['x-tenant-id'];
@@ -95,6 +101,7 @@ export class AssetsController {
     }
 
     @TsRestHandler(contract.assets.addAssetProperties)
+    @RequirePermissionsDecorator(['assets:properties:manage'])
     async addAssetProperties(@Headers() headers: any): Promise<ReturnType<typeof tsRestHandler>> {
         return tsRestHandler(contract.assets.addAssetProperties, async ({ params, body }) => {
             const tenantId = headers['x-tenant-id'];

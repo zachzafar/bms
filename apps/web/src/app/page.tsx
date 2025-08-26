@@ -2,10 +2,24 @@ import Link from 'next/link'
 import { Button } from "@/components/ui/button"
 import { Users, Building2, Search, CreditCard, BarChart, Settings, Shield, Boxes } from 'lucide-react'
 import { redirect } from 'next/navigation'
+import { cookies } from 'next/headers'
 
-
-export default function LandingPage() {
-  return redirect('/login')
+export default async function LandingPage() {
+  // Check if user is authenticated
+  const cookieStore = await cookies()
+  const session = cookieStore.get('session')
+  
+  if (session) {
+    // User is authenticated, redirect to dashboard
+    redirect('/dashboard')
+  } else {
+    // User is not authenticated, redirect to auth app
+    const authUrl = process.env.NODE_ENV === 'production' 
+      ? 'https://bookos.xyz'
+      : 'http://localhost:3002'
+    
+    redirect(authUrl)
+  }
 }
 
 // export default function LandingPage() {
@@ -85,120 +99,23 @@ export default function LandingPage() {
 //         <section className="bg-primary text-primary-foreground">
 //           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
 //             <div className="text-center">
-//               <h2 className="text-3xl font-bold">Ready to Transform Your Booking Operations?</h2>
-//               <p className="mt-4 text-lg opacity-90">
-//                 Join thousands of businesses that trust BookingOS for their asset management needs
-//               </p>
-//               <div className="mt-8">
-//                 <Button 
-//                   size="lg" 
-//                   variant="secondary"
-//                   asChild
-//                 >
-//                   <Link href="/signup">Start Your Free Trial</Link>
-//                 </Button>
-//               </div>
+//             <h2 className="text-3xl font-bold">Ready to Transform Your Booking Operations?</h2>
+//             <p className="mt-4 text-lg opacity-90">
+//               Join thousands of businesses that trust BookingOS for their asset management needs
+//             </p>
+//             <div className="mt-8">
+//               <Button 
+//                 size="lg" 
+//                 variant="secondary"
+//                 asChild
+//               >
+//                 <Link href="/signup">Start Your Free Trial</Link>
+//               </Button>
 //             </div>
 //           </div>
 //         </section>
 //       </main>
-
-//       {/* Footer */}
-//       <footer className="bg-gray-50">
-//         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-//           <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
-//             <div>
-//               <h3 className="text-sm font-semibold text-gray-900 tracking-wider uppercase">
-//                 Product
-//               </h3>
-//               <ul className="mt-4 space-y-4">
-//                 <li>
-//                   <a href="#" className="text-base text-gray-500 hover:text-gray-900">
-//                     Features
-//                   </a>
-//                 </li>
-//                 <li>
-//                   <a href="#" className="text-base text-gray-500 hover:text-gray-900">
-//                     Pricing
-//                   </a>
-//                 </li>
-//                 <li>
-//                   <a href="#" className="text-base text-gray-500 hover:text-gray-900">
-//                     Security
-//                   </a>
-//                 </li>
-//               </ul>
-//             </div>
-//             <div>
-//               <h3 className="text-sm font-semibold text-gray-900 tracking-wider uppercase">
-//                 Company
-//               </h3>
-//               <ul className="mt-4 space-y-4">
-//                 <li>
-//                   <a href="#" className="text-base text-gray-500 hover:text-gray-900">
-//                     About
-//                   </a>
-//                 </li>
-//                 <li>
-//                   <a href="#" className="text-base text-gray-500 hover:text-gray-900">
-//                     Blog
-//                   </a>
-//                 </li>
-//                 <li>
-//                   <a href="#" className="text-base text-gray-500 hover:text-gray-900">
-//                     Contact
-//                   </a>
-//                 </li>
-//               </ul>
-//             </div>
-//             <div>
-//               <h3 className="text-sm font-semibold text-gray-900 tracking-wider uppercase">
-//                 Resources
-//               </h3>
-//               <ul className="mt-4 space-y-4">
-//                 <li>
-//                   <a href="#" className="text-base text-gray-500 hover:text-gray-900">
-//                     Documentation
-//                   </a>
-//                 </li>
-//                 <li>
-//                   <a href="#" className="text-base text-gray-500 hover:text-gray-900">
-//                     API Reference
-//                   </a>
-//                 </li>
-//                 <li>
-//                   <a href="#" className="text-base text-gray-500 hover:text-gray-900">
-//                     Guides
-//                   </a>
-//                 </li>
-//               </ul>
-//             </div>
-//             <div>
-//               <h3 className="text-sm font-semibold text-gray-900 tracking-wider uppercase">
-//                 Legal
-//               </h3>
-//               <ul className="mt-4 space-y-4">
-//                 <li>
-//                   <a href="#" className="text-base text-gray-500 hover:text-gray-900">
-//                     Privacy
-//                   </a>
-//                 </li>
-//                 <li>
-//                   <a href="#" className="text-base text-gray-500 hover:text-gray-900">
-//                     Terms
-//                   </a>
-//                 </li>
-//               </ul>
-//             </div>
-//           </div>
-//           <div className="mt-12 border-t border-gray-200 pt-8">
-//             <p className="text-base text-gray-400 text-center">
-//               &copy; 2024 BookingOS. All rights reserved.
-//             </p>
-//           </div>
-//         </div>
-//       </footer>
-//       </>
+//     </>
 //   )
 // }
 

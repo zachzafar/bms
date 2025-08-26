@@ -47,5 +47,27 @@ export const tenantsContract = c.router({
       tenants: z.array(z.string())
     }),
     summary: 'Get all tenants'
+  },
+  getTenants: {
+    method: 'GET',
+    path: '/tenant',
+    responses: {
+      200: z.array(SelectTenantSchema),
+    },
+  },
+  update: {
+    method: 'PUT',
+    path: '/tenant/:id',
+    responses: {
+      200: z.object({
+        message: z.string()
+      })
+    },
+    pathParams: z.object({
+      id: z.string()
+    }),
+    body: z.object({
+      tenant: InsertTenantSchema
+    })
   }
 });

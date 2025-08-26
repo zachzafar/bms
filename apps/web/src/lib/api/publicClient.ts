@@ -5,7 +5,7 @@ import { memoizedRefreshToken } from "./refreshToken";
 import { getSession } from "./session";
 import { StorageService } from "./storage";
 
-export const baseUrl = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3001'
+export const baseUrl = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:4000'
 
 
 export const client = initTsrReactQuery(contract,{

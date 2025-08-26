@@ -1,22 +1,7 @@
-"use client"
+'use client'
 
-import { useState } from "react"
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
+import { useMemo, useState, useCallback } from 'react'
+import { toast } from 'sonner'
 import {
   Plus,
   Search,
@@ -27,146 +12,171 @@ import {
   Phone,
   Mail,
   Calendar,
-  User,
+  User as UserIcon,
   MessageSquare,
-} from "lucide-react"
-import { CommunicationForm } from "./communication-form"
-import { CommunicationDetail } from "./communication-detail"
-import { authClient } from "@/lib/api/publicClient"
-import { queryKeys } from "@/lib/api/queryKeys"
-import { toast } from "sonner"
+} from 'lucide-react'
+
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Badge } from '@/components/ui/badge'
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
+
+import { CommunicationForm } from './communication-form'
+import { CommunicationDetail } from './communication-detail'
+
+import { authClient } from '@/lib/api/publicClient'
+import { COMMUNICATIONS_QUERY_KEY } from '@/lib/api/queryKeys'
 
 export function CommunicationManagement() {
-  const queryClient = useQueryClient()
-  const [searchTerm, setSearchTerm] = useState("")
-  const [typeFilter, setTypeFilter] = useState("all")
-  const [outcomeFilter, setOutcomeFilter] = useState("all")
-  const [userFilter, setUserFilter] = useState("all")
+  const queryClient = authClient.useQueryClient()
+
+  const [searchTerm, setSearchTerm] = useState('')
+  const [typeFilter, setTypeFilter] = useState<'all' | 'Email' | 'Phone Call' | 'Meeting'>('all')
+  const [outcomeFilter, setOutcomeFilter] = useState<'all' | 'Positive' | 'Neutral' | 'Negative'>('all')
+  const [userFilter, setUserFilter] = useState<'all' | string>('all')
+
   const [selectedCommunication, setSelectedCommunication] = useState<any>(null)
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false)
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false)
   const [isDetailDialogOpen, setIsDetailDialogOpen] = useState(false)
 
-  const { data: communications = [], isLoading: communicationsLoading } = useQuery({
-    queryKey: queryKeys.communications.list(`${searchTerm}-${typeFilter}-${outcomeFilter}-${userFilter}`),
-    queryFn: () => authClient.get("/communications"),
-  })
+  // ——— Queries (ts-rest style) ———
+  // Build server-side query params from filters that aren't 'all'
+  const serverQuery = useMemo(
+    () => ({
+      type: typeFilter === 'all' ? undefined : typeFilter,
+      userId: userFilter === 'all' ? undefined : userFilter,
+      // add contactId/from/to here when your UI provides them
+    }),
+    [typeFilter, userFilter]
+  )
 
-  const { data: users = [] } = useQuery({
-    queryKey: queryKeys.users.lists(),
-    queryFn: () => authClient.get("/users"),
-  })
+  const { data: commsResp, isLoading: communicationsLoading } =
+    authClient.crm.communications.listComms.useQuery({
+      queryKey: [...COMMUNICATIONS_QUERY_KEY, serverQuery, searchTerm],
+      queryData: { query: serverQuery },
+    })
 
-  const createCommunicationMutation = useMutation({
-    mutationFn: (commData: any) => authClient.post("/communications", commData),
+  // If you have a users contract, prefer that. Otherwise keep your previous fetch.
+  // const { data: usersResp } = authClient.users?.listUsers
+  //   ? authClient.users.listUsers.useQuery({ queryKey: USERS_LIST_QK })
+  //   : authClient.query.useQuery({
+  //       // fallback to your existing REST call
+  //       queryKey: USERS_LIST_QK,
+  //       queryFn: () => authClient.get('/users') as any,
+  //     })
+
+  const communications = useMemo(() => (commsResp?.status === 200 ? commsResp.body : []), [commsResp])
+  // const users = useMemo(() => (usersResp?.status === 200 ? usersResp.body : Array.isArray(usersResp) ? usersResp : []), [usersResp])
+
+  // ——— Mutations (ts-rest style) ———
+  const { mutate: createComm, isPending: isCreating } = authClient.crm.communications.createComm.useMutation({
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: queryKeys.communications.all })
+      queryClient.invalidateQueries({ queryKey: COMMUNICATIONS_QUERY_KEY })
       setIsAddDialogOpen(false)
-      toast.success("Communication logged successfully")
+      toast.success('Communication logged successfully')
     },
-    onError: () => {
-      toast.error("Failed to log communication")
-    },
+    onError: (e) => toast.error(`Failed to log communication: ${e instanceof Error ? e.message : 'Unknown error'}`),
   })
 
-  const updateCommunicationMutation = useMutation({
-    mutationFn: ({ id, ...commData }: any) => authClient.put(`/communications/${id}`, commData),
+  const { mutate: updateComm, isPending: isUpdating } = authClient.crm.communications.updateComm.useMutation({
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: queryKeys.communications.all })
+      queryClient.invalidateQueries({ queryKey: COMMUNICATIONS_QUERY_KEY })
       setIsEditDialogOpen(false)
       setSelectedCommunication(null)
-      toast.success("Communication updated successfully")
+      toast.success('Communication updated successfully')
     },
-    onError: () => {
-      toast.error("Failed to update communication")
-    },
+    onError: (e) => toast.error(`Failed to update communication: ${e instanceof Error ? e.message : 'Unknown error'}`),
   })
 
-  const deleteCommunicationMutation = useMutation({
-    mutationFn: (commId: number) => authClient.delete(`/communications/${commId}`),
+  const { mutate: deleteComm, isPending: isDeleting } = authClient.crm.communications.deleteComm.useMutation({
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: queryKeys.communications.all })
-      toast.success("Communication deleted successfully")
+      queryClient.invalidateQueries({ queryKey: COMMUNICATIONS_QUERY_KEY })
+      toast.success('Communication deleted successfully')
     },
-    onError: () => {
-      toast.error("Failed to delete communication")
-    },
+    onError: (e) => toast.error(`Failed to delete communication: ${e instanceof Error ? e.message : 'Unknown error'}`),
   })
 
-  const filteredCommunications = communications.filter((comm: any) => {
-    const matchesSearch =
-      comm.clientName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      comm.userName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      comm.summary.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      comm.tags.some((tag: string) => tag.toLowerCase().includes(searchTerm.toLowerCase()))
+  // ——— Client-side filter (search + outcome) ———
+  const filteredCommunications = useMemo(() => {
+    const term = searchTerm.trim().toLowerCase()
+    return communications.filter((comm: any) => {
+      const matchesSearch = !term
+        ? true
+        : comm.clientName?.toLowerCase().includes(term) ||
+          comm.userName?.toLowerCase().includes(term) ||
+          comm.summary?.toLowerCase().includes(term) ||
+          (Array.isArray(comm.tags) && comm.tags.some((t: string) => t?.toLowerCase().includes(term)))
 
-    const matchesType = typeFilter === "all" || comm.type === typeFilter
-    const matchesOutcome = outcomeFilter === "all" || comm.outcome === outcomeFilter
-    const matchesUser = userFilter === "all" || comm.userId.toString() === userFilter
+      const matchesOutcome = outcomeFilter === 'all' || comm.outcome === outcomeFilter
+      return matchesSearch && matchesOutcome
+    })
+  }, [communications, outcomeFilter, searchTerm])
 
-    return matchesSearch && matchesType && matchesOutcome && matchesUser
-  })
+  // ——— Handlers ———
+  const handleAddCommunication = useCallback((commData: any) => createComm({ body: commData }), [createComm])
 
-  const handleAddCommunication = (commData: any) => {
-    createCommunicationMutation.mutate(commData)
-  }
+  const handleEditCommunication = useCallback(
+    (commData: any) => {
+      if (!selectedCommunication?.id) return
+      updateComm({ params: { id: String(selectedCommunication.id) }, body: commData })
+    },
+    [selectedCommunication?.id, updateComm]
+  )
 
-  const handleEditCommunication = (commData: any) => {
-    updateCommunicationMutation.mutate({ id: selectedCommunication?.id, ...commData })
-  }
+  const handleDeleteCommunication = useCallback((commId: number) => deleteComm({ params: { id: String(commId) }, body: {} }), [deleteComm])
 
-  const handleDeleteCommunication = (commId: number) => {
-    deleteCommunicationMutation.mutate(commId)
-  }
-
+  // ——— UI helpers ———
   const getTypeIcon = (type: string) => {
     switch (type) {
-      case "Phone Call":
+      case 'Phone Call':
         return <Phone className="h-4 w-4" />
-      case "Email":
+      case 'Email':
         return <Mail className="h-4 w-4" />
-      case "Meeting":
+      case 'Meeting':
         return <Calendar className="h-4 w-4" />
       default:
         return <MessageSquare className="h-4 w-4" />
     }
   }
 
-  const getTypeBadge = (type: string) => {
-    const colors = {
-      "Phone Call": "bg-blue-100 text-blue-800",
-      Email: "bg-green-100 text-green-800",
-      Meeting: "bg-purple-100 text-purple-800",
+  const typeBadge = (type: string) => {
+    const m: Record<string, string> = {
+      'Phone Call': 'bg-blue-100 text-blue-800',
+      Email: 'bg-green-100 text-green-800',
+      Meeting: 'bg-purple-100 text-purple-800',
     }
-    return colors[type as keyof typeof colors] || "bg-gray-100 text-gray-800"
+    return m[type] ?? 'bg-gray-100 text-gray-800'
   }
 
-  const getOutcomeBadge = (outcome: string) => {
-    const colors = {
-      Positive: "bg-green-100 text-green-800",
-      Neutral: "bg-yellow-100 text-yellow-800",
-      Negative: "bg-red-100 text-red-800",
+  const outcomeBadge = (outcome: string) => {
+    const m: Record<string, string> = {
+      Positive: 'bg-green-100 text-green-800',
+      Neutral: 'bg-yellow-100 text-yellow-800',
+      Negative: 'bg-red-100 text-red-800',
     }
-    return colors[outcome as keyof typeof colors] || "bg-gray-100 text-gray-800"
+    return m[outcome] ?? 'bg-gray-100 text-gray-800'
   }
 
-  if (communicationsLoading) {
-    return <div>Loading communications...</div>
-  }
+  if (communicationsLoading) return <div>Loading communications…</div>
 
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex justify-between items-center">
+      <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Communication Management</h1>
-          <p className="text-sm text-gray-600">Track all client interactions and communication history</p>
+          <h1 className="text-2xl font-bold">Communication Management</h1>
+          <p className="text-sm text-muted-foreground">Track all client interactions and communication history</p>
         </div>
         <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
           <DialogTrigger asChild>
-            <Button>
-              <Plus className="h-4 w-4 mr-2" />
-              Log Communication
+            <Button disabled={isCreating}>
+              <Plus className="mr-2 h-4 w-4" />
+              {isCreating ? 'Logging…' : 'Log Communication'}
             </Button>
           </DialogTrigger>
           <DialogContent className="max-w-2xl">
@@ -174,20 +184,16 @@ export function CommunicationManagement() {
               <DialogTitle>Log New Communication</DialogTitle>
               <DialogDescription>Record a new client interaction or communication.</DialogDescription>
             </DialogHeader>
-            <CommunicationForm
-              onSubmit={handleAddCommunication}
-              onCancel={() => setIsAddDialogOpen(false)}
-              users={users}
-            />
+            <CommunicationForm onSubmit={handleAddCommunication} onCancel={() => setIsAddDialogOpen(false)} users={users} />
           </DialogContent>
         </Dialog>
       </div>
 
-      {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+      {/* Stats */}
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-gray-600">Total Communications</CardTitle>
+            <CardTitle className="text-sm font-medium text-muted-foreground">Total Communications</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{communications.length}</div>
@@ -195,7 +201,7 @@ export function CommunicationManagement() {
         </Card>
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-gray-600">This Week</CardTitle>
+            <CardTitle className="text-sm font-medium text-muted-foreground">This Week</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">12</div>
@@ -203,17 +209,15 @@ export function CommunicationManagement() {
         </Card>
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-gray-600">Follow-ups Due</CardTitle>
+            <CardTitle className="text-sm font-medium text-muted-foreground">Follow-ups Due</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">
-              {communications.filter((c: any) => c.followUpRequired && c.followUpDate).length}
-            </div>
+            <div className="text-2xl font-bold">{communications.filter((c: any) => c.followUpRequired && c.followUpDate).length}</div>
           </CardContent>
         </Card>
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-gray-600">Avg Response Time</CardTitle>
+            <CardTitle className="text-sm font-medium text-muted-foreground">Avg Response Time</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">2.5h</div>
@@ -221,12 +225,12 @@ export function CommunicationManagement() {
         </Card>
       </div>
 
-      {/* Search and Filters */}
+      {/* Search + Filters */}
       <Card>
         <CardHeader>
-          <div className="flex flex-col sm:flex-row gap-4">
+          <div className="flex flex-col gap-4 sm:flex-row">
             <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
               <Input
                 placeholder="Search communications by client, user, summary, or tags..."
                 value={searchTerm}
@@ -235,7 +239,7 @@ export function CommunicationManagement() {
               />
             </div>
             <div className="flex gap-2">
-              <Select value={typeFilter} onValueChange={setTypeFilter}>
+              <Select value={typeFilter} onValueChange={(v) => setTypeFilter(v as any)}>
                 <SelectTrigger className="w-32">
                   <SelectValue placeholder="Type" />
                 </SelectTrigger>
@@ -246,7 +250,7 @@ export function CommunicationManagement() {
                   <SelectItem value="Meeting">Meeting</SelectItem>
                 </SelectContent>
               </Select>
-              <Select value={outcomeFilter} onValueChange={setOutcomeFilter}>
+              <Select value={outcomeFilter} onValueChange={(v) => setOutcomeFilter(v as any)}>
                 <SelectTrigger className="w-32">
                   <SelectValue placeholder="Outcome" />
                 </SelectTrigger>
@@ -257,15 +261,15 @@ export function CommunicationManagement() {
                   <SelectItem value="Negative">Negative</SelectItem>
                 </SelectContent>
               </Select>
-              <Select value={userFilter} onValueChange={setUserFilter}>
+              <Select value={userFilter} onValueChange={(v) => setUserFilter(v as any)}>
                 <SelectTrigger className="w-32">
                   <SelectValue placeholder="User" />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">All Users</SelectItem>
-                  {users.map((user: any) => (
-                    <SelectItem key={user.id} value={user.id.toString()}>
-                      {user.name}
+                  {users.map((u: any) => (
+                    <SelectItem key={u.id} value={String(u.id)}>
+                      {u.name}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -282,7 +286,7 @@ export function CommunicationManagement() {
                 <TableHead>User</TableHead>
                 <TableHead>Date & Time</TableHead>
                 <TableHead>Outcome</TableHead>
-                <TableHead className="w-[50px]"></TableHead>
+                <TableHead className="w-[50px]" />
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -291,7 +295,7 @@ export function CommunicationManagement() {
                   <TableCell>
                     <div>
                       <div className="font-medium">{comm.clientName}</div>
-                      <div className="flex items-center text-sm text-gray-500 mt-1">
+                      <div className="mt-1 flex items-center text-sm text-muted-foreground">
                         {getTypeIcon(comm.type)}
                         <span className="ml-1">{comm.type}</span>
                         {comm.duration && <span className="ml-2">({comm.duration}min)</span>}
@@ -300,9 +304,9 @@ export function CommunicationManagement() {
                   </TableCell>
                   <TableCell>
                     <div className="max-w-xs">
-                      <p className="text-sm line-clamp-2">{comm.summary}</p>
-                      {comm.tags.length > 0 && (
-                        <div className="flex flex-wrap gap-1 mt-2">
+                      <p className="line-clamp-2 text-sm">{comm.summary}</p>
+                      {Array.isArray(comm.tags) && comm.tags.length > 0 && (
+                        <div className="mt-2 flex flex-wrap gap-1">
                           {comm.tags.slice(0, 2).map((tag: string) => (
                             <Badge key={tag} variant="secondary" className="text-xs">
                               {tag}
@@ -319,19 +323,19 @@ export function CommunicationManagement() {
                   </TableCell>
                   <TableCell>
                     <div className="flex items-center text-sm">
-                      <User className="h-3 w-3 mr-2 text-gray-400" />
+                      <UserIcon className="mr-2 h-3 w-3 text-muted-foreground" />
                       {comm.userName}
                     </div>
                   </TableCell>
                   <TableCell>
                     <div className="text-sm">
                       <div>{comm.date}</div>
-                      <div className="text-gray-500">{comm.time}</div>
+                      <div className="text-muted-foreground">{comm.time}</div>
                     </div>
                   </TableCell>
                   <TableCell>
                     <div className="space-y-1">
-                      <Badge className={getOutcomeBadge(comm.outcome)}>{comm.outcome}</Badge>
+                      <Badge className={outcomeBadge(comm.outcome)}>{comm.outcome}</Badge>
                       {comm.followUpRequired && (
                         <div className="text-xs text-orange-600">Follow-up: {comm.followUpDate}</div>
                       )}
@@ -351,7 +355,7 @@ export function CommunicationManagement() {
                             setIsDetailDialogOpen(true)
                           }}
                         >
-                          <Eye className="h-4 w-4 mr-2" />
+                          <Eye className="mr-2 h-4 w-4" />
                           View Details
                         </DropdownMenuItem>
                         <DropdownMenuItem
@@ -360,11 +364,15 @@ export function CommunicationManagement() {
                             setIsEditDialogOpen(true)
                           }}
                         >
-                          <Edit className="h-4 w-4 mr-2" />
+                          <Edit className="mr-2 h-4 w-4" />
                           Edit
                         </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => handleDeleteCommunication(comm.id)} className="text-red-600">
-                          <Trash2 className="h-4 w-4 mr-2" />
+                        <DropdownMenuItem
+                          className="text-red-600"
+                          onClick={() => handleDeleteCommunication(comm.id)}
+                          disabled={isDeleting}
+                        >
+                          <Trash2 className="mr-2 h-4 w-4" />
                           Delete
                         </DropdownMenuItem>
                       </DropdownMenuContent>
@@ -418,3 +426,4 @@ export function CommunicationManagement() {
     </div>
   )
 }
+

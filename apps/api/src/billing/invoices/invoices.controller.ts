@@ -4,6 +4,7 @@ import { billingContract } from '@repo/api-contract';
 import * as schema from '@repo/api-contract';
 import { TenantService } from 'src/tenant/tenant.service';
 import { InvoicesService } from './invoices.service';
+import { RequireRead, RequireWrite } from 'src/auth/decorators/permissions.decorator';
 
 @Controller()
 export class InvoicesController {
@@ -14,6 +15,7 @@ export class InvoicesController {
   ) {}
 
   @TsRestHandler(billingContract.createInvoice)
+  @RequireWrite('invoices')
   async create(@Headers() headers: any): Promise<ReturnType<typeof tsRestHandler>> {
     return tsRestHandler(billingContract.createInvoice, async ({ body }) => {
       const tenantId = headers['x-tenant-id'];
@@ -32,6 +34,7 @@ export class InvoicesController {
   }
 
   @TsRestHandler(billingContract.getInvoices)
+  @RequireRead('invoices')
   async list(@Headers() headers: any): Promise<ReturnType<typeof tsRestHandler>> {
     return tsRestHandler(billingContract.getInvoices, async ({ query }) => {
       const tenantId = headers['x-tenant-id'];
@@ -41,6 +44,7 @@ export class InvoicesController {
   }
 
   @TsRestHandler(billingContract.getInvoice)
+  @RequireRead('invoices')
   async get(@Headers() headers: any): Promise<ReturnType<typeof tsRestHandler>> {
     return tsRestHandler(billingContract.getInvoice, async ({ params }) => {
       const tenantId = headers['x-tenant-id'];
@@ -51,6 +55,7 @@ export class InvoicesController {
   }
 
   @TsRestHandler(billingContract.updateInvoice)
+  @RequireWrite('invoices')
   async update(@Headers() headers: any): Promise<ReturnType<typeof tsRestHandler>> {
     return tsRestHandler(billingContract.updateInvoice, async ({ params, body }) => {
       const tenantId = headers['x-tenant-id'];
@@ -61,6 +66,7 @@ export class InvoicesController {
   }
 
   @TsRestHandler(billingContract.generateInvoiceFromBooking)
+  @RequireWrite('invoices')
   async generateFromBooking(@Headers() headers: any): Promise<ReturnType<typeof tsRestHandler>> {
     return tsRestHandler(billingContract.generateInvoiceFromBooking, async ({ params }) => {
       const tenantId = headers['x-tenant-id'];

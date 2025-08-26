@@ -4,6 +4,12 @@
   "scripts": {
     "build": "turbo build",
     "dev": "turbo dev",
+    "dev:api": "cd apps/api && PORT=3001 pnpm dev",
+    "dev:auth": "cd apps/auth && PORT=3002 NEXT_PUBLIC_API_URL=http://localhost:3001 pnpm dev",
+    "dev:web": "cd apps/web && PORT=3000 NEXT_PUBLIC_API_URL=http://localhost:3001 NEXT_PUBLIC_AUTH_URL=http://localhost:3002 pnpm dev",
+    "dev:crm": "cd apps/crm && PORT=3001 NEXT_PUBLIC_API_URL=http://localhost:3001 NEXT_PUBLIC_AUTH_URL=http://localhost:3002 pnpm dev",
+    "dev:system-admin": "cd apps/system-admin && PORT=3003 NEXT_PUBLIC_API_URL=http://localhost:3001 pnpm dev",
+    "dev:all": "concurrently \"pnpm dev:api\" \"pnpm dev:auth\" \"pnpm dev:web\" \"pnpm dev:crm\" \"pnpm dev:system-admin\"",
     "lint": "turbo lint",
     "format": "prettier --write \"**/*.{ts,tsx,md}\""
   },

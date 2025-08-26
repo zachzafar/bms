@@ -14,6 +14,7 @@ import { rateContract } from './rates';
 // import { billingContract } from './billing';
 import { crmContract } from './crm';
 import { billingContract } from './billing';
+import { systemAdminContract } from './system-admin';
 
 
 const c = initContract();
@@ -34,6 +35,7 @@ export const contract = c.router({
   rates: rateContract,
   billing: billingContract,
   crm: crmContract,
+  systemAdmin: systemAdminContract,
 });
 
 export * from './auth';
@@ -49,3 +51,4 @@ export * from './analytics';
 export * from './rates';
 export * from './billing';
 export * from './crm';
+export * from './system-admin';

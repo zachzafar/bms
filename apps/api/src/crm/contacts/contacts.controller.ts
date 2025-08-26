@@ -4,6 +4,7 @@ import { crmContract } from '@repo/api-contract'; // { contacts: ..., profiles: 
 import { ContactsService } from './contacts.service';
 import * as schema from '@repo/api-contract';
 import { TenantService } from 'src/tenant/tenant.service';
+import { RequireRead, RequireWrite, RequireDelete } from 'src/auth/decorators/permissions.decorator';
 
 @Controller()
 export class ContactsController {
@@ -14,6 +15,7 @@ export class ContactsController {
   ) {}
 
   @TsRestHandler(crmContract.contacts.createContact)
+  @RequireWrite('contacts')
   async createContact(@Headers() headers: any): Promise<ReturnType<typeof tsRestHandler>> {
     return tsRestHandler(crmContract.contacts.createContact, async ({ body }) => {
       const tenantId = headers['x-tenant-id'];
@@ -23,6 +25,7 @@ export class ContactsController {
   }
 
   @TsRestHandler(crmContract.contacts.listContacts)
+  @RequireRead('contacts')
   async listContacts(@Headers() headers: any): Promise<ReturnType<typeof tsRestHandler>> {
     return tsRestHandler(crmContract.contacts.listContacts, async ({ query }) => {
       const tenantId = headers['x-tenant-id'];
@@ -32,6 +35,7 @@ export class ContactsController {
   }
 
   @TsRestHandler(crmContract.contacts.getContact)
+  @RequireRead('contacts')
   async getContact(@Headers() headers: any): Promise<ReturnType<typeof tsRestHandler>> {
     return tsRestHandler(crmContract.contacts.getContact, async ({ params }) => {
       const tenantId = headers['x-tenant-id'];
@@ -43,6 +47,7 @@ export class ContactsController {
   }
 
   @TsRestHandler(crmContract.contacts.updateContact)
+  @RequireWrite('contacts')
   async updateContact(@Headers() headers: any): Promise<ReturnType<typeof tsRestHandler>> {
     return tsRestHandler(crmContract.contacts.updateContact, async ({ params, body }) => {
       const tenantId = headers['x-tenant-id'];
@@ -53,6 +58,7 @@ export class ContactsController {
   }
 
   @TsRestHandler(crmContract.contacts.deleteContact)
+  @RequireDelete('contacts')
   async deleteContact(@Headers() headers: any): Promise<ReturnType<typeof tsRestHandler>> {
     return tsRestHandler(crmContract.contacts.deleteContact, async ({ params }) => {
       const tenantId = headers['x-tenant-id'];
@@ -63,6 +69,7 @@ export class ContactsController {
   }
 
   @TsRestHandler(crmContract.contacts.mergeContacts)
+  @RequireWrite('contacts')
   async mergeContacts(@Headers() headers: any): Promise<ReturnType<typeof tsRestHandler>> {
     return tsRestHandler(crmContract.contacts.mergeContacts, async ({ params, body }) => {
       const tenantId = headers['x-tenant-id'];
@@ -76,6 +83,7 @@ export class ContactsController {
   }
 
   @TsRestHandler(crmContract.contacts.attachUser)
+  @RequireWrite('contacts')
   async attachUser(@Headers() headers: any): Promise<ReturnType<typeof tsRestHandler>> {
     return tsRestHandler(crmContract.contacts.attachUser, async ({ params, body }) => {
       const tenantId = headers['x-tenant-id'];
@@ -87,6 +95,7 @@ export class ContactsController {
   }
 
   @TsRestHandler(crmContract.contacts.detachUser)
+  @RequireWrite('contacts')
   async detachUser(@Headers() headers: any): Promise<ReturnType<typeof tsRestHandler>> {
     return tsRestHandler(crmContract.contacts.detachUser, async ({ params }) => {
       const tenantId = headers['x-tenant-id'];

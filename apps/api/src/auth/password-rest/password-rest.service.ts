@@ -83,4 +83,20 @@ export class PasswordRestService {
             `,
         })
     }
+
+    @OnEvent('admin.registered')
+    async handleAdminRegistrationNotification(payload: any) {
+        this.logger.log(`Sending admin welcome email to ${payload.email} for user ${payload.userId}`)
+        this.eventEmitter.emit('send-email', {
+            email: payload.email,
+            subject: 'Welcome to BookOS - Set Your Admin Password',
+            content: `
+                <h1>Welcome to BookOS, ${payload.name}!</h1>
+                <p>Your admin account has been created successfully.</p>
+                <p>Click <a href="${process.env.FRONTEND_URL}/password-reset/${payload.token}">here</a> to set your password and complete your account setup.</p>
+                <p>This link will expire in 24 hours.</p>
+                <p>If you didn't request this account, please contact support immediately.</p>
+            `,
+        })
+    }
 }
