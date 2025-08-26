@@ -20,18 +20,18 @@ const mockActivities = [
 ]
 
 export function DashboardOverview() {
-  const { data: stats } = useQuery({
-    queryKey: queryKeys.dashboard.stats(),
-    queryFn: () => authClient.get("/dashboard/stats"),
-  })
+  // const { data: stats } = useQuery({
+  //   queryKey: queryKeys.dashboard.stats(),
+  //   queryFn: () => authClient.get("/dashboard/stats"),
+  // })
 
-  const { data: recentActivities } = useQuery({
-    queryKey: queryKeys.dashboard.activities(),
-    queryFn: () => authClient.get("/dashboard/activities"),
-  })
+  // const { data: recentActivities } = useQuery({
+  //   queryKey: queryKeys.dashboard.activities(),
+  //   queryFn: () => authClient.get("/dashboard/activities"),
+  // })
 
-  const displayStats = stats || mockStats
-  const displayActivities = recentActivities || mockActivities
+  const displayStats =  mockStats
+  const displayActivities =  mockActivities
 
   return (
     <div className="space-y-8">

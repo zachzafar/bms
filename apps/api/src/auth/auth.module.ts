@@ -13,11 +13,13 @@ import { DrizzleModule } from 'src/drizzle/drizzle.module';
 import { PassportModule } from '@nestjs/passport';
 import { Tenant } from '@repo/api-contract';
 import { TenantService } from 'src/tenant/tenant.service';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 
 import { TenantGuard } from './guards/tenant/tenant.guard';
 import { ApiKeyStrategy } from './strategies/apikey.strategy';
 import { KeysService } from 'src/keys/keys.service';
 import { PasswordRestService } from './password-rest/password-rest.service';
+import { AdminGuard } from './guards/admin/admin.guard';
 
 @Module({
   imports: [
@@ -36,7 +38,8 @@ import { PasswordRestService } from './password-rest/password-rest.service';
       KeysService,
       TenantGuard,
       TenantService,
-      PasswordRestService
+      PasswordRestService,
+      AdminGuard
   ],
   controllers: [AuthController]
 })

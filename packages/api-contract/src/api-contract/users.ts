@@ -70,6 +70,7 @@ export const userContract = c.router({
                 id: z.string(),
             }),
         },
+        body: z.undefined(),
         pathParams: z.object({
             id: z.string(),
         }),

@@ -33,7 +33,7 @@ import {
 import { TaskForm } from "./task-form"
 import { TaskDetail } from "./task-detail"
 import { authClient } from "@/lib/api/publicClient"
-import { queryKeys } from "@/lib/api/queryKeys"
+import { TASKS_QUERY_KEY, USERS_QUERY_KEY } from "@/lib/api/queryKeys"
 import { toast } from "sonner"
 
 export function TaskManagement() {
@@ -47,20 +47,17 @@ export function TaskManagement() {
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false)
   const [isDetailDialogOpen, setIsDetailDialogOpen] = useState(false)
 
-  const { data: tasks = [], isLoading: tasksLoading } = useQuery({
-    queryKey: queryKeys.tasks.list(`${searchTerm}-${statusFilter}-${priorityFilter}-${assigneeFilter}`),
-    queryFn: () => authClient.get("/tasks"),
+  const { data: tasks = [], isLoading: tasksLoading } = authClient.crm.tasks.listTasks.useQuery({
+    queryKey: TASKS_QUERY_KEY
   })
 
-  const { data: users = [] } = useQuery({
-    queryKey: queryKeys.users.lists(),
-    queryFn: () => authClient.get("/users"),
+  const { data: users = [] } = authClient.users.getUsers.useQuery({
+    queryKey: USERS_QUERY_KEY
   })
 
-  const createTaskMutation = useMutation({
-    mutationFn: (taskData: any) => authClient.post("/tasks", taskData),
+  const createTaskMutation = authClient.crm.tasks.createTask.useMutation({
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: queryKeys.tasks.all })
+      queryClient.invalidateQueries({ queryKey: TASKS_QUERY_KEY })
       setIsAddDialogOpen(false)
       toast.success("Task created successfully")
     },
@@ -69,10 +66,9 @@ export function TaskManagement() {
     },
   })
 
-  const updateTaskMutation = useMutation({
-    mutationFn: ({ id, ...taskData }: any) => authClient.put(`/tasks/${id}`, taskData),
+  const updateTaskMutation = authClient.crm.tasks.updateTask.useMutation({
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: queryKeys.tasks.all })
+      queryClient.invalidateQueries({ queryKey: TASKS_QUERY_KEY })
       setIsEditDialogOpen(false)
       setSelectedTask(null)
       toast.success("Task updated successfully")
@@ -82,10 +78,9 @@ export function TaskManagement() {
     },
   })
 
-  const deleteTaskMutation = useMutation({
-    mutationFn: (taskId: number) => authClient.delete(`/tasks/${taskId}`),
+  const deleteTaskMutation = authClient.crm.tasks.deleteTask.useMutation({
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: queryKeys.tasks.all })
+      queryClient.invalidateQueries({ queryKey: TASKS_QUERY_KEY })
       toast.success("Task deleted successfully")
     },
     onError: () => {
@@ -93,10 +88,9 @@ export function TaskManagement() {
     },
   })
 
-  const toggleCompleteMutation = useMutation({
-    mutationFn: ({ id, status }: { id: number; status: string }) => authClient.put(`/tasks/${id}/status`, { status }),
+  const toggleCompleteMutation = authClient.crm.tasks.updateTask.useMutation({
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: queryKeys.tasks.all })
+      queryClient.invalidateQueries({ queryKey: TASKS_QUERY_KEY })
       toast.success("Task status updated")
     },
     onError: () => {

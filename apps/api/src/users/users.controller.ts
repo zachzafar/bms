@@ -2,6 +2,7 @@ import { Controller, Headers, Logger, NotFoundException } from '@nestjs/common';
 import { UsersService } from './users.service';
 import { tsRestHandler, TsRestHandler } from '@ts-rest/nest';
 import { contract as c } from "@repo/api-contract"
+import { RequireRead, RequireWrite, RequireDelete, RequirePermissionsDecorator } from 'src/auth/decorators/permissions.decorator';
 
 @Controller()
 export class UsersController {
@@ -9,6 +10,7 @@ export class UsersController {
     constructor(private UserService: UsersService) { }
 
     @TsRestHandler(c.users.createUser)
+    @RequireWrite('users')
     async createUser(@Headers() headers: any): Promise<ReturnType<typeof tsRestHandler>> {
         this.logger.log(`Creating a new user`);
         return tsRestHandler(c.users.createUser, async ({ body }) => {
@@ -21,6 +23,7 @@ export class UsersController {
     }
 
     @TsRestHandler(c.users.getUser)
+    @RequireRead('users')
     async getUser(): Promise<ReturnType<typeof tsRestHandler>> {
         this.logger.log(`Getting a user`);
         return tsRestHandler(c.users.getUser, async ({ params }) => {
@@ -34,6 +37,7 @@ export class UsersController {
     }
 
     @TsRestHandler(c.users.getUsers)
+    @RequireRead('users')
     async getUsers(@Headers() headers: any): Promise<ReturnType<typeof tsRestHandler>> {
         this.logger.log(`Getting all users`);
         return tsRestHandler(c.users.getUsers, async () => {
@@ -44,6 +48,7 @@ export class UsersController {
     }
 
     @TsRestHandler(c.users.updateUser)
+    @RequireWrite('users')
     async updateUser(@Headers() headers: any): Promise<ReturnType<typeof tsRestHandler>> {
         this.logger.log(`Updating a user`);
         return tsRestHandler(c.users.updateUser, async ({ params, body }) => {
@@ -57,6 +62,7 @@ export class UsersController {
     }
 
     @TsRestHandler(c.users.deleteUser)
+    @RequireDelete('users')
     async deleteUser(@Headers() headers: any): Promise<ReturnType<typeof tsRestHandler>> {
         this.logger.log(`Deleting a user`);
         return tsRestHandler(c.users.deleteUser, async ({ params }) => {
@@ -71,6 +77,7 @@ export class UsersController {
     }
 
     @TsRestHandler(c.users.getCustomers)
+    @RequireRead('customers')
     async getCustomers(@Headers() headers: any): Promise<ReturnType<typeof tsRestHandler>> {
         this.logger.log(`Getting all customers`);
         return tsRestHandler(c.users.getCustomers, async () => {
@@ -81,6 +88,7 @@ export class UsersController {
     }
 
     @TsRestHandler(c.users.getOwners)
+    @RequireRead('owners')
     async getOwners(@Headers() headers: any): Promise<ReturnType<typeof tsRestHandler>> {
         this.logger.log(`Getting all owners`);
         return tsRestHandler(c.users.getOwners, async () => {

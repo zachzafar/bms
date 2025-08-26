@@ -28,6 +28,14 @@ export class RefreshStrategy extends PassportStrategy(Strategy, 'refresh-jwt') {
     
     const refreshToken = req.body.refresh;
 
-    return this.authService.validateRefreshToken(userId, refreshToken);
+    // Validate the refresh token
+    const isValid = this.authService.validateRefreshToken(userId, refreshToken);
+    
+    // Return the same structure as JWT strategy for consistency
+    return {
+      sub: userId,
+      tenants: payload.tenants,
+      roles: payload.roles
+    };
   }
 }

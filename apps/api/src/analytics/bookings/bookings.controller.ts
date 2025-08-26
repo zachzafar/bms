@@ -2,12 +2,14 @@ import { Controller, Headers } from '@nestjs/common';
 import { BookingAnalyticsService } from './bookings.service';
 import { tsRestHandler, TsRestHandler } from '@ts-rest/nest';
 import { contract } from '@repo/api-contract';
+import { RequireRead } from 'src/auth/decorators/permissions.decorator';
 
 @Controller()
 export class BookingsAnalyticsController {
     constructor(private BookingsAnalyticsService: BookingAnalyticsService){}
 
     @TsRestHandler(contract.analytics.getBookingCount)
+    @RequireRead('analytics')
     async getBookingAnalytics(@Headers() headers: any): Promise<ReturnType<typeof tsRestHandler>> {
         return tsRestHandler(contract.analytics.getBookingCount, async ({}) => {
             const tenantId = headers['x-tenant-id'];
@@ -24,6 +26,7 @@ export class BookingsAnalyticsController {
     }
 
     @TsRestHandler(contract.analytics.getBookingCountsByMonthPerYear)
+    @RequireRead('analytics')
     async getBookingCountsByMonthPerYear(@Headers() headers: any): Promise<ReturnType<typeof tsRestHandler>> {
         return tsRestHandler(contract.analytics.getBookingCountsByMonthPerYear, async ({query}) => {
             const tenantId = headers['x-tenant-id'];

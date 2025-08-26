@@ -45,8 +45,8 @@ export class BrochuresService {
   async get(id: number) {
     const brochure = await this.db.query.Brochure.findFirst({ where: (b, { eq }) => eq(b.id, id) });
     if (!brochure) return null;
-    const contact = await this.db.query.Contact.findFirst({ where: (c, { eq }) => eq(c.id, brochure.contactId) });
-    const links = await this.db.query.BrochureAsset.findMany({ where: (bp, { eq }) => eq(bp.brochureId, id) });
+    const contact = await this.db.query.Contact.findFirst({ where: (c, { eq }) => eq(c.id, Number(brochure.contactId)) });
+    const links = await this.db.query.BrochureAsset.findMany({ where: (bp, { eq }) => eq(bp.brochureId, BigInt(id)) });
     const assets = await this.db.query.Asset.findMany({
       where: (a, { inArray }) => inArray(a.id, links.map((l) => l.assetId)),
     });
@@ -55,7 +55,7 @@ export class BrochuresService {
 
   async remove(id: number) {
     await this.db.transaction(async (tx) => {
-      await tx.delete(schema.BrochureAsset).where(eq(schema.BrochureAsset.brochureId, id));
+      await tx.delete(schema.BrochureAsset).where(eq(schema.BrochureAsset.brochureId, BigInt(id)));
       await tx.delete(schema.Brochure).where(eq(schema.Brochure.id, id));
     });
   }
@@ -63,19 +63,19 @@ export class BrochuresService {
   async addAssets(brochureId: number, assetIds: string[]) {
     if (!assetIds.length) return 0;
     await this.db.insert(schema.BrochureAsset).values(
-      assetIds.map((assetId) => ({ brochureId, assetId, tenantId: '' as any })) // tenantId set by trigger/ignored if not required in schema export
+      assetIds.map((assetId) => ({ brochureId: BigInt(brochureId), assetId, tenantId: '' as any })) // tenantId set by trigger/ignored if not required in schema export
     ).onDuplicateKeyUpdate({ set: {} }).execute();
     return assetIds.length;
   }
 
   async removeAsset(brochureId: number, assetId: string) {
     await this.db.delete(schema.BrochureAsset).where(
-      and(eq(schema.BrochureAsset.brochureId, brochureId), eq(schema.BrochureAsset.assetId, assetId))
+      and(eq(schema.BrochureAsset.brochureId, BigInt(brochureId)), eq(schema.BrochureAsset.assetId, assetId))
     );
   }
 
   async listAssets(brochureId: number) {
-    const links = await this.db.query.BrochureAsset.findMany({ where: (bp, { eq }) => eq(bp.brochureId, brochureId) });
+    const links = await this.db.query.BrochureAsset.findMany({ where: (bp, { eq }) => eq(bp.brochureId, BigInt(brochureId)) });
     const assets = await this.db.query.Asset.findMany({
       where: (a, { inArray }) => inArray(a.id, links.map((l) => l.assetId)),
     });

@@ -1,38 +1,34 @@
-"use client"
+'use client'
 
-import type React from "react"
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query"
-import { Toaster } from "sonner"
-import { useState } from "react"
-import "./globals.css"
+import type { Metadata } from 'next'
+import { Inter } from 'next/font/google'
+import './globals.css'
+import TanstackProvider from '@/providers/tanstack'
+import { Toaster } from '@/components/ui/sonner'
+import { DashboardLayout } from '@/components/dashboard-layout'
+
+const inter = Inter({ subsets: ['latin'] })
+
 
 export default function RootLayout({
   children,
-}: Readonly<{
+}: {
   children: React.ReactNode
-}>) {
-  const [queryClient] = useState(
-    () =>
-      new QueryClient({
-        defaultOptions: {
-          queries: {
-            staleTime: 5 * 60 * 1000, // 5 minutes
-            retry: 1,
-          },
-        },
-      }),
-  )
+}) {
+
 
   return (
     <html lang="en">
-      <head>
-      </head>
-      <body>
-        <QueryClientProvider client={queryClient}>
-          {children}
-          <Toaster position="top-right" />
-        </QueryClientProvider>
-      </body>
+      <body className={inter.className}>
+
+        <TanstackProvider>
+          <DashboardLayout>
+        {children}
+        </DashboardLayout>
+        </TanstackProvider>
+        <Toaster />
+        </body>  
     </html>
   )
 }
+

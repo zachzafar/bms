@@ -57,8 +57,8 @@ export class PaymentsService {
       // Create PaymentInvoice rows
       await tx.insert(schema.PaymentInvoice).values(
         invoiceIds.map((invoiceId, idx) => ({
-          paymentId,
-          invoiceId,
+          paymentId: BigInt(paymentId),
+          invoiceId: BigInt(invoiceId),
           amountApplied: amountsApplied[idx] as any,
         }))
       );
@@ -66,10 +66,10 @@ export class PaymentsService {
       // Naive status update: mark invoice Paid if total applied == totalAmount
       // Collect current applied per invoice
       const pivots = await tx.query.PaymentInvoice.findMany({
-        where: (pi, { inArray }) => inArray(pi.invoiceId, invoiceIds),
+        where: (pi, { inArray }) => inArray(pi.invoiceId, invoiceIds.map(id => BigInt(id))),
       });
 
-      const appliedByInvoice = new Map<number, number>();
+      const appliedByInvoice = new Map<bigint, number>();
       pivots.forEach((p) => {
         appliedByInvoice.set(
           p.invoiceId,
@@ -79,7 +79,7 @@ export class PaymentsService {
 
       for (const inv of invoices) {
         const total = this.toCents(String(inv.totalAmount));
-        const applied = appliedByInvoice.get(inv.id) ?? 0;
+        const applied = appliedByInvoice.get(BigInt(inv.id)) ?? 0;
         const status = applied >= total ? 'Paid' : (applied > 0 ? 'Partial' : inv.status);
         if (status !== inv.status) {
           await tx.update(schema.Invoice).set({ status }).where(eq(schema.Invoice.id, inv.id));
@@ -93,15 +93,22 @@ export class PaymentsService {
   }
 
   async list(tenantId: string, query: { customerId?: string }) {
-    return this.db.query.Payment.findMany({
+    const payments = await this.db.query.Payment.findMany({
       where: (p, { eq, and }) =>
         and(
-          query.customerId ? eq(p.customerId, query.customerId) : undefined,
+          query.customerId ? eq(p.customerId, BigInt(query.customerId)) : undefined,
           // If you keep tenantId on Payment via Customer link, filter in join or app layer.
           // If you add tenantId to Payment, also add eq(p.tenantId, tenantId) here.
         ),
       orderBy: (p, { desc }) => [desc(p.createdAt)],
     });
+
+    // Convert bigint values to numbers for API compatibility
+    return payments.map(payment => ({
+      ...payment,
+      id: Number(payment.id),
+      customerId: Number(payment.customerId),
+    }));
   }
 
   async get(id: number) {
@@ -111,14 +118,17 @@ export class PaymentsService {
     if (!payment) return null;
 
     const pivots = await this.db.query.PaymentInvoice.findMany({
-      where: (pi, { eq }) => eq(pi.paymentId, id),
+      where: (pi, { eq }) => eq(pi.paymentId, BigInt(id)),
       with: { invoice: true },
     });
 
     return {
       ...payment,
+      // Convert bigint values to numbers for API compatibility
+      id: Number(payment.id),
+      customerId: Number(payment.customerId),
       invoices: pivots.map((p) => ({
-        invoiceId: p.invoiceId,
+        invoiceId: Number(p.invoiceId),
         amountApplied: String(p.amountApplied),
         invoiceNumber: p.invoice.invoiceNumber,
       })),

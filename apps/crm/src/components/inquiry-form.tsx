@@ -1,144 +1,133 @@
 "use client"
 
-import type React from "react"
-
-import { useState } from "react"
+import { useForm } from "react-hook-form"
+import { zodResolver } from "@hookform/resolvers/zod"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Textarea } from "@/components/ui/textarea"
+import { InquiryFormSchema, InquiryFormInputs } from "@/lib/schemas"
+import { ExtendedSelectInquirySchema } from "@repo/api-contract"
+import { authClient } from "@/lib/api/publicClient"
+import { CONTACTS_QUERY_KEY, ASSETS_QUERY_KEY, USERS_QUERY_KEY } from "@/lib/api/queryKeys"
+
+type Inquiry = typeof ExtendedSelectInquirySchema._type
 
 interface InquiryFormProps {
-  initialData?: any
-  onSubmit: (data: any) => void
-  onCancel: () => void
-  agents: Array<{ id: number; name: string }>
+  initialData?: Inquiry
+  onSubmit: (data: InquiryFormInputs) => void
 }
 
-// Mock data for clients and properties - in real app this would come from your database
-const mockClients = [
-  { id: 1, name: "John Smith", email: "john.smith@email.com" },
-  { id: 2, name: "Sarah Johnson", email: "sarah.johnson@email.com" },
-  { id: 3, name: "Michael Brown", email: "michael.brown@email.com" },
-  { id: 4, name: "Emma Davis", email: "emma.davis@email.com" },
-]
-
-const mockProperties = [
-  { id: 1, title: "Modern Downtown Apartment" },
-  { id: 2, title: "Family House with Garden" },
-  { id: 3, title: "Studio Loft" },
-  { id: 4, title: "Luxury Penthouse" },
-]
-
-export function InquiryForm({ initialData, onSubmit, onCancel, agents }: InquiryFormProps) {
-  const [formData, setFormData] = useState({
-    clientId: initialData?.clientId || "",
-    clientName: initialData?.clientName || "",
-    clientEmail: initialData?.clientEmail || "",
-    propertyId: initialData?.propertyId || "",
-    propertyTitle: initialData?.propertyTitle || "",
-    status: initialData?.status || "New",
-    priority: initialData?.priority || "Medium",
-    followUpDate: initialData?.followUpDate || "",
-    assignedToId: initialData?.assignedToId || "",
-    assignedTo: initialData?.assignedTo || "",
-    notes: initialData?.notes || "",
-    source: initialData?.source || "Website",
+export function InquiryForm({ initialData, onSubmit }: InquiryFormProps) {
+  const { data: contactsData } = authClient.crm.contacts.listContacts.useQuery({
+    queryKey: CONTACTS_QUERY_KEY,
+  })
+  const { data: assetsData } = authClient.assets.getAssets.useQuery({
+    queryKey: ASSETS_QUERY_KEY,
+  })
+  const { data: usersData } = authClient.users.getUsers.useQuery({
+    queryKey: USERS_QUERY_KEY,
   })
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault()
+  const contacts = contactsData?.body || []
+  const assets = assetsData?.body || []
+  const users = usersData?.body || []
 
-    // Find selected client and property details
-    const selectedClient = mockClients.find((c) => c.id === Number.parseInt(formData.clientId))
-    const selectedProperty = mockProperties.find((p) => p.id === Number.parseInt(formData.propertyId))
-    const selectedAgent = agents.find((a) => a.id === Number.parseInt(formData.assignedToId))
+  const form = useForm<InquiryFormInputs>({
+    resolver: zodResolver(InquiryFormSchema),
+    defaultValues: {
+      contactId: initialData?.contactId || 0,
+      assetId: initialData?.assetId || "",
+      inquiryDate: initialData?.inquiryDate ? new Date(initialData.inquiryDate).toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
+      status: initialData?.status || "New",
+      followUpDate: initialData?.followUpDate ? new Date(initialData.followUpDate).toISOString().split('T')[0] : "",
+      assignedTo: initialData?.assignedTo || "",
+      notes: initialData?.notes || "",
+    },
+  })
 
-    onSubmit({
-      ...formData,
-      clientId: Number.parseInt(formData.clientId),
-      propertyId: Number.parseInt(formData.propertyId),
-      assignedToId: Number.parseInt(formData.assignedToId),
-      clientName: selectedClient?.name || formData.clientName,
-      clientEmail: selectedClient?.email || formData.clientEmail,
-      propertyTitle: selectedProperty?.title || formData.propertyTitle,
-      assignedTo: selectedAgent?.name || formData.assignedTo,
-    })
-  }
-
-  const handleChange = (field: string, value: string) => {
-    setFormData((prev) => ({ ...prev, [field]: value }))
-  }
-
-  const handleClientChange = (clientId: string) => {
-    const selectedClient = mockClients.find((c) => c.id === Number.parseInt(clientId))
-    setFormData((prev) => ({
-      ...prev,
-      clientId,
-      clientName: selectedClient?.name || "",
-      clientEmail: selectedClient?.email || "",
-    }))
-  }
-
-  const handlePropertyChange = (propertyId: string) => {
-    const selectedProperty = mockProperties.find((p) => p.id === Number.parseInt(propertyId))
-    setFormData((prev) => ({
-      ...prev,
-      propertyId,
-      propertyTitle: selectedProperty?.title || "",
-    }))
-  }
-
-  const handleAgentChange = (agentId: string) => {
-    const selectedAgent = agents.find((a) => a.id === Number.parseInt(agentId))
-    setFormData((prev) => ({
-      ...prev,
-      assignedToId: agentId,
-      assignedTo: selectedAgent?.name || "",
-    }))
+  const handleSubmit = (data: InquiryFormInputs) => {
+    onSubmit(data)
   }
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-4 max-h-[70vh] overflow-y-auto">
+    <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-4">
       <div className="grid grid-cols-2 gap-4">
         <div className="space-y-2">
-          <Label htmlFor="clientId">Client</Label>
-          <Select value={formData.clientId} onValueChange={handleClientChange}>
+          <Label htmlFor="contactId">Client</Label>
+          <Select 
+            value={form.watch("contactId").toString()} 
+            onValueChange={(value) => form.setValue("contactId", parseInt(value))}
+          >
             <SelectTrigger>
-              <SelectValue placeholder="Select client" />
+              <SelectValue placeholder="Select a client" />
             </SelectTrigger>
             <SelectContent>
-              {mockClients.map((client) => (
-                <SelectItem key={client.id} value={client.id.toString()}>
-                  {client.name}
+              {contacts.map((contact) => (
+                <SelectItem key={contact.id} value={contact.id.toString()}>
+                  {contact.firstName} {contact.lastName} ({contact.email})
                 </SelectItem>
               ))}
             </SelectContent>
           </Select>
+          {form.formState.errors.contactId && (
+            <p className="text-sm text-red-500">{form.formState.errors.contactId.message}</p>
+          )}
         </div>
-
         <div className="space-y-2">
-          <Label htmlFor="propertyId">Property</Label>
-          <Select value={formData.propertyId} onValueChange={handlePropertyChange}>
+          <Label htmlFor="assetId">Property</Label>
+          <Select 
+            value={form.watch("assetId")} 
+            onValueChange={(value) => form.setValue("assetId", value)}
+          >
             <SelectTrigger>
-              <SelectValue placeholder="Select property" />
+              <SelectValue placeholder="Select a property" />
             </SelectTrigger>
             <SelectContent>
-              {mockProperties.map((property) => (
-                <SelectItem key={property.id} value={property.id.toString()}>
-                  {property.title}
+              {assets.map((asset) => (
+                <SelectItem key={asset.id} value={asset.id}>
+                  {asset.name}
                 </SelectItem>
               ))}
             </SelectContent>
           </Select>
+          {form.formState.errors.assetId && (
+            <p className="text-sm text-red-500">{form.formState.errors.assetId.message}</p>
+          )}
+        </div>
+      </div>
+
+      <div className="grid grid-cols-2 gap-4">
+        <div className="space-y-2">
+          <Label htmlFor="inquiryDate">Inquiry Date</Label>
+          <Input
+            id="inquiryDate"
+            type="date"
+            {...form.register("inquiryDate")}
+            className={form.formState.errors.inquiryDate ? "border-red-500" : ""}
+          />
+          {form.formState.errors.inquiryDate && (
+            <p className="text-sm text-red-500">{form.formState.errors.inquiryDate.message}</p>
+          )}
+        </div>
+        <div className="space-y-2">
+          <Label htmlFor="followUpDate">Follow-Up Date</Label>
+          <Input
+            id="followUpDate"
+            type="date"
+            {...form.register("followUpDate")}
+          />
         </div>
       </div>
 
       <div className="grid grid-cols-2 gap-4">
         <div className="space-y-2">
           <Label htmlFor="status">Status</Label>
-          <Select value={formData.status} onValueChange={(value) => handleChange("status", value)}>
+          <Select 
+            value={form.watch("status")} 
+            onValueChange={(value) => form.setValue("status", value as any)}
+          >
             <SelectTrigger>
               <SelectValue placeholder="Select status" />
             </SelectTrigger>
@@ -149,83 +138,43 @@ export function InquiryForm({ initialData, onSubmit, onCancel, agents }: Inquiry
             </SelectContent>
           </Select>
         </div>
-
         <div className="space-y-2">
-          <Label htmlFor="priority">Priority</Label>
-          <Select value={formData.priority} onValueChange={(value) => handleChange("priority", value)}>
+          <Label htmlFor="assignedTo">Assigned To</Label>
+          <Select 
+            value={form.watch("assignedTo")} 
+            onValueChange={(value) => form.setValue("assignedTo", value)}
+          >
             <SelectTrigger>
-              <SelectValue placeholder="Select priority" />
+              <SelectValue placeholder="Select assignee" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="High">High</SelectItem>
-              <SelectItem value="Medium">Medium</SelectItem>
-              <SelectItem value="Low">Low</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-      </div>
-
-      <div className="grid grid-cols-2 gap-4">
-        <div className="space-y-2">
-          <Label htmlFor="assignedToId">Assigned To</Label>
-          <Select value={formData.assignedToId} onValueChange={handleAgentChange}>
-            <SelectTrigger>
-              <SelectValue placeholder="Select agent" />
-            </SelectTrigger>
-            <SelectContent>
-              {agents.map((agent) => (
-                <SelectItem key={agent.id} value={agent.id.toString()}>
-                  {agent.name}
+              {users.map((user) => (
+                <SelectItem key={user.id} value={user.id}>
+                  {/* {user.firstName} {user.lastName} */}
                 </SelectItem>
               ))}
             </SelectContent>
           </Select>
+          {form.formState.errors.assignedTo && (
+            <p className="text-sm text-red-500">{form.formState.errors.assignedTo.message}</p>
+          )}
         </div>
-
-        <div className="space-y-2">
-          <Label htmlFor="followUpDate">Follow-up Date</Label>
-          <Input
-            id="followUpDate"
-            type="date"
-            value={formData.followUpDate}
-            onChange={(e) => handleChange("followUpDate", e.target.value)}
-          />
-        </div>
-      </div>
-
-      <div className="space-y-2">
-        <Label htmlFor="source">Inquiry Source</Label>
-        <Select value={formData.source} onValueChange={(value) => handleChange("source", value)}>
-          <SelectTrigger>
-            <SelectValue placeholder="Select source" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="Website">Website</SelectItem>
-            <SelectItem value="Referral">Referral</SelectItem>
-            <SelectItem value="Social Media">Social Media</SelectItem>
-            <SelectItem value="Walk-in">Walk-in</SelectItem>
-            <SelectItem value="Advertisement">Advertisement</SelectItem>
-            <SelectItem value="Phone Call">Phone Call</SelectItem>
-          </SelectContent>
-        </Select>
       </div>
 
       <div className="space-y-2">
         <Label htmlFor="notes">Notes</Label>
         <Textarea
           id="notes"
-          value={formData.notes}
-          onChange={(e) => handleChange("notes", e.target.value)}
+          {...form.register("notes")}
+          placeholder="Additional notes about the inquiry..."
           rows={4}
-          placeholder="Add any additional notes or comments about this inquiry..."
         />
       </div>
 
-      <div className="flex justify-end space-x-2 pt-4 border-t">
-        <Button type="button" variant="outline" onClick={onCancel}>
-          Cancel
+      <div className="flex justify-end space-x-2 pt-4">
+        <Button type="submit" disabled={form.formState.isSubmitting}>
+          {form.formState.isSubmitting ? "Saving..." : (initialData ? "Update Inquiry" : "Create Inquiry")}
         </Button>
-        <Button type="submit">{initialData ? "Update Inquiry" : "Add Inquiry"}</Button>
       </div>
     </form>
   )

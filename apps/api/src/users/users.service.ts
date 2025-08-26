@@ -213,7 +213,7 @@ export class UsersService {
                 userData.password = hashedPassword;
             }
 
-            await tx.update(schema.User).set({ ...userData, password: hashedPassword, userType: userData.userType as ("customer" | "owner" | "system")[] }).where(eq(schema.User.id, id));
+            await tx.update(schema.User).set({ ...userData, password: hashedPassword }).where(eq(schema.User.id, id));
 
             // Handle customer role
             if (userData.userType?.includes("customer")) {

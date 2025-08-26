@@ -7,16 +7,17 @@ import { Button } from "@/components/ui/button"
 import { Sheet, SheetContent } from "@/components/ui/sheet"
 import { Menu, Users, Building, MessageSquare, CheckSquare, BarChart3, FileText, Settings } from "lucide-react"
 import { cn } from "@/lib/utils"
+import { AppHeader } from "./app-header"
 
 const navigation = [
   { name: "Dashboard", href: "/", icon: BarChart3, current: true },
   { name: "Clients", href: "/clients", icon: Users, current: false },
-  { name: "Properties", href: "/properties", icon: Building, current: false },
+  // { name: "Properties", href: "/properties", icon: Building, current: false },
   { name: "Inquiries", href: "/inquiries", icon: MessageSquare, current: false },
   { name: "Tasks", href: "/tasks", icon: CheckSquare, current: false },
   { name: "Communications", href: "/communications", icon: FileText, current: false },
   { name: "Reports", href: "/reports", icon: BarChart3, current: false },
-  { name: "Settings", href: "/settings", icon: Settings, current: false },
+  // { name: "Settings", href: "/settings", icon: Settings, current: false },
 ]
 
 interface DashboardLayoutProps {
@@ -102,17 +103,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
             <Menu className="h-5 w-5" />
           </Button>
 
-          <div className="flex flex-1 gap-x-4 self-stretch lg:gap-x-6">
-            <div className="flex flex-1"></div>
-            <div className="flex items-center gap-x-4 lg:gap-x-6">
-              <div className="flex items-center space-x-2">
-                <div className="h-8 w-8 rounded-full bg-blue-500 flex items-center justify-center">
-                  <span className="text-sm font-medium text-white">JD</span>
-                </div>
-                <span className="text-sm font-medium text-gray-700">John Doe</span>
-              </div>
-            </div>
-          </div>
+          <AppHeader />
         </div>
 
         {/* Page content */}

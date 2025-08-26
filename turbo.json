@@ -20,6 +20,30 @@
     "web#dev": {
       "cache": false,
       "persistent": true
+    },
+    "crm#build": {
+      "dependsOn": [],
+      "outputs": [".next/**", "!.next/cache/**"]
+    },
+    "crm#dev": {
+      "cache": false,
+      "persistent": true
+    },
+    "auth#build": {
+      "dependsOn": [],
+      "outputs": [".next/**", "!.next/cache/**"]
+    },
+    "auth#dev": {
+      "cache": false,
+      "persistent": true
+    },
+    "system-admin#build": {
+      "dependsOn": [],
+      "outputs": [".next/**", "!.next/cache/**"]
+    },
+    "system-admin#dev": {
+      "cache": false,
+      "persistent": true
     }
   }
 }

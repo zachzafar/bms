@@ -59,6 +59,26 @@ export const authContract = c.router({
     }).required({ refresh: true }),
         summary: 'Refresh token'
     },
+    validateToken: {
+        method: 'POST',
+        path: '/validate-token',
+        responses: {
+            200: z.object({
+              valid: z.boolean(),
+              user: SelectUserSchema.omit({ password: true}),
+              tenant: SelectTenantSchema
+            }),
+            401: z.object({
+              valid: z.boolean(),
+              message: z.string()
+            })
+          },
+        body: z.object({
+            token: z.string(),
+            tenantId: z.string()
+        }).required({ token: true, tenantId: true }),
+        summary: 'Validate token for cross-domain authentication'
+    },
     sendPasswordResetEmail: {
         method: 'POST',
         path: '/password-reset',
@@ -114,7 +134,35 @@ export const authContract = c.router({
       }),
         summary: 'Create a new user'
     },
-
+    registerAdmin: {
+      method: 'POST',
+      path: '/admin',
+      body: z.object({
+        name: z.string(),
+        email: z.string().email()
+      }).required({ name: true, email: true }),
+      responses: {
+        201: z.object({
+          userId: z.string(),
+          email: z.string()
+        })
+      },
+      summary: 'Register a new admin user'
+    },
+    validateAdmin: {
+      method: 'POST',
+      path: '/admin/validate',
+      body: z.object({
+        token: z.string()
+      }).required({ token: true }),
+      responses: {
+        200: z.object({
+          isAdmin: z.boolean(),
+          valid: z.boolean()
+        })
+      },
+      summary: 'Validate admin token'
+    },
     getPermissions: {
       method: 'GET',
       path: '/permissions',

@@ -4,6 +4,7 @@ import { contract } from '@repo/api-contract';
 import { RatesService } from './rates.service';
 import * as schema from '@repo/api-contract';
 import { TenantService } from 'src/tenant/tenant.service';
+import { RequireRead, RequireWrite, RequireDelete } from 'src/auth/decorators/permissions.decorator';
 
 @Controller()
 export class RatesController {
@@ -37,6 +38,7 @@ export class RatesController {
     }
 
     @TsRestHandler(contract.rates.getRate)
+    @RequireRead('rates')
     async getRate(@Headers() headers: any): Promise<ReturnType<typeof tsRestHandler>> {
         return tsRestHandler(contract.rates.getRate, async ({ params }) => {
             const tenantId = headers["x-tenant-id"];
@@ -51,6 +53,7 @@ export class RatesController {
     }
 
     @TsRestHandler(contract.rates.getRates)
+    @RequireRead('rates')
     async getRates(@Headers() headers: any): Promise<ReturnType<typeof tsRestHandler>> {
         return tsRestHandler(contract.rates.getRates, async ({ query }) => {
             const tenantId = headers['x-tenant-id']; // Extract tenantId from request headers

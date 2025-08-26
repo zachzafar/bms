@@ -19,7 +19,7 @@ const refreshTokenFn = async () => {
       console.log("refreshing token")
       const response = await axios.request({
         method: "POST",
-        url: "http://localhost:3001" + "/refresh",
+        url: "http://localhost:4000" + "/refresh",
         data: {
           refresh: currentSession.refreshToken
         }

@@ -11,7 +11,7 @@ import {
   SidebarMenuSubItem,
 } from "@/components/ui/sidebar"
 import { Collapsible, CollapsibleTrigger, CollapsibleContent } from "@radix-ui/react-collapsible"
-import { Home, Box, Calendar, Clipboard, Cog, Settings, User2, CircleDollarSign } from "lucide-react"
+import { Home, Box, Calendar, Clipboard, Cog, Settings, User2, CircleDollarSign, CreditCard, DollarSign, FileText } from "lucide-react"
 
 
 
@@ -69,16 +69,6 @@ const items = [
     icon: User2,
     children: [
       {
-        title: "User List",
-        url: "/users",
-        icon: User2,
-      },
-      {
-        title: "User Roles",
-        url: "/users/roles",
-        icon: Settings,
-      },
-      {
         title: "Owners",
         url: "/users/owners",
         icon: User2,
@@ -88,17 +78,24 @@ const items = [
         url: "/users/customers",
         icon: User2,
       },
-      // {
-      //   title:"Teams",
-      //   url:"/teams",
-      //   icon: User2
-      // },
     ]
   },
   {
-    title: "Settings",
-    url: "/settings",
-    icon: Settings,
+    title: "Billing",
+    url: "/billing",
+    icon: DollarSign,
+    children: [
+      {
+        title: "Invoices",
+        url: "/billing/invoices",
+        icon: FileText,
+      },
+      {
+        title: "Payments",
+        url: "/billing/payments",
+        icon: CreditCard,
+      },
+    ]
   },
 ]
 

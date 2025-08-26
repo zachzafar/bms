@@ -1,5 +1,5 @@
 import { relations, sql } from "drizzle-orm";
-import { datetime, decimal, index, int, mysqlTable, serial, text, timestamp, uniqueIndex, varchar } from "drizzle-orm/mysql-core";
+import { bigint, datetime, decimal, index, int, mysqlTable, serial, text, timestamp, uniqueIndex, varchar } from "drizzle-orm/mysql-core";
 import { Tenant } from "../tenant";
 import { Customer } from "../users";
 import { createInsertSchema, createSelectSchema } from "drizzle-zod";
@@ -21,7 +21,7 @@ export const Invoice = mysqlTable("invoice", {
   notes: text("notes"),
   createdAt: timestamp('createdAt').notNull().defaultNow(),
   updatedAt: timestamp('updated_at', { mode: 'date', }).$onUpdate(() => new Date()),
-  customerId: varchar("customer_id", { length: 255 }).notNull().references(() => Customer.id),
+  customerId:bigint("customer_id", { mode: 'bigint', unsigned: true }).notNull().references(() => Customer.id),
   bookingId: varchar("booking_id", { length: 255 }).notNull(),
 }, (table) => ({
   invoiceNumberUniqueIdx: uniqueIndex("invoice_number_unique").on(table.invoiceNumber),
@@ -62,7 +62,7 @@ export const InvoiceItem = mysqlTable("invoice_item", {
   totalPrice: decimal("total_price", { precision: 10, scale: 2 }).notNull(),
   createdAt: timestamp('createdAt').notNull().defaultNow(),
   updatedAt: timestamp('updated_at', { mode: 'date', }).$onUpdate(() => new Date()),
-  invoiceId: int("invoice_id").notNull().references(() => Invoice.id)
+  invoiceId: bigint("invoice_id", { mode: 'bigint', unsigned: true }).notNull().references(() => Invoice.id)
 }, (table) => ({
   invoiceIdx: index("invoice_idx").on(table.invoiceId),
 }));
@@ -84,8 +84,8 @@ export const InvoiceItemRelations = relations(InvoiceItem, ({ one }) => ({
 
 export const PaymentInvoice = mysqlTable("payment_invoice", {
   id: serial("id").primaryKey(),
-  paymentId: int("payment_id").notNull().references(() => Payment.id),
-  invoiceId: int("invoice_id").notNull().references(() => Invoice.id),
+  paymentId: bigint("payment_id", { mode: 'bigint', unsigned: true }).notNull().references(() => Payment.id),
+  invoiceId: bigint("invoice_id", { mode: 'bigint', unsigned: true }).notNull().references(() => Invoice.id),
   amountApplied: decimal("amount_applied", { precision: 10, scale: 2 }).notNull(),
   createdAt: timestamp('createdAt').notNull().defaultNow(),
   updatedAt: timestamp('updated_at', { mode: 'date', }).$onUpdate(() => new Date()),
@@ -122,7 +122,7 @@ export const Payment = mysqlTable("payment", {
   tenantId: varchar("tenant_id", { length: 255 }).notNull().references(() => Tenant.id),
   createdAt: timestamp('createdAt').notNull().defaultNow(),
   updatedAt: timestamp('updated_at', { mode: 'date', }).$onUpdate(() => new Date()),
-  customerId: varchar("customer_id", { length: 255 }).notNull().references(() => Customer.id),
+  customerId: bigint("customer_id", { mode: 'bigint', unsigned: true }).notNull().references(() => Customer.id),
 
 }, (table) => ({
   customerIdx: index("customer_idx").on(table.customerId),

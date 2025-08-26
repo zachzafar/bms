@@ -1,13 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getSessionFromRequest } from './lib/api/session';
-// import { authMiddleware } from './lib/authMiddleware';
 
 export async function middleware(req: NextRequest) {
-// //   const protectedRoutes = ['/dashboard', '/profile', '/settings'];
-
-// //   if (protectedRoutes.some((route) => req.nextUrl.pathname.startsWith(route))) {
-// //     return authMiddleware(req);
-// //   }
   const { pathname } = req.nextUrl;
   
   // 🚨 Ensure it does NOT apply to static assets
@@ -15,18 +8,30 @@ export async function middleware(req: NextRequest) {
     return NextResponse.next();
   }
 
+  // Check for token in URL params (cross-domain auth)
+  const token = req.nextUrl.searchParams.get('token');
+  const tenantId = req.nextUrl.searchParams.get('tenant');
 
-   const session = await getSessionFromRequest(req);
-    if (!session) {
-      const url = req.nextUrl.clone()
-        url.pathname = '/login'
-    
-        return NextResponse.redirect(url)
-    }
-
+  if (token && tenantId) {
+    // Token present, allow access (will be validated by the hook)
     return NextResponse.next();
+  }
+
+  // Check for session cookie
+  const session = req.cookies.get("session")?.value;
+  
+  if (!session) {
+    // No session, redirect to auth app
+    const authUrl = process.env.NODE_ENV === 'production' 
+      ? 'https://bookos.xyz/login'
+      : 'http://localhost:3002/login';
+    
+    return NextResponse.redirect(authUrl);
+  }
+
+  return NextResponse.next();
 }
 
 export const config = {
-  matcher: '/((?!login|signup|forgot-password|password-reset).*)', 
+  matcher: '/((?!_next/static|_next/image|favicon.ico).*)', 
 }

@@ -19,83 +19,37 @@ import { Plus, Search, MoreHorizontal, Edit, Eye, Trash2, Phone, Mail, MapPin } 
 import { ClientForm } from "./client-form"
 import { ClientDetail } from "./client-detail"
 import { authClient } from "@/lib/api/publicClient"
-import { CLIENT_QUERY_KEY } from "@/lib/api/queryKeys"
+import { CONTACTS_QUERY_KEY } from "@/lib/api/queryKeys"
 import { toast } from "sonner"
+import { ExtendedSelectContactSchema } from "@repo/api-contract"
+import { ContactFormInputs } from "@/lib/schemas"
 
-const mockClients = [
-  {
-    id: 1,
-    firstName: "John",
-    lastName: "Smith",
-    email: "john.smith@email.com",
-    phone: "+1 (555) 123-4567",
-    address: "123 Main St, New York, NY 10001",
-    inquirySource: "Website",
-    totalInquiries: 3,
-    lastContact: "2024-01-15T10:30:00Z",
-    createdAt: "2024-01-01T00:00:00Z",
-  },
-  {
-    id: 2,
-    firstName: "Sarah",
-    lastName: "Johnson",
-    email: "sarah.johnson@email.com",
-    phone: "+1 (555) 234-5678",
-    address: "456 Oak Ave, Los Angeles, CA 90210",
-    inquirySource: "Referral",
-    totalInquiries: 1,
-    lastContact: "2024-01-14T14:20:00Z",
-    createdAt: "2024-01-05T00:00:00Z",
-  },
-  {
-    id: 3,
-    firstName: "Mike",
-    lastName: "Chen",
-    email: "mike.chen@email.com",
-    phone: "+1 (555) 345-6789",
-    address: "789 Pine St, Chicago, IL 60601",
-    inquirySource: "Social Media",
-    totalInquiries: 2,
-    lastContact: "2024-01-13T09:15:00Z",
-    createdAt: "2024-01-10T00:00:00Z",
-  },
-]
-
-const mockStats = {
-  total: 156,
-  newThisMonth: 23,
-  activeInquiries: 45,
-  conversionRate: 18,
-}
+type Contact = typeof ExtendedSelectContactSchema._type
 
 export function ClientManagement() {
-  const { data: clientsData, refetch } = authClient.clients.getClients.useQuery({
-    queryKey: CLIENT_QUERY_KEY,
+  const { data: clientsData, refetch } = authClient.crm.contacts.listContacts.useQuery({
+    queryKey: CONTACTS_QUERY_KEY,
   })
-  const { data: statsData } = authClient.clients.getClientStats.useQuery({
-    queryKey: [...CLIENT_QUERY_KEY, "stats"],
-  })
-  const { mutate: createClient } = authClient.clients.createClient.useMutation()
-  const { mutate: updateClient } = authClient.clients.updateClient.useMutation()
-  const { mutate: deleteClient } = authClient.clients.deleteClient.useMutation()
+  const { mutate: createClient } = authClient.crm.contacts.createContact.useMutation()
+  const { mutate: updateClient } = authClient.crm.contacts.updateContact.useMutation()
+  const { mutate: deleteClient } = authClient.crm.contacts.deleteContact.useMutation()
 
   const [searchTerm, setSearchTerm] = useState("")
-  const [selectedClient, setSelectedClient] = useState<any>(null)
+  const [selectedClient, setSelectedClient] = useState<Contact | null>(null)
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false)
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false)
   const [isDetailDialogOpen, setIsDetailDialogOpen] = useState(false)
 
-  const clients = clientsData?.body || mockClients
-  const stats = statsData?.body || mockStats
+  const clients = clientsData?.body || []
 
   const filteredClients = clients.filter(
-    (client: any) =>
+    (client: Contact) =>
       `${client.firstName} ${client.lastName}`.toLowerCase().includes(searchTerm.toLowerCase()) ||
       client.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      client.phone.includes(searchTerm),
+      (client.phone && client.phone.includes(searchTerm)),
   )
 
-  const handleAddClient = (clientData: any) => {
+  const handleAddClient = (clientData: ContactFormInputs) => {
     createClient(
       { body: clientData },
       {
@@ -111,7 +65,7 @@ export function ClientManagement() {
     )
   }
 
-  const handleEditClient = (clientData: any) => {
+  const handleEditClient = (clientData: ContactFormInputs) => {
     if (!selectedClient) return
     updateClient(
       {
@@ -133,161 +87,151 @@ export function ClientManagement() {
   }
 
   const handleDeleteClient = (clientId: number) => {
-    if (confirm("Are you sure you want to delete this client?")) {
-      deleteClient(
-        { params: { id: clientId.toString() } },
-        {
-          onSuccess: () => {
-            toast.success("Client deleted successfully")
-            refetch()
-          },
-          onError: () => {
-            toast.error("Failed to delete client")
-          },
+    deleteClient(
+      { params: { id: clientId.toString() } },
+      {
+        onSuccess: () => {
+          toast.success("Client deleted successfully")
+          refetch()
         },
-      )
-    }
+        onError: () => {
+          toast.error("Failed to delete client")
+        },
+      },
+    )
   }
 
-  const getInquirySourceBadge = (source: string) => {
-    const colors = {
-      Website: "bg-blue-100 text-blue-800",
-      Referral: "bg-green-100 text-green-800",
-      "Social Media": "bg-purple-100 text-purple-800",
-      "Walk-in": "bg-orange-100 text-orange-800",
+  const getStatusBadge = (client: Contact) => {
+    if (client.customerProfile) {
+      return <Badge variant="default">Customer</Badge>
     }
-    return colors[source as keyof typeof colors] || "bg-gray-100 text-gray-800"
+    if (client.ownerProfile) {
+      return <Badge variant="secondary">Owner</Badge>
+    }
+    return <Badge variant="outline">Lead</Badge>
   }
 
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex justify-between items-center">
+      <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Client Management</h1>
-          <p className="text-sm text-gray-600">Manage your client database and relationships</p>
+          <h1 className="text-3xl font-bold tracking-tight">Client Management</h1>
+          <p className="text-muted-foreground">
+            Manage your contacts, customers, and property owners
+          </p>
         </div>
         <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
           <DialogTrigger asChild>
             <Button>
-              <Plus className="h-4 w-4 mr-2" />
+              <Plus className="mr-2 h-4 w-4" />
               Add Client
             </Button>
           </DialogTrigger>
           <DialogContent className="max-w-2xl">
             <DialogHeader>
               <DialogTitle>Add New Client</DialogTitle>
-              <DialogDescription>Enter the client's information below.</DialogDescription>
+              <DialogDescription>
+                Create a new contact record for your CRM system
+              </DialogDescription>
             </DialogHeader>
-            <ClientForm onSubmit={handleAddClient} onCancel={() => setIsAddDialogOpen(false)} />
+            <ClientForm onSubmit={handleAddClient} />
           </DialogContent>
         </Dialog>
-      </div>
-
-      {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-gray-600">Total Clients</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{stats.total}</div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-gray-600">New This Month</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{stats.newThisMonth}</div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-gray-600">Active Inquiries</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{stats.activeInquiries}</div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-gray-600">Conversion Rate</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{stats.conversionRate}%</div>
-          </CardContent>
-        </Card>
       </div>
 
       {/* Search and Filters */}
       <Card>
         <CardHeader>
-          <div className="flex items-center space-x-4">
-            <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
-              <Input
-                placeholder="Search clients by name, email, or phone..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10"
-              />
-            </div>
+          <div className="flex items-center space-x-2">
+            <Search className="h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="Search clients by name, email, or phone..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="max-w-sm"
+            />
           </div>
+        </CardHeader>
+      </Card>
+
+      {/* Stats */}
+      <div className="grid gap-4 md:grid-cols-4">
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Total Contacts</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{clients.length}</div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Customers</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">
+              {clients.filter(c => c.customerProfile).length}
+            </div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Property Owners</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">
+              {clients.filter(c => c.ownerProfile).length}
+            </div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Leads</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">
+              {clients.filter(c => !c.customerProfile && !c.ownerProfile).length}
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Clients Table */}
+      <Card>
+        <CardHeader>
+          <CardTitle>All Contacts</CardTitle>
         </CardHeader>
         <CardContent>
           <Table>
             <TableHeader>
               <TableRow>
                 <TableHead>Name</TableHead>
-                <TableHead>Contact</TableHead>
+                <TableHead>Email</TableHead>
+                <TableHead>Phone</TableHead>
                 <TableHead>Source</TableHead>
-                <TableHead>Inquiries</TableHead>
-                <TableHead>Last Contact</TableHead>
-                <TableHead className="w-[50px]"></TableHead>
+                <TableHead>Status</TableHead>
+                <TableHead>Created</TableHead>
+                <TableHead className="w-[100px]">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {filteredClients.map((client: any) => (
+              {filteredClients.map((client) => (
                 <TableRow key={client.id}>
-                  <TableCell>
-                    <div>
-                      <div className="font-medium">
-                        {client.firstName} {client.lastName}
-                      </div>
-                      <div className="text-sm text-gray-500 flex items-center mt-1">
-                        <MapPin className="h-3 w-3 mr-1" />
-                        {client.address?.split(",")[1]?.trim() || "N/A"}
-                      </div>
-                    </div>
+                  <TableCell className="font-medium">
+                    {client.firstName} {client.lastName}
                   </TableCell>
+                  <TableCell>{client.email}</TableCell>
+                  <TableCell>{client.phone || "—"}</TableCell>
+                  <TableCell>{client.source}</TableCell>
+                  <TableCell>{getStatusBadge(client)}</TableCell>
                   <TableCell>
-                    <div className="space-y-1">
-                      <div className="flex items-center text-sm">
-                        <Mail className="h-3 w-3 mr-2 text-gray-400" />
-                        {client.email}
-                      </div>
-                      <div className="flex items-center text-sm">
-                        <Phone className="h-3 w-3 mr-2 text-gray-400" />
-                        {client.phone}
-                      </div>
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    <Badge className={getInquirySourceBadge(client.inquirySource)}>{client.inquirySource}</Badge>
-                  </TableCell>
-                  <TableCell>
-                    <span className="font-medium">{client.totalInquiries || 0}</span>
-                  </TableCell>
-                  <TableCell>
-                    <span className="text-sm text-gray-600">
-                      {client.lastContact ? new Date(client.lastContact).toLocaleDateString() : "N/A"}
-                    </span>
+                    {new Date(client.createdAt).toLocaleDateString()}
                   </TableCell>
                   <TableCell>
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="sm">
+                        <Button variant="ghost" className="h-8 w-8 p-0">
                           <MoreHorizontal className="h-4 w-4" />
                         </Button>
                       </DropdownMenuTrigger>
@@ -298,7 +242,7 @@ export function ClientManagement() {
                             setIsDetailDialogOpen(true)
                           }}
                         >
-                          <Eye className="h-4 w-4 mr-2" />
+                          <Eye className="mr-2 h-4 w-4" />
                           View Details
                         </DropdownMenuItem>
                         <DropdownMenuItem
@@ -307,11 +251,14 @@ export function ClientManagement() {
                             setIsEditDialogOpen(true)
                           }}
                         >
-                          <Edit className="h-4 w-4 mr-2" />
+                          <Edit className="mr-2 h-4 w-4" />
                           Edit
                         </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => handleDeleteClient(client.id)} className="text-red-600">
-                          <Trash2 className="h-4 w-4 mr-2" />
+                        <DropdownMenuItem
+                          onClick={() => handleDeleteClient(client.id)}
+                          className="text-red-600"
+                        >
+                          <Trash2 className="mr-2 h-4 w-4" />
                           Delete
                         </DropdownMenuItem>
                       </DropdownMenuContent>
@@ -329,16 +276,14 @@ export function ClientManagement() {
         <DialogContent className="max-w-2xl">
           <DialogHeader>
             <DialogTitle>Edit Client</DialogTitle>
-            <DialogDescription>Update the client's information below.</DialogDescription>
+            <DialogDescription>
+              Update the client information
+            </DialogDescription>
           </DialogHeader>
           {selectedClient && (
-            <ClientForm
+            <ClientForm 
+              onSubmit={handleEditClient} 
               initialData={selectedClient}
-              onSubmit={handleEditClient}
-              onCancel={() => {
-                setIsEditDialogOpen(false)
-                setSelectedClient(null)
-              }}
             />
           )}
         </DialogContent>
@@ -351,13 +296,7 @@ export function ClientManagement() {
             <DialogTitle>Client Details</DialogTitle>
           </DialogHeader>
           {selectedClient && (
-            <ClientDetail
-              client={selectedClient}
-              onClose={() => {
-                setIsDetailDialogOpen(false)
-                setSelectedClient(null)
-              }}
-            />
+            <ClientDetail client={selectedClient} />
           )}
         </DialogContent>
       </Dialog>
