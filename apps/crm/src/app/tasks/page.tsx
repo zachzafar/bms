@@ -129,7 +129,8 @@ export function TaskManagement() {
   if (tasksLoading) return <div>Loading tasks…</div>
 
   return (
-    <div className="space-y-6">
+    <div>
+     {/* <div className="space-y-6"> */}
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>

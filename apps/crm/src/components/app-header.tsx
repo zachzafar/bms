@@ -15,10 +15,11 @@ import {
   LogOut, 
   ChevronDown, 
   User,
-  Globe
+  Globe,
+  Calendar
 } from "lucide-react"
-import { useCrossDomainAuth } from "@/hooks/useCrossDomainAuth"
-import { StorageService } from "@/lib/api/storage"
+import { useStorage } from "@/hooks/useStorage"
+import { deleteSession } from "@/lib/api/session"
 
 interface AppOption {
   id: string
@@ -31,12 +32,12 @@ interface AppOption {
 
 const appOptions: AppOption[] = [
   {
-    id: 'booking',
-    name: 'Booking Platform',
-    description: 'Manage property bookings and reservations',
-    icon: <Building className="h-4 w-4" />,
-    url: process.env.NODE_ENV === 'production' ? 'https://booking.bookos.xyz' : 'http://localhost:3000',
-    color: 'text-blue-600'
+    id: 'crm',
+    name: 'CRM System',
+    description: 'Manage clients, inquiries, and business relationships',
+    icon: <Users className="h-4 w-4" />,
+    url: process.env.NODE_ENV === 'production' ? 'https://crm.bookos.xyz' : 'http://localhost:3001',
+    color: 'text-purple-600'
   },
   {
     id: 'auth',
@@ -49,50 +50,41 @@ const appOptions: AppOption[] = [
 ]
 
 export function AppHeader() {
-  const { logout, isAuthenticated, isLoading } = useCrossDomainAuth()
+  const { user } = useStorage()
   const [currentUser, setCurrentUser] = useState({ name: 'User', initials: 'U' })
 
   useEffect(() => {
-    const getUserInfo = async () => {
-      try {
-        const user = await StorageService.getUser()
-        if (user) {
-          const name = user.name || user.email || 'User'
-          const initials = name.split(' ').map(n => n.charAt(0)).join('').toUpperCase().slice(0, 2) || 'U'
-          setCurrentUser({ name, initials })
-        }
-      } catch (error) {
-        console.error('Failed to get user info:', error)
-      }
+    if (user) {
+      const name = user.name || user.email || 'User'
+      const initials = name.split(' ').map(n => n.charAt(0)).join('').toUpperCase().slice(0, 2) || 'U'
+      setCurrentUser({ name, initials })
     }
-
-    if (isAuthenticated && !isLoading) {
-      getUserInfo()
-    }
-  }, [isAuthenticated, isLoading])
+  }, [user])
 
   const handleAppSwitch = (app: AppOption) => {
-    // Store current CRM state if needed
-    localStorage.setItem('crm_last_visited', window.location.pathname)
+    // Store current web app state if needed
+    localStorage.setItem('web_last_visited', window.location.pathname)
     
     // Redirect to the selected app
     window.location.href = app.url
   }
 
-  const handleLogout = () => {
-    logout()
-  }
-
-  // Don't render if still loading or not authenticated
-  if (isLoading || !isAuthenticated) {
-    return (
-      <div className="flex flex-1 gap-x-4 self-stretch lg:gap-x-6">
-        <div className="flex flex-1"></div>
-        <div className="flex items-center gap-x-4 lg:gap-x-6">
-          <div className="h-8 w-8 rounded-full bg-gray-300 animate-pulse"></div>
-        </div>
-      </div>
-    )
+  const handleLogout = async () => {
+    try {
+      await deleteSession()
+      // Redirect to auth app
+      const authUrl = process.env.NODE_ENV === 'production' 
+        ? 'https://bookos.xyz'
+        : 'http://localhost:3002'
+      window.location.href = authUrl
+    } catch (error) {
+      console.error('Logout failed:', error)
+      // Force redirect even if logout fails
+      const authUrl = process.env.NODE_ENV === 'production' 
+        ? 'https://bookos.xyz'
+        : 'http://localhost:3002'
+      window.location.href = authUrl
+    }
   }
 
   return (

@@ -197,6 +197,14 @@ export const systemAdminContract = c.router({
     },
     summary: 'Get all roles for a tenant',
   },
+  getPermissions: {
+      method: 'GET',
+      path: '/system-admin/permissions',
+      responses: {
+          200: z.array(z.string())
+      },
+      summary: 'Get all roles'
+  },
 
   // User Assignment to Tenants
   assignUserToTenant: {
