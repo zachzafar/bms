@@ -3,15 +3,17 @@ import { Observable } from 'rxjs';
 import { Reflector } from '@nestjs/core';
 import { IS_PUBLIC_KEY } from 'src/auth/decorators/public.decorator';
 import { SKIP_TENANT_CHECK_KEY } from 'src/auth/decorators/skipTenantCheck.decorator';
+import { IS_AMDIN_ROUTE } from 'src/auth/decorators/admin.decorator';
 import { TenantService } from 'src/tenant/tenant.service';
 import { KeysService } from 'src/keys/keys.service';
+import { UsersService } from 'src/users/users.service';
 
 @Injectable()
 export class TenantGuard implements CanActivate {
 
-  constructor(private reflector: Reflector,private tenantService: TenantService,private keyService: KeysService) {}
+  constructor(private reflector: Reflector,private tenantService: TenantService,private keyService: KeysService, private userService: UsersService) {}
 
-  canActivate(
+ canActivate(
     context: ExecutionContext,
   ): boolean | Promise<boolean> | Observable<boolean> {
 
@@ -22,7 +24,11 @@ export class TenantGuard implements CanActivate {
 
     const isPublic = this.reflector.getAllAndOverride<boolean>(IS_PUBLIC_KEY, [context.getHandler(), context.getClass()]);
     const skipTenantCheck = this.reflector.getAllAndOverride<boolean>(SKIP_TENANT_CHECK_KEY, [context.getHandler(), context.getClass()]);
-    if (isPublic || skipTenantCheck) {
+    const isAdminRoute = this.reflector.getAllAndOverride<boolean>(IS_AMDIN_ROUTE, [context.getHandler(), context.getClass()]);
+    console.log('isAdminRoute', isAdminRoute);
+    console.log('isPublic', isPublic);
+    console.log('skipTenantCheck', skipTenantCheck);
+    if (isPublic || skipTenantCheck || isAdminRoute) {
       return true;
     }
 
@@ -31,10 +37,6 @@ export class TenantGuard implements CanActivate {
       return true; // Allow access to Swagger documentation
     }
 
-    // Check if user is an admin - admins can access any tenant
-    if (user && this.isAdminUser(user)) {
-      return true;
-    }
 
     if (apikey) {
       return this.keyService.tenatHasKey(tenantId, apikey);
@@ -43,22 +45,9 @@ export class TenantGuard implements CanActivate {
     return this.tenantService.tenantHasUser(tenantId, request.user.sub);
   }
 
-  private isAdminUser(user: any): boolean {
-    // Check if user is an admin based on the JWT structure from loginAdmin
-    // Admin users get: { "all": [{roleId: 'admin', roleName: 'admin', permissions: ['admin']}] }
-    if (!user || !user.roles) {
-      return false;
-    }
+  
 
-    // Check if user has admin role in the "all" tenant (special admin tenant)
-    if (user.roles.all && Array.isArray(user.roles.all)) {
-      for (const role of user.roles.all) {
-        if (role.roleName === 'admin' && role.permissions && role.permissions.includes('admin')) {
-          return true;
-        }
-      }
-    }
-
-    return false;
+  private async isAdminUser(userId: string): Promise<boolean> {
+    return await this.userService.isAdminUser(userId);
   }
 }

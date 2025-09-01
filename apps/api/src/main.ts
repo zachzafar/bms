@@ -9,6 +9,7 @@ import { TenantGuard } from './auth/guards/tenant/tenant.guard';
 import { TenantService } from './tenant/tenant.service';
 import { UniversalGuard } from './auth/guards/universal-guard/universal-guard.guard';
 import { KeysService } from './keys/keys.service';
+import { UsersService } from './users/users.service';
 import { PermissionsGuard } from './auth/guards/permissions/permissions.guard';
 import { AdminGuard } from './auth/guards/admin/admin.guard';
 
@@ -56,8 +57,9 @@ async function bootstrap() {
   const reflector = app.get(Reflector);
   const tenantService = app.get(TenantService)
   const keysService = app.get(KeysService)
+  const usersService = app.get(UsersService)
   
-  app.useGlobalGuards(new UniversalGuard(reflector),new TenantGuard(reflector,tenantService,keysService));
+  app.useGlobalGuards(new UniversalGuard(reflector),new TenantGuard(reflector,tenantService,keysService,usersService));
 
   await app.listen(process.env.PORT ?? 4000);
   logger.log(`Application is running on: ${await app.getUrl()}`);

@@ -100,7 +100,7 @@ export class SystemAdminService {
         const [adminUser] = await tx.insert(schema.User).values({
           ...adminUserData,
           password: hashedPassword,
-          userType: 'admin',
+          userType: 'system',
         }).$returningId();
 
         // Create tenant-user relationship

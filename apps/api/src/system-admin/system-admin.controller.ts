@@ -4,7 +4,11 @@ import { tsRestHandler, TsRestHandler } from '@ts-rest/nest';
 import { contract } from '@repo/api-contract';
 import { UseGuards } from '@nestjs/common';
 import { AdminGuard } from '../auth/guards/admin/admin.guard';
+import { getAllScopes } from 'src/auth/permissions';
+import { IsAdminRoute } from 'src/auth/decorators/admin.decorator';
 
+
+@IsAdminRoute()
 @UseGuards(AdminGuard)
 @Controller()
 export class SystemAdminController {
@@ -13,6 +17,7 @@ export class SystemAdminController {
   constructor(private systemAdminService: SystemAdminService) {}
 
   // System Admin User Management
+  @IsAdminRoute()
   @TsRestHandler(contract.systemAdmin.createSystemAdmin)
   async createSystemAdmin(): Promise<ReturnType<typeof tsRestHandler>> {
     return tsRestHandler(contract.systemAdmin.createSystemAdmin, async ({ body }) => {
@@ -25,6 +30,7 @@ export class SystemAdminController {
     });
   }
 
+  @IsAdminRoute()
   @TsRestHandler(contract.systemAdmin.getSystemAdmins)
   async getSystemAdmins(): Promise<ReturnType<typeof tsRestHandler>> {
     return tsRestHandler(contract.systemAdmin.getSystemAdmins, async () => {
@@ -34,6 +40,7 @@ export class SystemAdminController {
   }
 
   // Tenant Management
+  @IsAdminRoute()
   @TsRestHandler(contract.systemAdmin.createTenant)
   async createTenant(): Promise<ReturnType<typeof tsRestHandler>> {
     return tsRestHandler(contract.systemAdmin.createTenant, async ({ body }) => {
@@ -45,8 +52,8 @@ export class SystemAdminController {
     });
   }
 
+  @IsAdminRoute()
   @TsRestHandler(contract.systemAdmin.getTenants)
-
   async getTenants(): Promise<ReturnType<typeof tsRestHandler>> {
     return tsRestHandler(contract.systemAdmin.getTenants, async () => {
       const tenants = await this.systemAdminService.getTenants();
@@ -54,8 +61,8 @@ export class SystemAdminController {
     });
   }
 
+  @IsAdminRoute()
   @TsRestHandler(contract.systemAdmin.getTenant)
-
   async getTenant(): Promise<ReturnType<typeof tsRestHandler>> {
     return tsRestHandler(contract.systemAdmin.getTenant, async ({ params }) => {
       const result = await this.systemAdminService.getTenant(params.id);
@@ -63,6 +70,7 @@ export class SystemAdminController {
     });
   }
 
+  @IsAdminRoute()
   @TsRestHandler(contract.systemAdmin.updateTenant)
   async updateTenant(): Promise<ReturnType<typeof tsRestHandler>> {
     return tsRestHandler(contract.systemAdmin.updateTenant, async ({ params, body }) => {
@@ -74,6 +82,7 @@ export class SystemAdminController {
     });
   }
 
+  @IsAdminRoute()
   @TsRestHandler(contract.systemAdmin.deleteTenant)
   async deleteTenant(): Promise<ReturnType<typeof tsRestHandler>> {
     return tsRestHandler(contract.systemAdmin.deleteTenant, async ({ params }) => {
@@ -82,6 +91,7 @@ export class SystemAdminController {
     });
   }
 
+  @IsAdminRoute()
   @TsRestHandler(contract.systemAdmin.getTenantDetails)
   async getTenantDetails(): Promise<ReturnType<typeof tsRestHandler>> {
     return tsRestHandler(contract.systemAdmin.getTenantDetails, async ({ params }) => {
@@ -91,6 +101,7 @@ export class SystemAdminController {
   }
 
   // Role Management
+  @IsAdminRoute()
   @TsRestHandler(contract.systemAdmin.createTenantRole)
   async createTenantRole(): Promise<ReturnType<typeof tsRestHandler>> {
     return tsRestHandler(contract.systemAdmin.createTenantRole, async ({ params, body }) => {
@@ -104,6 +115,7 @@ export class SystemAdminController {
     });
   }
 
+  @IsAdminRoute()
   @TsRestHandler(contract.systemAdmin.updateTenantRole)
   async updateTenantRole(): Promise<ReturnType<typeof tsRestHandler>> {
     return tsRestHandler(contract.systemAdmin.updateTenantRole, async ({ params, body }) => {
@@ -118,6 +130,7 @@ export class SystemAdminController {
     });
   }
 
+  @IsAdminRoute()
   @TsRestHandler(contract.systemAdmin.deleteTenantRole)
   async deleteTenantRole(): Promise<ReturnType<typeof tsRestHandler>> {
     return tsRestHandler(contract.systemAdmin.deleteTenantRole, async ({ params }) => {
@@ -129,6 +142,8 @@ export class SystemAdminController {
     });
   }
 
+
+  @IsAdminRoute()
   @TsRestHandler(contract.systemAdmin.getTenantRoles)
   async getTenantRoles(): Promise<ReturnType<typeof tsRestHandler>> {
     return tsRestHandler(contract.systemAdmin.getTenantRoles, async ({ params }) => {
@@ -138,6 +153,7 @@ export class SystemAdminController {
   }
 
   // User Assignment to Tenants
+  @IsAdminRoute()
   @TsRestHandler(contract.systemAdmin.assignUserToTenant)
   async assignUserToTenant(): Promise<ReturnType<typeof tsRestHandler>> {
     return tsRestHandler(contract.systemAdmin.assignUserToTenant, async ({ params, body }) => {
@@ -151,6 +167,17 @@ export class SystemAdminController {
     });
   }
 
+  @IsAdminRoute()
+  @TsRestHandler(contract.systemAdmin.getPermissions)
+    async getPermissions(): Promise<ReturnType<typeof tsRestHandler>> {
+        return tsRestHandler(contract.auth.getPermissions, async () => {
+            const permissions = getAllScopes();
+            
+            return { status: 200, body: permissions };
+        })
+    }
+
+    @IsAdminRoute()
   @TsRestHandler(contract.systemAdmin.removeUserFromTenant)
   async removeUserFromTenant(): Promise<ReturnType<typeof tsRestHandler>> {
     return tsRestHandler(contract.systemAdmin.removeUserFromTenant, async ({ params }) => {
@@ -162,6 +189,7 @@ export class SystemAdminController {
     });
   }
 
+  @IsAdminRoute()
   @TsRestHandler(contract.systemAdmin.getTenantUsers)
   async getTenantUsers(): Promise<ReturnType<typeof tsRestHandler>> {
     return tsRestHandler(contract.systemAdmin.getTenantUsers, async ({ params }) => {
@@ -171,6 +199,7 @@ export class SystemAdminController {
   }
 
   // API Key Management
+  @IsAdminRoute()
   @TsRestHandler(contract.systemAdmin.createTenantApiKey)
   async createTenantApiKey(): Promise<ReturnType<typeof tsRestHandler>> {
     return tsRestHandler(contract.systemAdmin.createTenantApiKey, async ({ params, body }) => {
@@ -183,6 +212,7 @@ export class SystemAdminController {
     });
   }
 
+  @IsAdminRoute()
   @TsRestHandler(contract.systemAdmin.getTenantApiKeys)
   async getTenantApiKeys(): Promise<ReturnType<typeof tsRestHandler>> {
     return tsRestHandler(contract.systemAdmin.getTenantApiKeys, async ({ params }) => {
@@ -191,6 +221,7 @@ export class SystemAdminController {
     });
   }
 
+  @IsAdminRoute()
   @TsRestHandler(contract.systemAdmin.deleteTenantApiKey)
   async deleteTenantApiKey(): Promise<ReturnType<typeof tsRestHandler>> {
     return tsRestHandler(contract.systemAdmin.deleteTenantApiKey, async ({ params }) => {
@@ -203,6 +234,7 @@ export class SystemAdminController {
   }
 
   // System-wide operations
+  @IsAdminRoute()
   @TsRestHandler(contract.systemAdmin.getSystemStats)
   async getSystemStats(): Promise<ReturnType<typeof tsRestHandler>> {
     return tsRestHandler(contract.systemAdmin.getSystemStats, async () => {
@@ -211,6 +243,7 @@ export class SystemAdminController {
     });
   }
 
+  @IsAdminRoute()
   @TsRestHandler(contract.systemAdmin.getSystemLogs)
   async getSystemLogs(): Promise<ReturnType<typeof tsRestHandler>> {
     return tsRestHandler(contract.systemAdmin.getSystemLogs, async ({ query }) => {

@@ -316,5 +316,12 @@ export class UsersService {
         }
     }
 
+    async isAdminUser(userId: string): Promise<boolean> {
+        const user = await this.db.query.User.findFirst({
+            where: (user, { eq, and }) => and(eq(user.id, userId), eq(user.userType, 'admin')),
+        })
+        return user !== null;
+    }
+
 
 }

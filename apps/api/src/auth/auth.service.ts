@@ -119,14 +119,14 @@ export class AuthService {
     }
   
     let tenantHasUsers = await this.db.select().from(schema.TenantHasUsers).where(eq(schema.TenantHasUsers.userId, user_.id))
-  
+    console.log(tenantHasUsers)
     let tenants = await this.db.query.Tenant.findMany({
       where: (tenant, { inArray }) => inArray(
         tenant.id,
         tenantHasUsers.map(tenantHasUser => tenantHasUser.tenantId)
       )
     })
-    this.logger.log(tenants)
+    
   
     const isValid = await verify(user_.password, password);
   
@@ -150,7 +150,7 @@ export class AuthService {
     });
   
     const { password: _, ...user } = user_;
-  
+    this.logger.log(`Tenants: ${tenants}`)
     return {
       user,
       tenants,
