@@ -41,6 +41,7 @@ import { AdminGuard } from './guards/admin/admin.guard';
       PasswordRestService,
       AdminGuard
   ],
+  exports:[AuthService],
   controllers: [AuthController]
 })
 export class AuthModule {}

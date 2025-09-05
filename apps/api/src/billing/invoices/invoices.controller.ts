@@ -4,7 +4,9 @@ import { billingContract } from '@repo/api-contract';
 import * as schema from '@repo/api-contract';
 import { TenantService } from 'src/tenant/tenant.service';
 import { InvoicesService } from './invoices.service';
-import { RequireRead, RequireWrite } from 'src/auth/decorators/permissions.decorator';
+// import { RequireRead, RequireWrite } from 'src/auth/decorators/permissions.decorator';
+import { Roles } from 'src/auth/decorators/permissions.decorator';
+import { PermissionScope } from 'src/auth/permissions';
 
 @Controller()
 export class InvoicesController {
@@ -15,7 +17,7 @@ export class InvoicesController {
   ) {}
 
   @TsRestHandler(billingContract.createInvoice)
-  @RequireWrite('invoices')
+  @Roles(PermissionScope.BILLING_WRITE)
   async create(@Headers() headers: any): Promise<ReturnType<typeof tsRestHandler>> {
     return tsRestHandler(billingContract.createInvoice, async ({ body }) => {
       const tenantId = headers['x-tenant-id'];
@@ -34,7 +36,7 @@ export class InvoicesController {
   }
 
   @TsRestHandler(billingContract.getInvoices)
-  @RequireRead('invoices')
+  @Roles(PermissionScope.BILLING_READ)
   async list(@Headers() headers: any): Promise<ReturnType<typeof tsRestHandler>> {
     return tsRestHandler(billingContract.getInvoices, async ({ query }) => {
       const tenantId = headers['x-tenant-id'];
@@ -44,7 +46,7 @@ export class InvoicesController {
   }
 
   @TsRestHandler(billingContract.getInvoice)
-  @RequireRead('invoices')
+  @Roles(PermissionScope.BILLING_READ)
   async get(@Headers() headers: any): Promise<ReturnType<typeof tsRestHandler>> {
     return tsRestHandler(billingContract.getInvoice, async ({ params }) => {
       const tenantId = headers['x-tenant-id'];
@@ -55,7 +57,7 @@ export class InvoicesController {
   }
 
   @TsRestHandler(billingContract.updateInvoice)
-  @RequireWrite('invoices')
+  @Roles(PermissionScope.BILLING_WRITE)
   async update(@Headers() headers: any): Promise<ReturnType<typeof tsRestHandler>> {
     return tsRestHandler(billingContract.updateInvoice, async ({ params, body }) => {
       const tenantId = headers['x-tenant-id'];
@@ -66,7 +68,7 @@ export class InvoicesController {
   }
 
   @TsRestHandler(billingContract.generateInvoiceFromBooking)
-  @RequireWrite('invoices')
+  @Roles(PermissionScope.BILLING_WRITE)
   async generateFromBooking(@Headers() headers: any): Promise<ReturnType<typeof tsRestHandler>> {
     return tsRestHandler(billingContract.generateInvoiceFromBooking, async ({ params }) => {
       const tenantId = headers['x-tenant-id'];

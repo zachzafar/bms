@@ -4,6 +4,10 @@ export enum PermissionScope {
   ASSETS_WRITE = "assets:write",
   ASSETS_DELETE = "assets:delete",
   ASSETS_PROPERTIES_MANAGE = "assets:properties:manage",
+  ASSET_CONFIG_READ = 'assets:config:read',
+  ASSET_CONFIG_WRITE = 'assets:config:write',
+  ASSET_CONFIG_UPDATE = 'assets:config:update',
+  ASSET_CONFIG_DELETE = 'assets:config:delete',
   
   // User Management
   USERS_READ = "users:read",

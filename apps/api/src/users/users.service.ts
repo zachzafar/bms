@@ -135,36 +135,35 @@ export class UsersService {
     }
 
     async findAll(tenantId: string): Promise<SelectUser[]> {
-        
-        // Replace the problematic query with a more explicit join approach
-        const usersWithRoles =(await this.db.select({
-            user: schema.User,
-            roles: schema.UserHasRoles
-        })
-        .from(schema.TenantHasUsers)
-        .where(eq(schema.TenantHasUsers.tenantId, tenantId))
-        .innerJoin(schema.User, eq(schema.TenantHasUsers.userId, schema.User.id))
-        .leftJoin(schema.UserHasRoles, eq(schema.UserHasRoles.userId, schema.User.id))).filter(row => Array.isArray(row.user.userType) && row.user.userType.includes("system") )
-        
-        // Process the results to group roles by user
-        const userMap = new Map<string, SelectUser & { roles: number[] }>();
-        
-        usersWithRoles.forEach(row => {
-            if (!userMap.has(row.user.id)) {
-                userMap.set(row.user.id, {
-                    ...row.user,
-                    roles: row.roles?.roleId ? [Number(row.roles.roleId)] : []
-                });
-            } else if (row.roles?.roleId) {
-                const user = userMap.get(row.user.id)!;
-                if (!user.roles.includes(Number(row.roles.roleId))) {
-                    user.roles.push(Number(row.roles.roleId));
-                }
-            }
-        });
-        
-        return Array.from(userMap.values());
+  const usersWithRoles = await this.db
+    .select({
+      user: schema.User,
+      roles: schema.UserHasRoles
+    })
+    .from(schema.TenantHasUsers)
+    .where(eq(schema.TenantHasUsers.tenantId, tenantId))
+    .innerJoin(schema.User, eq(schema.TenantHasUsers.userId, schema.User.id))
+    .leftJoin(schema.UserHasRoles, eq(schema.UserHasRoles.userId, schema.User.id));
+
+  // Group roles by user
+  const userMap = new Map<string, SelectUser & { roles: number[] }>();
+
+  usersWithRoles.forEach(row => {
+    if (!userMap.has(row.user.id)) {
+      userMap.set(row.user.id, {
+        ...row.user,
+        roles: row.roles?.roleId ? [Number(row.roles.roleId)] : []
+      });
+    } else if (row.roles?.roleId) {
+      const user = userMap.get(row.user.id)!;
+      if (!user.roles.includes(Number(row.roles.roleId))) {
+        user.roles.push(Number(row.roles.roleId));
+      }
     }
+  });
+
+  return Array.from(userMap.values());
+}
 
     async findOne(id: string, tenantId?: string): Promise<SelectUser | Omit<SelectUser,"roles"> |undefined> {
         if (!tenantId)

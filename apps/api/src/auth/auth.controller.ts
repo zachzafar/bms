@@ -7,7 +7,11 @@ import { LocalAuthGuard } from './guards/local-auth/local-auth.guard';
 import { Public } from './decorators/public.decorator';
 import { PasswordRestService } from './password-rest/password-rest.service';
 import { RequireAdmin, RequireAdminPermission } from './guards/admin/admin.guard';
+import { PermissionsGuard } from './guards/permissions/permissions.guard';
+import { PermissionScope } from './permissions';
+import { Roles } from './decorators/permissions.decorator';
 
+@UseGuards(PermissionsGuard)
 @Controller()
 export class AuthController {
     private readonly logger = new Logger(AuthController.name);
@@ -70,6 +74,7 @@ export class AuthController {
     }
 
     @TsRestHandler(contract.auth.getRoles)
+    @Roles(PermissionScope.USERS_ROLES_MANAGE)
     async getRoles(@Headers() headers:any): Promise<ReturnType<typeof tsRestHandler>> {
         return tsRestHandler(contract.auth.getRoles, async () => {
             const tenantId = headers['x-tenant-id'];
@@ -86,6 +91,7 @@ export class AuthController {
     }
 
     @TsRestHandler(contract.auth.createRole)
+    @Roles(PermissionScope.USERS_ROLES_MANAGE)
     async createRole(@Headers() headers:any): Promise<ReturnType<typeof tsRestHandler>> {
         return tsRestHandler(contract.auth.createRole, async ({ body }) => {
             const tenantId = headers['x-tenant-id'];
@@ -99,6 +105,7 @@ export class AuthController {
     }
 
     @TsRestHandler(contract.auth.updateRole)
+    @Roles(PermissionScope.USERS_ROLES_MANAGE)
     async updateRole(@Headers() headers:any): Promise<ReturnType<typeof tsRestHandler>> {
         return tsRestHandler(contract.auth.updateRole, async ({ params, body }) => {
             const tenantId = headers['x-tenant-id'];
@@ -113,6 +120,7 @@ export class AuthController {
     }
 
     @TsRestHandler(contract.auth.deleteRole)
+    @Roles(PermissionScope.USERS_ROLES_MANAGE)
     async deleteRole(@Headers() headers:any): Promise<ReturnType<typeof tsRestHandler>> {
         return tsRestHandler(contract.auth.deleteRole, async ({ params }) => {
             const tenantId = headers['x-tenant-id'];

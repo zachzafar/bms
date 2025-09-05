@@ -4,7 +4,9 @@ import { billingContract } from '@repo/api-contract';
 import * as schema from '@repo/api-contract';
 import { TenantService } from 'src/tenant/tenant.service';
 import { PaymentsService } from './payments.service';
-import { RequireRead, RequireWrite } from 'src/auth/decorators/permissions.decorator';
+// import { RequireRead, RequireWrite } from 'src/auth/decorators/permissions.decorator';
+import { Roles } from 'src/auth/decorators/permissions.decorator';
+import { PermissionScope } from 'src/auth/permissions';
 
 @Controller()
 export class PaymentsController {
@@ -14,7 +16,7 @@ export class PaymentsController {
   ) { }
 
   @TsRestHandler(billingContract.createPayment)
-  @RequireWrite('payments')
+  @Roles(PermissionScope.PAYMENTS_WRITE)
   async create(@Headers() headers: any): Promise<ReturnType<typeof tsRestHandler>> {
     return tsRestHandler(billingContract.createPayment, async ({ body }) => {
       const tenantId = headers['x-tenant-id'];
@@ -31,7 +33,7 @@ export class PaymentsController {
   }
 
   @TsRestHandler(billingContract.getPayments)
-  @RequireRead('payments')
+  @Roles(PermissionScope.PAYMENTS_READ)
   async list(@Headers() headers: any): Promise<ReturnType<typeof tsRestHandler>> {
     return tsRestHandler(billingContract.getPayments, async ({ query }) => {
       const tenantId = headers['x-tenant-id'];
@@ -41,7 +43,7 @@ export class PaymentsController {
   }
 
   @TsRestHandler(billingContract.getPayment)
-  @RequireRead('payments')
+  @Roles(PermissionScope.PAYMENTS_READ)
   async get(@Headers() headers: any): Promise<ReturnType<typeof tsRestHandler>> {
     return tsRestHandler(billingContract.getPayment, async ({ params }) => {
       const tenantId = headers['x-tenant-id'];

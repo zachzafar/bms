@@ -1,11 +1,15 @@
-import { Body, Controller, Headers, Logger, Param } from '@nestjs/common';
+import { Body, Controller, Headers, Logger, Param, UseGuards } from '@nestjs/common';
 import { TsRestHandler, tsRestHandler } from '@ts-rest/nest';
 import { contract } from '@repo/api-contract';
 import { RatesService } from './rates.service';
 import * as schema from '@repo/api-contract';
 import { TenantService } from 'src/tenant/tenant.service';
-import { RequireRead, RequireWrite, RequireDelete } from 'src/auth/decorators/permissions.decorator';
+// import { RequireRead, RequireWrite, RequireDelete } from 'src/auth/decorators/permissions.decorator';
+import { Roles } from 'src/auth/decorators/permissions.decorator';
+import { PermissionScope } from 'src/auth/permissions';
+import { PermissionsGuard } from 'src/auth/guards/permissions/permissions.guard';
 
+@UseGuards(PermissionsGuard)
 @Controller()
 export class RatesController {
     private readonly logger = new Logger(RatesController.name);
@@ -16,6 +20,7 @@ export class RatesController {
     ) { }
 
     @TsRestHandler(contract.rates.createRate)
+    @Roles(PermissionScope.RATES_WRITE)
     async createRate(@Headers() headers: any): Promise<ReturnType<typeof tsRestHandler>> {
         return tsRestHandler(contract.rates.createRate, async ({ body }) => {
             const tenantId = headers['x-tenant-id'];
@@ -38,7 +43,7 @@ export class RatesController {
     }
 
     @TsRestHandler(contract.rates.getRate)
-    @RequireRead('rates')
+    @Roles(PermissionScope.RATES_READ)
     async getRate(@Headers() headers: any): Promise<ReturnType<typeof tsRestHandler>> {
         return tsRestHandler(contract.rates.getRate, async ({ params }) => {
             const tenantId = headers["x-tenant-id"];
@@ -53,7 +58,7 @@ export class RatesController {
     }
 
     @TsRestHandler(contract.rates.getRates)
-    @RequireRead('rates')
+    @Roles(PermissionScope.RATES_READ)
     async getRates(@Headers() headers: any): Promise<ReturnType<typeof tsRestHandler>> {
         return tsRestHandler(contract.rates.getRates, async ({ query }) => {
             const tenantId = headers['x-tenant-id']; // Extract tenantId from request headers
@@ -112,6 +117,7 @@ export class RatesController {
 
 
     @TsRestHandler(contract.rates.updateRate)
+    @Roles(PermissionScope.RATES_WRITE)
     async updateRate(@Headers() headers: any): Promise<ReturnType<typeof tsRestHandler>> {
         return tsRestHandler(contract.rates.updateRate, async ({ params, body }) => {
             const tenantId = headers['x-tenant-id'];
@@ -137,6 +143,7 @@ export class RatesController {
     }
 
     @TsRestHandler(contract.rates.deleteRate)
+    @Roles(PermissionScope.RATES_DELETE)
     async deleteRate(@Headers() headers: any, @Param('id') rateId: string): Promise<ReturnType<typeof tsRestHandler>> {
         return tsRestHandler(contract.rates.deleteRate, async ({ params }) => {
             const rateId = params.id;

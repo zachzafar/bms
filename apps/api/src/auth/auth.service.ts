@@ -158,6 +158,31 @@ export class AuthService {
       refreshToken,
     };
   }
+
+  async getUserPermissionsForTenant(userId:string, tenantId:string): Promise<string[]> {
+
+    const userRoles = await this.db.select(
+      {
+        permission: schema.RoleHasPermissions.permission
+      }
+    )
+    .from(schema.UserHasRoles)
+    .where(and(
+      eq(schema.UserHasRoles.userId,userId),
+      eq(schema.UserHasRoles.tenantId,tenantId)
+    ))
+    .innerJoin(schema.Roles, eq(schema.UserHasRoles.roleId, schema.Roles.id))
+    .leftJoin(schema.RoleHasPermissions, eq(schema.Roles.id, schema.RoleHasPermissions.roleId));
+
+    const permissions = new Set<string>()
+
+    userRoles.map(role => {
+      if (role.permission)
+      permissions.add(role.permission)
+    })
+
+    return Array.from(permissions)
+  }
   
   // NEW: Helper method to get user roles and permissions per tenant
   async getUserRolesAndPermissions(userId: string, tenantIds: string[]) {

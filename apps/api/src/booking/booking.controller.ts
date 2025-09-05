@@ -4,7 +4,9 @@ import { tsRestHandler, TsRestHandler } from '@ts-rest/nest';
 import { BookingService } from './booking.service';
 import * as schema from "@repo/api-contract"
 import { TenantService } from 'src/tenant/tenant.service';
-import { RequireRead, RequireWrite, RequireDelete, RequirePermissionsDecorator } from 'src/auth/decorators/permissions.decorator';
+// import { RequireRead, RequireWrite, RequireDelete, RequirePermissionsDecorator } from 'src/auth/decorators/permissions.decorator';
+import { Roles } from 'src/auth/decorators/permissions.decorator';
+import { PermissionScope } from 'src/auth/permissions';
 
 @Controller()
 export class BookingController {
@@ -12,7 +14,7 @@ export class BookingController {
     constructor(private bookingService: BookingService,private tenantService: TenantService) {}
     
     @TsRestHandler(contract.booking.createBooking)
-    @RequireWrite('bookings')
+    @Roles(PermissionScope.BOOKINGS_WRITE)
     async createBooking(): Promise<ReturnType<typeof tsRestHandler>> {
         return tsRestHandler(contract.booking.createBooking, async ({ body }) => {
             const {booking, customers} = body
@@ -22,7 +24,7 @@ export class BookingController {
     }
 
     @TsRestHandler(contract.booking.getBooking)
-    @RequireRead('bookings')
+    @Roles(PermissionScope.BOOKINGS_READ)
     async getBooking(@Headers() headers:any): Promise<ReturnType<typeof tsRestHandler>> {
         return tsRestHandler(contract.booking.getBooking, async ({ params }) => {
             const tenantId = headers['x-tenant-id'];
@@ -33,7 +35,7 @@ export class BookingController {
     }
 
     @TsRestHandler(contract.booking.getBookings)
-    @RequireRead('bookings')
+    @Roles(PermissionScope.BOOKINGS_READ)
     async getBookings(@Headers() headers: any): Promise<ReturnType<typeof tsRestHandler>> {
         return tsRestHandler(contract.booking.getBookings, async () => {
             this.logger.log("Get bookings for tenant: ", headers['x-tenant-id'] || "no tenant")
@@ -55,7 +57,7 @@ export class BookingController {
     }
 
     @TsRestHandler(contract.booking.updateBooking)
-    @RequireWrite('bookings')
+    @Roles(PermissionScope.BOOKINGS_WRITE)
     async updateBooking(): Promise<ReturnType<typeof tsRestHandler>> {
         return tsRestHandler(contract.booking.updateBooking, async ({ body }) => {
             await this.bookingService.updateBooking(body);
@@ -64,7 +66,7 @@ export class BookingController {
     }
 
     @TsRestHandler(contract.booking.cancelBooking)
-    @RequireDelete('bookings')
+    @Roles(PermissionScope.BOOKINGS_DELETE)
     async deleteBooking(): Promise<ReturnType<typeof tsRestHandler>> {
         return tsRestHandler(contract.booking.cancelBooking, async ({ params }) => {
             await this.bookingService.deleteBooking(params.id);
@@ -73,7 +75,7 @@ export class BookingController {
     }
 
     @TsRestHandler(contract.booking.createBookingByTag)
-    @RequirePermissionsDecorator(['bookings:write', 'bookings:by-tag:create'])
+    @Roles(PermissionScope.BOOKINGS_WRITE, PermissionScope.BOOKINGS_BY_TAG_CREATE)
     async createBookingByTag(@Headers() headers: any): Promise<ReturnType<typeof tsRestHandler>> {
         return tsRestHandler(contract.booking.createBookingByTag, async ({ body }) => {
             const tenantId = headers['x-tenant-id'];
@@ -83,7 +85,7 @@ export class BookingController {
     }
 
     @TsRestHandler(contract.booking.checkTagAvailability)
-    @RequireRead('bookings')
+    @Roles(PermissionScope.BOOKINGS_READ)
     async checkTagAvailability(@Headers() headers: any): Promise<ReturnType<typeof tsRestHandler>> {
         return tsRestHandler(contract.booking.checkTagAvailability, async ({ query }) => {
             const tenantId = headers['x-tenant-id'];
