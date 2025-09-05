@@ -3,10 +3,13 @@ import { AssetsController } from './assets.controller';
 import { AssetAnalyticsService } from './assets.service';
 import { DrizzleModule } from 'src/drizzle/drizzle.module';
 import { TenantModule } from 'src/tenant/tenant.module';
+import { AuthModule } from 'src/auth/auth.module'; // <-- import AuthModule
+import { PermissionsGuard } from 'src/auth/guards/permissions/permissions.guard';
+
 
 @Module({
-  imports: [DrizzleModule, TenantModule],
+  imports: [DrizzleModule, AuthModule, TenantModule], // <-- make AuthService available
   controllers: [AssetsController],
-  providers: [AssetAnalyticsService]
+  providers: [AssetAnalyticsService, PermissionsGuard]
 })
 export class AssetsModule {}

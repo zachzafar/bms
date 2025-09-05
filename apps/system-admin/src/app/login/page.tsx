@@ -150,8 +150,8 @@ export default function AdminLogin() {
           </Form>
           
           <div className="mt-6 text-center">
-            <p className="text-sm text-slate-400">
-              Need help? Contact your system administrator
+            <p className="text-sm text-slate-400"><a href='/admin-registration'>
+              Need help? Contact your system administrator</a>
             </p>
           </div>
         </CardContent>

@@ -34,15 +34,14 @@ export function CreateUserForm({ roles, onClose, onSuccess }: CreateUserFormProp
       email: '',
       password: '',
       roles: [],
-      userType: ['system']
+      userType: 'system'
     },
   });
 
   const handleCreateUser: SubmitHandler<CreateUserFormData> = async (data) => {
+    console.log("Submitting user:", data); // debug
     createUserMutation(
-      {
-        body: data,
-      },
+      { body: data },
       {
         onSuccess: () => {
           toast.success('User created successfully');
@@ -63,9 +62,11 @@ export function CreateUserForm({ roles, onClose, onSuccess }: CreateUserFormProp
         <DialogTitle>Add New User</DialogTitle>
         <DialogDescription>Enter user details below</DialogDescription>
       </DialogHeader>
-      
+
       <Form {...form}>
-        <form onSubmit={form.handleSubmit(handleCreateUser)} className='space-y-4'>
+        <form onSubmit={form.handleSubmit(handleCreateUser, (err) => {
+          console.error("Validation errors:", err);
+        })} className='space-y-4'>
           <div className='grid grid-cols-1 md:grid-cols-2 gap-4'>
             <FormField
               control={form.control}
@@ -100,9 +101,9 @@ export function CreateUserForm({ roles, onClose, onSuccess }: CreateUserFormProp
                 <FormItem>
                   <FormLabel>Password</FormLabel>
                   <FormControl>
-                    <Input 
-                      type="password" 
-                      {...field} 
+                    <Input
+                      type="password"
+                      {...field}
                       required
                     />
                   </FormControl>
@@ -111,7 +112,7 @@ export function CreateUserForm({ roles, onClose, onSuccess }: CreateUserFormProp
               )}
             />
           </div>
-          
+
           <FormField
             control={form.control}
             name="roles"

@@ -1,16 +1,20 @@
-import { Controller, Headers, Logger, NotFoundException } from '@nestjs/common';
+import { Controller, Headers, Logger, NotFoundException, UseGuards } from '@nestjs/common';
 import { UsersService } from './users.service';
 import { tsRestHandler, TsRestHandler } from '@ts-rest/nest';
 import { contract as c } from "@repo/api-contract"
-import { RequireRead, RequireWrite, RequireDelete, RequirePermissionsDecorator } from 'src/auth/decorators/permissions.decorator';
+// import { RequireRead, RequireWrite, RequireDelete, RequirePermissionsDecorator } from 'src/auth/decorators/permissions.decorator';
+import { Roles } from 'src/auth/decorators/permissions.decorator';
+import { PermissionScope } from 'src/auth/permissions';
+import { PermissionsGuard } from 'src/auth/guards/permissions/permissions.guard';
 
+@UseGuards(PermissionsGuard)
 @Controller()
 export class UsersController {
     private readonly logger = new Logger(UsersController.name);
     constructor(private UserService: UsersService) { }
 
     @TsRestHandler(c.users.createUser)
-    @RequireWrite('users')
+    @Roles(PermissionScope.USERS_WRITE)
     async createUser(@Headers() headers: any): Promise<ReturnType<typeof tsRestHandler>> {
         this.logger.log(`Creating a new user`);
         return tsRestHandler(c.users.createUser, async ({ body }) => {
@@ -23,7 +27,7 @@ export class UsersController {
     }
 
     @TsRestHandler(c.users.getUser)
-    @RequireRead('users')
+    @Roles(PermissionScope.USERS_READ)
     async getUser(): Promise<ReturnType<typeof tsRestHandler>> {
         this.logger.log(`Getting a user`);
         return tsRestHandler(c.users.getUser, async ({ params }) => {
@@ -37,7 +41,7 @@ export class UsersController {
     }
 
     @TsRestHandler(c.users.getUsers)
-    @RequireRead('users')
+    @Roles(PermissionScope.USERS_READ)
     async getUsers(@Headers() headers: any): Promise<ReturnType<typeof tsRestHandler>> {
         this.logger.log(`Getting all users`);
         return tsRestHandler(c.users.getUsers, async () => {
@@ -48,7 +52,7 @@ export class UsersController {
     }
 
     @TsRestHandler(c.users.updateUser)
-    @RequireWrite('users')
+    @Roles(PermissionScope.USERS_WRITE)
     async updateUser(@Headers() headers: any): Promise<ReturnType<typeof tsRestHandler>> {
         this.logger.log(`Updating a user`);
         return tsRestHandler(c.users.updateUser, async ({ params, body }) => {
@@ -62,7 +66,7 @@ export class UsersController {
     }
 
     @TsRestHandler(c.users.deleteUser)
-    @RequireDelete('users')
+    @Roles(PermissionScope.USERS_DELETE)
     async deleteUser(@Headers() headers: any): Promise<ReturnType<typeof tsRestHandler>> {
         this.logger.log(`Deleting a user`);
         return tsRestHandler(c.users.deleteUser, async ({ params }) => {
@@ -77,7 +81,7 @@ export class UsersController {
     }
 
     @TsRestHandler(c.users.getCustomers)
-    @RequireRead('customers')
+    @Roles(PermissionScope.CUSTOMERS_READ)
     async getCustomers(@Headers() headers: any): Promise<ReturnType<typeof tsRestHandler>> {
         this.logger.log(`Getting all customers`);
         return tsRestHandler(c.users.getCustomers, async () => {
@@ -88,7 +92,7 @@ export class UsersController {
     }
 
     @TsRestHandler(c.users.getOwners)
-    @RequireRead('owners')
+    @Roles(PermissionScope.CUSTOMERS_READ)
     async getOwners(@Headers() headers: any): Promise<ReturnType<typeof tsRestHandler>> {
         this.logger.log(`Getting all owners`);
         return tsRestHandler(c.users.getOwners, async () => {

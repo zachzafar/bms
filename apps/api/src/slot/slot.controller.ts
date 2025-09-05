@@ -1,15 +1,19 @@
-import { Controller } from '@nestjs/common';
+import { Controller, UseGuards } from '@nestjs/common';
 import { SlotService } from './slot.service';
 import { contract } from '@repo/api-contract';
 import { TsRestHandler, tsRestHandler } from '@ts-rest/nest';
-import { RequireRead, RequireWrite } from 'src/auth/decorators/permissions.decorator';
+// import { RequireRead, RequireWrite } from 'src/auth/decorators/permissions.decorator';
+import { Roles } from 'src/auth/decorators/permissions.decorator';
+import { PermissionScope } from 'src/auth/permissions';
+import { PermissionsGuard } from 'src/auth/guards/permissions/permissions.guard';
 
+@UseGuards(PermissionsGuard)
 @Controller()
 export class SlotController {
     constructor(private readonly slotService: SlotService) {}
 
     @TsRestHandler(contract.slots.getAssetStatus)
-    @RequireRead('slots')
+    @Roles(PermissionScope.SLOTS_READ)
     async getAssetStatus(): Promise<ReturnType<typeof tsRestHandler>> {
         return tsRestHandler(contract.slots.getAssetStatus, async ({ params, query }) => {
             const startDate = query?.start ? new Date(query.start) : undefined;
@@ -28,7 +32,7 @@ export class SlotController {
     }
 
     @TsRestHandler(contract.slots.createAssetAvailability)
-    @RequireWrite('slots')
+    @Roles(PermissionScope.SLOTS_WRITE)
     async createAssetAvailability(): Promise<ReturnType<typeof tsRestHandler>> {
         return tsRestHandler(contract.slots.createAssetAvailability, async ({ body }) => {
             await this.slotService.generateSlotsForRangeAndPrice(
@@ -48,7 +52,7 @@ export class SlotController {
     }
 
     @TsRestHandler(contract.slots.getAssetAvailability)
-    @RequireRead('slots')
+    @Roles(PermissionScope.SLOTS_READ)
     async getAssetAvailability(): Promise<ReturnType<typeof tsRestHandler>> {
         return tsRestHandler(contract.slots.getAssetAvailability, async ({ params }) => {
             const ranges = await this.slotService.getRangesForAssetByPriceAndAvailability(params.id);

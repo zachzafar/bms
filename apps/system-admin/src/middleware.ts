@@ -12,6 +12,7 @@ export async function middleware(req: NextRequest) {
   // Allow access to public pages without authentication
   if (pathname === '/login' || 
       pathname === '/signup' || 
+      pathname === '/admin-registration'||
       pathname === '/forgot-password' || 
       pathname.startsWith('/password-reset/')) {
     return NextResponse.next();
@@ -28,7 +29,7 @@ export async function middleware(req: NextRequest) {
   } 
 
   // If authenticated and trying to access login/signup, redirect to home
-  if (pathname === '/login' || pathname === '/admin-registration' || pathname === '/') {
+  if (pathname === '/login'  || pathname === '/') {
     const url = req.nextUrl.clone();
     url.pathname = '/dashboard';
     return NextResponse.redirect(url);

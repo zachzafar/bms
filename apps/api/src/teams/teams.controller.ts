@@ -1,16 +1,20 @@
-import { Controller, Logger } from '@nestjs/common';
+import { Controller, Logger, UseGuards } from '@nestjs/common';
 import { TeamsService } from './teams.service';
 import { contract as c}  from "@repo/api-contract"
 import { TsRestHandler, tsRestHandler } from '@ts-rest/nest';
-import { RequireRead, RequireWrite, RequireDelete, RequirePermissionsDecorator } from 'src/auth/decorators/permissions.decorator';
+// import { RequireRead, RequireWrite, RequireDelete, RequirePermissionsDecorator } from 'src/auth/decorators/permissions.decorator';
+import { Roles } from 'src/auth/decorators/permissions.decorator';
+import { PermissionScope } from 'src/auth/permissions';
+import { PermissionsGuard } from 'src/auth/guards/permissions/permissions.guard';
 
+@UseGuards(PermissionsGuard)
 @Controller('teams')
 export class TeamsController {
     private readonly logger = new Logger(TeamsController.name);
     constructor(private TeamsService: TeamsService){}
 
     @TsRestHandler(c.teams.createTeam)
-    @RequireWrite('teams')
+    @Roles(PermissionScope.TEAMS_WRITE)
     async createTeam(): Promise<ReturnType<typeof tsRestHandler>>{
         return tsRestHandler(c.teams.createTeam, async({ body }) => {
             const { id } = await this.TeamsService.create(body)
@@ -54,7 +58,7 @@ export class TeamsController {
     // }
 
     @TsRestHandler(c.teams.getTeams)
-    @RequireRead('teams')
+    @Roles(PermissionScope.TEAMS_READ)
     async getTeams(): Promise<ReturnType<typeof tsRestHandler>>{
         return tsRestHandler(c.teams.getTeams, async({ params }) => {
             const { tenant } = params
@@ -67,7 +71,7 @@ export class TeamsController {
     }
 
     @TsRestHandler(c.teams.updateTeam)
-    @RequireWrite('teams')
+    @Roles(PermissionScope.TEAMS_WRITE)
     async updateTeam(): Promise<ReturnType<typeof tsRestHandler>>{
         return tsRestHandler(c.teams.updateTeam, async({ params, body }) => {
             const { id } = params
@@ -84,7 +88,7 @@ export class TeamsController {
     }
 
     @TsRestHandler(c.teams.deleteTeam)
-    @RequireDelete('teams')
+    @Roles(PermissionScope.TEAMS_DELETE)
     async deleteTeam(): Promise<ReturnType<typeof tsRestHandler>>{
         return tsRestHandler(c.teams.deleteTeam, async({ params }) => {
             const { id } = params
@@ -99,7 +103,7 @@ export class TeamsController {
     }
 
     @TsRestHandler(c.teams.addUserToTeam)
-    @RequirePermissionsDecorator(['teams:users:manage'])
+    @Roles(PermissionScope.TEAMS_USERS_MANAGE)
     async addUserToTeam(): Promise<ReturnType<typeof tsRestHandler>>{
         return tsRestHandler(c.teams.addUserToTeam, async({ params }) => {
             const { id, userId } = params
@@ -114,7 +118,7 @@ export class TeamsController {
     }
 
     @TsRestHandler(c.teams.removeUserFromTeam)
-    @RequirePermissionsDecorator(['teams:users:manage'])
+    @Roles(PermissionScope.TEAMS_USERS_MANAGE)
     async removeUserFromTeam(): Promise<ReturnType<typeof tsRestHandler>>{
         return tsRestHandler(c.teams.removeUserFromTeam, async({ params }) => {
             const { id, userId } = params

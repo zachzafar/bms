@@ -6,7 +6,10 @@ import { TenantService } from 'src/tenant/tenant.service';
 import * as schema from "@repo/api-contract"
 import { FileFieldsInterceptor } from '@nestjs/platform-express';
 import { Public } from 'src/auth/decorators/public.decorator';
-import { RequireRead, RequireWrite, RequireDelete, RequirePermissionsDecorator } from 'src/auth/decorators/permissions.decorator';
+// import { RequireRead, RequireWrite, RequireDelete, RequirePermissionsDecorator } from 'src/auth/decorators/permissions.decorator';
+import { Roles } from 'src/auth/decorators/permissions.decorator';
+import { PermissionScope } from 'src/auth/permissions';
+
 
 @Controller()
 export class AssetsController {
@@ -16,7 +19,7 @@ export class AssetsController {
     }
 
     @TsRestHandler(contract.assets.getAssets)
-    @RequireRead('assets')
+    @Roles(PermissionScope.ASSETS_READ)
     async getAssets(@Headers() headers: any): Promise<ReturnType<typeof tsRestHandler>> {
         return tsRestHandler(contract.assets.getAssets, async ({ query }) => {
             this.logger.log('Get assets for tenant: ', headers['x-tenant-id'] || 'no tenant');
@@ -35,7 +38,7 @@ export class AssetsController {
     }
 
     @TsRestHandler(contract.assets.getAsset)
-    @RequireRead('assets')
+    @Roles(PermissionScope.ASSETS_READ)
     async getAssetById(@Headers() headers: any): Promise<ReturnType<typeof tsRestHandler>> {
         return tsRestHandler(contract.assets.getAsset, async ({ params }) => {
             const tenantId = headers['x-tenant-id'];
@@ -52,7 +55,7 @@ export class AssetsController {
     }
 
     @TsRestHandler(contract.assets.createAsset)
-    @RequireWrite('assets')
+    @Roles(PermissionScope.ASSETS_WRITE)
     async createAsset(@Headers() headers: any): Promise<ReturnType<typeof tsRestHandler>> {
         return tsRestHandler(contract.assets.createAsset, async ({ body }) => {
             const tenantId = headers['x-tenant-id'];
@@ -69,7 +72,7 @@ export class AssetsController {
     }
 
     @TsRestHandler(contract.assets.updateAsset)
-    @RequireWrite('assets')
+    @Roles(PermissionScope.ASSETS_WRITE)
     async updateAsset(@Headers() headers: any): Promise<ReturnType<typeof tsRestHandler>> {
         return tsRestHandler(contract.assets.updateAsset, async ({ params, body }) => {
             const tenantId = headers['x-tenant-id'];
@@ -85,7 +88,7 @@ export class AssetsController {
     }
 
     @TsRestHandler(contract.assets.deleteAsset)
-    @RequireDelete('assets')
+    @Roles(PermissionScope.ASSETS_DELETE)
     async deleteAsset(@Headers() headers: any): Promise<ReturnType<typeof tsRestHandler>> {
         return tsRestHandler(contract.assets.deleteAsset, async ({ params }) => {
             const tenantId = headers['x-tenant-id'];
@@ -101,7 +104,7 @@ export class AssetsController {
     }
 
     @TsRestHandler(contract.assets.addAssetProperties)
-    @RequirePermissionsDecorator(['assets:properties:manage'])
+    @Roles(PermissionScope.ASSETS_PROPERTIES_MANAGE)
     async addAssetProperties(@Headers() headers: any): Promise<ReturnType<typeof tsRestHandler>> {
         return tsRestHandler(contract.assets.addAssetProperties, async ({ params, body }) => {
             const tenantId = headers['x-tenant-id'];
@@ -118,6 +121,7 @@ export class AssetsController {
     }
 
     @TsRestHandler(contract.assets.getAssetProperties)
+    @Roles(PermissionScope.ASSETS_PROPERTIES_MANAGE)
     async getAssetProperties(@Headers() headers: any): Promise<ReturnType<typeof tsRestHandler>> {
         return tsRestHandler(contract.assets.getAssetProperties, async ({ params }) => {
             const tenantId = headers['x-tenant-id'];
@@ -143,6 +147,7 @@ export class AssetsController {
         { name: 'images', maxCount: 10 }
     ]))
     @TsRestHandler(contract.assets.uploadAssetImages)
+    @Roles(PermissionScope.ASSETS_PROPERTIES_MANAGE)
     async uploadAssetImages(
         @Headers() headers: any,
         @UploadedFiles() files: { images?: Express.Multer.File[] }
@@ -166,6 +171,7 @@ export class AssetsController {
 
     @Public()
     @TsRestHandler(contract.assets.getAssetsWithDetails)
+    @Roles(PermissionScope.ASSETS_READ)
     async getAssetsWithDetails(@Headers() headers: any): Promise<ReturnType<typeof tsRestHandler>> {
         return tsRestHandler(contract.assets.getAssetsWithDetails, async ({ query }) => {
             const tenantId = headers['x-tenant-id'];
@@ -195,6 +201,7 @@ export class AssetsController {
 
 
     @TsRestHandler(contract.assets.deleteAssetImages)
+    @Roles(PermissionScope.ASSETS_DELETE)
     async deleteAssetImage(@Headers() headers: any): Promise<ReturnType<typeof tsRestHandler>> {
         return tsRestHandler(contract.assets.deleteAssetImages, async ({ params, body }) => {
             const tenantId = headers['x-tenant-id'];
@@ -208,6 +215,7 @@ export class AssetsController {
     }
 
     @TsRestHandler(contract.assets.getAssetImages)
+    @Roles(PermissionScope.ASSETS_READ)
     async getAssetImages(@Headers() headers: any): Promise<ReturnType<typeof tsRestHandler>> {
         return tsRestHandler(contract.assets.getAssetImages, async ({ params }) => {
             const tenantId = headers['x-tenant-id'];
@@ -218,6 +226,7 @@ export class AssetsController {
     }
 
     @TsRestHandler(contract.assets.getAvailableAssets)
+    @Roles(PermissionScope.ASSETS_READ)
     async getAvailableAssets(@Headers() headers: any): Promise<ReturnType<typeof tsRestHandler>> {
         const tenantId = headers['x-tenant-id'];
 

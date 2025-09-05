@@ -1,15 +1,19 @@
-import { Controller, Headers } from '@nestjs/common';
+import { Controller, Headers, UseGuards } from '@nestjs/common';
 import { AssetAnalyticsService } from './assets.service';
 import { contract } from '@repo/api-contract';
 import { tsRestHandler, TsRestHandler } from '@ts-rest/nest';
-import { RequireRead } from 'src/auth/decorators/permissions.decorator';
+// import { RequireRead } from 'src/auth/decorators/permissions.decorator';
+import { Roles } from 'src/auth/decorators/permissions.decorator';
+import { PermissionScope } from 'src/auth/permissions';
+import { PermissionsGuard } from 'src/auth/guards/permissions/permissions.guard';
 
+@UseGuards(PermissionsGuard)
 @Controller()
 export class AssetsController {
     constructor(private assetAnalyticsService: AssetAnalyticsService){}
 
     @TsRestHandler(contract.analytics.getAssetCount)
-    @RequireRead('analytics')
+    @Roles(PermissionScope.ANALYTICS_ASSETS_READ)
     async getAssetAnalytics(@Headers() headers: any): Promise<ReturnType<typeof tsRestHandler>> {
         return tsRestHandler(contract.analytics.getAssetCount, async ({query}) => {
             const tenantId = headers['x-tenant-id'];
@@ -30,7 +34,7 @@ export class AssetsController {
     }
 
     @TsRestHandler(contract.analytics.getAssetUtilization)
-    @RequireRead('analytics')
+    @Roles(PermissionScope.ANALYTICS_ASSETS_READ)
     async getAssetUtilization(@Headers() headers: any): Promise<ReturnType<typeof tsRestHandler>> {
         return tsRestHandler(contract.analytics.getAssetUtilization, async ({query}) => {
             const tenantId = headers['x-tenant-id'];
@@ -51,7 +55,7 @@ export class AssetsController {
     }
 
     @TsRestHandler(contract.analytics.getMaintenanceCostByAssetTypePerMonth)
-    @RequireRead('analytics')
+    @Roles(PermissionScope.ANALYTICS_ASSETS_READ)
     async getMaintenanceCostByAssetTypePerMonth(@Headers() headers: any): Promise<ReturnType<typeof tsRestHandler>> {
         return tsRestHandler(contract.analytics.getMaintenanceCostByAssetTypePerMonth, async ({query}) => {
             const tenantId = headers['x-tenant-id'];
@@ -64,7 +68,7 @@ export class AssetsController {
     }
 
     @TsRestHandler(contract.analytics.getRevenueByAssetTypePerYear)
-    @RequireRead('analytics')
+    @Roles(PermissionScope.ANALYTICS_ASSETS_READ)
     async getRevenueByAssetTypePerYear(@Headers() headers: any): Promise<ReturnType<typeof tsRestHandler>> {
         return tsRestHandler(contract.analytics.getRevenueByAssetTypePerYear, async ({query}) => {
             const tenantId = headers['x-tenant-id'];

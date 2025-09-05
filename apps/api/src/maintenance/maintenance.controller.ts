@@ -1,12 +1,15 @@
-import { Controller, Header, Headers, Logger, UploadedFiles, UseInterceptors } from '@nestjs/common';
+import { Controller, Header, Headers, Logger, UploadedFiles, UseGuards, UseInterceptors } from '@nestjs/common';
 import { MaintenanceService } from './maintenance.service';
 import {  tsRestHandler, TsRestHandler } from '@ts-rest/nest';
 import { contract } from '@repo/api-contract';
 import { TenantService } from 'src/tenant/tenant.service';
 import * as schema from "@repo/api-contract"
 import { FileFieldsInterceptor } from '@nestjs/platform-express';
-import { RequireRead, RequireWrite, RequireDelete, RequirePermissionsDecorator } from 'src/auth/decorators/permissions.decorator';
+import { Roles } from 'src/auth/decorators/permissions.decorator';
+import { PermissionScope } from 'src/auth/permissions';
+import { PermissionsGuard } from 'src/auth/guards/permissions/permissions.guard';
 
+@UseGuards(PermissionsGuard)
 @Controller()
 export class MaintenanceController {
     private readonly logger = new Logger(MaintenanceController.name);
@@ -15,7 +18,7 @@ export class MaintenanceController {
     }
         
     @TsRestHandler(contract.maintenance.createMaintenance)
-    @RequireWrite('maintenance')
+    @Roles(PermissionScope.MAINTENANCE_WRITE)
     async createMaintenance(@Headers() headers:any): Promise<ReturnType<typeof tsRestHandler>> {
         return tsRestHandler(contract.maintenance.createMaintenance, async ({ body }) => {
             const tenantId = headers['x-tenant-id']
@@ -26,7 +29,7 @@ export class MaintenanceController {
     }
 
     @TsRestHandler(contract.maintenance.getMaintenance)
-    @RequireRead('maintenance')
+    @Roles(PermissionScope.MAINTENANCE_READ)
     async getMaintenance(@Headers() headers:any): Promise<ReturnType<typeof tsRestHandler>> {
         return tsRestHandler(contract.maintenance.getMaintenance, async ({ params }) => {
             const tenantId = headers['x-tenant-id']
@@ -43,7 +46,7 @@ export class MaintenanceController {
     }
 
     @TsRestHandler(contract.maintenance.getMaintenances)
-    @RequireRead('maintenance')
+    @Roles(PermissionScope.MAINTENANCE_READ)
     async getMaintenances(@Headers() headers: any): Promise<ReturnType<typeof tsRestHandler>> {
         return tsRestHandler(contract.maintenance.getMaintenances, async () => {
             const tenantId = headers['x-tenant-id']
@@ -55,7 +58,7 @@ export class MaintenanceController {
     }
 
     @TsRestHandler(contract.maintenance.updateMaintenance)
-    @RequireWrite('maintenance')
+    @Roles(PermissionScope.MAINTENANCE_WRITE)
     async updateMaintenance(@Headers() headers:any): Promise<ReturnType<typeof tsRestHandler>> {
         return tsRestHandler(contract.maintenance.updateMaintenance, async ({ body, params }) => {
             const tenantId = headers['x-tenant-id']
@@ -74,7 +77,7 @@ export class MaintenanceController {
     
 
     @TsRestHandler(contract.maintenance.deleteMaintenance)
-    @RequireDelete('maintenance')
+    @Roles(PermissionScope.MAINTENANCE_DELETE)
     async deleteMaintenance(@Headers() headers:any): Promise<ReturnType<typeof tsRestHandler>> {
         return tsRestHandler(contract.maintenance.deleteMaintenance, async ({ params }) => {
             const tenantId = headers['x-tenant-id']
@@ -87,7 +90,7 @@ export class MaintenanceController {
         { name: 'files', maxCount: 10 }
     ]))
     @TsRestHandler(contract.maintenance.uploadMaintenanceFiles)
-    @RequirePermissionsDecorator(['maintenance:files:manage'])
+    @Roles(PermissionScope.MAINTENANCE_FILES_MANAGE)
     async uploadMaintenanceFiles(
         @Headers() headers:any,
         @UploadedFiles() files: { files?: Express.Multer.File[] },
@@ -111,7 +114,7 @@ export class MaintenanceController {
     }
 
     @TsRestHandler(contract.maintenance.getMaintenanceFiles)
-    @RequireRead('maintenance')
+    @Roles(PermissionScope.MAINTENANCE_FILES_MANAGE)
     async getMaintenanceFiles(@Headers() headers:any): Promise<ReturnType<typeof tsRestHandler>> {
         return tsRestHandler(contract.maintenance.getMaintenanceFiles, async ({ params }) => {
             const tenantId = headers['x-tenant-id']
@@ -127,7 +130,7 @@ export class MaintenanceController {
     }
 
     @TsRestHandler(contract.maintenance.deleteMaintenanceFiles)
-    @RequirePermissionsDecorator(['maintenance:files:manage'])
+    @Roles(PermissionScope.MAINTENANCE_FILES_MANAGE)
     async deleteMaintenanceFiles(@Headers() headers:any): Promise<ReturnType<typeof tsRestHandler>> {
         return tsRestHandler(contract.maintenance.deleteMaintenanceFiles, async ({ params,body }) => {
             const tenantId = headers['x-tenant-id']

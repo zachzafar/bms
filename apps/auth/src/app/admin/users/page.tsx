@@ -22,9 +22,10 @@ type ExtendedSelectUser = z.infer<typeof ExtendedSelectUserSchema>;
 
 export default function UsersPage() {
   const queryClient = authClient.useQueryClient();
-  const { data: users } = authClient.users.getUsers.useQuery({ 
-    queryKey: ["users"] 
-  });
+  const { data: users } = authClient.users.getUsers.useQuery(
+    { queryKey: ["users"] }
+  );
+
   const { data: roles } = authClient.auth.getRoles.useQuery({ 
     queryKey: ["roles"] 
   });
@@ -144,7 +145,7 @@ export default function UsersPage() {
                         name: user.name,
                         email: user.email,
                         password: '',
-                        userType: {},
+                        userType: "system",
                         createdAt: null,
                         updatedAt: null,
                         roles: user.roles
