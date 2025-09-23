@@ -20,6 +20,7 @@ import {
 } from "lucide-react"
 import { useStorage } from "@/hooks/useStorage"
 import { deleteSession } from "@/lib/api/session"
+import { queryClient } from "@/providers/tanstack"
 
 interface AppOption {
   id: string
@@ -72,6 +73,7 @@ export function AppHeader() {
   const handleLogout = async () => {
     try {
       await deleteSession()
+      // queryClient.clear();
       // Redirect to auth app
       const authUrl = process.env.NODE_ENV === 'production' 
         ? 'https://bookos.xyz'

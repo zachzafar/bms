@@ -9,6 +9,7 @@ import { useRouter } from 'next/navigation';
 import { authClient } from '@/lib/api/publicClient';
 import { getSession, deleteSession } from '@/lib/api/session';
 import { toast } from 'sonner';
+import { queryClient } from '@/providers/tanstack';
 
 interface AppOption {
   id: string;
@@ -122,6 +123,9 @@ export default function AuthHubPage() {
       localStorage.removeItem('user');
       localStorage.removeItem('tenant');
       localStorage.clear()
+
+      queryClient.clear();
+
       toast.success('Logged out successfully');
       router.push('/login');
     } catch (error) {

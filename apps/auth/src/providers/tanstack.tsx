@@ -3,7 +3,7 @@
 import { authClient } from '@/lib/api/publicClient';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 
-const queryClient = new QueryClient();
+export const queryClient = new QueryClient(); // ⬅️ export it so you can import elsewhere
 
 // ✅ Extract the properly-cased provider
 const TsRestProvider = authClient.ReactQueryProvider;

@@ -1,4 +1,4 @@
-import { BadRequestException, Controller, Headers, Logger, MaxFileSizeValidator, ParseFilePipe, ParseFilePipeBuilder, Query, UploadedFiles, UseInterceptors } from '@nestjs/common';
+import { BadRequestException, Controller, Headers, Logger, MaxFileSizeValidator, ParseFilePipe, ParseFilePipeBuilder, Query, UploadedFiles, UseGuards, UseInterceptors } from '@nestjs/common';
 import { AssetsService } from './assets.service';
 import { TsRestHandler, tsRestHandler } from '@ts-rest/nest';
 import { contract } from '@repo/api-contract';
@@ -9,8 +9,9 @@ import { Public } from 'src/auth/decorators/public.decorator';
 // import { RequireRead, RequireWrite, RequireDelete, RequirePermissionsDecorator } from 'src/auth/decorators/permissions.decorator';
 import { Roles } from 'src/auth/decorators/permissions.decorator';
 import { PermissionScope } from 'src/auth/permissions';
+import { PermissionsGuard } from 'src/auth/guards/permissions/permissions.guard';
 
-
+@UseGuards(PermissionsGuard)
 @Controller()
 export class AssetsController {
     private readonly logger = new Logger(AssetsController.name);
