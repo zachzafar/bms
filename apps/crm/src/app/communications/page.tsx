@@ -29,9 +29,9 @@ import { CommunicationForm } from '@/components/communication-form'
 import { CommunicationDetail } from '@/components/communication-detail'
 
 import { authClient } from '@/lib/api/publicClient'
-import { COMMUNICATIONS_QUERY_KEY } from '@/lib/api/queryKeys'
+import { COMMUNICATIONS_QUERY_KEY, CONTACTS_QUERY_KEY } from '@/lib/api/queryKeys'
 
-export function CommunicationManagement() {
+export default function CommunicationManagement() {
   const queryClient = authClient.useQueryClient()
 
   const [searchTerm, setSearchTerm] = useState('')
@@ -62,16 +62,12 @@ export function CommunicationManagement() {
     })
 
   // If you have a users contract, prefer that. Otherwise keep your previous fetch.
-  // const { data: usersResp } = authClient.users?.listUsers
-  //   ? authClient.users.listUsers.useQuery({ queryKey: USERS_LIST_QK })
-  //   : authClient.query.useQuery({
-  //       // fallback to your existing REST call
-  //       queryKey: USERS_LIST_QK,
-  //       queryFn: () => authClient.get('/users') as any,
-  //     })
+  const { data: clientsData, refetch } = authClient.crm.contacts.listContacts.useQuery({
+    queryKey: CONTACTS_QUERY_KEY,
+  })
 
   const communications = useMemo(() => (commsResp?.status === 200 ? commsResp.body : []), [commsResp])
-  // const users = useMemo(() => (usersResp?.status === 200 ? usersResp.body : Array.isArray(usersResp) ? usersResp : []), [usersResp])
+  const users = useMemo(() => (clientsData?.status === 200 ? clientsData.body : Array.isArray(clientsData) ? clientsData : []), [clientsData])
 
   // ——— Mutations (ts-rest style) ———
   const { mutate: createComm, isPending: isCreating } = authClient.crm.communications.createComm.useMutation({

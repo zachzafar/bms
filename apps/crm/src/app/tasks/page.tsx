@@ -33,7 +33,7 @@ import { TASKS_QUERY_KEY, USERS_QUERY_KEY } from '@/lib/api/queryKeys'
 
 
 
-export function TaskManagement() {
+export default function TaskManagement() {
   const queryClient = authClient.useQueryClient()
 
   const [searchTerm, setSearchTerm] = useState('')
@@ -61,28 +61,13 @@ export function TaskManagement() {
 
   const { data: usersResp } = authClient.users.getUsers.useQuery({ queryKey: USERS_QUERY_KEY })
 
+  const users = useMemo(() => (usersResp?.status === 200 ? usersResp.body : []), [usersResp])
+
+
+
   const tasks = useMemo(() => (tasksResp?.status === 200 ? tasksResp.body : []), [tasksResp])
-  const users = useMemo(() => (usersResp?.status === 200 ? usersResp.body : Array.isArray(usersResp) ? usersResp : []), [usersResp])
 
-  // Mutations
-  const { mutate: createTask, isPending: isCreating } = authClient.crm.tasks.createTask.useMutation({
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: TASKS_QUERY_KEY })
-      setIsAddDialogOpen(false)
-      toast.success('Task created successfully')
-    },
-    onError: (e) => toast.error(`Failed to create task: ${e instanceof Error ? e.message : 'Unknown error'}`),
-  })
 
-  const { mutate: updateTask, isPending: isUpdating } = authClient.crm.tasks.updateTask.useMutation({
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: TASKS_QUERY_KEY })
-      setIsEditDialogOpen(false)
-      setSelectedTask(null)
-      toast.success('Task updated successfully')
-    },
-    onError: (e) => toast.error(`Failed to update task: ${e instanceof Error ? e.message : 'Unknown error'}`),
-  })
 
   const { mutate: deleteTask, isPending: isDeleting } = authClient.crm.tasks.deleteTask.useMutation({
     onSuccess: () => {
@@ -116,8 +101,6 @@ export function TaskManagement() {
   }, [tasks, priorityFilter, searchTerm])
 
   // Handlers
-  const handleAddTask = useCallback((data: any) => createTask({ body: data }), [createTask])
-  const handleEditTask = useCallback((data: any) => selectedTask?.id && updateTask({ params: { id: String(selectedTask.id) }, body: data }), [selectedTask?.id, updateTask])
   const handleDeleteTask = useCallback((id: number) => deleteTask({ params: { id: String(id) }, body: {} }), [deleteTask])
   const handleToggleComplete = useCallback((id: number) => completeTask({ params: { id: String(id) }, body: {} }), [completeTask])
 
@@ -129,7 +112,7 @@ export function TaskManagement() {
   if (tasksLoading) return <div>Loading tasks…</div>
 
   return (
-    <div>
+    <div className="space-y-6">
      {/* <div className="space-y-6"> */}
       {/* Header */}
       <div className="flex items-center justify-between">
@@ -139,9 +122,9 @@ export function TaskManagement() {
         </div>
         <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
           <DialogTrigger asChild>
-            <Button disabled={isCreating}>
+            <Button >
               <Plus className="mr-2 h-4 w-4" />
-              {isCreating ? 'Adding…' : 'Add Task'}
+                Add Task
             </Button>
           </DialogTrigger>
           <DialogContent className="max-w-2xl">
@@ -149,7 +132,7 @@ export function TaskManagement() {
               <DialogTitle>Add New Task</DialogTitle>
               <DialogDescription>Create a new task and assign it to a team member.</DialogDescription>
             </DialogHeader>
-            <TaskForm onSubmit={handleAddTask} onCancel={() => setIsAddDialogOpen(false)} users={users} />
+            <TaskForm />
           </DialogContent>
         </Dialog>
       </div>
@@ -229,7 +212,7 @@ export function TaskManagement() {
             <DialogDescription>Update the task details below.</DialogDescription>
           </DialogHeader>
           {selectedTask && (
-            <TaskForm initialData={selectedTask} onSubmit={handleEditTask} onCancel={() => { setIsEditDialogOpen(false); setSelectedTask(null) }} users={users} />
+            <TaskForm initialData={selectedTask} />
           )}
         </DialogContent>
       </Dialog>

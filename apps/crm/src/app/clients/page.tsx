@@ -26,7 +26,7 @@ import { ContactFormInputs } from "@/lib/schemas"
 
 type Contact = typeof ExtendedSelectContactSchema._type
 
-export function ClientManagement() {
+export default function ClientManagement() {
   const { data: clientsData, refetch } = authClient.crm.contacts.listContacts.useQuery({
     queryKey: CONTACTS_QUERY_KEY,
   })
@@ -88,7 +88,9 @@ export function ClientManagement() {
 
   const handleDeleteClient = (clientId: number) => {
     deleteClient(
-      { params: { id: clientId.toString() } },
+      { params: { id: clientId.toString() },
+        body: {},
+      },
       {
         onSuccess: () => {
           toast.success("Client deleted successfully")

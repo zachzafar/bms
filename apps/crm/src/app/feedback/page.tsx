@@ -22,7 +22,7 @@ import { authClient } from '@/lib/api/publicClient'
 
 
 
-export function FeedbackManagement() {
+export default function FeedbackManagement() {
   const queryClient = authClient.useQueryClient()
 
   const [searchTerm, setSearchTerm] = useState('')
@@ -58,9 +58,7 @@ export function FeedbackManagement() {
 
 
   // ——— Mutations ———
-  const { mutate: createFeedback, isPending: isCreating } =
-    (authClient as any).crm?.feedback?.createFeedback
-      ? (authClient as any).crm.feedback.createFeedback.useMutation({
+  const { mutate: createFeedback, isPending: isCreating } = authClient.crm.feedback.createFeedback.useMutation({
           onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: FEEDBACK_QUERY_KEY })
             toast.success('Feedback saved')
@@ -69,21 +67,10 @@ export function FeedbackManagement() {
           },
           onError: (e: any) => toast.error(`Failed to save feedback: ${e?.message ?? 'Unknown error'}`),
         })
-      : (authClient as any).mutation.useMutation({
-          // raw fallback
-          mutationFn: (data: any) => (authClient as any).post('/api/feedback', data),
-          onSuccess: () => {
-            queryClient.invalidateQueries({ queryKey: FEEDBACK_QUERY_KEY })
-            toast.success('Feedback saved')
-            setIsFormOpen(false)
-            setSelectedFeedback(null)
-          },
-          onError: () => toast.error('Failed to save feedback'),
-        })
 
-  const { mutate: updateFeedback, isPending: isUpdating } =
-    (authClient as any).crm?.feedback?.updateFeedback
-      ? (authClient as any).crm.feedback.updateFeedback.useMutation({
+
+
+  const { mutate: updateFeedback, isPending: isUpdating } = authClient.crm.feedback.updateFeedback.useMutation({
           onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: FEEDBACK_QUERY_KEY })
             toast.success('Feedback updated')
@@ -92,33 +79,15 @@ export function FeedbackManagement() {
           },
           onError: (e: any) => toast.error(`Failed to update feedback: ${e?.message ?? 'Unknown error'}`),
         })
-      : (authClient as any).mutation.useMutation({
-          mutationFn: ({ id, ...data }: any) => (authClient as any).put(`/api/feedback/${id}`, data),
-          onSuccess: () => {
-            queryClient.invalidateQueries({ queryKey: FEEDBACK_QUERY_KEY })
-            toast.success('Feedback updated')
-            setIsFormOpen(false)
-            setSelectedFeedback(null)
-          },
-          onError: () => toast.error('Failed to update feedback'),
-        })
 
-  const { mutate: deleteFeedback, isPending: isDeleting } =
-    (authClient as any).crm?.feedback?.deleteFeedback
-      ? (authClient as any).crm.feedback.deleteFeedback.useMutation({
+
+
+  const { mutate: deleteFeedback, isPending: isDeleting } = authClient.crm.feedback.deleteFeedback.useMutation({
           onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: FEEDBACK_QUERY_KEY })
             toast.success('Feedback deleted')
           },
           onError: (e: any) => toast.error(`Failed to delete feedback: ${e?.message ?? 'Unknown error'}`),
-        })
-      : (authClient as any).mutation.useMutation({
-          mutationFn: (id: string) => (authClient as any).delete(`/api/feedback/${id}`),
-          onSuccess: () => {
-            queryClient.invalidateQueries({ queryKey: FEEDBACK_QUERY_KEY })
-            toast.success('Feedback deleted')
-          },
-          onError: () => toast.error('Failed to delete feedback'),
         })
 
   // ——— Filtering ———

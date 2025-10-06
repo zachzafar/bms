@@ -4,9 +4,9 @@ import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Textarea } from "@/components/ui/textarea"
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form"
 import { ContactFormSchema, ContactFormInputs } from "@/lib/schemas"
 import { ExtendedSelectContactSchema } from "@repo/api-contract"
 
@@ -35,85 +35,111 @@ export function ClientForm({ initialData, onSubmit }: ClientFormProps) {
   }
 
   return (
-    <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-4">
-      <div className="grid grid-cols-2 gap-4">
-        <div className="space-y-2">
-          <Label htmlFor="firstName">First Name</Label>
-          <Input
-            id="firstName"
-            {...form.register("firstName")}
-            className={form.formState.errors.firstName ? "border-red-500" : ""}
+    <Form {...form}>
+      <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-4">
+        <div className="grid grid-cols-2 gap-4">
+          <FormField
+            control={form.control}
+            name="firstName"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel htmlFor="firstName">First Name</FormLabel>
+                <FormControl>
+                  <Input id="firstName" placeholder="Enter first name" {...field} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
           />
-          {form.formState.errors.firstName && (
-            <p className="text-sm text-red-500">{form.formState.errors.firstName.message}</p>
-          )}
-        </div>
-        <div className="space-y-2">
-          <Label htmlFor="lastName">Last Name</Label>
-          <Input
-            id="lastName"
-            {...form.register("lastName")}
-            className={form.formState.errors.lastName ? "border-red-500" : ""}
+          
+          <FormField
+            control={form.control}
+            name="lastName"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel htmlFor="lastName">Last Name</FormLabel>
+                <FormControl>
+                  <Input id="lastName" placeholder="Enter last name" {...field} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
           />
-          {form.formState.errors.lastName && (
-            <p className="text-sm text-red-500">{form.formState.errors.lastName.message}</p>
-          )}
         </div>
-      </div>
 
-      <div className="space-y-2">
-        <Label htmlFor="email">Email</Label>
-        <Input
-          id="email"
-          type="email"
-          {...form.register("email")}
-          className={form.formState.errors.email ? "border-red-500" : ""}
+        <FormField
+          control={form.control}
+          name="email"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel htmlFor="email">Email</FormLabel>
+              <FormControl>
+                <Input id="email" type="email" placeholder="Enter email address" {...field} />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
         />
-        {form.formState.errors.email && (
-          <p className="text-sm text-red-500">{form.formState.errors.email.message}</p>
-        )}
-      </div>
 
-      <div className="space-y-2">
-        <Label htmlFor="phone">Phone</Label>
-        <Input 
-          id="phone" 
-          {...form.register("phone")}
+        <FormField
+          control={form.control}
+          name="phone"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel htmlFor="phone">Phone</FormLabel>
+              <FormControl>
+                <Input id="phone" placeholder="Enter phone number" {...field} />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
         />
-      </div>
 
-      <div className="space-y-2">
-        <Label htmlFor="address">Address</Label>
-        <Textarea
-          id="address"
-          {...form.register("address")}
+        <FormField
+          control={form.control}
+          name="address"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel htmlFor="address">Address</FormLabel>
+              <FormControl>
+                <Textarea id="address" placeholder="Enter address" {...field} />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
         />
-      </div>
 
-      <div className="space-y-2">
-        <Label htmlFor="source">Inquiry Source</Label>
-        <Select 
-          value={form.watch("source")} 
-          onValueChange={(value) => form.setValue("source", value as any)}
-        >
-          <SelectTrigger>
-            <SelectValue placeholder="Select inquiry source" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="Website">Website</SelectItem>
-            <SelectItem value="Referral">Referral</SelectItem>
-            <SelectItem value="Walk-In">Walk-In</SelectItem>
-            <SelectItem value="Social">Social</SelectItem>
-            <SelectItem value="Other">Other</SelectItem>
-          </SelectContent>
-        </Select>
-      </div>
+        <FormField
+          control={form.control}
+          name="source"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel htmlFor="source">Inquiry Source</FormLabel>
+              <Select onValueChange={field.onChange} value={field.value}>
+                <FormControl>
+                  <SelectTrigger id="source">
+                    <SelectValue placeholder="Select inquiry source" />
+                  </SelectTrigger>
+                </FormControl>
+                <SelectContent>
+                  <SelectItem value="Website">Website</SelectItem>
+                  <SelectItem value="Referral">Referral</SelectItem>
+                  <SelectItem value="Walk-In">Walk-In</SelectItem>
+                  <SelectItem value="Social">Social</SelectItem>
+                  <SelectItem value="Other">Other</SelectItem>
+                </SelectContent>
+              </Select>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
 
-      <div className="flex justify-end space-x-2 pt-4">
-        <Button type="submit" disabled={form.formState.isSubmitting}>
-          {form.formState.isSubmitting ? "Saving..." : (initialData ? "Update Client" : "Add Client")}
-        </Button>
-      </div>
-    </form>
+        <div className="flex justify-end space-x-2 pt-4">
+          <Button type="submit" disabled={form.formState.isSubmitting}>
+            {form.formState.isSubmitting ? "Saving..." : (initialData ? "Update Client" : "Add Client")}
+          </Button>
+        </div>
+      </form>
+    </Form>
   )
 }

@@ -74,7 +74,6 @@ export const ExtendedSelectTaskSchema = SelectTaskSchema
   });
 
 export const ExtendedSelectBrochureSchema = SelectBrochureSchema.extend({
-  contact: SelectContactSchema,
   assets: z.array(SelectAssetSchema),
 });
 
@@ -88,7 +87,7 @@ export const contactContract = c.router({
     method: "POST",
     path: "/contact",
     summary: "Create a new contact",
-    body: InsertContactSchema,
+    body: InsertContactSchema.omit({ tenantId: true }),
     responses: {
       201: z.object({ message: z.string(), contactId: z.number() }),
       400: z.object({ message: z.string() }),
@@ -122,7 +121,7 @@ export const contactContract = c.router({
     path: "/contact/:id",
     summary: "Update a contact by id",
     pathParams: z.object({ id: z.string() }),
-    body: UpdateContactSchema,
+    body: UpdateContactSchema.omit({ tenantId: true,id: true }),
     responses: {
       200: z.object({ message: z.string() }),
     },
@@ -221,7 +220,11 @@ export const inquiryContract = c.router({
     method: "POST",
     path: "/inquiry",
     summary: "Create a new inquiry",
-    body: InsertInquirySchema,
+    body: InsertInquirySchema.omit({ tenantId: true, contactId: true, inquiryDate: true, followUpDate: true }).extend({
+      contactId: z.number(),
+      inquiryDate: z.string(),
+      followUpDate: z.string().optional(),
+    }),
     responses: { 201: z.object({ message: z.string(), inquiryId: z.number() }) },
   },
   listInquiries: {
@@ -249,7 +252,11 @@ export const inquiryContract = c.router({
     path: "/inquiry/:id",
     summary: "Update an inquiry by id",
     pathParams: z.object({ id: z.string() }),
-    body: UpdateInquirySchema,
+    body: UpdateInquirySchema.omit({ tenantId: true, id: true, inquiryDate: true, followUpDate: true }).extend({
+      contactId: z.number(),
+      inquiryDate: z.string().optional(),
+      followUpDate: z.string().optional(),
+    }),
     responses: { 200: z.object({ message: z.string() }) },
   },
   deleteInquiry: {
@@ -276,7 +283,7 @@ export const commsContract = c.router({
     method: "POST",
     path: "/communication",
     summary: "Create a communication log",
-    body: InsertCommunicationLogSchema,
+    body: InsertCommunicationLogSchema.omit({ tenantId: true }),
     responses: { 201: z.object({ message: z.string(), communicationId: z.number() }) },
   },
   listComms: {
@@ -369,7 +376,7 @@ export const brochureContract = c.router({
     method: "POST",
     path: "/brochure",
     summary: "Create a brochure for a contact",
-    body: InsertBrochureSchema,
+    body: InsertBrochureSchema.omit({ tenantId: true }),
     responses: { 201: z.object({ message: z.string(), brochureId: z.number() }) },
   },
   listBrochures: {
@@ -426,7 +433,9 @@ export const taskContract = c.router({
     method: "POST",
     path: "/task",
     summary: "Create a task",
-    body: InsertTaskSchema,
+    body: InsertTaskSchema.omit({ tenantId: true, dueDate: true }).extend({
+      dueDate: z.string(),
+    }),
     responses: { 201: z.object({ message: z.string(), taskId: z.number() }) },
   },
   listTasks: {
@@ -454,7 +463,9 @@ export const taskContract = c.router({
     path: "/task/:id",
     summary: "Update a task by id",
     pathParams: z.object({ id: z.string() }),
-    body: UpdateTaskSchema,
+    body: UpdateTaskSchema.omit({ tenantId: true, dueDate: true, id: true }).extend({
+      dueDate: z.string().optional(),
+    }),
     responses: { 200: z.object({ message: z.string() }) },
   },
   deleteTask: {
@@ -481,7 +492,7 @@ export const documentContract = c.router({
     method: "POST",
     path: "/document",
     summary: "Create (record) a document for a contact",
-    body: InsertDocumentSchema,
+    body: InsertDocumentSchema.omit({ tenantId: true }),
     responses: { 201: z.object({ message: z.string(), documentId: z.number() }) },
   },
   listDocuments: {

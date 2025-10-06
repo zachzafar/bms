@@ -3,6 +3,7 @@
 import type React from "react"
 
 import { useState } from "react"
+import { usePathname } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Sheet, SheetContent } from "@/components/ui/sheet"
 import { Menu, Users, Building, MessageSquare, CheckSquare, BarChart3, FileText, Settings } from "lucide-react"
@@ -10,14 +11,16 @@ import { cn } from "@/lib/utils"
 import { AppHeader } from "./app-header"
 
 const navigation = [
-  { name: "Dashboard", href: "/", icon: BarChart3, current: true },
-  { name: "Clients", href: "/clients", icon: Users, current: false },
-  // { name: "Properties", href: "/properties", icon: Building, current: false },
-  { name: "Inquiries", href: "/inquiries", icon: MessageSquare, current: false },
-  { name: "Tasks", href: "/tasks", icon: CheckSquare, current: false },
-  { name: "Communications", href: "/communications", icon: FileText, current: false },
-  { name: "Reports", href: "/reports", icon: BarChart3, current: false },
-  // { name: "Settings", href: "/settings", icon: Settings, current: false },
+  { name: "Dashboard", href: "/", icon: BarChart3 },
+  { name: "Clients", href: "/clients", icon: Users },
+  // { name: "Properties", href: "/properties", icon: Building },
+  { name: "Feedback", href: "/feedback", icon: MessageSquare },
+  { name: "Brochures", href: "/brochure", icon: FileText },
+  { name: "Inquiries", href: "/inquiries", icon: MessageSquare },
+  { name: "Tasks", href: "/tasks", icon: CheckSquare },
+  { name: "Communications", href: "/communications", icon: FileText },
+  { name: "Reports", href: "/reports", icon: BarChart3 },
+  // { name: "Settings", href: "/settings", icon: Settings },
 ]
 
 interface DashboardLayoutProps {
@@ -26,6 +29,15 @@ interface DashboardLayoutProps {
 
 export function DashboardLayout({ children }: DashboardLayoutProps) {
   const [sidebarOpen, setSidebarOpen] = useState(false)
+  const pathname = usePathname()
+
+  // Function to determine if a navigation item is current
+  const isCurrentPath = (href: string) => {
+    if (href === "/") {
+      return pathname === "/"
+    }
+    return pathname.startsWith(href)
+  }
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -37,26 +49,29 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
               <h1 className="text-xl font-bold text-gray-900">CRM System</h1>
             </div>
             <nav className="flex-1 space-y-1 px-3 py-4">
-              {navigation.map((item) => (
-                <a
-                  key={item.name}
-                  href={item.href}
-                  className={cn(
-                    item.current
-                      ? "bg-blue-50 border-blue-500 text-blue-700"
-                      : "border-transparent text-gray-600 hover:bg-gray-50 hover:text-gray-900",
-                    "group flex items-center px-3 py-2 text-sm font-medium border-l-4 rounded-r-md",
-                  )}
-                >
-                  <item.icon
+              {navigation.map((item) => {
+                const isCurrent = isCurrentPath(item.href)
+                return (
+                  <a
+                    key={item.name}
+                    href={item.href}
                     className={cn(
-                      item.current ? "text-blue-500" : "text-gray-400 group-hover:text-gray-500",
-                      "mr-3 h-5 w-5",
+                      isCurrent
+                        ? "bg-blue-50 border-blue-500 text-blue-700"
+                        : "border-transparent text-gray-600 hover:bg-gray-50 hover:text-gray-900",
+                      "group flex items-center px-3 py-2 text-sm font-medium border-l-4 rounded-r-md",
                     )}
-                  />
-                  {item.name}
-                </a>
-              ))}
+                  >
+                    <item.icon
+                      className={cn(
+                        isCurrent ? "text-blue-500" : "text-gray-400 group-hover:text-gray-500",
+                        "mr-3 h-5 w-5",
+                      )}
+                    />
+                    {item.name}
+                  </a>
+                )
+              })}
             </nav>
           </div>
         </SheetContent>
@@ -75,7 +90,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
                   key={item.name}
                   href={item.href}
                   className={cn(
-                    item.current
+                    isCurrentPath(item.href)
                       ? "bg-blue-50 border-blue-500 text-blue-700"
                       : "border-transparent text-gray-600 hover:bg-gray-50 hover:text-gray-900",
                     "group flex items-center px-3 py-2 text-sm font-medium border-l-4 rounded-r-md",
@@ -83,7 +98,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
                 >
                   <item.icon
                     className={cn(
-                      item.current ? "text-blue-500" : "text-gray-400 group-hover:text-gray-500",
+                      isCurrentPath(item.href) ? "text-blue-500" : "text-gray-400 group-hover:text-gray-500",
                       "mr-3 h-5 w-5",
                     )}
                   />
