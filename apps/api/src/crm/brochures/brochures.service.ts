@@ -4,6 +4,10 @@ import * as schema from '@repo/api-contract';
 import { DrizzleAsyncProvider } from 'src/drizzle/drizzle.provider';
 import { and, eq, inArray } from 'drizzle-orm';
 
+export type BrochureWithAssets = schema.SelectBrochure & {
+  assets: schema.SelectAsset[];
+}
+
 @Injectable()
 export class BrochuresService {
   constructor(@Inject(DrizzleAsyncProvider) private db: MySql2Database<typeof schema>) {}
@@ -13,44 +17,45 @@ export class BrochuresService {
     return id;
   }
 
-  // async list(tenantId: string, query: { contactId?: string }) {
-  //   const brochures = await this.db.query.Brochure.findMany({
-  //     where: (b, { eq, and }) => and(
-  //       eq(b.tenantId, tenantId),
-  //       query.contactId ? eq(b.contactId, Number(query.contactId)) : undefined
-  //     ),
-  //   });
+  async list(tenantId: string) {
+    const brochures = await this.db.query.Brochure.findMany({
+      where: (b, { eq }) => 
+        eq(b.tenantId, tenantId)
+    });
 
-  //   const ids = brochures.map((b) => b.id);
-  //   const links = ids.length
-  //     ? await this.db.query.BrochureAsset.findMany({ where: (bp, { inArray }) => inArray(bp.brochureId, ids) })
-  //     : [];
-  //   const assetsByBrochure = new Map<number, string[]>();
-  //   links.forEach((l) => {
-  //     assetsByBrochure.set(l.brochureId, [...(assetsByBrochure.get(l.brochureId) ?? []), l.assetId]);
-  //   });
+    const ids = brochures.map((b) => BigInt(b.id));
+    const links = ids.length
+      ? await this.db.query.BrochureAsset.findMany({ where: (bp, { inArray }) => inArray(bp.brochureId, ids) })
+      : [];
+    const assetsByBrochure = new Map<number, string[]>();
+    links.forEach((l) => {
+      assetsByBrochure.set(Number(l.brochureId), [...(assetsByBrochure.get(Number(l.brochureId)) ?? []), l.assetId]);
+    });
 
-  //   // hydrate contact + assets
-  //   const res = [];
-  //   for (const b of brochures) {
-  //     const contact = await this.db.query.Contact.findFirst({ where: (c, { eq }) => eq(c.id, b.contactId) });
-  //     const assets = await this.db.query.Asset.findMany({
-  //       where: (a, { inArray }) => inArray(a.id, assetsByBrochure.get(b.id) ?? []),
-  //     });
-  //     res.push({ ...b, contact, assets });
-  //   }
-  //   return res;
-  // }
+    // hydrate contact + assets
+    const res: BrochureWithAssets[] = [];
+    for (const b of brochures) {
+      // const contact = await this.db.query.Contact.findFirst({ where: (c, { eq }) => eq(c.id, b.contactId) });
+      const assets = await this.db.query.Asset.findMany({
+        where: (a, { inArray }) => inArray(a.id, assetsByBrochure.get(b.id) ?? []),
+      });
+      // res.push({ ...b, contact, assets });
+      res.push({ ...b, assets: assets.map(a => ({ ...a, assetTypeId: Number(a.assetTypeId) })) });
+    }
+    return res;
+  }
 
   async get(id: number) {
     const brochure = await this.db.query.Brochure.findFirst({ where: (b, { eq }) => eq(b.id, id) });
     if (!brochure) return null;
-    const contact = await this.db.query.Contact.findFirst({ where: (c, { eq }) => eq(c.id, Number(brochure.contactId)) });
+
+    const contactLinks = await this.db.query.BrochureContact.findMany({ where: (bp, { eq }) => eq(bp.brochureId, BigInt(id)) });
+    
     const links = await this.db.query.BrochureAsset.findMany({ where: (bp, { eq }) => eq(bp.brochureId, BigInt(id)) });
     const assets = await this.db.query.Asset.findMany({
       where: (a, { inArray }) => inArray(a.id, links.map((l) => l.assetId)),
     });
-    return { ...brochure, contact, assets };
+    return { ...brochure, assets: assets.map(a => ({ ...a, assetTypeId: Number(a.assetTypeId) })) };
   }
 
   async remove(id: number) {

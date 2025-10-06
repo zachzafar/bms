@@ -8,8 +8,8 @@ import { and, eq } from 'drizzle-orm';
 export class FeedbackService {
   constructor(@Inject(DrizzleAsyncProvider) private db: MySql2Database<typeof schema>) {}
 
-  async create(data: Omit<schema.InsertFeedback, 'id'>) {
-    const [{ id }] = await this.db.insert(schema.Feedback).values(data).$returningId();
+  async create(data: Omit<schema.InsertFeedback, 'id'>,tenantId: string) {
+    const [{ id }] = await this.db.insert(schema.Feedback).values({...data, contactId: BigInt(data.contactId), tenantId}).$returningId();
     return id;
   }
 
@@ -55,8 +55,8 @@ export class FeedbackService {
     return this.toExtended(rows[0]);
   }
 
-  async update(id: number, patch: Partial<schema.UpdateFeedback>) {
-    await this.db.update(schema.Feedback).set(patch).where(eq(schema.Feedback.id, id)).execute();
+  async update(id: number, patch: schema.UpdateFeedback) {
+    await this.db.update(schema.Feedback).set({...patch, contactId: BigInt(patch.contactId)}).where(eq(schema.Feedback.id, id)).execute();
   }
 
   async remove(id: number) {

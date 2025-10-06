@@ -16,30 +16,29 @@ export class BrochuresController {
   async create(@Headers() headers: any): Promise<ReturnType<typeof tsRestHandler>> {
     return tsRestHandler(crmContract.brochures.createBrochure, async ({ body }) => {
       const tenantId = headers['x-tenant-id'];
-      await this.tenantService.validateTenantAccess(tenantId, schema.Contact, body.contactId);
       const id = await this.brochures.create({ ...body, tenantId });
       return { status: 201, body: { message: 'brochure created', brochureId: id } };
     });
   }
 
-  // @TsRestHandler(crmContract.brochures.listBrochures)
-  // async list(@Headers() headers: any): Promise<ReturnType<typeof tsRestHandler>> {
-  //   return tsRestHandler(crmContract.brochures.listBrochures, async ({ query }) => {
-  //     const tenantId = headers['x-tenant-id'];
-  //     const rows = await this.brochures.list(tenantId, query);
-  //     return { status: 200, body: rows };
-  //   });
-  // }
+  @TsRestHandler(crmContract.brochures.listBrochures)
+  async list(@Headers() headers: any): Promise<ReturnType<typeof tsRestHandler>> {
+    return tsRestHandler(crmContract.brochures.listBrochures, async () => {
+      const tenantId = headers['x-tenant-id'];
+      const rows = await this.brochures.list(tenantId);
+      return { status: 200, body: rows };
+    });
+  }
 
-  // @TsRestHandler(crmContract.brochures.getBrochure)
-  // async get(@Headers() headers: any): Promise<ReturnType<typeof tsRestHandler>> {
-  //   return tsRestHandler(crmContract.brochures.getBrochure, async ({ params }) => {
-  //     const tenantId = headers['x-tenant-id'];
-  //     await this.tenantService.validateTenantAccess(tenantId, schema.Brochure, Number(params.id));
-  //     const row = await this.brochures.get(Number(params.id));
-  //     return row ? { status: 200, body: row } : { status: 404, body: undefined };
-  //   });
-  // }
+  @TsRestHandler(crmContract.brochures.getBrochure)
+  async get(@Headers() headers: any): Promise<ReturnType<typeof tsRestHandler>> {
+    return tsRestHandler(crmContract.brochures.getBrochure, async ({ params }) => {
+      const tenantId = headers['x-tenant-id'];
+      await this.tenantService.validateTenantAccess(tenantId, schema.Brochure, Number(params.id));
+      const row = await this.brochures.get(Number(params.id));
+      return row ? { status: 200, body: row } : { status: 404, body: undefined };
+    });
+  }
 
   @TsRestHandler(crmContract.brochures.deleteBrochure)
   async remove(@Headers() headers: any): Promise<ReturnType<typeof tsRestHandler>> {
@@ -56,11 +55,8 @@ export class BrochuresController {
     return tsRestHandler(crmContract.brochures.addBrochureAssets, async ({ params, body }) => {
       const tenantId = headers['x-tenant-id'];
       await this.tenantService.validateTenantAccess(tenantId, schema.Brochure, Number(params.id));
-      for (const assetId of body.assetIds) {
-        await this.tenantService.validateTenantAccess(tenantId, schema.Asset, assetId);
-      }
       const added = await this.brochures.addAssets(Number(params.id), body.assetIds);
-      return { status: 200, body: { message: 'assets added', added } };
+      return { status: 200, body: { message: 'Assets added to brochure', added } };
     });
   }
 
@@ -69,7 +65,6 @@ export class BrochuresController {
     return tsRestHandler(crmContract.brochures.removeBrochureAsset, async ({ params }) => {
       const tenantId = headers['x-tenant-id'];
       await this.tenantService.validateTenantAccess(tenantId, schema.Brochure, Number(params.id));
-      await this.tenantService.validateTenantAccess(tenantId, schema.Asset, params.assetId);
       await this.brochures.removeAsset(Number(params.id), params.assetId);
       return { status: 204, body: undefined };
     });
@@ -80,8 +75,8 @@ export class BrochuresController {
   //   return tsRestHandler(crmContract.brochures.listBrochureAssets, async ({ params }) => {
   //     const tenantId = headers['x-tenant-id'];
   //     await this.tenantService.validateTenantAccess(tenantId, schema.Brochure, Number(params.id));
-  //     const rows = await this.brochures.listAssets(Number(params.id));
-  //     return { status: 200, body: rows };
+  //     const assets = await this.brochures.listAssets(Number(params.id));
+  //     return { status: 200, body: assets };
   //   });
   // }
 }

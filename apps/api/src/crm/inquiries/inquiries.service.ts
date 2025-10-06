@@ -9,7 +9,7 @@ export class InquiriesService {
   constructor(@Inject(DrizzleAsyncProvider) private db: MySql2Database<typeof schema>) {}
 
   async createInquiry(data: Omit<schema.InsertInquiry, 'id'>) {
-    const [{ id }] = await this.db.insert(schema.Inquiry).values(data).$returningId();
+    const [{ id }] = await this.db.insert(schema.Inquiry).values({...data, contactId: BigInt(data.contactId)}).$returningId();
     return id;
   }
 
@@ -52,7 +52,12 @@ export class InquiriesService {
       return true;
     });
 
-    return filtered.map(this.toExtended);
+    return filtered.map((i) => ({
+      ...i,
+      assets: {
+
+      }
+    })).map(this.toExtended);
   }
 
   async getInquiry(id: number) {
@@ -70,7 +75,8 @@ export class InquiriesService {
   }
 
   async updateInquiry(id: number, patch: Partial<schema.UpdateInquiry>) {
-    await this.db.update(schema.Inquiry).set(patch).where(eq(schema.Inquiry.id, id)).execute();
+    const contactId = patch.contactId ? BigInt(patch.contactId) : undefined
+    await this.db.update(schema.Inquiry).set({...patch, contactId}).where(eq(schema.Inquiry.id, id)).execute();
   }
 
   async deleteInquiry(id: number) {

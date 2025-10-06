@@ -37,7 +37,7 @@ const allowAllCorsEndpoints = [
   imports: [DrizzleModule, SchemaDesignModule, AuthModule, UsersModule,ConfigModule.forRoot({
     isGlobal: true, // Makes ConfigService globally available
     envFilePath: '.env', // Path to your environment file
-  }), AssetsModule, BookingModule, MaintenanceModule, TeamsModule, TenantModule, ObjectStorageModule, KeysModule, AnalyticsModule, SlotModule, EventEmitterModule.forRoot(), EmailModule, RatesModule, TagsModule, BillingModule, CrmModule, SystemAdminModule],
+  }), AssetsModule, BookingModule, MaintenanceModule, TeamsModule, TenantModule, ObjectStorageModule, KeysModule, AnalyticsModule, SlotModule, EventEmitterModule.forRoot(), EmailModule, RatesModule, TagsModule, BillingModule, CrmModule, SystemAdminModule,],
   controllers: [AppController, SlotController],
   providers: [AppService, ObjectStorageService, SlotService],
 })
