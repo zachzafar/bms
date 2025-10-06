@@ -2,7 +2,7 @@ import { initContract } from "@ts-rest/core";
 
 import { z } from "zod";
 
-import { InsertBookingSchema, SelectAssetSchema, SelectBookingSchema, SelectCustomerSchema, SelectUserSchema, UpdateBookingSchema } from "../database-schema";
+import { InsertBlockedDateSchema, InsertBookingSchema, SelectAssetSchema, SelectBookingSchema, SelectCustomerSchema, SelectUserSchema, UpdateBlockedDateSchema, UpdateBookingSchema } from "../database-schema";
 
 
 const c = initContract();
@@ -115,4 +115,65 @@ export const bookingContract = c.router({
         },
         summary: 'Get blocked date ranges for a tag',
     },
-})
+// Blocked Dates routes
+  getBlockedDates: {
+    method: "GET",
+    path: "/blocked-dates",
+    query: z
+      .object({
+        assetId: z.string().optional(), // optional filter by asset
+      })
+      .optional(),
+    responses: {
+      200: z.array(
+        z.object({
+          id: z.number(),
+          tenantId: z.string(),
+          assetId: z.string(),
+          startDate: z.string(),
+          endDate: z.string(),
+          title: z.string().min(1, "Title is required"),
+          reason: z.string().optional(),
+          createdAt: z.string(),
+          updatedAt: z.string(),
+        })
+      ),
+    },
+    summary: "Get all blocked dates, optionally filtered by asset",
+  },
+
+  createBlockedDate: {
+    method: "POST",
+    path: "/blocked-dates",
+    body: InsertBlockedDateSchema,
+    responses: {
+      201: z.object({
+        message: z.string(),
+        blockedDateId: z.number(),
+      }),
+    },
+    summary: "Create a new blocked date",
+  },
+
+  updateBlockedDate: {
+    method: "PUT",
+    path: "/blocked-dates/:id",
+    pathParams: z.object({ id: z.number() }),
+    body: UpdateBlockedDateSchema,
+    responses: {
+      200: z.object({ message: z.string() }),
+    },
+    summary: "Update a blocked date by ID",
+  },
+
+  deleteBlockedDate: {
+    method: "DELETE",
+    path: "/blocked-dates/:id",
+    pathParams: z.object({ id: z.string() }),
+    body: z.object({}).optional(),
+    responses: {
+      204: z.undefined(),
+    },
+    summary: "Delete a blocked date by ID",
+  },
+});

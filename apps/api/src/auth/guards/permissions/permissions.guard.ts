@@ -1,8 +1,9 @@
-import { Injectable, CanActivate, ExecutionContext, ForbiddenException, Logger } from '@nestjs/common';
+import { Injectable, CanActivate, ExecutionContext, ForbiddenException, Logger, UnauthorizedException } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import { AuthService } from 'src/auth/auth.service';
 import { ROLES_KEY } from 'src/auth/decorators/permissions.decorator';
 import { PermissionScope } from 'src/auth/permissions';
+import { KeysService } from 'src/keys/keys.service';
 
 @Injectable()
 export class PermissionsGuard implements CanActivate {
@@ -10,20 +11,29 @@ export class PermissionsGuard implements CanActivate {
 
   constructor(
     private readonly reflector: Reflector,
-    private readonly authService: AuthService
+    private readonly authService: AuthService,
+    private readonly keysService: KeysService,
   ) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
+    const request = context.switchToHttp().getRequest();
+
+    // 🔑 Check API key first
+    const apiKey = request.headers['x-api-key'] as string;
+    if (apiKey && await this.keysService.isValidKey(apiKey)) {
+      this.logger.log('Request authorized via API Key');
+      return true; // bypass tenant/user permissions
+    }
+
+    // ⬇️ Normal JWT + permissions flow
     const requiredPermissions = this.reflector.getAllAndOverride<PermissionScope[]>(
       ROLES_KEY,
       [context.getHandler(), context.getClass()],
     );
 
-    if (!requiredPermissions) {
-      return true; // No permissions required
-    }
+    // If no permissions required, allow
+    if (!requiredPermissions) return true;
 
-    const request = context.switchToHttp().getRequest();
     const user = request.user;
     const tenantId = request.headers['x-tenant-id'] as string;
 
@@ -32,8 +42,7 @@ export class PermissionsGuard implements CanActivate {
       throw new ForbiddenException('User not authenticated');
     }
 
-    const userId = user.id ?? user.sub; // ✅ support both id or sub
-
+    const userId = user.id ?? user.sub;
     this.logger.log(`Permissions guard - User ID: ${userId}`);
     this.logger.log(`Permissions guard - Tenant ID: ${tenantId}`);
 
@@ -57,9 +66,11 @@ export class PermissionsGuard implements CanActivate {
   ): Promise<boolean> {
     const permissions = await this.authService.getUserPermissionsForTenant(userId, tenantId);
 
-    this.logger.debug(`User ${userId} has permissions in tenant ${tenantId}: ${permissions.join(', ')}`);
+    this.logger.debug(
+      `User ${userId} has permissions in tenant ${tenantId}: ${permissions.join(', ')}`
+    );
 
-    const hasPermission = requiredPermissions.every(permission => permissions.includes(permission));
+    const hasPermission = requiredPermissions.every((p) => permissions.includes(p));
 
     if (!hasPermission) {
       this.logger.warn(

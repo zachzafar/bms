@@ -51,7 +51,7 @@ const CreateCustomerSchema = z.object({
   phone: z.string().min(1, 'Phone number is required'),
   address: z.string().min(1, 'Address is required'),
   dateOfBirth: z.string().optional(),
-  userType: z.array(z.string()).default(['customer']),
+  userType: z.string().default('customer'),
 })
 
 type CreateCustomerFormData = z.infer<typeof CreateCustomerSchema>;
@@ -76,7 +76,7 @@ export default function Component() {
   const createForm = useForm<CreateCustomerFormData>({
     resolver: zodResolver(CreateCustomerSchema),
     defaultValues: {
-      userType: ['customer'],
+      userType: 'customer',
     }
   });
 
@@ -88,7 +88,7 @@ export default function Component() {
         body: {
           ...data,
           password: 'password',
-          userType: ['customer'],
+          userType: 'customer',
           roles: [],
           customerDetails: {
             phone: data?.phone || null,

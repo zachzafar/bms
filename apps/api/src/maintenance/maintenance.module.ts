@@ -8,10 +8,11 @@ import { TenantModule } from 'src/tenant/tenant.module';
 import { ObjectStorageService } from 'src/object-storage/object-storage.service';
 import { AuthModule } from 'src/auth/auth.module';
 import { PermissionsGuard } from 'src/auth/guards/permissions/permissions.guard';
+import { KeysModule } from 'src/keys/keys.module';
 
 
 @Module({
-  imports: [DrizzleModule,forwardRef(() => BookingModule),TenantModule, AuthModule ],
+  imports: [DrizzleModule,forwardRef(() => BookingModule),TenantModule, AuthModule, KeysModule ],
   providers: [MaintenanceService,TenantService,ObjectStorageService, PermissionsGuard],
   controllers: [MaintenanceController],
   exports: [MaintenanceService]

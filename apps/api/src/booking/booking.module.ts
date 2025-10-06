@@ -5,6 +5,7 @@ import { DrizzleModule } from 'src/drizzle/drizzle.module';
 import { MaintenanceModule } from 'src/maintenance/maintenance.module';
 import { SlotService } from 'src/slot/slot.service';
 import { TenantService } from 'src/tenant/tenant.service';
+import { KeysModule } from 'src/keys/keys.module';
 
 @Module({
   imports: [DrizzleModule,forwardRef(() => MaintenanceModule)],

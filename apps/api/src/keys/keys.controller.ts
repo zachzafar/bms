@@ -7,7 +7,7 @@ import { Roles } from 'src/auth/decorators/permissions.decorator';
 import { PermissionScope } from 'src/auth/permissions';
 import { PermissionsGuard } from 'src/auth/guards/permissions/permissions.guard';
 
-@UseGuards(PermissionsGuard)
+// @UseGuards(PermissionsGuard)
 @Controller()
 export class KeysController {
     private readonly logger = new Logger(KeysController.name);

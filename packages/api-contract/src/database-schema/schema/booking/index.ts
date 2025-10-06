@@ -123,6 +123,48 @@ export const RatesRelations = relations(Rate, ({ many }) => ({
   assets: many(AssetHasRates),
 }));
 
+// Blocked Dates table
+export const BlockedDate = mysqlTable("blocked_date", {
+  id: serial("id").primaryKey(),
+  tenantId: varchar("tenant_id", { length: 255 }).notNull(),
+  assetId: varchar("asset_id", { length: 255 }).notNull(), // optional if block is asset-specific
+  startDate: date("start_date").notNull(),
+  endDate: date("end_date").notNull(),
+  title: varchar("title", { length: 255 }).notNull(),
+  reason: varchar("reason", { length: 255 }),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").$onUpdate(() => new Date()),
+}, (table) => ({
+  tenantIdx: index("blocked_tenant_idx").on(table.tenantId),
+  assetIdx: index("blocked_asset_idx").on(table.assetId),
+  dateIdx: index("blocked_date_idx").on(table.startDate, table.endDate),
+}));
+
+// Zod schemas for insert/select/update
+export const InsertBlockedDateSchema = createInsertSchema(BlockedDate)
+  .omit({ startDate: true, endDate: true })
+  .extend({
+    startDate: z.string(),
+    endDate: z.string(),
+    reason: z.string().optional(),
+    assetId: z.string(), // optional if you allow global blocks
+    tenantId: z.string(),
+  });
+
+export const SelectBlockedDateSchema = createSelectSchema(BlockedDate);
+export const UpdateBlockedDateSchema = InsertBlockedDateSchema.partial();
+
+export type InsertBlockedDate = z.infer<typeof InsertBlockedDateSchema>;
+export type SelectBlockedDate = z.infer<typeof SelectBlockedDateSchema>;
+export type UpdateBlockedDate = z.infer<typeof UpdateBlockedDateSchema>;
+
+// Optional: relations
+export const BlockedDateRelations = relations(BlockedDate, ({ one }) => ({
+  asset: one(Asset, {
+    fields: [BlockedDate.assetId],
+    references: [Asset.id],
+  }),
+}));
 
 
 
