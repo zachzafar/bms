@@ -1,4 +1,4 @@
-import { Controller, Headers } from '@nestjs/common';
+import { Controller, Headers, BadRequestException } from '@nestjs/common';
 import { TsRestHandler, tsRestHandler } from '@ts-rest/nest';
 import { crmContract } from '@repo/api-contract';
 import { TasksService } from './task.service'
@@ -12,6 +12,20 @@ export class TasksController {
     private readonly tenantService: TenantService
   ) {}
 
+  // Helper method to validate and convert date strings
+  private validateAndConvertDate(dateString: string): Date{
+    
+    // Validate if the string is a valid date
+    const date = new Date(dateString);
+    
+    // Check if the date is valid (not NaN) and the string is not empty
+    if (isNaN(date.getTime()) || dateString.trim() === '') {
+      throw new BadRequestException(`Invalid date format: ${dateString}`);
+    }
+    
+    return date;
+  }
+
   @TsRestHandler(crmContract.tasks.createTask)
   async create(@Headers() headers: any): Promise<ReturnType<typeof tsRestHandler>> {
     return tsRestHandler(crmContract.tasks.createTask, async ({ body }) => {
@@ -20,7 +34,11 @@ export class TasksController {
       await this.tasks.assertUserInTenant(tenantId, body.userId);
       // Validate contact if provided
       if (body.contactId) await this.tenantService.validateTenantAccess(tenantId, schema.Contact, body.contactId);
-      const id = await this.tasks.create({ ...body, tenantId });
+      
+      // Validate and convert dueDate
+      const dueDate = this.validateAndConvertDate(body.dueDate);
+      
+      const id = await this.tasks.create({ ...body, tenantId, dueDate });
       return { status: 201, body: { message: 'task created', taskId: id } };
     });
   }
@@ -51,7 +69,11 @@ export class TasksController {
       await this.tenantService.validateTenantAccess(tenantId, schema.Task, Number(params.id));
       if (body.userId) await this.tasks.assertUserInTenant(tenantId, body.userId);
       if (body.contactId) await this.tenantService.validateTenantAccess(tenantId, schema.Contact, body.contactId);
-      await this.tasks.update(Number(params.id), body);
+      
+      // Validate and convert dueDate if provided
+
+      
+      await this.tasks.update(Number(params.id), {...body, dueDate: body.dueDate ? this.validateAndConvertDate(body.dueDate): undefined});
       return { status: 200, body: { message: 'task updated' } };
     });
   }
