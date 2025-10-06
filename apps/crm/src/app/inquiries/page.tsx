@@ -17,7 +17,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Plus, Search, MoreHorizontal, Edit, Eye, Trash2, User, Building, Calendar, AlertCircle } from "lucide-react"
-import { InquiryForm } from "@/components/inquiry-form"
+import  InquiryForm  from "@/components/inquiry-form"
 import { InquiryDetail } from "@/components/inquiry-detail"
 import { authClient } from "@/lib/api/publicClient"
 import { INQUIRIES_QUERY_KEY } from "@/lib/api/queryKeys"
@@ -27,7 +27,7 @@ import { InquiryFormInputs } from "@/lib/schemas"
 
 type Inquiry = typeof ExtendedSelectInquirySchema._type
 
-export function InquiryManagement() {
+export default function InquiryManagement() {
   const { data: inquiriesData, refetch } = authClient.crm.inquiries.listInquiries.useQuery({
     queryKey: INQUIRIES_QUERY_KEY,
   })
@@ -95,7 +95,9 @@ export function InquiryManagement() {
 
   const handleDeleteInquiry = (inquiryId: number) => {
     deleteInquiry(
-      { params: { id: inquiryId.toString() } },
+      { params: { id: inquiryId.toString() },
+        body: {},
+      },
       {
         onSuccess: () => {
           toast.success("Inquiry deleted successfully")
@@ -255,7 +257,7 @@ export function InquiryManagement() {
                   <TableCell>
                     <div className="flex items-center space-x-2">
                       <User className="h-4 w-4 text-muted-foreground" />
-                      <span>{inquiry.assignee.firstName} {inquiry.assignee.lastName}</span>
+                      <span>{inquiry.assignee.name}</span>
                     </div>
                   </TableCell>
                   <TableCell>

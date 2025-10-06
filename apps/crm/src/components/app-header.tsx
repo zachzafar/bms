@@ -32,11 +32,11 @@ interface AppOption {
 
 const appOptions: AppOption[] = [
   {
-    id: 'crm',
-    name: 'CRM System',
-    description: 'Manage clients, inquiries, and business relationships',
-    icon: <Users className="h-4 w-4" />,
-    url: process.env.NODE_ENV === 'production' ? 'https://crm.bookos.xyz' : 'http://localhost:3001',
+    id: 'booking',
+    name: 'Booking',
+    description: 'Manage bookings, invoices, assets and payments',
+    icon: <Calendar className="h-4 w-4" />,
+    url: process.env.NODE_ENV === 'production' ? 'https://booking.bookos.xyz' : 'http://localhost:3000',
     color: 'text-purple-600'
   },
   {

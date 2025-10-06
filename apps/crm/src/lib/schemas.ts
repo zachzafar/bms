@@ -11,26 +11,26 @@ export const ContactFormSchema = z.object({
 })
 
 export const InquiryFormSchema = z.object({
-  contactId: z.number({ message: 'Contact is required' }),
-  assetId: z.string({ message: 'Asset is required' }),
-  inquiryDate: z.string({ message: 'Inquiry date is required' }),
-  status: z.enum(['New', 'Follow-Up', 'Closed']).default('New'),
+  contactId: z.number(),
+  assetId: z.string(),
+  inquiryDate: z.string(),
+  status: z.enum(["New", "Follow-Up", "Closed"]),
   followUpDate: z.string().optional(),
-  assignedTo: z.string({ message: 'Assignee is required' }),
+  assignedTo: z.string(),
   notes: z.string().optional(),
-})
+});
 
 export const CommunicationFormSchema = z.object({
   contactId: z.number({ message: 'Contact is required' }),
   type: z.enum(['Email', 'Phone Call', 'Meeting']),
   summary: z.string().min(1, { message: 'Summary is required' }),
-  date: z.string({ message: 'Date is required' }),
+  date: z.date({ message: 'Date is required' }),
 })
 
 export const FeedbackFormSchema = z.object({
   contactId: z.number({ message: 'Contact is required' }),
   assetId: z.string({ message: 'Asset is required' }),
-  viewingDate: z.string({ message: 'Viewing date is required' }),
+  viewingDate: z.date({ message: 'Viewing date is required' }),
   comments: z.string().optional(),
   rating: z.number().int().min(1).max(5, { message: 'Rating must be between 1 and 5' }),
 })
@@ -39,7 +39,7 @@ export const TaskFormSchema = z.object({
   userId: z.string({ message: 'Assignee is required' }),
   contactId: z.number().optional(),
   description: z.string().min(1, { message: 'Description is required' }),
-  dueDate: z.string({ message: 'Due date is required' }),
+  dueDate: z.date({ message: 'Due date is required' }),
   status: z.enum(['Pending', 'Completed', 'Overdue']).default('Pending'),
 })
 

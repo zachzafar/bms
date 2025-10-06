@@ -11,12 +11,13 @@ import { Textarea } from "@/components/ui/textarea"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Badge } from "@/components/ui/badge"
 import { X } from "lucide-react"
+import { SelectContactType } from "@repo/api-contract"
 
 interface CommunicationFormProps {
   initialData?: any
   onSubmit: (data: any) => void
   onCancel: () => void
-  users: Array<{ id: number; name: string }>
+  users: Array<SelectContactType>
 }
 
 // Mock data for clients - in real app this would come from your database
@@ -74,7 +75,7 @@ export function CommunicationForm({ initialData, onSubmit, onCancel, users }: Co
       duration: formData.duration ? Number.parseInt(formData.duration) : null,
       clientName: selectedClient?.name || formData.clientName,
       clientEmail: selectedClient?.email || formData.clientEmail,
-      userName: selectedUser?.name || formData.userName,
+      userName: selectedUser?.firstName + " " + selectedUser?.lastName || formData.userName,
     })
   }
 
@@ -97,7 +98,7 @@ export function CommunicationForm({ initialData, onSubmit, onCancel, users }: Co
     setFormData((prev) => ({
       ...prev,
       userId,
-      userName: selectedUser?.name || "",
+      userName: selectedUser?.firstName + " " + selectedUser?.lastName || "",
     }))
   }
 
@@ -143,7 +144,7 @@ export function CommunicationForm({ initialData, onSubmit, onCancel, users }: Co
             <SelectContent>
               {users.map((user) => (
                 <SelectItem key={user.id} value={user.id.toString()}>
-                  {user.name}
+                  {user.firstName + " " + user.lastName}
                 </SelectItem>
               ))}
             </SelectContent>

@@ -8,7 +8,6 @@ import { Mail, Phone, User, Building, Calendar, Clock, MessageSquare, AlertCircl
 
 interface InquiryDetailProps {
   inquiry: any
-  onClose: () => void
 }
 
 // Mock data for inquiry timeline
@@ -51,7 +50,7 @@ const mockTimeline = [
   },
 ]
 
-export function InquiryDetail({ inquiry, onClose }: InquiryDetailProps) {
+export function InquiryDetail({ inquiry }: InquiryDetailProps) {
   const getStatusBadge = (status: string) => {
     const colors = {
       New: "bg-blue-100 text-blue-800",
