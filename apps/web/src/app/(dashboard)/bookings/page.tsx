@@ -19,6 +19,8 @@ import { toast } from 'sonner';
 import { MultiSelector, MultiSelectorTrigger, MultiSelectorInput, MultiSelectorContent, MultiSelectorList, MultiSelectorItem, } from '@/components/extension/multi-select';
 import { StorageService } from '@/lib/api/storage';
 
+import { isSameDay } from "date-fns";
+
 // Booking form schema
 const bookingFormSchema = z.object({
   assetId: z.string().min(1, { message: 'Asset is required' }),
@@ -34,6 +36,15 @@ function calculateNights(start: string, end: string) {
     (new Date(end).getTime() - new Date(start).getTime()) / (1000 * 60 * 60 * 24)
   );
 }
+
+type BlockedDate = {
+  id: number;
+  startDate: string; // ISO string
+  endDate: string;   // ISO string
+  title: string;
+  reason?: string;
+};
+
 
 // Helper: find applicable rate for asset and nights
 function getApplicableRate(
@@ -74,6 +85,8 @@ export default function Component() {
 
   const { mutate: createBooking } = authClient.booking.createBooking.useMutation();
   const { mutate: createBookingByTag } = authClient.booking.createBookingByTag.useMutation();
+
+  const [blockedDates, setBlockedDates] = useState<BlockedDate[]>([]);
 
   const [availableAssets, setAvailableAssets] = useState<
     {
@@ -151,65 +164,110 @@ export default function Component() {
     },
   });
 
+  useEffect(() => {
+    authClient.booking.getBlockedDates.query({ query: {} })
+      .then(res => {
+        const blocked: BlockedDate[] = Array.isArray(res.body)
+          ? res.body.map(b => ({
+            id: b.id,
+            startDate: b.startDate,
+            endDate: b.endDate,
+            title: b.title,
+            reason: b.reason,
+          }))
+          : [];
+        setBlockedDates(blocked);
+      })
+      .catch(err => console.error(err));
+  }, []);
+
   const startDate = form.watch('startDate');
   const endDate = form.watch('endDate');
 
+  const [invalidStartOrEnd, setInvalidStartOrEnd] = useState<BlockedDate[]>([]);
+
+  useEffect(() => {
+    if (startDate && endDate) {
+      const start = new Date(startDate);
+      const end = new Date(endDate);
+
+      const conflicts = blockedDates.filter(b => {
+        const blockedStart = new Date(b.startDate);
+        const blockedEnd = new Date(b.endDate);
+
+        // Conflict if the start or end date matches any blocked date exactly
+        return (
+          isSameDay(start, blockedStart) ||
+          isSameDay(start, blockedEnd) ||
+          isSameDay(end, blockedStart) ||
+          isSameDay(end, blockedEnd)
+        );
+      });
+
+      setInvalidStartOrEnd(conflicts);
+    } else {
+      setInvalidStartOrEnd([]);
+    }
+  }, [startDate, endDate, blockedDates]);
+
+
+
   // When dates change, fetch available assets and assign applicable rates
   useEffect(() => {
-  if (startDate && endDate) {
-    setDateRangeReady(true);
+    if (startDate && endDate) {
+      setDateRangeReady(true);
 
-    authClient.assets
-      .getAvailableAssets.query({
-        query: {
-          startDate,
-          endDate,
-        },
-      })
-      .then((res) => {
-        console.log('API Response:', res);  // Log the response for debugging
+      authClient.assets
+        .getAvailableAssets.query({
+          query: {
+            startDate,
+            endDate,
+          },
+        })
+        .then((res) => {
+          console.log('API Response:', res);  // Log the response for debugging
 
-        if (res.status === 200) {
-          const nights = Math.ceil(
-            (new Date(endDate).getTime() - new Date(startDate).getTime()) / 
-            (1000 * 60 * 60 * 24)
-          );
-
-          const assetsWithRates = res.body.map((asset) => {
-            const applicableRates = rates.filter(
-              (rate) =>
-                rate.assetId === asset.id &&
-                (!rate.minNights || rate.minNights <= nights) &&
-                (!rate.maxNights || rate.maxNights >= nights)
+          if (res.status === 200) {
+            const nights = Math.ceil(
+              (new Date(endDate).getTime() - new Date(startDate).getTime()) /
+              (1000 * 60 * 60 * 24)
             );
 
-            const selectedRate =
-              applicableRates.length > 0
-                ? applicableRates.reduce((prev, curr) =>
+            const assetsWithRates = res.body.map((asset) => {
+              const applicableRates = rates.filter(
+                (rate) =>
+                  rate.assetId === asset.id &&
+                  (!rate.minNights || rate.minNights <= nights) &&
+                  (!rate.maxNights || rate.maxNights >= nights)
+              );
+
+              const selectedRate =
+                applicableRates.length > 0
+                  ? applicableRates.reduce((prev, curr) =>
                     (prev.priority ?? 100) < (curr.priority ?? 100) ? prev : curr
                   )
-                : null;
+                  : null;
 
-            return {
-              ...asset,
-              applicableRate: selectedRate || undefined,
-            };
-          });
+              return {
+                ...asset,
+                applicableRate: selectedRate || undefined,
+              };
+            });
 
-          setAvailableAssets(assetsWithRates);
-        } else {
+            setAvailableAssets(assetsWithRates);
+          } else {
+            setAvailableAssets([]);
+          }
+        })
+        .catch((err) => {
+          console.error('Failed to fetch available assets:', err);
           setAvailableAssets([]);
-        }
-      })
-      .catch((err) => {
-        console.error('Failed to fetch available assets:', err);
-        setAvailableAssets([]);
-      });
-  } else {
-    setDateRangeReady(false);
-    setAvailableAssets([]);
-  }
-}, [startDate, endDate, rates]);
+        });
+    } else {
+      setDateRangeReady(false);
+      setAvailableAssets([]);
+    }
+  }, [startDate, endDate, rates]);
 
 
   const onSubmit = (values: BookingFormValues) => {
@@ -322,6 +380,25 @@ export default function Component() {
                             }}
                           />
                         </div>
+
+                        {invalidStartOrEnd.length > 0 && (
+                          <div className="mt-2 p-2 border border-red-300 bg-red-50 rounded">
+                            <p className="font-semibold text-red-700">
+                              The start or end date cannot be on these blocked dates:
+                            </p>
+                            <ul className="list-disc ml-5 text-red-600 text-sm">
+                              {invalidStartOrEnd.map(b => {
+                                const start = new Date(b.startDate);
+                                const end = new Date(b.endDate);
+                                return (
+                                  <li key={b.id}>
+                                    {b.title} ({start.toLocaleDateString()} → {end.toLocaleDateString()})
+                                  </li>
+                                );
+                              })}
+                            </ul>
+                          </div>
+                        )}
                         <FormMessage />
                       </FormItem>
                     );
@@ -374,7 +451,7 @@ export default function Component() {
                         {customerList.map((customer) => (
                           <MultiSelectorItem
                             key={customer.customer.id}
-                            value={customer.user.name}
+                            value={customer.customer.id.toString()}
                           >
                             {customer.user.name}
                           </MultiSelectorItem>
@@ -422,9 +499,10 @@ export default function Component() {
                     </FormItem>
                   )}
                 />
-                <Button type="submit" className="w-full">
+                <Button type="submit" className="w-full" disabled={invalidStartOrEnd.length > 0}>
                   Create Booking
                 </Button>
+
               </form>
             </Form>
           </DialogContent>

@@ -28,7 +28,8 @@ export const drizzleProvider: Provider[] = [
         connectionLimit: 10, // Adjust this based on traffic
         queueLimit: 0,
         enableKeepAlive: true, // Ensures the connection doesn't close unexpectedly
-        keepAliveInitialDelay: 10000, 
+        keepAliveInitialDelay: 10000,
+        timezone: 'Z', 
       };
       const connection =  mysql.createPool(connectionOptions);
 

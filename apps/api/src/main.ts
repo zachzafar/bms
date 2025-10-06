@@ -25,6 +25,7 @@ async function bootstrap() {
         'http://localhost:3002', // Auth app
         'http://localhost:3003', // System Admin app
         'http://localhost:4000', // API itself
+        'http://localhost:3004',
       ];
 
   // Enable CORS for development
@@ -39,6 +40,7 @@ async function bootstrap() {
       'Accept',
       'Authorization',
       'x-tenant-id',
+      'x-api-key',
     ],
   });
 

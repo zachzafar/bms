@@ -11,26 +11,26 @@ import { PermissionScope } from 'src/auth/permissions';
 @Controller()
 export class BookingController {
     private readonly logger = new Logger(BookingController.name);
-    constructor(private bookingService: BookingService,private tenantService: TenantService) {}
-    
+    constructor(private bookingService: BookingService, private tenantService: TenantService) { }
+
     @TsRestHandler(contract.booking.createBooking)
     @Roles(PermissionScope.BOOKINGS_WRITE)
     async createBooking(): Promise<ReturnType<typeof tsRestHandler>> {
         return tsRestHandler(contract.booking.createBooking, async ({ body }) => {
-            const {booking, customers} = body
-            await this.bookingService.createBooking(booking,customers);
+            const { booking, customers } = body
+            await this.bookingService.createBooking(booking, customers);
             return { status: 201, body: { message: "successfully added booking" } };
         });
     }
 
     @TsRestHandler(contract.booking.getBooking)
     @Roles(PermissionScope.BOOKINGS_READ)
-    async getBooking(@Headers() headers:any): Promise<ReturnType<typeof tsRestHandler>> {
+    async getBooking(@Headers() headers: any): Promise<ReturnType<typeof tsRestHandler>> {
         return tsRestHandler(contract.booking.getBooking, async ({ params }) => {
             const tenantId = headers['x-tenant-id'];
             const booking = await this.bookingService.getBooking(params.id);
-            await this.tenantService.validateTenantAccess(tenantId,schema.Asset,booking.asset.id)
-            return { status: 200, body:  booking  };
+            await this.tenantService.validateTenantAccess(tenantId, schema.Asset, booking.asset.id)
+            return { status: 200, body: booking };
         });
     }
 
@@ -41,7 +41,7 @@ export class BookingController {
             this.logger.log("Get bookings for tenant: ", headers['x-tenant-id'] || "no tenant")
             const tenantId = headers['x-tenant-id'];
             const bookings = (await this.bookingService.getBookings(tenantId)).map((booking) => {
-                let assetTypeId = booking.asset.assetTypeId? Number(booking.asset.assetTypeId): undefined;
+                let assetTypeId = booking.asset.assetTypeId ? Number(booking.asset.assetTypeId) : undefined;
 
                 return {
                     ...booking,
@@ -52,7 +52,7 @@ export class BookingController {
                 }
             });
 
-            return { status: 200, body:  bookings  };
+            return { status: 200, body: bookings };
         });
     }
 
@@ -61,7 +61,7 @@ export class BookingController {
     async updateBooking(): Promise<ReturnType<typeof tsRestHandler>> {
         return tsRestHandler(contract.booking.updateBooking, async ({ body }) => {
             await this.bookingService.updateBooking(body);
-            return { status: 200, body:  { message: "succesffully updated booking"} };
+            return { status: 200, body: { message: "succesffully updated booking" } };
         });
     }
 
@@ -70,7 +70,7 @@ export class BookingController {
     async deleteBooking(): Promise<ReturnType<typeof tsRestHandler>> {
         return tsRestHandler(contract.booking.cancelBooking, async ({ params }) => {
             await this.bookingService.deleteBooking(params.id);
-            return { status: 204, body: undefined};
+            return { status: 204, body: undefined };
         });
     }
 
@@ -98,6 +98,65 @@ export class BookingController {
             const result = await this.bookingService.checkAvailabilityByTag({ tagId });
 
             return { status: 200, body: result };
+        });
+    }
+
+    // -------------------------
+    // Blocked Dates endpoints
+    // -------------------------
+    @TsRestHandler(contract.booking.getBlockedDates)
+    @Roles(PermissionScope.BOOKINGS_READ)
+    async getBlockedDates(
+        @Headers() headers: any,
+        @Query() query: { assetId?: string }
+    ): Promise<ReturnType<typeof tsRestHandler>> {
+        return tsRestHandler(contract.booking.getBlockedDates, async ({ query }) => {
+            const blockedDates = await this.bookingService.getBlockedDates(query?.assetId);
+
+            const formatted = blockedDates.map((b) => ({
+                tenantId: b.tenantId,
+                id: b.id,
+                assetId: b.assetId,
+                startDate: b.startDate,
+                endDate: b.endDate,
+                createdAt: b.createdAt,
+                updatedAt: b.updatedAt ?? b.createdAt,
+                reason: b.reason ?? undefined,
+                title: b.title,
+            }));
+
+            return { status: 200, body: formatted };
+        });
+    }
+
+
+    @TsRestHandler(contract.booking.createBlockedDate)
+    @Roles(PermissionScope.BOOKINGS_WRITE)
+    async createBlockedDate(): Promise<ReturnType<typeof tsRestHandler>> {
+        return tsRestHandler(contract.booking.createBlockedDate, async ({ body }) => {
+            const result = await this.bookingService.createBlockedDate(body);
+            return { status: 201, body: result };
+        });
+    }
+
+    @TsRestHandler(contract.booking.updateBlockedDate)
+    @Roles(PermissionScope.BOOKINGS_WRITE)
+    async updateBlockedDate(): Promise<ReturnType<typeof tsRestHandler>> {
+        return tsRestHandler(contract.booking.updateBlockedDate, async ({ body, params }) => {
+            const result = await this.bookingService.updateBlockedDate(params.id, body);
+            return { status: 200, body: result };
+        });
+    }
+
+    @TsRestHandler(contract.booking.deleteBlockedDate)
+    @Roles(PermissionScope.BOOKINGS_DELETE)
+    async deleteBlockedDate(): Promise<ReturnType<typeof tsRestHandler>> {
+        return tsRestHandler(contract.booking.deleteBlockedDate, async ({ params }) => {
+            const id = String(params.id); 
+            // if (isNaN(id)) throw new BadRequestException("Invalid blocked date ID");
+
+            await this.bookingService.deleteBlockedDate(id);
+            return { status: 204, body: undefined };
         });
     }
 }

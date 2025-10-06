@@ -5,10 +5,11 @@ import { DrizzleModule } from 'src/drizzle/drizzle.module';
 import { TenantService } from 'src/tenant/tenant.service';
 import { AuthModule } from 'src/auth/auth.module';
 import { PermissionsGuard } from 'src/auth/guards/permissions/permissions.guard';
+import { KeysModule } from 'src/keys/keys.module';
 
 @Module({
   imports: [
-    DrizzleModule,AuthModule
+    DrizzleModule,AuthModule, KeysModule
   ],
   providers: [RatesService,TenantService,PermissionsGuard],
   controllers: [RatesController],
