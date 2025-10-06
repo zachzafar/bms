@@ -17,7 +17,8 @@ export class TasksService {
   }
 
   async create(data: Omit<schema.InsertTask, 'id'>) {
-    const [{ id }] = await this.db.insert(schema.Task).values(data).$returningId();
+    const contactId = data.contactId ? BigInt(data.contactId) : undefined
+    const [{ id }] = await this.db.insert(schema.Task).values({...data, contactId}).$returningId();
     return id;
   }
 
@@ -64,7 +65,8 @@ export class TasksService {
   }
 
   async update(id: number, patch: Partial<schema.UpdateTask>) {
-    await this.db.update(schema.Task).set(patch).where(eq(schema.Task.id, id)).execute();
+    const contactId = patch.contactId ? BigInt(patch.contactId) : undefined
+    await this.db.update(schema.Task).set({...patch, contactId, }).where(eq(schema.Task.id, id)).execute();
   }
 
   async remove(id: number) {

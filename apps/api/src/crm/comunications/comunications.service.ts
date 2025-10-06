@@ -9,7 +9,7 @@ export class CommunicationsService {
   constructor(@Inject(DrizzleAsyncProvider) private db: MySql2Database<typeof schema>) {}
 
   async create(data: Omit<schema.InsertCommunicationLog, 'id'>) {
-    const [{ id }] = await this.db.insert(schema.CommunicationLog).values(data).$returningId();
+    const [{ id }] = await this.db.insert(schema.CommunicationLog).values({...data, contactId: BigInt(data.contactId)}).$returningId();
     return id;
   }
 
@@ -56,8 +56,8 @@ export class CommunicationsService {
     return this.toExtended(rows[0]);
   }
 
-  async update(id: number, patch: Partial<schema.UpdateCommunicationLog>) {
-    await this.db.update(schema.CommunicationLog).set(patch).where(eq(schema.CommunicationLog.id, id)).execute();
+  async update(id: number, patch: schema.UpdateCommunicationLog) {
+    await this.db.update(schema.CommunicationLog).set({...patch, contactId: BigInt(patch.contactId)}).where(eq(schema.CommunicationLog.id, id)).execute();
   }
 
   async remove(id: number) {

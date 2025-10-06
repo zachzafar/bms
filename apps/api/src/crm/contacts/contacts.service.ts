@@ -69,44 +69,44 @@ export class ContactsService {
     await this.db.delete(schema.Contact).where(eq(schema.Contact.id, id)).execute();
   }
 
-  async mergeContacts(tenantId: string, { targetId, sourceId }: { targetId: number; sourceId: number }) {
-    if (targetId === sourceId) return;
+  // async mergeContacts(tenantId: string, { targetId, sourceId }: { targetId: number; sourceId: number }) {
+  //   if (targetId === sourceId) return;
 
-    // Repoint children from source -> target (relying on tenant cascades for safety)
-    await this.db.update(schema.Inquiry).set({ contactId: BigInt(targetId) }).where(eq(schema.Inquiry.contactId, BigInt(sourceId)));
-    await this.db.update(schema.CommunicationLog).set({ contactId: BigInt(targetId) }).where(eq(schema.CommunicationLog.contactId, BigInt(sourceId)));
-    await this.db.update(schema.Feedback).set({ contactId: BigInt(targetId) }).where(eq(schema.Feedback.contactId, BigInt(sourceId)));
-    await this.db.update(schema.Document).set({ contactId: BigInt(targetId) }).where(eq(schema.Document.contactId, BigInt(sourceId)));
-    await this.db.update(schema.Brochure).set({ contactId: BigInt(targetId) }).where(eq(schema.Brochure.contactId, BigInt(sourceId)));
-    await this.db.update(schema.Task).set({ contactId: BigInt(targetId) }).where(eq(schema.Task.contactId, BigInt(sourceId)));
+  //   // Repoint children from source -> target (relying on tenant cascades for safety)
+  //   await this.db.update(schema.Inquiry).set({ contactId: BigInt(targetId) }).where(eq(schema.Inquiry.contactId, BigInt(sourceId)));
+  //   await this.db.update(schema.CommunicationLog).set({ contactId: BigInt(targetId) }).where(eq(schema.CommunicationLog.contactId, BigInt(sourceId)));
+  //   await this.db.update(schema.Feedback).set({ contactId: BigInt(targetId) }).where(eq(schema.Feedback.contactId, BigInt(sourceId)));
+  //   await this.db.update(schema.Document).set({ contactId: BigInt(targetId) }).where(eq(schema.Document.contactId, BigInt(sourceId)));
+  //   await this.db.update(schema.Brochure).set({ contactId: BigInt(targetId) }).where(eq(schema.Brochure.contactId, BigInt(sourceId)));
+  //   await this.db.update(schema.Task).set({ contactId: BigInt(targetId) }).where(eq(schema.Task.contactId, BigInt(sourceId)));
 
-    // Profiles: move if target lacks one
-    const sourceCustomer = await this.db.query.Customer.findFirst({ where: (t, { eq }) => eq(t.contactId, BigInt(sourceId)) });
-    const targetCustomer = await this.db.query.Customer.findFirst({ where: (t, { eq }) => eq(t.contactId, BigInt(targetId)) });
-    if (sourceCustomer && !targetCustomer) {
-      await this.db.update(schema.Customer).set({ contactId: BigInt(targetId) }).where(eq(schema.Customer.contactId, BigInt(sourceId)));
-    } else if (sourceCustomer && targetCustomer) {
-      // both exist -> delete source profile
-      await this.db.delete(schema.Customer).where(eq(schema.Customer.contactId, BigInt(sourceId)));
-    }
+  //   // Profiles: move if target lacks one
+  //   const sourceCustomer = await this.db.query.Customer.findFirst({ where: (t, { eq }) => eq(t.contactId, BigInt(sourceId)) });
+  //   const targetCustomer = await this.db.query.Customer.findFirst({ where: (t, { eq }) => eq(t.contactId, BigInt(targetId)) });
+  //   if (sourceCustomer && !targetCustomer) {
+  //     await this.db.update(schema.Customer).set({ contactId: BigInt(targetId) }).where(eq(schema.Customer.contactId, BigInt(sourceId)));
+  //   } else if (sourceCustomer && targetCustomer) {
+  //     // both exist -> delete source profile
+  //     await this.db.delete(schema.Customer).where(eq(schema.Customer.contactId, BigInt(sourceId)));
+  //   }
 
-    const sourceOwner = await this.db.query.Owner.findFirst({ where: (t, { eq }) => eq(t.contactId, BigInt(sourceId)) });
-    const targetOwner = await this.db.query.Owner.findFirst({ where: (t, { eq }) => eq(t.contactId, BigInt(targetId)) });
-    if (sourceOwner && !targetOwner) {
-      await this.db.update(schema.Owner).set({ contactId: BigInt(targetId) }).where(eq(schema.Owner.contactId, BigInt(sourceId)));
-    } else if (sourceOwner && targetOwner) {
-      await this.db.delete(schema.Owner).where(eq(schema.Owner.contactId, BigInt(sourceId)));
-    }
+  //   const sourceOwner = await this.db.query.Owner.findFirst({ where: (t, { eq }) => eq(t.contactId, BigInt(sourceId)) });
+  //   const targetOwner = await this.db.query.Owner.findFirst({ where: (t, { eq }) => eq(t.contactId, BigInt(targetId)) });
+  //   if (sourceOwner && !targetOwner) {
+  //     await this.db.update(schema.Owner).set({ contactId: BigInt(targetId) }).where(eq(schema.Owner.contactId, BigInt(sourceId)));
+  //   } else if (sourceOwner && targetOwner) {
+  //     await this.db.delete(schema.Owner).where(eq(schema.Owner.contactId, BigInt(sourceId)));
+  //   }
 
-    // Remove source contact
-    await this.db.delete(schema.Contact).where(eq(schema.Contact.id, sourceId));
-  }
+  //   // Remove source contact
+  //   await this.db.delete(schema.Contact).where(eq(schema.Contact.id, sourceId));
+  // }
 
-  async attachUser(contactId: number, userId: string) {
-    await this.db.update(schema.Contact).set({ userId }).where(eq(schema.Contact.id, contactId));
-  }
+  // async attachUser(contactId: number, userId: string) {
+  //   await this.db.update(schema.Contact).set({ userId }).where(eq(schema.Contact.id, contactId));
+  // }
 
-  async detachUser(contactId: number) {
-    await this.db.update(schema.Contact).set({ userId: null as any }).where(eq(schema.Contact.id, contactId));
-  }
+  // async detachUser(contactId: number) {
+  //   await this.db.update(schema.Contact).set({ userId: null as any }).where(eq(schema.Contact.id, contactId));
+  // }
 }

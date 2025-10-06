@@ -4,6 +4,7 @@ import { crmContract } from '@repo/api-contract';
 import { InquiriesService } from './inquiries.service';
 import { TenantService } from 'src/tenant/tenant.service';
 import * as schema from '@repo/api-contract';
+import { convertBigIntToNumber } from 'src/utils/bigint-converter';
 
 @Controller()
 export class InquiriesController {
@@ -19,8 +20,17 @@ export class InquiriesController {
       // Validate tenant access to contact & asset before insert
       await this.tenantService.validateTenantAccess(tenantId, schema.Contact, body.contactId);
       await this.tenantService.validateTenantAccess(tenantId, schema.Asset, body.assetId);
-      const id = await this.inquiries.createInquiry({ ...body, tenantId });
-      return { status: 201, body: { message: 'inquiry created', inquiryId: id } };
+      
+      // Convert string dates to Date objects
+      const inquiryData = {
+        ...body,
+        tenantId,
+        inquiryDate: new Date(body.inquiryDate),
+        followUpDate: body.followUpDate ? new Date(body.followUpDate) : undefined,
+      };
+      
+      const id = await this.inquiries.createInquiry(inquiryData);
+      return { status: 201, body: { message: 'inquiry created', inquiryId: Number(id) } };
     });
   }
 
@@ -28,8 +38,9 @@ export class InquiriesController {
   async listInquiries(@Headers() headers: any): Promise<ReturnType<typeof tsRestHandler>> {
     return tsRestHandler(crmContract.inquiries.listInquiries, async ({ query }) => {
       const tenantId = headers['x-tenant-id'];
-      const rows = await this.inquiries.listInquiries(tenantId, query);
-      return { status: 200, body: rows };
+      const rows = await this.inquiries.listInquiries(tenantId, {});
+      
+      return { status: 200, body: rows.map((i) => convertBigIntToNumber(i)) };
     });
   }
 
@@ -48,7 +59,18 @@ export class InquiriesController {
     return tsRestHandler(crmContract.inquiries.updateInquiry, async ({ params, body }) => {
       const tenantId = headers['x-tenant-id'];
       await this.tenantService.validateTenantAccess(tenantId, schema.Inquiry, Number(params.id));
-      await this.inquiries.updateInquiry(Number(params.id), body);
+      
+      // Convert string dates to Date objects if provided
+      const updateData = {
+        ...body,
+        ...(body.inquiryDate && { inquiryDate: new Date(body.inquiryDate) }),
+        ...(body.followUpDate && { followUpDate: new Date(body.followUpDate) }),
+      };
+
+      const inquiryDate = updateData.inquiryDate ? new Date(updateData.inquiryDate) : undefined;
+      const followUpDate = updateData.followUpDate ? new Date(updateData.followUpDate) : undefined;
+      
+      await this.inquiries.updateInquiry(Number(params.id), {...updateData, contactId: updateData.contactId, inquiryDate, followUpDate });
       return { status: 200, body: { message: 'inquiry updated' } };
     });
   }

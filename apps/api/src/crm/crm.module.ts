@@ -16,11 +16,13 @@ import { TasksService } from './task/task.service';
 import { DrizzleModule } from 'src/drizzle/drizzle.module';
 import { TenantModule } from 'src/tenant/tenant.module';
 import { TenantService } from 'src/tenant/tenant.service';
+import { ReportsService } from './reports/reports.service';
+import { ReportsController } from './reports/reports.controller';
 
 
 @Module({
   imports: [DrizzleModule, TenantModule],
-  controllers: [ContactsController, InquiriesController, CommunicationsController, FeedbackController, BrochuresController, DocumentsController, TasksController],
-  providers: [ContactsService, InquiriesService, CommunicationsService, FeedbackService, BrochuresService, DocumentsService, TasksService,TenantService]
+  controllers: [ContactsController, InquiriesController, CommunicationsController, FeedbackController, BrochuresController, DocumentsController, TasksController, ReportsController],
+  providers: [ContactsService, InquiriesService, CommunicationsService, FeedbackService, BrochuresService, DocumentsService, TasksService,TenantService, ReportsService]
 })
 export class CrmModule {}

@@ -22,14 +22,14 @@ export class RefreshStrategy extends PassportStrategy(Strategy, 'refresh-jwt') {
     });
   }
  
-  validate(req: Request, payload: AuthJwtPayload) {
+  async validate(req: Request, payload: AuthJwtPayload) {
     console.log('Validating refresh token',payload.sub,req.body.refresh);
     const userId = payload.sub;
     
     const refreshToken = req.body.refresh;
 
     // Validate the refresh token
-    const isValid = this.authService.validateRefreshToken(userId, refreshToken);
+    await this.authService.validateRefreshToken(userId, refreshToken);
     
     // Return the same structure as JWT strategy for consistency
     return {

@@ -18,7 +18,7 @@ export class FeedbackController {
       const tenantId = headers['x-tenant-id'];
       await this.tenantService.validateTenantAccess(tenantId, schema.Contact, body.contactId);
       await this.tenantService.validateTenantAccess(tenantId, schema.Asset, body.assetId);
-      const id = await this.feedback.create({ ...body, tenantId });
+      const id = await this.feedback.create(body,tenantId );
       return { status: 201, body: { message: 'feedback created', feedbackId: id } };
     });
   }

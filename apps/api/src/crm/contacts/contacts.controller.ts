@@ -70,41 +70,41 @@ export class ContactsController {
     });
   }
 
-  @TsRestHandler(crmContract.contacts.mergeContacts)
-  @Roles(PermissionScope.CONTACTS_WRITE)
-  async mergeContacts(@Headers() headers: any): Promise<ReturnType<typeof tsRestHandler>> {
-    return tsRestHandler(crmContract.contacts.mergeContacts, async ({ params, body }) => {
-      const tenantId = headers['x-tenant-id'];
-      const targetId = Number(params.id);
-      const sourceId = body.sourceContactId;
-      await this.tenantService.validateTenantAccess(tenantId, schema.Contact, targetId);
-      await this.tenantService.validateTenantAccess(tenantId, schema.Contact, sourceId);
-      await this.contacts.mergeContacts(tenantId, { targetId, sourceId });
-      return { status: 200, body: { message: 'contacts merged', mergedFrom: sourceId, mergedInto: targetId } };
-    });
-  }
+  // @TsRestHandler(crmContract.contacts.mergeContacts)
+  // @Roles(PermissionScope.CONTACTS_WRITE)
+  // async mergeContacts(@Headers() headers: any): Promise<ReturnType<typeof tsRestHandler>> {
+  //   return tsRestHandler(crmContract.contacts.mergeContacts, async ({ params, body }) => {
+  //     const tenantId = headers['x-tenant-id'];
+  //     const targetId = Number(params.id);
+  //     const sourceId = body.sourceContactId;
+  //     await this.tenantService.validateTenantAccess(tenantId, schema.Contact, targetId);
+  //     await this.tenantService.validateTenantAccess(tenantId, schema.Contact, sourceId);
+  //     await this.contacts.mergeContacts(tenantId, { targetId, sourceId });
+  //     return { status: 200, body: { message: 'contacts merged', mergedFrom: sourceId, mergedInto: targetId } };
+  //   });
+  // }
 
-  @TsRestHandler(crmContract.contacts.attachUser)
-  @Roles(PermissionScope.CONTACTS_WRITE)
-  async attachUser(@Headers() headers: any): Promise<ReturnType<typeof tsRestHandler>> {
-    return tsRestHandler(crmContract.contacts.attachUser, async ({ params, body }) => {
-      const tenantId = headers['x-tenant-id'];
-      const contactId = Number(params.id);
-      await this.tenantService.validateTenantAccess(tenantId, schema.Contact, contactId);
-      await this.contacts.attachUser(contactId, body.userId);
-      return { status: 200, body: { message: 'user attached' } };
-    });
-  }
+  // @TsRestHandler(crmContract.contacts.attachUser)
+  // @Roles(PermissionScope.CONTACTS_WRITE)
+  // async attachUser(@Headers() headers: any): Promise<ReturnType<typeof tsRestHandler>> {
+  //   return tsRestHandler(crmContract.contacts.attachUser, async ({ params, body }) => {
+  //     const tenantId = headers['x-tenant-id'];
+  //     const contactId = Number(params.id);
+  //     await this.tenantService.validateTenantAccess(tenantId, schema.Contact, contactId);
+  //     await this.contacts.attachUser(contactId, body.userId);
+  //     return { status: 200, body: { message: 'user attached' } };
+  //   });
+  // }
 
-  @TsRestHandler(crmContract.contacts.detachUser)
-  @Roles(PermissionScope.CONTACTS_WRITE)
-  async detachUser(@Headers() headers: any): Promise<ReturnType<typeof tsRestHandler>> {
-    return tsRestHandler(crmContract.contacts.detachUser, async ({ params }) => {
-      const tenantId = headers['x-tenant-id'];
-      const contactId = Number(params.id);
-      await this.tenantService.validateTenantAccess(tenantId, schema.Contact, contactId);
-      await this.contacts.detachUser(contactId);
-      return { status: 200, body: { message: 'user detached' } };
-    });
-  }
+  // @TsRestHandler(crmContract.contacts.detachUser)
+  // @Roles(PermissionScope.CONTACTS_WRITE)
+  // async detachUser(@Headers() headers: any): Promise<ReturnType<typeof tsRestHandler>> {
+  //   return tsRestHandler(crmContract.contacts.detachUser, async ({ params }) => {
+  //     const tenantId = headers['x-tenant-id'];
+  //     const contactId = Number(params.id);
+  //     await this.tenantService.validateTenantAccess(tenantId, schema.Contact, contactId);
+  //     await this.contacts.detachUser(contactId);
+  //     return { status: 200, body: { message: 'user detached' } };
+  //   });
+  // }
 }
