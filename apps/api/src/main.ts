@@ -26,6 +26,11 @@ async function bootstrap() {
         'http://localhost:3003', // System Admin app
         'http://localhost:4000', // API itself
         'http://localhost:3004',
+        'https://bookos.xyz',
+        'https://crm.bookos.xyz',
+        'https://auth.bookos.xyz',
+        'https://admin.bookos.xyz',
+        'https://booking.bookos.xyz'
       ];
 
   // Enable CORS for development
