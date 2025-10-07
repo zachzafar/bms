@@ -80,10 +80,10 @@ export default function UsersPage() {
   const filteredUsers = allUsers.filter(user => {
     const matchesSearch = user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          user.email.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesTenant = selectedTenant === 'all' || user.tenantId === selectedTenant;
+    // const matchesTenant = selectedTenant === 'all' || user.tenantId === selectedTenant;
     const matchesType = userTypeFilter === 'all' || user.userType === userTypeFilter;
     
-    return matchesSearch && matchesTenant && matchesType;
+    return matchesSearch && matchesType;
   });
 
   const handleUpdateUser = async () => {
@@ -256,12 +256,12 @@ export default function UsersPage() {
                         {user.userType}
                       </Badge>
                     </td>
-                    <td className="p-3 text-slate-300">
+                    {/* <td className="p-3 text-slate-300">
                       {user.tenantId ? 
                         tenants.find(t => t.id === user.tenantId)?.name || 'Unknown' : 
                         'System'
                       }
-                    </td>
+                    </td> */}
                     <td className="p-3 text-slate-400 text-sm">
                       {user.createdAt ? new Date(user.createdAt).toLocaleDateString() : 'N/A'}
                     </td>
