@@ -30,7 +30,12 @@ async function bootstrap() {
         'https://crm.bookos.xyz',
         'https://auth.bookos.xyz',
         'https://admin.bookos.xyz',
-        'https://booking.bookos.xyz'
+        'https://booking.bookos.xyz',
+        'https://www.bookos.xyz',
+        'https://www.crm.bookos.xyz',
+        'https://www.auth.bookos.xyz',
+        'https://www.admin.bookos.xyz',
+        'https://www.booking.bookos.xyz'
       ];
 
   // Enable CORS for development
