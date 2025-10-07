@@ -38,5 +38,44 @@ module.exports = {
           DOMAIN: 'bookos.xyz'
         },
       },
+    {
+      name: 'nextjs-auth', // Authentication app
+      script: 'pnpm',
+      args: '--filter=auth start',
+      cwd: __dirname,
+      env: {
+        NODE_ENV: 'production',
+        SESSION_SECRET_KEY: '8ac41fcacd17dac40d0240c2198519c29e3a07c6ee846d93b37d9a755beabbb9db26d2e7eeb15c6eeb401e193cca0e6c38c07a0cedfdfbead7c90d47eea977cb',
+        SECURE: 'true',
+        DOMAIN: 'bookos.xyz',
+        NEXT_PUBLIC_API_URL: 'https://api.bookos.xyz'
+      },
+    },
+    {
+      name: 'nextjs-crm', // CRM application
+      script: 'pnpm',
+      args: '--filter=crm start',
+      cwd: __dirname,
+      env: {
+        NODE_ENV: 'production',
+        SESSION_SECRET_KEY: '8ac41fcacd17dac40d0240c2198519c29e3a07c6ee846d93b37d9a755beabbb9db26d2e7eeb15c6eeb401e193cca0e6c38c07a0cedfdfbead7c90d47eea977cb',
+        SECURE: 'true',
+        DOMAIN: 'bookos.xyz',
+        NEXT_PUBLIC_API_URL: 'https://api.bookos.xyz'
+      },
+    },
+    {
+      name: 'nextjs-system-admin', // System admin application
+      script: 'pnpm',
+      args: '--filter=system-admin start',
+      cwd: __dirname,
+      env: {
+        NODE_ENV: 'production',
+        SESSION_SECRET_KEY: '8ac41fcacd17dac40d0240c2198519c29e3a07c6ee846d93b37d9a755beabbb9db26d2e7eeb15c6eeb401e193cca0e6c38c07a0cedfdfbead7c90d47eea977cb',
+        SECURE: 'true',
+        DOMAIN: 'bookos.xyz',
+        NEXT_PUBLIC_API_URL: 'https://api.bookos.xyz'
+      },
+    },
     ],
   };
