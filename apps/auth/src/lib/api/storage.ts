@@ -21,6 +21,8 @@ type CookieOptions = {
   secure?: boolean;
   /** SameSite defaults to 'Lax' which is ideal for subdomains/ports on same site. */
   sameSite?: "Lax" | "Strict" | "None";
+  /** Domain for cross-subdomain sharing */
+  domain?: string;
 };
 
 function isClient() {
@@ -34,6 +36,7 @@ function setCookie(name: string, value: string, opts: CookieOptions = {}) {
     path = "/",
     secure = typeof window !== "undefined" && window.location.protocol === "https:",
     sameSite = "Lax",
+    domain,
   } = opts;
 
   const parts = [
@@ -43,7 +46,8 @@ function setCookie(name: string, value: string, opts: CookieOptions = {}) {
   ];
 
   if (typeof maxAgeSeconds === "number") parts.push(`Max-Age=${Math.max(0, Math.floor(maxAgeSeconds))}`);
-  if (secure) parts.push("Secure"); // ignored on http://localhost but fine to include
+  if (secure) parts.push("Secure");
+  if (domain) parts.push(`Domain=${domain}`);
 
   document.cookie = parts.join("; ");
 }
@@ -116,7 +120,10 @@ export class StorageService {
 
   /* ----------------------- USER ----------------------- */
 
-  static setUser(user: Omit<SelectUser, "password">, opts: CookieOptions = { maxAgeSeconds: 60 * 60 * 24 * 7 }) {
+  static setUser(user: Omit<SelectUser, "password">, opts: CookieOptions = { 
+    maxAgeSeconds: 60 * 60 * 24 * 7,
+    domain: typeof window !== "undefined" ? window.location.hostname.includes('localhost') ? undefined : 'bookos.xyz' : undefined
+  }) {
     setCookie(StorageService.USER_KEY, JSON.stringify(user), opts);
   }
 
@@ -130,7 +137,10 @@ export class StorageService {
 
   /* ----------------------- TENANT ----------------------- */
 
-  static setTenant(tenant: SelectTenant, opts: CookieOptions = { maxAgeSeconds: 60 * 60 * 24 * 7 }) {
+  static setTenant(tenant: SelectTenant, opts: CookieOptions = { 
+    maxAgeSeconds: 60 * 60 * 24 * 7,
+    domain: typeof window !== "undefined" ? window.location.hostname.includes('localhost') ? undefined : 'bookos.xyz' : undefined
+  }) {
     setCookie(StorageService.TENANT_KEY, JSON.stringify(tenant), opts);
   }
 
@@ -144,7 +154,10 @@ export class StorageService {
 
   /* ----------------------- TENANT LIST ----------------------- */
 
-  static setTenantList(tenantList: SelectTenant[], opts: CookieOptions = { maxAgeSeconds: 60 * 60 * 24 * 7 }) {
+  static setTenantList(tenantList: SelectTenant[], opts: CookieOptions = { 
+    maxAgeSeconds: 60 * 60 * 24 * 7,
+    domain: typeof window !== "undefined" ? window.location.hostname.includes('localhost') ? undefined : 'bookos.xyz' : undefined
+  }) {
     setCookie(StorageService.TENANT_LIST_KEY, JSON.stringify(tenantList), opts);
   }
 
