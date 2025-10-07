@@ -11,8 +11,8 @@ import { useRouter } from 'next/navigation';
 import { authClient } from '@/lib/api/publicClient';
 import { ROLES_QUERY_KEY, USERS_QUERY_KEY } from '@/lib/api/queryKeys';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { CreateUserForm } from '@/components/users/CreateUserForm';
-import { EditUserForm } from '@/components/users/EditUserForm';
+// import { CreateUserForm } from '@/components/users/CreateUserForm';
+// import { EditUserForm } from '@/components/users/EditUserForm';
 import { Pencil } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 // import { queryClient } from '@/lib/react-query';
@@ -91,7 +91,7 @@ export default function Component() {
                   onChange={(e) => setSearchTerm(e.target.value)}
                 />
               </div>
-              <Dialog open={open} onOpenChange={setOpen}>
+              {/* <Dialog open={open} onOpenChange={setOpen}>
                 <DialogTrigger asChild>
                   <Button onClick={() => { setSelectedUser(null); setOpen(true); }}>
                     <PlusCircle className='mr-2 h-4 w-4' />
@@ -119,7 +119,7 @@ export default function Component() {
                     }}
                   />
                 )}
-              </Dialog>
+              </Dialog> */}
             </div>
 
             <Table>
@@ -139,7 +139,7 @@ export default function Component() {
                     <TableCell>{user.roles.toString() != null
                       ? rolesMap?.[user.roles.toString()] ?? "-"
                       : "-"}</TableCell>
-                    <TableCell>
+                    {/* <TableCell>
                       <Button
                         variant='ghost'
                         size='icon'
@@ -157,7 +157,7 @@ export default function Component() {
                       >
                         <Pencil className='h-4 w-4' />
                       </Button>
-                    </TableCell>
+                    </TableCell> */}
                   </TableRow>
                 ))}
               </TableBody>
