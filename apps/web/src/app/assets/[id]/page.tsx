@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import  AssetAvailabilityCalendar  from '@/app/(dashboard)/assets/[id]/AssetAvailabilityCalendar';
+import  AssetAvailabilityCalendar  from '@/app/assets/[id]/AssetAvailabilityCalendar';
 import AssetTypePropertiesForm from './AssetTypePropertiesForm';
 import { useParams } from 'next/navigation';
 import { authClient } from '@/lib/api/publicClient';
