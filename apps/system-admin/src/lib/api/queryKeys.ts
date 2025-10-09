@@ -8,7 +8,15 @@ export const TASKS_QUERY_KEY = ['tasks'];
 export const DOCUMENTS_QUERY_KEY = ['documents'];
 export const USERS_QUERY_KEY = ['users'];
 export const ASSETS_QUERY_KEY = ['assets'];
+export const TENANTS_QUERY_KEY = ['tenants'];
 
+
+// Tenant API Keys Query Key
+export const TENANT_API_KEYS_QUERY_KEY = ['tenantApiKeys'];
+// Tenant Users Query Key
+export const TENANT_USERS_QUERY_KEY = ['tenantUsers'];
+// Tenant Roles Query Key
+export const TENANT_ROLES_QUERY_KEY = ['tenantRoles'];
 // Extended query keys for specific contexts
 export const CONTACT_INQUIRIES_QUERY_KEY = (contactId: number) => [...CONTACTS_QUERY_KEY, contactId, 'inquiries'];
 export const CONTACT_COMMUNICATIONS_QUERY_KEY = (contactId: number) => [...CONTACTS_QUERY_KEY, contactId, 'communications'];
