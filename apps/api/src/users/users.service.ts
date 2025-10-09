@@ -211,7 +211,8 @@ export class UsersService {
                 hashedPassword = await hash(userData.password);
                 userData.password = hashedPassword;
             }
-
+            // If userData empty skip update
+            if (Object.keys(userData).length > 0) 
             await tx.update(schema.User).set({ ...userData, password: hashedPassword }).where(eq(schema.User.id, id));
 
             // Handle customer role

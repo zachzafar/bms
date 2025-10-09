@@ -1,17 +1,19 @@
-import { Injectable, Logger, NotFoundException, ConflictException, UnauthorizedException, Inject } from '@nestjs/common';
+import { Injectable, Logger, NotFoundException, ConflictException, Inject } from '@nestjs/common';
 import { MySql2Database } from 'drizzle-orm/mysql2';
 import { DrizzleAsyncProvider } from 'src/drizzle/drizzle.provider';
 import * as schema from '@repo/api-contract';
 import { eq, and, count, countDistinct, desc, sql } from 'drizzle-orm';
 import { hash } from 'argon2';
 import { randomBytes } from 'crypto';
+import { UsersService } from 'src/users/users.service';
 
 @Injectable()
 export class SystemAdminService {
   private readonly logger = new Logger(SystemAdminService.name);
 
   constructor(
-    @Inject(DrizzleAsyncProvider) private db: MySql2Database<typeof schema>
+    @Inject(DrizzleAsyncProvider) private db: MySql2Database<typeof schema>,
+    private readonly userService: UsersService,
   ) {}
 
   // System Admin User Management
@@ -756,5 +758,17 @@ export class SystemAdminService {
       this.logger.error(`Failed to get system logs: ${error.message}`);
       throw error;
     }
+  }
+  // Accepts tenantId and JSON file image urls are downloaded and added to the tenant's assets the property fields are mapped to fields that exist for the asset type
+  async BulkAssetUpload(tenantId:string,file : Express.Multer.File){
+    // try {
+    //   const fileStream = fs.createReadStream(file.path);
+    //   const jsonData = await parseJsonStream(fileStream);
+    //   this.logger.log(`Bulk asset upload for tenant: ${tenantId} with ${jsonData.length} assets`);
+    //   return jsonData;
+    // } catch (error: any) {
+    //   this.logger.error(`Failed to bulk upload assets: ${error.message}`);
+    //   throw error;
+    // }
   }
 }
