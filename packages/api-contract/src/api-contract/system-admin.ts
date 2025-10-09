@@ -258,7 +258,25 @@ export const systemAdminContract = c.router({
         assignedAt: z.string(),
       })),
     },
-    summary: 'Get all users assigned to a tenant',
+  summary: 'Get all users assigned to a tenant',
+  },
+
+  createUserForTenant: {
+    method: 'POST',
+    path:'/system-admin/tenants/:tenantId/users',
+    body: z.object({
+      email: z.string().email(),
+      name: z.string().min(1),
+      password: z.string().min(8),
+      roleIds: z.array(z.number()),
+    }).required({ email: true, name: true, password: true, roleIds: true }),
+    responses: {
+      201: z.object({
+        userId: z.string(),
+        message: z.string(),
+      }),
+    },
+    summary: 'Create a new user for a tenant',
   },
 
   // API Key Management
@@ -355,5 +373,24 @@ export const systemAdminContract = c.router({
       })),
     },
     summary: 'Get system logs',
+  },
+
+  updateUserRoles: {
+    method: 'PUT',
+    path: '/system-admin/tenants/:tenantId/users/:userId/roles',
+    pathParams: z.object({
+      tenantId: z.string(),
+      userId: z.string(),
+    }),
+    body: z.object({
+      roleIds: z.array(z.number()),
+      isAdmin: z.boolean().default(false),
+    }).required({ roleIds: true }),
+    responses: {
+      201: z.object({
+        message: z.string(),
+      }),
+    },
+    summary: 'Update roles for a user in a tenant',
   },
 });

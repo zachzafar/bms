@@ -6,6 +6,7 @@ import { UseGuards } from '@nestjs/common';
 import { AdminGuard } from '../auth/guards/admin/admin.guard';
 import { getAllScopes } from 'src/auth/permissions';
 import { IsAdminRoute } from 'src/auth/decorators/admin.decorator';
+import { UsersService } from 'src/users/users.service';
 
 
 @IsAdminRoute()
@@ -14,7 +15,7 @@ import { IsAdminRoute } from 'src/auth/decorators/admin.decorator';
 export class SystemAdminController {
   private readonly logger = new Logger(SystemAdminController.name);
 
-  constructor(private systemAdminService: SystemAdminService) {}
+  constructor(private systemAdminService: SystemAdminService, private usersService: UsersService) { }
 
   // System Admin User Management
   @IsAdminRoute()
@@ -39,16 +40,21 @@ export class SystemAdminController {
     });
   }
 
-  // Tenant Management
   @IsAdminRoute()
-  @TsRestHandler(contract.systemAdmin.createTenant)
-  async createTenant(): Promise<ReturnType<typeof tsRestHandler>> {
-    return tsRestHandler(contract.systemAdmin.createTenant, async ({ body }) => {
-      const result = await this.systemAdminService.createTenant(
-        body.tenant,
-        body.adminUser
+  @TsRestHandler(contract.systemAdmin.createUserForTenant)
+  async createUserForTenant(): Promise<ReturnType<typeof tsRestHandler>> {
+    return tsRestHandler(contract.systemAdmin.createUserForTenant, async ({ body,params }) => {
+
+      const result = await this.usersService.createUser({
+        email: body.email,
+        name: body.name,
+        password: body.password,
+        userType: 'system'
+      },
+       params.tenantId,
+       body.roleIds
       );
-      return { status: 201, body: result };
+      return { status: 201, body: { message: `Successfully added user to tenant ${params.tenantId}`, userId: result } };
     });
   }
 
@@ -169,15 +175,15 @@ export class SystemAdminController {
 
   @IsAdminRoute()
   @TsRestHandler(contract.systemAdmin.getPermissions)
-    async getPermissions(): Promise<ReturnType<typeof tsRestHandler>> {
-        return tsRestHandler(contract.auth.getPermissions, async () => {
-            const permissions = getAllScopes();
-            
-            return { status: 200, body: permissions };
-        })
-    }
+  async getPermissions(): Promise<ReturnType<typeof tsRestHandler>> {
+    return tsRestHandler(contract.auth.getPermissions, async () => {
+      const permissions = getAllScopes();
 
-    @IsAdminRoute()
+      return { status: 200, body: permissions };
+    })
+  }
+
+  @IsAdminRoute()
   @TsRestHandler(contract.systemAdmin.removeUserFromTenant)
   async removeUserFromTenant(): Promise<ReturnType<typeof tsRestHandler>> {
     return tsRestHandler(contract.systemAdmin.removeUserFromTenant, async ({ params }) => {
@@ -197,6 +203,8 @@ export class SystemAdminController {
       return { status: 200, body: result };
     });
   }
+
+
 
   // API Key Management
   @IsAdminRoute()
@@ -257,4 +265,20 @@ export class SystemAdminController {
       return { status: 200, body: result };
     });
   }
+
+  @IsAdminRoute()
+  @TsRestHandler(contract.systemAdmin.updateUserRoles)
+  async updateUserRoles(): Promise<ReturnType<typeof tsRestHandler>> {
+    return tsRestHandler(contract.systemAdmin.updateUserRoles, async ({ params, body }) => {
+      const result = await this.usersService.update(
+        params.userId,
+        params.tenantId,
+        {},
+        body.roleIds,
+      );
+      return { status: 204, body: {message: 'User roles updated successfully'} };
+    });
+  }
+
+
 }
