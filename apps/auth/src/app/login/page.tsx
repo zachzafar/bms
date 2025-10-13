@@ -50,7 +50,6 @@ export default function LoginPage() {
         // Create session
         const session: Session = {
           refreshToken: response.body.refreshToken,
-          accessToken: response.body.token
         };
 
         await createSession(session);

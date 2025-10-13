@@ -12,5 +12,6 @@ import { TenantService } from 'src/tenant/tenant.service';
   ],
   controllers: [TagsController],
   providers: [TagsService,TenantService],
+  exports: [TagsService],
 })
 export class TagsModule {}

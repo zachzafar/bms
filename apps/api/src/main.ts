@@ -12,9 +12,13 @@ import { KeysService } from './keys/keys.service';
 import { UsersService } from './users/users.service';
 import { PermissionsGuard } from './auth/guards/permissions/permissions.guard';
 import { AdminGuard } from './auth/guards/admin/admin.guard';
+import { json, urlencoded } from 'express';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
+
+  app.use(json({limit: '50mb'}))
+  app.use(urlencoded({ limit: '50mb', extended: true }));
   
   // Get CORS origins from environment or use defaults
   const corsOrigins = process.env.CORS_ORIGINS 

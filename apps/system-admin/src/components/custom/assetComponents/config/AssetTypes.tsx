@@ -34,15 +34,21 @@ export default function AssetTypes({ tenantId }: { tenantId: string }) {
   const [selectedProperties, setSelectedProperties] = useState<string[]>([]);
   const queryClient = authClient.useQueryClient();
 
-  const { data: assetTypes, isLoading: isLoadingAssetTypes } = authClient.settings.assetType.getAssetTypes.useQuery({ 
-    queryKey: ['assetTypes'] 
+  const { data: assetTypes, isLoading: isLoadingAssetTypes } = authClient.systemAdmin.getAssetTypes.useQuery({ 
+    queryKey: ['assetTypes'],
+    queryData: {
+      params: { tenantId }
+    }
   });
 
-  const { data: properties, isLoading: isLoadingProperties } = authClient.settings.assetType.getProperties.useQuery({
-    queryKey: ['properties']
+  const { data: properties, isLoading: isLoadingProperties } = authClient.systemAdmin.getProperties.useQuery({
+    queryKey: ['properties'],
+    queryData: {
+      params: { tenantId }
+    }
   });
 
-  const { data: editingAssetType } = authClient.settings.assetType.getAssetType.useQuery({
+  const { data: editingAssetType } = authClient.systemAdmin.getAssetType.useQuery({
     queryKey: ['assetType', editingAssetTypeId],
     enabled: !!editingAssetTypeId,
     queryData: {
@@ -50,7 +56,7 @@ export default function AssetTypes({ tenantId }: { tenantId: string }) {
     }
   });
 
-  const { mutate: addAssetTypeMutation } = authClient.settings.assetType.createAssetType.useMutation({
+  const { mutate: addAssetTypeMutation } = authClient.systemAdmin.createAssetType.useMutation({
     onSuccess: () => {
       toast.success('New asset type was added successfully');
       queryClient.invalidateQueries({ queryKey: ['assetTypes']});
@@ -62,7 +68,7 @@ export default function AssetTypes({ tenantId }: { tenantId: string }) {
     }
   });
 
-  const { mutate: updateAssetTypeMutation } = authClient.settings.assetType.updateAssetType.useMutation({
+  const { mutate: updateAssetTypeMutation } = authClient.systemAdmin.updateAssetType.useMutation({
     onSuccess: () => {
       toast.success('Asset type was updated successfully');
       setEditingAssetType(undefined);
@@ -74,7 +80,7 @@ export default function AssetTypes({ tenantId }: { tenantId: string }) {
     }
   });
 
-  const { mutate: deleteAssetTypeMutation } = authClient.settings.assetType.deleteAssetType.useMutation({
+  const { mutate: deleteAssetTypeMutation } = authClient.systemAdmin.deleteAssetType.useMutation({
     onSuccess: () => {
       toast.success('Asset type was deleted successfully');
       queryClient.invalidateQueries({ queryKey: ['assetTypes']});
@@ -153,8 +159,8 @@ export default function AssetTypes({ tenantId }: { tenantId: string }) {
   }
 
   return (
-    <>
-      <Card>
+    <div className="space-y-6">
+      <Card className="border-slate-700 bg-slate-800">
         <CardHeader>
           <CardTitle>{editingAssetType ? 'Edit Asset Type' : 'Add New Asset Type'}</CardTitle>
           <CardDescription>
@@ -263,6 +269,6 @@ export default function AssetTypes({ tenantId }: { tenantId: string }) {
           </Table>
         </CardContent>
       </Card>
-    </>
+    </div>
   );
 }

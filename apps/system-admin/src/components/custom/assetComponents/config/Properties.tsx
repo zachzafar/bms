@@ -33,11 +33,14 @@ export default function Properties({ tenantId }: { tenantId: string }) {
   const queryClient = authClient.useQueryClient()
   
 
-  const { data: properties, isLoading } = authClient.settings.properties.getProperties.useQuery({
-    queryKey: ['properties']
+  const { data: properties, isLoading } = authClient.systemAdmin.getProperties.useQuery({
+    queryKey: ['properties'],
+    queryData: {
+      params: { tenantId }
+    }
   });
 
-  const { mutate: createProperty } = authClient.settings.properties.createProperty.useMutation({
+  const { mutate: createProperty } = authClient.systemAdmin.createProperty.useMutation({  
     onSuccess: () => {
       toast.success('Property created successfully');
       form.reset();
@@ -49,9 +52,10 @@ export default function Properties({ tenantId }: { tenantId: string }) {
     }
   });
 
-  const { mutate: deleteProperty } = authClient.settings.properties.deleteProperty.useMutation({
+  const { mutate: deleteProperty } = authClient.systemAdmin.deleteProperty.useMutation({
     onSuccess: () => {
-      toast('Property deleted successfully');
+      toast.success('Property deleted successfully');
+      queryClient.invalidateQueries({ queryKey: ['properties']});
     },
     onError: (error: any) => {
       toast.error(`Error deleting property: ${error.message}`);

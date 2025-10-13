@@ -7,12 +7,13 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ArrowLeft, Settings, Trash2 } from 'lucide-react';
 import Link from 'next/link';
 import { authClient } from '@/lib/api/publicClient';
-import { TenantOverview } from './components/TenantOverview';
-import { TenantUsers } from './components/TenantUsers';
-import { TenantRoles } from './components/TenantRoles';
-import { TenantApiKeys } from './components/TenantApiKeys';
+import { TenantOverview } from '@/components/custom/assetComponents/components/TenantOverview';
+import { TenantUsers } from '@/components/custom/assetComponents/components/TenantUsers';
+import { TenantRoles } from '@/components/custom/assetComponents/components/TenantRoles';
+import { TenantApiKeys } from '@/components/custom/assetComponents/components/TenantApiKeys';
 import { TENANTS_QUERY_KEY } from '@/lib/api/queryKeys';
-import AssetConfig from './components/TenantAssetConfig';
+import AssetConfig from '@/components/custom/assetComponents/components/TenantAssetConfig';
+import TenantAssets from '@/components/custom/assetComponents/components/TenantAssets';
 
 export default function TenantDetailPage() {
   const params = useParams();
@@ -111,6 +112,9 @@ export default function TenantDetailPage() {
             <TabsTrigger value="asset-config" className="data-[state=active]:bg-slate-700 data-[state=active]:text-white">
               Asset Config
             </TabsTrigger>
+            <TabsTrigger value="assets" className="data-[state=active]:bg-slate-700 data-[state=active]:text-white">
+              Assets
+            </TabsTrigger>
           </TabsList>
 
           <TabsContent value="overview">
@@ -130,6 +134,9 @@ export default function TenantDetailPage() {
           </TabsContent>
           <TabsContent value="asset-config">
             <AssetConfig tenantId={tenantId} />
+          </TabsContent>
+          <TabsContent value="assets">
+            <TenantAssets tenantId={tenantId} />
           </TabsContent>
         </Tabs>
       </div>

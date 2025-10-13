@@ -41,7 +41,6 @@ import { InsertBookingFormFieldSchema } from '@repo/api-contract';
 import * as z from 'zod';
 import { Textarea } from '@/components/ui/textarea';
 import { useState } from 'react';
-import { StorageService } from '@/lib/api/storage';
 
 const bookingFormSchema = z.object({
   name: z.string().min(1, 'Form name is required'),

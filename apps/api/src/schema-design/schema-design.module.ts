@@ -5,6 +5,7 @@ import { FormsModule } from './forms/forms.module';
 import { AssetTypeModule } from './asset-type/asset-type.module';
 
 @Module({
-  imports: [PropertyModule, ImportModule, FormsModule, AssetTypeModule]
+  imports: [PropertyModule, ImportModule, FormsModule, AssetTypeModule],
+  exports: [PropertyModule, ImportModule, FormsModule, AssetTypeModule],
 })
 export class SchemaDesignModule {}
