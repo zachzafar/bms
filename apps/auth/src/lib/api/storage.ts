@@ -107,10 +107,7 @@ export class StorageService {
     // Try reading a non-HTTP-only 'sid' (if you ever set it that way in dev)
     const maybeSid = getCookie(StorageService.SID_COOKIE);
     if (maybeSid) return maybeSid;
-
-    // Fallback: ask server for the current session (server will read HTTP-only cookie)
-    const session = await getSession();
-    return session?.accessToken ?? null;
+    return null
   }
 
   static removeToken() {

@@ -11,7 +11,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Plus, Edit, Trash2, Key, Eye, EyeOff, Copy, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { authClient } from '@/lib/api/publicClient';
-import { AVAILABLE_SCOPES } from '../types';
+import { AVAILABLE_SCOPES } from '../../../../app/dashboard/tenants/[id]/types';
 import { TENANT_API_KEYS_QUERY_KEY } from '@/lib/api/queryKeys';
 
 interface TenantApiKeysProps {

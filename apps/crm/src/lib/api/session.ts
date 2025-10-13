@@ -31,11 +31,11 @@ export async function createSession(payload: Session) {
 
   cookies().set("session", session, {
     httpOnly: true,
-    secure: process.env.SECURE === "true",
+    // secure: process.env.SECURE === "true",
     expires: expiredAt,
     sameSite: "lax",
     path: "/",
-    domain: process.env.DOMAIN,
+    // domain: process.env.DOMAIN,
   });
 }
 

@@ -5,7 +5,7 @@ import * as schema from '@repo/api-contract';
 import { and, eq, gte, inArray, lte } from 'drizzle-orm';
 import type { InsertAsset, UpdateAsset } from '@repo/api-contract';
 import { ObjectStorageService } from 'src/object-storage/object-storage.service';
-
+import { Readable } from 'stream';
 
 
 @Injectable()
@@ -150,7 +150,7 @@ export class AssetsService {
     return await this.db.query.AssetHasProperties.findMany({ where: (assetHasProperties, { eq }) => eq(assetHasProperties.assetId, assetId), with: { assetProperty: true } })
   }
 
-  async uploadAssetImages(tenant: string, assetId: string, images: Buffer[]) {
+  async uploadAssetImages(tenant: string, assetId: string, images: (Buffer|Readable)[]) {
     this.logger.log("Attempting to use storage service")
     const imageUrls = await Promise.all(images.map(async (image) => {
       const imageUrl = await this.objectStorageService.uploadObject(image, "image", tenant, assetId);

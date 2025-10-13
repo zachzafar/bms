@@ -3,15 +3,12 @@
 import { useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
 import { 
   Building, 
   Users, 
-  Plus, 
-  Edit, 
-  Trash2, 
   Eye,
-  MoreHorizontal
+  MoreHorizontal,
+  Plus
 } from 'lucide-react';
 import Link from 'next/link';
 import { toast } from 'sonner';

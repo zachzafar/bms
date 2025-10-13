@@ -26,11 +26,6 @@ axiosInstance.interceptors.request.use(
           Authorization: `Bearer ${accessToken}`,
 
         });
-
-        if (config.data instanceof FormData) {
-          console.log(config.data)
-          config.headers['Content-Type'] = "multipart/form-data"
-        }
       }
   
       return config

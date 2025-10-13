@@ -27,17 +27,14 @@ import { toast } from 'sonner';
 import { InsertTag, InsertTagSchema } from '@repo/api-contract';
 import { Textarea } from '@/components/ui/textarea';
 import { useQueryClient } from '@tanstack/react-query';
-import { StorageService } from '@/lib/api/storage';
-
-
 
 export default function Tags({ tenantId }: { tenantId: string }) {
   
-  console.log('tenantId:', tenantId);
+  
 
   const queryClient = useQueryClient();
 
-  const { mutate: createTag } = authClient.settings.tags.createTag.useMutation({
+  const { mutate: createTag } = authClient.systemAdmin.createTag.useMutation({
     onSuccess: () => {
       toast('Tag created successfully');
       queryClient.invalidateQueries({ queryKey: ['tags'] });
@@ -48,11 +45,14 @@ export default function Tags({ tenantId }: { tenantId: string }) {
     }
   });
 
-  const { data: tags, isLoading } = authClient.settings.tags.getTags.useQuery({
-    queryKey: ['tags']
+  const { data: tags, isLoading } = authClient.systemAdmin.getTags.useQuery({
+    queryKey: ['tags'],
+    queryData: {
+      params: { tenantId }
+    }
   })
 
-  const { mutate: deleteTag } = authClient.settings.tags.deleteTag.useMutation({
+  const { mutate: deleteTag } = authClient.systemAdmin.deleteTag.useMutation({
     onSuccess: () => {
       toast('Tag deleted successfully');
       queryClient.invalidateQueries({ queryKey: ['tags'] }); // refetch tags
@@ -71,7 +71,7 @@ export default function Tags({ tenantId }: { tenantId: string }) {
   const processForm: SubmitHandler<InsertTag> = (data) => {
     console.log("Form Data inside processForm:", data);
     
-    const body = { ...data}; // Create the payload
+    const body = { ...data,tenantId }; // Create the payload
 
     console.log('Creating tag with data:', { body });
 

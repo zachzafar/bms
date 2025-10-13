@@ -6,6 +6,7 @@ import { eq, and, count, countDistinct, desc, sql } from 'drizzle-orm';
 import { hash } from 'argon2';
 import { randomBytes } from 'crypto';
 import { UsersService } from 'src/users/users.service';
+import { promises as fs} from "fs";
 
 @Injectable()
 export class SystemAdminService {
@@ -759,16 +760,5 @@ export class SystemAdminService {
       throw error;
     }
   }
-  // Accepts tenantId and JSON file image urls are downloaded and added to the tenant's assets the property fields are mapped to fields that exist for the asset type
-  async BulkAssetUpload(tenantId:string,file : Express.Multer.File){
-    // try {
-    //   const fileStream = fs.createReadStream(file.path);
-    //   const jsonData = await parseJsonStream(fileStream);
-    //   this.logger.log(`Bulk asset upload for tenant: ${tenantId} with ${jsonData.length} assets`);
-    //   return jsonData;
-    // } catch (error: any) {
-    //   this.logger.error(`Failed to bulk upload assets: ${error.message}`);
-    //   throw error;
-    // }
-  }
+  
 }

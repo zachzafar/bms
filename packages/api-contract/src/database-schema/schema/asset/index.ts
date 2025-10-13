@@ -85,7 +85,7 @@ export const AssetHasProperties = mysqlTable("asset_has_properties", {
     id: serial("id").primaryKey(),
     assetId: varchar("tenant_id", { length: 255 }).notNull().references(() => Asset.id),
     assetPropertyId: bigint("asset_property_id", { mode: 'bigint', unsigned: true}).notNull().references(() => assetProperty.id),
-    value: varchar("value", { length: 255 }).notNull(),
+    value: text("value").notNull(),
 }, (table) => ({
     assetPropertyUniqueIdx: uniqueIndex("asset_property_unique").on(table.assetId, table.assetPropertyId),
 }));

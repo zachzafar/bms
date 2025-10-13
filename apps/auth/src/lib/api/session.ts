@@ -9,7 +9,6 @@ import { NextRequest } from "next/server";
 
 export type Session = {
   refreshToken: string;
-  accessToken: string;
 };
 
 
@@ -31,11 +30,11 @@ export async function createSession(payload: Session) {
 
   cookies().set("session", session, {
     httpOnly: true,
-    secure: process.env.SECURE === "true",
+    // secure: process.env.SECURE === "true",
     expires: expiredAt,
     sameSite: "lax",
     path: "/",
-    domain: process.env.DOMAIN,
+    // domain: process.env.DOMAIN,
   });
 }
 
@@ -104,7 +103,6 @@ export async function updateTokens( refreshToken:string ,accessToken: string) {
 
   const newPayload: Session = {
     refreshToken,
-    accessToken
   };
 
   await createSession(newPayload);

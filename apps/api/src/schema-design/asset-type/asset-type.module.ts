@@ -8,6 +8,7 @@ import { TenantService } from 'src/tenant/tenant.service';
 @Module({
   imports: [DrizzleModule,TenantModule],
   providers: [AssetTypeService,TenantService],
-  controllers: [AssetTypeController]
+  controllers: [AssetTypeController],
+  exports: [AssetTypeService]
 })
 export class AssetTypeModule {}

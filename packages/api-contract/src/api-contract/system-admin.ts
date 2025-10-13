@@ -1,8 +1,19 @@
 import { initContract } from "@ts-rest/core";
 import { z } from "zod";
-import { InsertTenantSchema, SelectTenantSchema, InsertUserSchema, SelectUserSchema } from "../database-schema/schema";
+import { InsertTenantSchema, SelectTenantSchema, InsertUserSchema, SelectUserSchema,InsertAssetTypeSchema, SelectAssetPropertySchema, SelectAssetTypeSchema, UpdateAssetTypeSchema,InsertAssetPropertySchema, UpdateAssetPropertySchema, InsertTagSchema, SelectTagSchema, InsertBookingFormSchema, SelectBookingFormSchema, InsertBookingFormFieldSchema, SelectBookingFormFieldSchema } from "../database-schema/schema";
 
 const c = initContract();
+
+ const AssetTypeWithPropertiesSchema = z.object({
+    assetType: InsertAssetTypeSchema,
+    properties: z.array(z.number())
+})
+
+ const SelectAssetTypeWithPropertiesSchema = z.object({
+    assetType: SelectAssetTypeSchema,
+    properties: z.array(z.number())
+})
+
 
 export const systemAdminContract = c.router({
   // System Admin User Management
@@ -393,4 +404,250 @@ export const systemAdminContract = c.router({
     },
     summary: 'Update roles for a user in a tenant',
   },
+      createAssetType: {
+        method: 'POST',
+        path: '/system-admin/asset-type',
+        body: AssetTypeWithPropertiesSchema,
+        responses: {
+            201: z.object({
+                id: z.number(),
+            })
+        },
+        summary: 'Create a new asset type'
+    },
+    getAssetTypes: {
+        method: 'GET',
+        path: '/system-admin/asset-type/:tenantId',
+        responses: {
+            200: z.array(SelectAssetTypeSchema)
+        },
+        pathParams: z.object({
+            tenantId: z.string()
+        }),
+        summary: 'Get all asset types'
+    },
+    getAssetType: {
+        method: 'GET',
+        path: '/system-admin/asset-type/:id',
+        responses: {
+            200: z.object({
+                assetType: SelectAssetTypeSchema,
+                properties: z.array(SelectAssetPropertySchema)
+            }),
+            404: z.object({
+                message: z.string()
+            })
+        },
+        pathParams: z.object({
+            id: z.string()
+        }),
+        summary: 'Get asset type by id'
+    },
+    updateAssetType: {
+        method: 'PUT',
+        path: '/system-admin/asset-type/:id',
+        body: z.object({
+            assetType: UpdateAssetTypeSchema,
+            properties: z.array(z.number())
+    }),
+        responses: {
+            200: z.null()
+        },
+        pathParams: z.object({
+            id: z.string()
+        }),
+        summary: 'Update asset type by id'
+    },
+    deleteAssetType: {
+        method: 'DELETE',
+        path: '/system-admin/asset-type/:id',
+        body: z.undefined(),
+        responses: {
+            200: z.object({
+                message: z.string()
+            })
+        },
+        pathParams: z.object({
+            id: z.string()
+        }),
+        summary: 'Delete asset type by id'
+    },
+    getProperties: {
+        method: 'GET',
+        path: '/system-admin/properties/:tenantId',
+        responses: {
+            200: z.array(SelectAssetPropertySchema)
+        },
+        pathParams: z.object({
+            tenantId: z.string()
+        }),
+        summary: 'Get all asset properties'
+    },
+      createProperty: {
+        method: 'POST',
+        path: '/system-admin/properties',
+        body: InsertAssetPropertySchema,
+        responses: {
+            201: z.object({
+                id: z.number(),
+            })
+        },
+        summary: 'Create a new asset property'
+    },
+    getProperty: {
+        method: 'GET',
+        path: '/system-admin/properties/:id',
+        responses: {
+            200: SelectAssetPropertySchema,
+            404: z.object({
+                message: z.string()
+            })
+        },
+        pathParams: z.object({
+            id: z.number()
+        }),
+        summary: 'Get a asset property'
+    },
+
+    updateProperty: {
+        method: 'PUT',
+        path: '/system-admin/properties/:id',
+        body: UpdateAssetPropertySchema,
+        responses: {
+            200: z.object({
+                id: z.number(),
+            }),
+            404: z.object({
+                message: z.string()
+            })
+        },
+        pathParams: z.object({
+            id: z.number()
+        }),
+        summary: 'Update a asset property'
+    },
+    deleteProperty: {
+        method: 'DELETE',
+        path: '/system-admin/properties/:id',
+        body: z.object({}).optional(),
+        responses: {
+            200: z.object({
+                message: z.string(),
+            }),
+            404: z.object({
+                message: z.string()
+            })
+        },
+        pathParams: z.object({
+            id: z.string()
+        }),
+        summary: 'Delete a asset property'
+    },
+     createTag: {
+        method: 'POST',
+        path: '/system-admin/tags',
+        body: InsertTagSchema,
+        responses: {
+            201: z.object({
+                id: z.string(),
+            })
+        },
+        summary: 'Create a new tag'
+    },
+    getTag: {
+        method: 'GET',
+        path: '/system-admin/tags/:id',
+        responses: {
+            200: SelectTagSchema,
+            404: z.object({
+                message: z.string()
+            })
+        },
+        pathParams: z.object({
+            id: z.string()
+        }),
+        summary: 'Get a tag'
+    },
+    deleteTag: {
+        method: 'DELETE',
+        path: '/system-admin/tags/:id',
+        body: z.object({}).optional(),
+        responses: {
+            200: z.object({
+                message: z.string(),
+            }),
+            404: z.object({
+                message: z.string()
+            })
+        },
+        pathParams: z.object({
+            id: z.string()
+        }),
+        summary: 'Delete a tag'
+    },
+    getTags: {
+        method: 'GET',
+        path: '/system-admin/tags/:tenantId',
+        responses: {
+            200: z.array(SelectTagSchema)
+        },
+        pathParams: z.object({
+            tenantId: z.string()
+        }),
+        summary: 'Get all tags'
+    },
+        createForm : {
+        method: 'POST',
+        path: '/system-admin/form',
+        body: z.object({
+            form : InsertBookingFormSchema,
+            fields: z.array(InsertBookingFormFieldSchema.omit({
+                formId: true
+            }))
+        }),
+        responses: {
+            201: z.object({
+                id: z.number()
+            })
+        },
+        summary: 'Create a new form'
+    },
+    getForms: {
+        method: 'GET',
+        path: '/system-admin/form',
+        responses: {
+            200: z.array(SelectBookingFormSchema)
+        },
+        summary: 'Get all forms'
+    },
+    getForm: {
+        method: 'GET',
+        path: '/system-admin/form/:id',
+        responses: {
+            200: z.object({
+                form: SelectBookingFormSchema,
+                fields: z.array(SelectBookingFormSchema)
+            }),
+        },
+        pathParams: z.object({
+            id: z.number()
+        }),
+        summary: 'Get a form by id'
+    },
+    bulkUpload: {
+        method: 'POST',
+        path: '/system-admin/bulk-upload',
+        body: z.object({
+            file: z.any(),
+            assetTypeId: z.number(),
+            tenantId: z.string() ,
+        }),
+        responses: {
+            201: z.object({
+                message: z.string()
+            })
+        },
+        summary: 'Bulk upload assets'
+    },
 });
+        

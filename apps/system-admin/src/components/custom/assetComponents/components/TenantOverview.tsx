@@ -2,7 +2,7 @@
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Users, Shield, Key } from 'lucide-react';
-import { TenantDetails } from '../types';
+import { TenantDetails } from '../../../../app/dashboard/tenants/[id]/types';
 import { authClient } from '@/lib/api/publicClient';
 import { TENANTS_QUERY_KEY } from '@/lib/api/queryKeys';
 

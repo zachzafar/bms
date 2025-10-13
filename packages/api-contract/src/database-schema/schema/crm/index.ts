@@ -67,7 +67,8 @@ export const contactRelations = relations(Contact, ({ one, many }) => ({
   inquiries: many(Inquiry),
   communications: many(CommunicationLog),
   feedbacks: many(Feedback),
-  brochures: many(Brochure),
+  // FIX: brochures is a many-to-many via the join table, not a direct FK to Brochure
+  brochures: many(BrochureContact),
   documents: many(Document),
   tasks: many(Task),
 }));
