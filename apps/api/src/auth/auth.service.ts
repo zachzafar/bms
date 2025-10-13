@@ -402,17 +402,25 @@ export class AuthService {
     tenants: string[], 
     tenantRolesAndPermissions: Record<string, Array<{ roleId: string; roleName: string; permissions: string[] }>>
   ) {
-    const payload = { 
+    // Minimize payload to reduce token size:
+    // - Remove roles from token; resolve roles server-side using `sub`
+    // - Use a shorter claim name for tenants ("t")
+    const accessPayload = { 
       sub: userId, 
-      tenants, 
-      roles: tenantRolesAndPermissions 
+      t: tenants 
     };
-    
+
+    // Keep refresh token minimal; add jti if you want revocation tracking
+    const refreshPayload = { 
+      sub: userId 
+      // jti: someGeneratedId, // optional: add if you implement server-side revocation
+    };
+
     const [accessToken, refreshToken] = await Promise.all([
-      this.jwtService.signAsync(payload),
-      this.jwtService.signAsync(payload, this.refreshTokenConfig)
+      this.jwtService.signAsync(accessPayload /*, { noTimestamp: true } */),
+      this.jwtService.signAsync(refreshPayload, this.refreshTokenConfig /* { noTimestamp: true } */)
     ]);
-  
+
     return { accessToken, refreshToken };
   }
 
