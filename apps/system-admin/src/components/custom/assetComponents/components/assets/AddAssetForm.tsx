@@ -5,7 +5,7 @@ import { FormField, FormItem, FormLabel, Form, FormControl, FormDescription, For
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { authClient } from '@/lib/api/publicClient';
-import { ASSET_TAGS_QUERY_KEY, ASSET_TYPE_QUERY_KEY } from '@/lib/api/queryKeys';
+// import { ASSET_TAGS_QUERY_KEY, ASSET_TYPE_QUERY_KEY } from '@/lib/api/queryKeys';
 import { StorageService } from '@/lib/api/storage';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useRouter } from 'next/navigation';
@@ -25,8 +25,8 @@ function AddAssetForm() {
   const tenant = StorageService.getTenant();
   const router = useRouter();
   const { mutate, isPending } = authClient.assets.createAsset.useMutation();
-  const { data: assetTypes } = authClient.settings.assetType.getAssetTypes.useQuery({ queryKey: ASSET_TYPE_QUERY_KEY });
-  const { data: assetTags } = authClient.settings.tags.getTags.useQuery({ queryKey: ASSET_TAGS_QUERY_KEY });
+  const { data: assetTypes } = authClient.settings.assetType.getAssetTypes.useQuery({ queryKey: ['assetTypes'] });
+  const { data: assetTags } = authClient.settings.tags.getTags.useQuery({ queryKey: ['assetTags'] });
 
   const form = useForm<ModifiedInsertAsset>({
     resolver: zodResolver(ModifiedInsertAssetSchema)
