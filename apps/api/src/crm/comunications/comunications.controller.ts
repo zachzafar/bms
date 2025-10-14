@@ -17,6 +17,7 @@ export class CommunicationsController {
     return tsRestHandler(crmContract.communications.createComm, async ({ body }) => {
       const tenantId = headers['x-tenant-id'];
       await this.tenantService.validateTenantAccess(tenantId, schema.Contact, body.contactId);
+
       const id = await this.comms.create({ ...body, tenantId });
       return { status: 201, body: { message: 'communication created', communicationId: id } };
     });
@@ -27,7 +28,7 @@ export class CommunicationsController {
     return tsRestHandler(crmContract.communications.listComms, async ({ query }) => {
       const tenantId = headers['x-tenant-id'];
       const rows = await this.comms.list(tenantId, query);
-      return { status: 200, body: rows };
+      return { status: 200, body: rows.map(row => ({...row, contactId: Number(row.contactId)})) };
     });
   }
 

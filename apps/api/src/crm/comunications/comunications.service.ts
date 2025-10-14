@@ -1,4 +1,4 @@
-import { Inject, Injectable } from '@nestjs/common';
+import { BadRequestException, Inject, Injectable } from '@nestjs/common';
 import { MySql2Database } from 'drizzle-orm/mysql2';
 import * as schema from '@repo/api-contract';
 import { DrizzleAsyncProvider } from 'src/drizzle/drizzle.provider';
@@ -9,7 +9,11 @@ export class CommunicationsService {
   constructor(@Inject(DrizzleAsyncProvider) private db: MySql2Database<typeof schema>) {}
 
   async create(data: Omit<schema.InsertCommunicationLog, 'id'>) {
-    const [{ id }] = await this.db.insert(schema.CommunicationLog).values({...data, contactId: BigInt(data.contactId)}).$returningId();
+     const date = new Date(data.date);
+      if (isNaN(date.getTime())) {
+        throw new BadRequestException('invalid date format');
+      }
+    const [{ id }] = await this.db.insert(schema.CommunicationLog).values({...data, contactId: BigInt(data.contactId), date}).$returningId();
     return id;
   }
 
@@ -40,7 +44,17 @@ export class CommunicationsService {
       return true;
     });
 
-    return filtered.map(this.toExtended);
+    const comms = this.db.query.CommunicationLog.findMany({
+      where: and(
+        eq(schema.CommunicationLog.tenantId, tenantId),
+        query.contactId ? eq(schema.CommunicationLog.contactId, BigInt(query.contactId)) : undefined,
+        query.userId ? eq(schema.CommunicationLog.userId, query.userId) : undefined,
+        query.type ? eq(schema.CommunicationLog.type, query.type) : undefined,
+        query.from ? gte(schema.CommunicationLog.date, new Date(query.from)) : undefined,
+        query.to ? lte(schema.CommunicationLog.date, new Date(query.to)) : undefined,
+      ),
+    });
+    return comms
   }
 
   async get(id: number) {
@@ -57,7 +71,14 @@ export class CommunicationsService {
   }
 
   async update(id: number, patch: schema.UpdateCommunicationLog) {
-    await this.db.update(schema.CommunicationLog).set({...patch, contactId: BigInt(patch.contactId)}).where(eq(schema.CommunicationLog.id, id)).execute();
+    let date:Date | undefined = undefined
+    if (patch.date) {
+       date = new Date(patch.date);
+      if (isNaN(date.getTime())) {
+        return { status: 400, body: { message: 'invalid date format' } };
+      }
+    }
+    await this.db.update(schema.CommunicationLog).set({...patch, contactId: BigInt(patch.contactId), date}).where(eq(schema.CommunicationLog.id, id)).execute();
   }
 
   async remove(id: number) {

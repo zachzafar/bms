@@ -16,9 +16,9 @@ export class TasksService {
     if (!member) throw new NotFoundException('User not in tenant');
   }
 
-  async create(data: Omit<schema.InsertTask, 'id'>) {
+  async create(data: Omit<schema.InsertTask, 'id'>,tenantId: string) {
     const contactId = data.contactId ? BigInt(data.contactId) : undefined
-    const [{ id }] = await this.db.insert(schema.Task).values({...data, contactId}).$returningId();
+    const [{ id }] = await this.db.insert(schema.Task).values({...data, contactId,tenantId}).$returningId();
     return id;
   }
 
@@ -49,7 +49,11 @@ export class TasksService {
       return true;
     });
 
-    return filtered.map(this.toExtended);
+    const tasksList = await this.db.query.Task.findMany({
+      where: and(eq(schema.Task.tenantId, tenantId)),
+    })
+
+    return tasksList
   }
 
   async get(id: number) {

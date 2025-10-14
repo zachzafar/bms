@@ -29,7 +29,7 @@ import { CommunicationForm } from '@/components/communication-form'
 import { CommunicationDetail } from '@/components/communication-detail'
 
 import { authClient } from '@/lib/api/publicClient'
-import { COMMUNICATIONS_QUERY_KEY, CONTACTS_QUERY_KEY } from '@/lib/api/queryKeys'
+import { COMMUNICATIONS_QUERY_KEY, CONTACTS_QUERY_KEY, USERS_QUERY_KEY } from '@/lib/api/queryKeys'
 
 export default function CommunicationManagement() {
   const queryClient = authClient.useQueryClient()
@@ -50,7 +50,6 @@ export default function CommunicationManagement() {
     () => ({
       type: typeFilter === 'all' ? undefined : typeFilter,
       userId: userFilter === 'all' ? undefined : userFilter,
-      // add contactId/from/to here when your UI provides them
     }),
     [typeFilter, userFilter]
   )
@@ -61,13 +60,16 @@ export default function CommunicationManagement() {
       queryData: { query: serverQuery },
     })
 
-  // If you have a users contract, prefer that. Otherwise keep your previous fetch.
-  const { data: clientsData, refetch } = authClient.crm.contacts.listContacts.useQuery({
+  const { data: clientsData } = authClient.crm.contacts.listContacts.useQuery({
     queryKey: CONTACTS_QUERY_KEY,
+  })
+  const { data: usersResp } = authClient.users.getUsers.useQuery({
+    queryKey: USERS_QUERY_KEY,
   })
 
   const communications = useMemo(() => (commsResp?.status === 200 ? commsResp.body : []), [commsResp])
-  const users = useMemo(() => (clientsData?.status === 200 ? clientsData.body : Array.isArray(clientsData) ? clientsData : []), [clientsData])
+  const contacts = useMemo(() => (clientsData?.status === 200 ? clientsData.body : []), [clientsData])
+  const users = useMemo(() => (usersResp?.status === 200 ? usersResp.body : []), [usersResp])
 
   // ——— Mutations (ts-rest style) ———
   const { mutate: createComm, isPending: isCreating } = authClient.crm.communications.createComm.useMutation({
@@ -101,14 +103,15 @@ export default function CommunicationManagement() {
   const filteredCommunications = useMemo(() => {
     const term = searchTerm.trim().toLowerCase()
     return communications.filter((comm: any) => {
+      const clientName = `${comm?.contact?.firstName ?? ''} ${comm?.contact?.lastName ?? ''}`.trim().toLowerCase()
+      const userName = `${comm?.user?.firstName ?? ''} ${comm?.user?.lastName ?? ''}`.trim().toLowerCase()
       const matchesSearch = !term
         ? true
-        : comm.clientName?.toLowerCase().includes(term) ||
-          comm.userName?.toLowerCase().includes(term) ||
-          comm.summary?.toLowerCase().includes(term) ||
-          (Array.isArray(comm.tags) && comm.tags.some((t: string) => t?.toLowerCase().includes(term)))
+        : clientName.includes(term) ||
+          userName.includes(term) ||
+          comm.summary?.toLowerCase().includes(term)
 
-      const matchesOutcome = outcomeFilter === 'all' || comm.outcome === outcomeFilter
+      const matchesOutcome = true // outcome not in schema; keep filter neutral
       return matchesSearch && matchesOutcome
     })
   }, [communications, outcomeFilter, searchTerm])
@@ -180,7 +183,7 @@ export default function CommunicationManagement() {
               <DialogTitle>Log New Communication</DialogTitle>
               <DialogDescription>Record a new client interaction or communication.</DialogDescription>
             </DialogHeader>
-            <CommunicationForm onSubmit={handleAddCommunication} onCancel={() => setIsAddDialogOpen(false)} users={users} />
+            <CommunicationForm onSubmit={handleAddCommunication} onCancel={() => setIsAddDialogOpen(false)} users={users} contacts={contacts} />
           </DialogContent>
         </Dialog>
       </div>
@@ -265,7 +268,7 @@ export default function CommunicationManagement() {
                   <SelectItem value="all">All Users</SelectItem>
                   {users.map((u: any) => (
                     <SelectItem key={u.id} value={String(u.id)}>
-                      {u.name}
+                      {u.firstName} {u.lastName}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -290,7 +293,9 @@ export default function CommunicationManagement() {
                 <TableRow key={comm.id}>
                   <TableCell>
                     <div>
-                      <div className="font-medium">{comm.clientName}</div>
+                      <div className="font-medium">
+                        {comm?.contact ? `${comm.contact.firstName} ${comm.contact.lastName}` : 'Unknown Contact'}
+                      </div>
                       <div className="mt-1 flex items-center text-sm text-muted-foreground">
                         {getTypeIcon(comm.type)}
                         <span className="ml-1">{comm.type}</span>
@@ -320,18 +325,18 @@ export default function CommunicationManagement() {
                   <TableCell>
                     <div className="flex items-center text-sm">
                       <UserIcon className="mr-2 h-3 w-3 text-muted-foreground" />
-                      {comm.userName}
+                      {comm?.user ? `${comm.user.firstName} ${comm.user.lastName}` : 'Unknown User'}
                     </div>
                   </TableCell>
                   <TableCell>
                     <div className="text-sm">
-                      <div>{comm.date}</div>
-                      <div className="text-muted-foreground">{comm.time}</div>
+                      <div>{new Date(comm.date).toLocaleDateString()}</div>
+                      <div className="text-muted-foreground">{new Date(comm.date).toLocaleTimeString()}</div>
                     </div>
                   </TableCell>
                   <TableCell>
                     <div className="space-y-1">
-                      <Badge className={outcomeBadge(comm.outcome)}>{comm.outcome}</Badge>
+                      <Badge className={outcomeBadge(comm.outcome ?? 'Neutral')}>{comm.outcome ?? 'Neutral'}</Badge>
                       {comm.followUpRequired && (
                         <div className="text-xs text-orange-600">Follow-up: {comm.followUpDate}</div>
                       )}
@@ -397,6 +402,7 @@ export default function CommunicationManagement() {
                 setSelectedCommunication(null)
               }}
               users={users}
+              contacts={contacts}
             />
           )}
         </DialogContent>

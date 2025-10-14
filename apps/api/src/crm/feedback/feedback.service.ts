@@ -2,14 +2,19 @@ import { Inject, Injectable } from '@nestjs/common';
 import { MySql2Database } from 'drizzle-orm/mysql2';
 import * as schema from '@repo/api-contract';
 import { DrizzleAsyncProvider } from 'src/drizzle/drizzle.provider';
-import { and, eq } from 'drizzle-orm';
+import { and, eq, gte, lte } from 'drizzle-orm';
 
 @Injectable()
 export class FeedbackService {
   constructor(@Inject(DrizzleAsyncProvider) private db: MySql2Database<typeof schema>) {}
 
   async create(data: Omit<schema.InsertFeedback, 'id'>,tenantId: string) {
-    const [{ id }] = await this.db.insert(schema.Feedback).values({...data, contactId: BigInt(data.contactId), tenantId}).$returningId();
+    // Convert viewingDate to Date object
+    const viewingDate = new Date(data.viewingDate);
+    if (isNaN(viewingDate.getTime())) {
+      throw new Error('Invalid date format');
+    }
+    const [{ id }] = await this.db.insert(schema.Feedback).values({...data, contactId: BigInt(data.contactId), tenantId,viewingDate}).$returningId();
     return id;
   }
 
@@ -39,7 +44,18 @@ export class FeedbackService {
       return true;
     });
 
-    return filtered.map(this.toExtended);
+    const feedbackList = await this.db.query.Feedback.findMany({
+      where: and(
+        eq(schema.Feedback.tenantId, tenantId),
+        query.contactId ? eq(schema.Feedback.contactId, BigInt(query.contactId)) : undefined,
+        query.assetId ? eq(schema.Feedback.assetId, query.assetId) : undefined,
+        query.minRating ? gte(schema.Feedback.rating, query.minRating) : undefined,
+        query.maxRating ? lte(schema.Feedback.rating, query.maxRating) : undefined,
+      ),
+      
+    });
+
+    return feedbackList
   }
 
   async get(id: number) {
@@ -56,7 +72,15 @@ export class FeedbackService {
   }
 
   async update(id: number, patch: schema.UpdateFeedback) {
-    await this.db.update(schema.Feedback).set({...patch, contactId: BigInt(patch.contactId)}).where(eq(schema.Feedback.id, id)).execute();
+    // Convert viewingDate to Date object
+    let viewingDate: Date | undefined;
+    if (patch.viewingDate) {
+       viewingDate = new Date(patch.viewingDate);
+      if (isNaN(viewingDate.getTime())) {
+        throw new Error('Invalid date format');
+      }
+    }
+    await this.db.update(schema.Feedback).set({...patch, contactId: BigInt(patch.contactId),viewingDate}).where(eq(schema.Feedback.id, id)).execute();
   }
 
   async remove(id: number) {

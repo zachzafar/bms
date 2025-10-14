@@ -14,7 +14,7 @@ import {
   bigint,
   decimal,
 } from "drizzle-orm/mysql-core";
-import { z } from "zod";
+import { date, z } from "zod";
 import { createInsertSchema, createSelectSchema } from "drizzle-zod";
 
 import { Tenant } from "../tenant"; // tenants: id varchar(36)
@@ -347,8 +347,8 @@ export type UpdateInquiry = z.infer<typeof UpdateInquirySchema>;
 
 /* ---------------------------- Communication Log -------------------- */
 export const InsertCommunicationLogSchema = createInsertSchema(CommunicationLog)
-  .omit({ createdAt: true, updatedAt: true, contactId: true })
-  .extend({ contactId: z.number() });
+  .omit({ createdAt: true, updatedAt: true, contactId: true,date: true })
+  .extend({ contactId: z.number(),date: z.string() });
 export const SelectCommunicationLogSchema = createSelectSchema(CommunicationLog)
   .omit({ contactId: true })
   .extend({ contactId: z.number() });
@@ -360,14 +360,14 @@ export type UpdateCommunicationLog = z.infer<typeof UpdateCommunicationLogSchema
 
 /* -------------------------------- Feedback ------------------------- */
 export const InsertFeedbackSchema = createInsertSchema(Feedback)
-  .omit({ createdAt: true, updatedAt: true, contactId: true,tenantId:true })
+  .omit({ createdAt: true, updatedAt: true, contactId: true,tenantId:true,viewingDate:true })
   .extend({
     rating: z.number().int().min(1).max(5),
-    contactId: z.number()
+    contactId: z.number(),
+    viewingDate: z.string(),
   });
-export const SelectFeedbackSchema = createSelectSchema(Feedback)
-  .omit({ contactId: true })
-  .extend({ contactId: z.number() });
+export const SelectFeedbackSchema = createSelectSchema(Feedback).omit({ tenantId: true, contactId:true})
+  .extend({ contactId: z.number()});
 export const UpdateFeedbackSchema = InsertFeedbackSchema.partial().required({ id: true,contactId:true });
 
 export type InsertFeedback = z.infer<typeof InsertFeedbackSchema>;
@@ -397,7 +397,7 @@ export type SelectBrochureAsset = z.infer<typeof SelectBrochureAssetSchema>;
 export type UpdateBrochureAsset = z.infer<typeof UpdateBrochureAssetSchema>;
 /* ---------------------------------- Task --------------------------- */
 export const InsertTaskSchema = createInsertSchema(Task)
-  .omit({ createdAt: true, updatedAt: true, contactId: true })
+  .omit({ createdAt: true, updatedAt: true, contactId: true, tenantId:true })
   .extend({ contactId: z.number().optional() });
 export const SelectTaskSchema = createSelectSchema(Task)
   .omit({ contactId: true })
