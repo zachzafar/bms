@@ -4,6 +4,7 @@ import { crmContract } from '@repo/api-contract';
 import { TasksService } from './task.service'
 import { TenantService } from 'src/tenant/tenant.service';
 import * as schema from '@repo/api-contract';
+import { UserId, AuthUser } from '../../common/decorators/auth-user.decorator';
 
 @Controller()
 export class TasksController {
@@ -38,17 +39,17 @@ export class TasksController {
       // Validate and convert dueDate
       const dueDate = this.validateAndConvertDate(body.dueDate);
       
-      const id = await this.tasks.create({ ...body, tenantId, dueDate });
+      const id = await this.tasks.create({ ...body, dueDate },tenantId);
       return { status: 201, body: { message: 'task created', taskId: id } };
     });
   }
 
   @TsRestHandler(crmContract.tasks.listTasks)
-  async list(@Headers() headers: any): Promise<ReturnType<typeof tsRestHandler>> {
+  async list(@Headers() headers: any, @UserId() userId: string ): Promise<ReturnType<typeof tsRestHandler>> {
     return tsRestHandler(crmContract.tasks.listTasks, async ({ query }) => {
       const tenantId = headers['x-tenant-id'];
       const rows = await this.tasks.list(tenantId, query);
-      return { status: 200, body: rows };
+      return { status: 200, body: rows.map(row => ({...row,contactId: Number(row.contactId)})) };
     });
   }
 

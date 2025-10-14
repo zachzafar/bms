@@ -20,6 +20,7 @@ import {
   InsertFeedbackSchema, 
   SelectFeedback,
 } from "@repo/api-contract"
+import { useQueryClient } from "@tanstack/react-query"
 
 interface FeedbackFormProps {
   feedback?: SelectFeedback
@@ -31,13 +32,15 @@ export function FeedbackForm({ feedback, onClose }: FeedbackFormProps) {
   const [hoveredRating, setHoveredRating] = useState(0)
   const router = useRouter()
   const tenant = StorageService.getTenant()
+  const queryClient = useQueryClient()
 
   const form = useForm<InsertFeedback>({
     resolver: zodResolver(InsertFeedbackSchema),
     defaultValues: {
       contactId: 0,
       assetId: "",
-      viewingDate: new Date(),
+      // viewingDate should be a string for the form
+      viewingDate: new Date().toISOString(),
       rating: 0,
       comments: "",
     },
@@ -63,7 +66,8 @@ export function FeedbackForm({ feedback, onClose }: FeedbackFormProps) {
     if (feedback) {
       form.setValue("contactId", feedback.contactId)
       form.setValue("assetId", feedback.assetId)
-      form.setValue("viewingDate", feedback.viewingDate)
+      // Convert existing Date to ISO string for the form
+      form.setValue("viewingDate", new Date(feedback.viewingDate).toISOString())
       form.setValue("rating", feedback.rating)
       form.setValue("comments", feedback.comments || "")
       setRating(feedback.rating)
@@ -75,18 +79,28 @@ export function FeedbackForm({ feedback, onClose }: FeedbackFormProps) {
     const feedbackData = {
       ...data,
       rating,
-   
     }
 
     if (feedback?.id) {
+      // Build update payload using strings for dates
+      const updateData = {
+        id: feedback.id,
+        contactId: feedbackData.contactId,
+        assetId: feedbackData.assetId,
+        viewingDate: feedbackData.viewingDate,
+        rating: feedbackData.rating,
+        comments: feedbackData.comments ?? null,
+      }
+
       updateFeedback(
         {
           params: { id: feedback.id.toString() },
-          body: feedback,
+          body: updateData,
         },
         {
           onSuccess: () => {
             toast.success("Feedback updated successfully")
+            queryClient.invalidateQueries({ queryKey: FEEDBACK_QUERY_KEY })
             onClose()
             form.reset()
           },
@@ -104,6 +118,7 @@ export function FeedbackForm({ feedback, onClose }: FeedbackFormProps) {
         {
           onSuccess: () => {
             toast.success("Feedback created successfully")
+            queryClient.invalidateQueries({ queryKey: FEEDBACK_QUERY_KEY })
             onClose()
             form.reset()
           },
@@ -195,9 +210,10 @@ export function FeedbackForm({ feedback, onClose }: FeedbackFormProps) {
               <FormLabel>Viewing Date</FormLabel>
               <FormControl>
                 <Input 
-                  type="datetime-local" 
-                  value={field.value instanceof Date ? field.value.toISOString().slice(0, 16) : ""}
-                  onChange={(e) => field.onChange(new Date(e.target.value))}
+                  type="datetime-local"
+                  // datetime-local expects "YYYY-MM-DDTHH:mm"
+                  value={typeof field.value === "string" ? field.value.slice(0, 16) : ""}
+                  onChange={(e) => field.onChange(e.target.value)}
                 />
               </FormControl>
               <FormMessage />

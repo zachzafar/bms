@@ -43,40 +43,33 @@ const predefinedTags = [
   "Maintenance Request",
 ]
 
-export function CommunicationForm({ initialData, onSubmit, onCancel, users }: CommunicationFormProps) {
+export function CommunicationForm({ initialData, onSubmit, onCancel, users, contacts }: { initialData?: any; onSubmit: (data: any) => void; onCancel: () => void; users: Array<import("@repo/api-contract").SelectUser>; contacts: Array<import("@repo/api-contract").SelectContact> }) {
   const [formData, setFormData] = useState({
-    clientId: initialData?.clientId || "",
-    clientName: initialData?.clientName || "",
-    clientEmail: initialData?.clientEmail || "",
-    userId: initialData?.userId || "",
-    userName: initialData?.userName || "",
+    clientId: (initialData?.contactId ?? initialData?.contact?.id ?? "").toString(),
+    // no need to store name/email locally; resolve from contacts/users when needed
+    userId: (initialData?.userId ?? initialData?.user?.id ?? "").toString(),
     type: initialData?.type || "Phone Call",
     summary: initialData?.summary || "",
     duration: initialData?.duration || "",
     outcome: initialData?.outcome || "Neutral",
     followUpRequired: initialData?.followUpRequired || false,
     followUpDate: initialData?.followUpDate || "",
-    tags: initialData?.tags || [],
+    tags: (initialData?.tags as string[]) || [],
   })
 
   const [newTag, setNewTag] = useState("")
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
-
-    // Find selected client and user details
-    const selectedClient = mockClients.find((c) => c.id === Number.parseInt(formData.clientId))
-    const selectedUser = users.find((u) => u.id === Number.parseInt(formData.userId))
-
-    onSubmit({
-      ...formData,
-      clientId: Number.parseInt(formData.clientId),
-      userId: Number.parseInt(formData.userId),
-      duration: formData.duration ? Number.parseInt(formData.duration) : null,
-      clientName: selectedClient?.name || formData.clientName,
-      clientEmail: selectedClient?.email || formData.clientEmail,
-      userName: selectedUser?.firstName + " " + selectedUser?.lastName || formData.userName,
-    })
+    // Build payload for InsertCommunicationLogSchema (contactId: number, userId: string, type, summary, date)
+    const payload = {
+      contactId: Number.parseInt(formData.clientId),
+      userId: formData.userId, // users have string IDs
+      type: formData.type, // must be "Email" | "Phone Call" | "Meeting"
+      summary: formData.summary,
+      date: new Date().toISOString(),
+    }
+    onSubmit(payload)
   }
 
   const handleChange = (field: string, value: string | boolean | string[]) => {
@@ -84,21 +77,16 @@ export function CommunicationForm({ initialData, onSubmit, onCancel, users }: Co
   }
 
   const handleClientChange = (clientId: string) => {
-    const selectedClient = mockClients.find((c) => c.id === Number.parseInt(clientId))
     setFormData((prev) => ({
       ...prev,
       clientId,
-      clientName: selectedClient?.name || "",
-      clientEmail: selectedClient?.email || "",
     }))
   }
 
   const handleUserChange = (userId: string) => {
-    const selectedUser = users.find((u) => u.id === Number.parseInt(userId))
     setFormData((prev) => ({
       ...prev,
       userId,
-      userName: selectedUser?.firstName + " " + selectedUser?.lastName || "",
     }))
   }
 
@@ -112,7 +100,7 @@ export function CommunicationForm({ initialData, onSubmit, onCancel, users }: Co
   const removeTag = (tagToRemove: string) => {
     handleChange(
       "tags",
-      formData.tags.filter((tag) => tag !== tagToRemove),
+      formData.tags.filter((tag: string) => tag !== tagToRemove),
     )
   }
 
@@ -126,9 +114,9 @@ export function CommunicationForm({ initialData, onSubmit, onCancel, users }: Co
               <SelectValue placeholder="Select client" />
             </SelectTrigger>
             <SelectContent>
-              {mockClients.map((client) => (
-                <SelectItem key={client.id} value={client.id.toString()}>
-                  {client.name}
+              {contacts.map((contact) => (
+                <SelectItem key={contact.id} value={contact.id.toString()}>
+                  {contact.firstName} {contact.lastName}
                 </SelectItem>
               ))}
             </SelectContent>
@@ -143,8 +131,8 @@ export function CommunicationForm({ initialData, onSubmit, onCancel, users }: Co
             </SelectTrigger>
             <SelectContent>
               {users.map((user) => (
-                <SelectItem key={user.id} value={user.id.toString()}>
-                  {user.firstName + " " + user.lastName}
+                <SelectItem key={user.id} value={user.id}>
+                  {user.name}
                 </SelectItem>
               ))}
             </SelectContent>
@@ -234,7 +222,7 @@ export function CommunicationForm({ initialData, onSubmit, onCancel, users }: Co
       <div className="space-y-3">
         <Label>Tags</Label>
         <div className="flex flex-wrap gap-2 mb-2">
-          {formData.tags.map((tag) => (
+          {formData.tags.map((tag: string) => (
             <Badge key={tag} variant="secondary" className="flex items-center gap-1">
               {tag}
               <X className="h-3 w-3 cursor-pointer" onClick={() => removeTag(tag)} />

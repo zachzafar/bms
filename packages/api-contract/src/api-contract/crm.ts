@@ -297,7 +297,7 @@ export const commsContract = c.router({
       from: DateString.optional(),
       to: DateString.optional(),
     }),
-    responses: { 200: z.array(ExtendedSelectCommunicationSchema) },
+    responses: { 200: z.array(SelectCommunicationLogSchema) },
   },
   getComm: {
     method: "GET",
@@ -343,7 +343,7 @@ export const feedbackContract = c.router({
       minRating: z.number().int().min(1).max(5).optional(),
       maxRating: z.number().int().min(1).max(5).optional(),
     }),
-    responses: { 200: z.array(ExtendedSelectFeedbackSchema) },
+    responses: { 200: z.array(SelectFeedbackSchema) },
   },
   getFeedback: {
     method: "GET",
@@ -433,7 +433,7 @@ export const taskContract = c.router({
     method: "POST",
     path: "/task",
     summary: "Create a task",
-    body: InsertTaskSchema.omit({ tenantId: true, dueDate: true }).extend({
+    body: InsertTaskSchema.omit({  dueDate: true }).extend({
       dueDate: z.string(),
     }),
     responses: { 201: z.object({ message: z.string(), taskId: z.number() }) },
@@ -449,7 +449,7 @@ export const taskContract = c.router({
       from: DateString.optional(),
       to: DateString.optional(),
     }),
-    responses: { 200: z.array(ExtendedSelectTaskSchema) },
+    responses: { 200: z.array(SelectTaskSchema) },
   },
   getTask: {
     method: "GET",
@@ -463,7 +463,7 @@ export const taskContract = c.router({
     path: "/task/:id",
     summary: "Update a task by id",
     pathParams: z.object({ id: z.string() }),
-    body: UpdateTaskSchema.omit({ tenantId: true, dueDate: true, id: true }).extend({
+    body: UpdateTaskSchema.omit({ dueDate: true, id: true }).extend({
       dueDate: z.string().optional(),
     }),
     responses: { 200: z.object({ message: z.string() }) },

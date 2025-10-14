@@ -28,7 +28,7 @@ export class FeedbackController {
     return tsRestHandler(crmContract.feedback.listFeedback, async ({ query }) => {
       const tenantId = headers['x-tenant-id'];
       const rows = await this.feedback.list(tenantId, query);
-      return { status: 200, body: rows };
+      return { status: 200, body: rows.map(row => ({...row, contactId: Number(row.contactId)})) };
     });
   }
 
