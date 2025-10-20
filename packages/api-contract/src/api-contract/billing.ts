@@ -42,7 +42,11 @@ export const billingContract = c.router({
     path: "/invoice",
     summary: "Create a new invoice",
     body: z.object({
-      invoice: InsertInvoiceSchema,
+      invoice: InsertInvoiceSchema.extend({
+        customerId: z.string(), // frontend sends string
+        issueDate: z.string(),  // frontend sends ISO string
+        dueDate: z.string(),    // frontend sends ISO string
+      }),
       items: z.array(z.object({
         description: z.string(),
         quantity: z.number(),
@@ -55,9 +59,9 @@ export const billingContract = c.router({
         message: z.string(),
         invoiceId: z.number(),
       }),
-    //   400: z.object({
-    //     message: z.string(),
-    //   }),
+      //   400: z.object({
+      //     message: z.string(),
+      //   }),
     },
   },
 
@@ -89,22 +93,52 @@ export const billingContract = c.router({
   },
 
   updateInvoice: {
-    method: "PUT",
-    path: "/invoice/:id",
-    summary: "Update an invoice by ID",
-    pathParams: z.object({
-      id: z.string(),
+  method: "PUT",
+  path: "/invoice/:id",
+  summary: "Update an invoice by ID",
+  pathParams: z.object({
+    id: z.string(),
+  }),
+  body: UpdateInvoiceSchema.extend({
+    customerId: z.string(), // frontend sends string
+    issueDate: z.string(),  // frontend sends ISO string
+    dueDate: z.string(),    // frontend sends ISO string
+    items: z.array(z.object({
+      id: z.number(),
+      description: z.string(),
+      quantity: z.number(),
+      unitPrice: z.string(),
+      totalPrice: z.string(),
+      invoiceId: z.number(),
+    })).optional(), // <-- added
+  }),
+  responses: {
+    200: z.object({
+      message: z.string(),
     }),
-    body: UpdateInvoiceSchema,
-    responses: {
-      200: z.object({
-        message: z.string(),
-      }),
-      400: z.object({
-        message: z.string(),
-      }),
-    },
+    400: z.object({
+      message: z.string(),
+    }),
   },
+},
+
+  deleteInvoice: {
+  method: "DELETE",
+  path: "/invoice/:id",
+  summary: "Delete an invoice by ID",
+  pathParams: z.object({
+    id: z.string(), // frontend will send the invoice ID as a string
+  }),
+  body: z.object({}),
+  responses: {
+    200: z.object({
+      message: z.string(),
+    }),
+    404: z.object({
+      message: z.string(),
+    }),
+  },
+},
 
   // Payment endpoints
   createPayment: {

@@ -14,6 +14,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Plus, Trash2, ArrowLeft, Save } from 'lucide-react';
 import { toast } from 'sonner';
 import { authClient } from '@/lib/api/publicClient';
+import { StorageService } from '@/lib/api/storage';
 
 // Invoice form schema
 const invoiceFormSchema = z.object({
@@ -106,32 +107,44 @@ export default function CreateInvoicePage() {
   };
 
   const onSubmit = (data: InvoiceFormValues) => {
-    setIsSubmitting(true);
-    
-    // Calculate totals
-    const subtotal = data.items.reduce((sum, item) => sum + parseFloat(item.totalPrice), 0);
-    const taxAmount = 0; // You can add tax calculation logic here
-    const totalAmount = subtotal + taxAmount;
+  setIsSubmitting(true);
 
-    const invoiceData = {
-      invoice: {
-        customerId: data.customerId,
-        bookingId: data.bookingId,
-        invoiceNumber: data.invoiceNumber,
-        issueDate: new Date(data.issueDate),
-        dueDate: new Date(data.dueDate),
-        notes: data.notes,
-        subtotal: subtotal.toFixed(2),
-        taxAmount: taxAmount.toFixed(2),
-        totalAmount: totalAmount.toFixed(2),
-        status: 'Unpaid',
-      },
-      items: data.items,
-    };
+  // Calculate totals
+  const subtotal = data.items.reduce((sum, item) => sum + parseFloat(item.totalPrice), 0);
+  const taxAmount = 0; // add tax logic if needed
+  const totalAmount = subtotal + taxAmount;
 
-    createInvoice(invoiceData);
-    setIsSubmitting(false);
+  // Prepare invoice data for JSON
+  const invoiceData = {
+    invoice: {
+      status: 'Unpaid',
+      customerId: data.customerId, // serialize BigInt as string for JSON
+      bookingId: data.bookingId || '',
+      invoiceNumber: data.invoiceNumber || '',
+      issueDate: data.issueDate, 
+      dueDate: data.dueDate,     
+      tenantId: StorageService.getTenant()?.id || '',
+      subtotal: subtotal.toFixed(2),
+      taxAmount: taxAmount.toFixed(2),
+      totalAmount: totalAmount.toFixed(2),
+      notes: data.notes || '',
+    },
+    items: data.items.map((item) => ({
+      ...item,
+      quantity: Number(item.quantity),
+      unitPrice: Number(item.unitPrice).toFixed(2),
+      totalPrice: Number(item.totalPrice).toFixed(2),
+    })),
   };
+
+  createInvoice({ body: invoiceData });
+  setIsSubmitting(false);
+};
+
+
+
+
+
 
   const customers = customersData?.body || [];
   const bookings = bookingsData?.body || [];

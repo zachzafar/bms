@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { Calendar, DateRange, momentLocalizer, Event, SlotInfo, View } from "react-big-calendar";
 import moment from "moment";
 import "react-big-calendar/lib/css/react-big-calendar.css";
-import { Button } from '../../../components/ui/button';
+import { Button } from "../../../components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "../../../components/ui/card";
 import { authClient } from "../../../lib/api/publicClient";
 import { Trash2 } from "lucide-react";
@@ -28,19 +28,29 @@ type BlockedDate = {
 
 const localizer = momentLocalizer(moment);
 
+// 🧩 Helpers
+function formatLocalDate(date: Date) {
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, "0");
+  const d = String(date.getDate()).padStart(2, "0");
+  return `${y}-${m}-${d}`;
+}
+
+function parseLocalDate(str: string) {
+  const [y, m, d] = str.split("-").map(Number);
+  return new Date(y, m - 1, d, 0, 0, 0);
+}
+
 export default function BookingCalendar() {
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [blocked, setBlocked] = useState<BlockedDate[]>([]);
   const [blockTitle, setBlockTitle] = useState<string>("");
-
   const [selectedRange, setSelectedRange] = useState<{ start: Date; end: Date } | null>(null);
   const [currentDate, setCurrentDate] = useState(new Date());
-  const [currentView, setCurrentView] = useState<View>('month');
+  const [currentView, setCurrentView] = useState<View>("month");
 
-  // Queries
   const bookingsQuery = authClient.booking.getBookings.useQuery({ queryKey: BOOKINGS_QUERY_KEY });
 
-  // Mutations
   const createBlockedDateMutation = authClient.booking.createBlockedDate.useMutation();
   const deleteBlockedDateMutation = authClient.booking.deleteBlockedDate.useMutation({
     onSuccess: () => {
@@ -68,40 +78,46 @@ export default function BookingCalendar() {
 
   useEffect(() => {
     if (bookingsQuery.data) {
-      const bookingsData = bookingsQuery.data.body?.map((b) => ({
-        id: Number(b.id),
-        startDate: b.startDate,
-        endDate: b.endDate,
-        customerName: b.user.name,
-      })) ?? [];
+      const bookingsData =
+        bookingsQuery.data.body?.map((b) => ({
+          id: Number(b.id),
+          startDate: b.startDate,
+          endDate: b.endDate,
+          customerName: b.user.name,
+        })) ?? [];
       setBookings(bookingsData);
     }
     fetchBlockedDates();
   }, [bookingsQuery.data]);
 
-  // Convert blocked dates to react-big-calendar events
-  const blockedEvents: Event[] = blocked.map((b) => ({
-    title: b.title,
-    start: new Date(b.startDate),
-    end: new Date(b.endDate),
-    allDay: true,
-  }));
+  // ✅ FIX: Add +1 day to end for display (RBC treats end as exclusive)
+  const blockedEvents: Event[] = blocked.map((b) => {
+    const start = parseLocalDate(b.startDate);
+    const end = parseLocalDate(b.endDate);
+    const endPlusOne = new Date(end);
+    endPlusOne.setDate(endPlusOne.getDate() + 1);
+    return {
+      title: b.title,
+      start,
+      end: endPlusOne,
+      allDay: true,
+    };
+  });
 
   const tempEvent: Event[] = selectedRange
     ? [
-        {
-          title: blockTitle || "New Block",
-          start: selectedRange.start,
-          end: selectedRange.end,
-          allDay: true,
-          resource: { temp: true },
-        },
-      ]
+      {
+        title: blockTitle || "New Block",
+        start: selectedRange.start,
+        end: selectedRange.end,
+        allDay: true,
+        resource: { temp: true },
+      },
+    ]
     : [];
 
   const events = [...blockedEvents, ...tempEvent];
 
-  // Helper: compares only the day part (ignores time)
   function sameDay(date1: Date, date2: Date) {
     return (
       date1.getFullYear() === date2.getFullYear() &&
@@ -110,13 +126,17 @@ export default function BookingCalendar() {
     );
   }
 
+  // ✅ Your payload stays correct (endDate -1 for exclusive end)
   const handleBlock = async () => {
     if (!selectedRange) return;
 
     const tenantId = localStorage.getItem("tenant")!;
-    const assetId = "some-asset-id"; // must provide a valid assetId
-    const startDate = selectedRange.start.toISOString().split("T")[0];
-    const endDate = selectedRange.end.toISOString().split("T")[0];
+    const assetId = "some-asset-id";
+
+    const startDate = formatLocalDate(selectedRange.start);
+    const endCopy = new Date(selectedRange.end);
+    endCopy.setDate(endCopy.getDate() - 1);
+    const endDate = formatLocalDate(endCopy);
 
     await createBlockedDateMutation.mutateAsync({
       body: { tenantId, assetId, startDate, endDate, title: blockTitle, reason: "Manual Block" },
@@ -156,48 +176,18 @@ export default function BookingCalendar() {
             eventPropGetter={(event) => {
               if (event.resource?.temp) {
                 return {
-                  style: { backgroundColor: "rgba(0,128,255,0.3)", border: "1px solid #007BFF" },
+                  style: {
+                    backgroundColor: "rgba(0,128,255,0.3)",
+                    border: "1px solid #007BFF",
+                  },
                 };
               }
-              return { style: { backgroundColor: "rgba(255,0,0,0.7)", color: "white" } };
-            }}
-            slotPropGetter={(slotInfo: Date | { start: Date; end: Date }) => {
-              if (!selectedRange) return {};
-
-              let slotStart: Date;
-              let slotEnd: Date;
-
-              if (slotInfo instanceof Date) {
-                // Month view
-                slotStart = slotEnd = slotInfo;
-              } else {
-                // Week/day view
-                slotStart = slotInfo.start;
-                slotEnd = slotInfo.end;
-              }
-
-              let inRange = false;
-
-              if (slotInfo instanceof Date) {
-                // Month view: check if the day is in the selected range
-                let current = new Date(selectedRange.start);
-                while (current <= selectedRange.end) {
-                  if (sameDay(current, slotStart)) {
-                    inRange = true;
-                    break;
-                  }
-                  current.setDate(current.getDate() + 1);
-                }
-              } else {
-                // Week/day view: check time overlap
-                inRange = slotEnd > selectedRange.start && slotStart < selectedRange.end;
-              }
-
-              if (inRange) {
-                return { style: { backgroundColor: "rgba(255,165,0,0.3)" } };
-              }
-
-              return {};
+              return {
+                style: {
+                  backgroundColor: "rgba(255,0,0,0.7)",
+                  color: "white",
+                },
+              };
             }}
             components={{
               event: ({ event }: any) => (
@@ -230,13 +220,10 @@ export default function BookingCalendar() {
           ) : (
             <ul className="space-y-2">
               {blocked.map((b) => (
-                <li
-                  key={b.id}
-                  className="flex items-center justify-between rounded-lg border p-2"
-                >
+                <li key={b.id} className="flex items-center justify-between rounded-lg border p-2">
                   <span>
-                    {new Date(b.startDate).toLocaleDateString()} →{" "}
-                    {new Date(b.endDate).toLocaleDateString()}{" "}
+                    {parseLocalDate(b.startDate).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })} - 
+                    {parseLocalDate(b.endDate).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}
                     {b.reason ? `(${b.reason})` : ""}
                   </span>
                   <Button

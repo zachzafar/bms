@@ -1,4 +1,4 @@
-import { Controller, Headers, Logger, Query } from '@nestjs/common';
+import { ConflictException, Controller, Headers, Logger, Query } from '@nestjs/common';
 import { contract } from '@repo/api-contract';
 import { tsRestHandler, TsRestHandler } from '@ts-rest/nest';
 import { BookingService } from './booking.service';
@@ -14,14 +14,26 @@ export class BookingController {
     constructor(private bookingService: BookingService, private tenantService: TenantService) { }
 
     @TsRestHandler(contract.booking.createBooking)
-    @Roles(PermissionScope.BOOKINGS_WRITE)
-    async createBooking(): Promise<ReturnType<typeof tsRestHandler>> {
-        return tsRestHandler(contract.booking.createBooking, async ({ body }) => {
-            const { booking, customers } = body
-            await this.bookingService.createBooking(booking, customers);
-            return { status: 201, body: { message: "successfully added booking" } };
-        });
+@Roles(PermissionScope.BOOKINGS_WRITE)
+async createBooking(): Promise<ReturnType<typeof tsRestHandler>> {
+  return tsRestHandler(contract.booking.createBooking, async ({ body }) => {
+    const { booking, customers } = body;
+
+    const bookingId = await this.bookingService.createBooking(booking, customers);
+
+    if (!bookingId) {
+      throw new ConflictException('Booking creation failed, no bookingId returned');
     }
+
+    return {
+      status: 201,
+      body: {
+        message: 'successfully added booking',
+        bookingId, // ✅ now guaranteed to be string
+      },
+    };
+  });
+}
 
     @TsRestHandler(contract.booking.getBooking)
     @Roles(PermissionScope.BOOKINGS_READ)
@@ -152,7 +164,7 @@ export class BookingController {
     @Roles(PermissionScope.BOOKINGS_DELETE)
     async deleteBlockedDate(): Promise<ReturnType<typeof tsRestHandler>> {
         return tsRestHandler(contract.booking.deleteBlockedDate, async ({ params }) => {
-            const id = String(params.id); 
+            const id = String(params.id);
             // if (isNaN(id)) throw new BadRequestException("Invalid blocked date ID");
 
             await this.bookingService.deleteBlockedDate(id);

@@ -11,9 +11,8 @@ import { keysContract } from './keys';
 import { analyticsContract } from './analytics';
 import { slotContract } from './slots';
 import { rateContract } from './rates';
-// import { billingContract } from './billing';
-import { crmContract } from './crm';
 import { billingContract } from './billing';
+import { crmContract } from './crm';
 import { systemAdminContract } from './system-admin';
 import { reportsContract } from './reports';
 

@@ -2,14 +2,17 @@ import { Inject, Injectable, BadRequestException, NotFoundException } from '@nes
 import { MySql2Database } from 'drizzle-orm/mysql2';
 import * as schema from '@repo/api-contract';
 import { DrizzleAsyncProvider } from 'src/drizzle/drizzle.provider';
-import { and, eq, inArray } from 'drizzle-orm';
+import { and, eq, gte, inArray, lte } from 'drizzle-orm';
+import { SlotService } from 'src/slot/slot.service';
 
 type CreateInvoiceInput = Omit<schema.InsertInvoice, 'id'>;
 type ItemInput = { description: string; quantity: number; unitPrice: string; totalPrice: string; };
 
 @Injectable()
 export class InvoicesService {
-  constructor(@Inject(DrizzleAsyncProvider) private db: MySql2Database<typeof schema>) {}
+  constructor(@Inject(DrizzleAsyncProvider) private db: MySql2Database<typeof schema>,
+    private readonly slotService: SlotService,
+  ) { }
 
   private iso(d: Date | null | undefined) {
     return d ? d.toISOString() : undefined;
@@ -117,9 +120,41 @@ export class InvoicesService {
     };
   }
 
-  async update(id: number, patch: Partial<schema.UpdateInvoice>) {
-    await this.db.update(schema.Invoice).set(patch).where(eq(schema.Invoice.id, id)).execute();
+  async update(
+    id: number,
+    invoiceData: Partial<schema.UpdateInvoice>,
+    items?: {
+      id?: number;
+      description: string;
+      quantity: number;
+      unitPrice: string;
+      totalPrice: string;
+      invoiceId?: number;
+    }[]
+  ) {
+    await this.db.transaction(async (tx) => {
+      // Update invoice main fields
+      await tx.update(schema.Invoice).set(invoiceData).where(eq(schema.Invoice.id, id)).execute();
+
+      if (items && items.length > 0) {
+        // Delete existing items
+        await tx.delete(schema.InvoiceItem).where(eq(schema.InvoiceItem.invoiceId, BigInt(id))).execute();
+
+        // Insert updated items
+        await tx.insert(schema.InvoiceItem).values(
+          items.map((i) => ({
+            description: i.description,
+            quantity: i.quantity,
+            unitPrice: i.unitPrice as any,
+            totalPrice: i.totalPrice as any,
+            invoiceId: BigInt(id),
+          }))
+        ).execute();
+      }
+    });
   }
+
+
 
   /** Simple invoice number generator you can replace with your own sequence */
   async generateInvoiceNumber() {
@@ -131,66 +166,124 @@ export class InvoicesService {
     return `INV-${y}${m}${d}-${rand}`;
   }
 
+  async delete(id: number) {
+    // Optional: check if the invoice exists first
+    const invoice = await this.db.query.Invoice.findFirst({
+      where: (i, { eq }) => eq(i.id, id),
+    });
+
+    if (!invoice) {
+      throw new NotFoundException(`Invoice with ID ${id} not found`);
+    }
+
+    // Wrap in transaction to also delete related items
+    await this.db.transaction(async (tx) => {
+      // Delete related invoice items first
+      await tx.delete(schema.InvoiceItem).where(eq(schema.InvoiceItem.invoiceId, BigInt(id))).execute();
+
+      // Delete the invoice itself
+      await tx.delete(schema.Invoice).where(eq(schema.Invoice.id, id)).execute();
+    });
+
+    return { message: `Invoice ${id} deleted successfully` };
+  }
+
   /**
    * Create an invoice from a Booking:
    * - Uses the first associated booking customer
    * - Subtotal/Total from booking.totalPrice, tax 0.00 (customize if needed)
    * - Single item line "Booking {asset.name}"
    */
-  async generateFromBooking(tenantId: string, bookingId: string) {
-    // 1) Pull booking + asset
-    const booking = await this.db.query.Booking.findFirst({
-      where: (b, { eq }) => eq(b.id, bookingId),
-      with: { asset: true },
-    });
-    if (!booking) throw new NotFoundException('Booking not found');
+ async generateInvoiceFromBooking(tenantId: string, bookingId: string) {
+  // 1) Pull booking + asset
+  const booking = await this.db.query.Booking.findFirst({
+    where: (b, { eq }) => eq(b.id, bookingId),
+    with: { asset: true },
+  });
+  if (!booking) throw new NotFoundException('Booking not found');
 
-    // 2) Derive a customer from booking (first linked customer via UserHasBookings → Customer)
-    const userLinks = await this.db.query.UserHasBookings.findMany({
-      where: (ub, { eq }) => eq(ub.bookingId, bookingId),
-    });
-    if (!userLinks.length) throw new BadRequestException('No users linked to booking');
-    const firstUserId = userLinks[0].userId;
+  // 2) Pull first customer linked to booking
+  const userLinks = await this.db.query.UserHasBookings.findMany({
+    where: (ub, { eq }) => eq(ub.bookingId, bookingId),
+  });
+  if (!userLinks.length) throw new BadRequestException('No users linked to booking');
 
-    const customer = await this.db.query.Customer.findFirst({
-      where: (c, { eq }) => eq(c.userId, firstUserId),
-    });
-    if (!customer) throw new BadRequestException('No customer found for booking user');
+  const firstUserId = userLinks[0].userId;
+  const customer = await this.db.query.Customer.findFirst({
+    where: (c, { eq }) => eq(c.userId, firstUserId),
+  });
+  if (!customer) throw new BadRequestException('No customer found for booking user');
 
-    // Optional: you can validate tenant here against the asset
-    // (usually done at controller via TenantService.validateTenantAccess(tenantId, schema.Asset, booking.assetId))
+  // 3) Calculate number of nights
+  const startDate = new Date(booking.startDate);
+  const endDate = new Date(booking.endDate);
+  const nights = Math.ceil((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24));
 
-    const total = booking.totalPrice ? String(booking.totalPrice) : '0.00';
-    const invoiceNumber = await this.generateInvoiceNumber();
+  // 4) Fetch applicable rate from Rate table
+  const matchingRates = await this.db
+    .select({
+      rate: schema.Rate,
+      assetHasRate: schema.AssetHasRates,
+    })
+    .from(schema.Rate)
+    .innerJoin(schema.AssetHasRates, eq(schema.Rate.id, schema.AssetHasRates.rateId))
+    .where(
+      and(
+        eq(schema.AssetHasRates.assetId, booking.assetId),
+        lte(schema.Rate.startDate, startDate), // rate start <= booking start
+        gte(schema.Rate.endDate, endDate)      // rate end >= booking end
+      )
+    );
 
-    const [{ id }] = await this.db.transaction(async (tx) => {
-      const inserted = await tx.insert(schema.Invoice).values({
-        tenantId,
-        invoiceNumber,
-        status: 'Unpaid',
-        issueDate: new Date(),
-        dueDate: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000), // +14 days
-        subtotal: total as any,
-        taxAmount: '0.00' as any,
-        totalAmount: total as any,
-        notes: `Invoice for booking ${bookingId}`,
-        customerId: BigInt(customer.id),  // Convert to bigint
-        bookingId,
-      }).$returningId();
-
-      const invoiceId = inserted[0].id;
-
-      await tx.insert(schema.InvoiceItem).values({
-        invoiceId: BigInt(invoiceId),
-        description: `Booking ${booking.asset?.name ?? booking.assetId}`,
-        quantity: 1,
-        unitPrice: total as any,
-        totalPrice: total as any,
-      });
-
-      return inserted;
-    });
-
-    return id;
+  if (!matchingRates.length) {
+    throw new NotFoundException('No applicable rate found for booking dates');
   }
+
+  // Pick the rate with highest priority (lowest number)
+  const applicableRate = matchingRates
+    .map((r) => r.rate)
+    .reduce((prev, curr) => (prev.priority ?? 100) < (curr.priority ?? 100) ? prev : curr);
+
+  const unitPrice = Number(applicableRate.pricePerNight ?? 0);
+  const total = (unitPrice * nights).toFixed(2);
+
+  const invoiceNumber = await this.generateInvoiceNumber();
+
+  const [{ id }] = await this.db.transaction(async (tx) => {
+    // 5) Insert invoice
+    const [insertedInvoice] = await tx.insert(schema.Invoice).values({
+      tenantId,
+      invoiceNumber,
+      status: 'Unpaid',
+      issueDate: new Date(),
+      dueDate: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000),
+      subtotal: total as any,
+      taxAmount: '0.00' as any,
+      totalAmount: total as any,
+      notes: `Invoice for booking ${bookingId}`,
+      customerId: BigInt(customer.id),
+      bookingId,
+    }).$returningId();
+
+    const invoiceId = insertedInvoice.id;
+
+    // 6) Insert invoice item
+    await tx.insert(schema.InvoiceItem).values({
+      invoiceId: BigInt(invoiceId),
+      description: `Rate per night for ${booking.asset?.name ?? booking.assetId}`,
+      quantity: nights,
+      unitPrice: unitPrice as any,
+      totalPrice: total as any,
+    });
+
+    return [insertedInvoice];
+  });
+
+  return id;
 }
+
+
+
+
+}
+

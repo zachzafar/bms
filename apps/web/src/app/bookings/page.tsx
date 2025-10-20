@@ -84,6 +84,7 @@ export default function Component() {
   const tagList = tagsResponse?.body ?? [];
 
   const { mutate: createBooking } = authClient.booking.createBooking.useMutation();
+  const { mutate: generateInvoiceFromBooking } = authClient.billing.generateInvoiceFromBooking.useMutation();
   const { mutate: createBookingByTag } = authClient.booking.createBookingByTag.useMutation();
 
   const [blockedDates, setBlockedDates] = useState<BlockedDate[]>([]);
@@ -283,12 +284,37 @@ export default function Component() {
         },
       },
       {
-        onSuccess: () => {
+        onSuccess: (response) => {
           toast.success('Booking created successfully');
           queryClient.invalidateQueries({ queryKey: BOOKINGS_QUERY_KEY });
           setIsCreateDialogOpen(false);
           form.reset();
           setCustomers([]);
+
+          // Generate invoice after booking creation
+          const bookingId = response.body.bookingId; // <- now comes from backend
+          const tenant = StorageService.getTenant();
+          const tenantId = tenant?.id;
+
+          console.log(tenantId);
+
+          if (bookingId && tenantId) {
+            generateInvoiceFromBooking(
+              {
+                params: { bookingId },
+                body: {},
+              },
+              {
+                onSuccess: () => toast.success('Invoice generated successfully'),
+                onError: (err) => {
+                  console.error('Failed to generate invoice:', err);
+                  toast.error('Failed to generate invoice');
+                },
+              }
+            );
+          } else {
+            console.warn('No bookingId or tenantId available to generate invoice');
+          }
         },
         onError: (error) => {
           toast.error('Failed to create booking');
@@ -297,6 +323,10 @@ export default function Component() {
       }
     );
   };
+
+
+
+
 
   const handleSort = (column: any) => {
     if (sortBy === column) {

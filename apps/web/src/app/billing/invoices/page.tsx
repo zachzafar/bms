@@ -8,15 +8,16 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Plus, Search, Eye, Edit, Download, Filter } from 'lucide-react';
+import { Plus, Search, Eye, Edit, Download, Trash } from 'lucide-react';
 import { authClient } from '@/lib/api/publicClient';
 import { toast } from 'sonner';
 import { Label } from '@/components/ui/label';
 
+
 interface Invoice {
   id: number;
   invoiceNumber: string;
-  customerId: string;
+  customerId: number;
   status: string;
   issueDate: string;
   dueDate: string;
@@ -42,31 +43,33 @@ export default function InvoicesPage() {
   // Fetch invoices and customers
   const { data: invoicesData, refetch: refetchInvoices } = authClient.billing.getInvoices.useQuery({
     queryKey: ['invoices'],
-    query: {},
   });
 
   const { data: customersData } = authClient.users.getCustomers.useQuery({
     queryKey: ['customers'],
   });
 
-  const { mutate: deleteInvoice } = authClient.billing.deleteInvoice?.useMutation?.({
+  // At the top, import mutation hooks
+  const { mutate: deleteInvoice } = authClient.billing.deleteInvoice.useMutation({
     onSuccess: () => {
       toast.success('Invoice deleted successfully');
       refetchInvoices();
     },
-    onError: (error) => {
+    onError: (error: any) => {
       toast.error('Failed to delete invoice');
       console.error('Delete invoice error:', error);
     },
-  }) || { mutate: () => {} };
+  });
+
 
   const invoices = invoicesData?.body || [];
   const customers = customersData?.body || [];
 
-  // Filter invoices
+  // Filter invoices safely
   const filteredInvoices = invoices.filter((invoice) => {
-    const matchesSearch = invoice.invoiceNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         invoice.notes?.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesSearch =
+      invoice.invoiceNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (invoice.notes?.toLowerCase().includes(searchTerm.toLowerCase()) ?? false);
     const matchesStatus = statusFilter === 'all' || invoice.status === statusFilter;
     const matchesCustomer = customerFilter === 'all' || String(invoice.customerId) === customerFilter;
 
@@ -74,8 +77,8 @@ export default function InvoicesPage() {
   });
 
   const getCustomerName = (customerId: string) => {
-    const customer = customers.find(c => String(c.customer.id) === customerId);
-    return customer ? (customer.user.name || customer.user.email) : 'Unknown Customer';
+    const customer = customers.find((c) => String(c.customer.id) === customerId);
+    return customer ? customer.user.name || customer.user.email : 'Unknown Customer';
   };
 
   const getStatusColor = (status: string) => {
@@ -93,28 +96,27 @@ export default function InvoicesPage() {
     }
   };
 
-  const isOverdue = (dueDate: string) => {
-    return new Date(dueDate) < new Date() && statusFilter !== 'paid';
+  const isOverdue = (dueDate?: string, status?: string) => {
+    if (!dueDate) return false;
+    const due = new Date(dueDate);
+    if (isNaN(due.getTime())) return false;
+    return due < new Date() && status?.toLowerCase() !== 'paid';
   };
 
-  const handleDeleteInvoice = (invoiceId: number) => {
-    if (confirm('Are you sure you want to delete this invoice? This action cannot be undone.')) {
-      if (deleteInvoice) {
-        deleteInvoice({ id: invoiceId });
-      } else {
-        toast.error('Invoice deletion not implemented yet');
-      }
-    }
-  };
+  const handleDeleteInvoice = (invoiceId: string) => {
+  if (confirm('Are you sure you want to delete this invoice? This action cannot be undone.')) {
+    deleteInvoice({ params: { id: invoiceId } }); 
+  }
+};
 
   const getTotalOutstanding = () => {
     return filteredInvoices
-      .filter(inv => inv.status !== 'Paid')
+      .filter((inv) => inv.status.toLowerCase() !== 'paid')
       .reduce((sum, inv) => sum + parseFloat(inv.totalAmount), 0);
   };
 
   const getOverdueInvoices = () => {
-    return filteredInvoices.filter(inv => isOverdue(inv.dueDate));
+    return filteredInvoices.filter((inv) => isOverdue(inv.dueDate, inv.status));
   };
 
   return (
@@ -137,7 +139,7 @@ export default function InvoicesPage() {
             <div className="text-2xl font-bold">{filteredInvoices.length}</div>
           </CardContent>
         </Card>
-        
+
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Outstanding Amount</CardTitle>
@@ -146,7 +148,7 @@ export default function InvoicesPage() {
             <div className="text-2xl font-bold">${getTotalOutstanding().toFixed(2)}</div>
           </CardContent>
         </Card>
-        
+
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Overdue Invoices</CardTitle>
@@ -155,14 +157,14 @@ export default function InvoicesPage() {
             <div className="text-2xl font-bold">{getOverdueInvoices().length}</div>
           </CardContent>
         </Card>
-        
+
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Paid Invoices</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              {filteredInvoices.filter(inv => inv.status === 'Paid').length}
+              {filteredInvoices.filter((inv) => inv.status.toLowerCase() === 'paid').length}
             </div>
           </CardContent>
         </Card>
@@ -252,40 +254,30 @@ export default function InvoicesPage() {
               </TableHeader>
               <TableBody>
                 {filteredInvoices.map((invoice) => (
-                  <TableRow key={invoice.id} className={isOverdue(invoice.dueDate) ? 'bg-red-50' : ''}>
-                    <TableCell className="font-medium">
-                      {invoice.invoiceNumber}
-                    </TableCell>
+                  <TableRow key={invoice.id} className={isOverdue(invoice.dueDate, invoice.status) ? 'bg-red-50' : ''}>
+                    <TableCell className="font-medium">{invoice.invoiceNumber}</TableCell>
+                    <TableCell>{getCustomerName(String(invoice.customerId))}</TableCell>
                     <TableCell>
-                      {getCustomerName(String(invoice.customerId))}
-                    </TableCell>
-                    <TableCell>
-                      <Badge className={getStatusColor(invoice.status)}>
-                        {invoice.status}
-                      </Badge>
-                      {isOverdue(invoice.dueDate) && (
+                      <Badge className={getStatusColor(invoice.status)}>{invoice.status}</Badge>
+                      {isOverdue(invoice.dueDate, invoice.status) && (
                         <Badge variant="destructive" className="ml-2">
                           Overdue
                         </Badge>
                       )}
                     </TableCell>
+                    <TableCell>{new Date(invoice.issueDate).toLocaleDateString()}</TableCell>
                     <TableCell>
-                      {new Date(invoice.issueDate).toLocaleDateString()}
-                    </TableCell>
-                    <TableCell>
-                      <span className={isOverdue(invoice.dueDate) ? 'text-red-600 font-medium' : ''}>
+                      <span className={isOverdue(invoice.dueDate, invoice.status) ? 'text-red-600 font-medium' : ''}>
                         {new Date(invoice.dueDate).toLocaleDateString()}
                       </span>
                     </TableCell>
-                    <TableCell className="font-medium">
-                      ${parseFloat(invoice.totalAmount).toFixed(2)}
-                    </TableCell>
+                    <TableCell className="font-medium">${parseFloat(invoice.totalAmount).toFixed(2)}</TableCell>
                     <TableCell>
                       <div className="flex space-x-2">
                         <Button
                           variant="outline"
                           size="sm"
-                          onClick={() => router.push(`/billing/invoices/${invoice.id}`)}
+                          onClick={() => router.push(`/billing/invoices/${invoice.id}/view`)}
                         >
                           <Eye className="h-4 w-4" />
                         </Button>
@@ -300,11 +292,18 @@ export default function InvoicesPage() {
                           variant="outline"
                           size="sm"
                           onClick={() => {
-                            // Implement download functionality
                             toast.info('Download functionality coming soon');
                           }}
                         >
                           <Download className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleDeleteInvoice(invoice.id)}
+                        >
+                          Delete
+                          {/* <Trash className="h-4 w-4" /> */}
                         </Button>
                       </div>
                     </TableCell>
