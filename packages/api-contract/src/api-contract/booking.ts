@@ -24,6 +24,7 @@ export const bookingContract = c.router({
         responses: {
             201: z.object({
                 message: z.string(),
+                bookingId: z.string(),
             })
 
         },
