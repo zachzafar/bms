@@ -10,6 +10,7 @@ import { authClient } from "../../../lib/api/publicClient";
 import { Trash2 } from "lucide-react";
 import { BOOKINGS_QUERY_KEY } from "@/lib/api/queryKeys";
 import { toast } from "sonner";
+import { StorageService } from "@/lib/api/storage";
 
 type Booking = {
   id: number;
@@ -130,7 +131,8 @@ export default function BookingCalendar() {
   const handleBlock = async () => {
     if (!selectedRange) return;
 
-    const tenantId = localStorage.getItem("tenant")!;
+    const currentTenant = StorageService.getTenant();
+    const tenantId = currentTenant?.id ?? "";
     const assetId = "some-asset-id";
 
     const startDate = formatLocalDate(selectedRange.start);
@@ -222,7 +224,7 @@ export default function BookingCalendar() {
               {blocked.map((b) => (
                 <li key={b.id} className="flex items-center justify-between rounded-lg border p-2">
                   <span>
-                    {parseLocalDate(b.startDate).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })} - 
+                    {parseLocalDate(b.startDate).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })} -
                     {parseLocalDate(b.endDate).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}
                     {b.reason ? `(${b.reason})` : ""}
                   </span>

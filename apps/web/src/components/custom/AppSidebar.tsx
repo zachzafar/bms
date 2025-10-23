@@ -35,6 +35,11 @@ const items = [
         title: "Bookings",
         url: "/bookings",
         icon: Calendar,
+      },
+      {
+        title: "Booking Calendar",
+        url: "/bookings/calendar",
+        icon: Calendar,
       }
     ]
   },
