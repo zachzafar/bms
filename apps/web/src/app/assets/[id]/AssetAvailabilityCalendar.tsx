@@ -1,259 +1,281 @@
 'use client';
 
-import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
+import { useEffect, useState } from 'react';
+import { Calendar, momentLocalizer, Event, SlotInfo, View } from 'react-big-calendar';
+import moment from 'moment';
+import 'react-big-calendar/lib/css/react-big-calendar.css';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { SelectAsset } from '@repo/api-contract';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { authClient } from '@/lib/api/publicClient';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import { Form, FormField, FormItem, FormLabel, FormControl, FormMessage, FormDescription } from '@/components/ui/form';
+import { Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { Calendar } from '@/components/ui/calendar';
-import { CalendarIcon } from 'lucide-react';
-import { cn } from '@/lib/utils';
-import { format } from 'date-fns';
-import { z } from 'zod';
+import { StorageService } from '@/lib/api/storage';
+import { SelectAsset } from '@repo/api-contract';
 
-const InsertAvailabilitySchema = z.object({
-            assetId: z.string(),
-            startDate: z.date(),
-            endDate: z.date(),
-            available: z.boolean(),
-            price: z.string(),
-})
+type Booking = {
+  id: number;
+  startDate: string;
+  endDate: string;
+  customerName: string;
+};
 
-type InsertAvailability = z.infer<typeof InsertAvailabilitySchema>;
+type BlockedDate = {
+  id: number;
+  startDate: string; // expected 'YYYY-MM-DD' or ISO
+  endDate: string;   // expected 'YYYY-MM-DD' or ISO
+  title: string;
+  reason?: string;
+};
 
-export default function AssetAvailabilityCalendar({
-  asset }: { asset: SelectAsset }) {
-    const queryClient = authClient.useQueryClient();
-  
-    const { data: availabilities } = authClient.slots.getAssetAvailability.useQuery({
-    queryKey: ['availability', asset.id],
-    queryData: { params: { id: asset.id } }
-  });
+const localizer = momentLocalizer(moment);
 
-  const { mutate } = authClient.slots.createAssetAvailability.useMutation();
+function formatLocalDate(date: Date) {
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, '0');
+  const d = String(date.getDate()).padStart(2, '0');
+  return `${y}-${m}-${d}`;
+}
 
-  const ranges = availabilities?.status == 200 ? availabilities.body.map(availability => availability) : [];
+// NEW helper: parse a date-only 'YYYY-MM-DD' as a local Date (avoids UTC shift)
+function parseDateOnly(dateStr: string) {
+  // if string includes time or 'T', just rely on Date constructor (it has time info)
+  if (dateStr.includes('T')) return new Date(dateStr);
+  const [y, m, d] = dateStr.split('-').map(Number);
+  return new Date(y, m - 1, d, 0, 0, 0); // local midnight
+}
 
-  const form = useForm<Omit<InsertAvailability,"assetId">>({
-    resolver: zodResolver(InsertAvailabilitySchema.omit({ assetId: true })),
-    defaultValues: {
-      available: false,
+export default function AssetAvailabilityCalendar({ asset }: { asset: SelectAsset }) {
+  const [bookings, setBookings] = useState<Booking[]>([]);
+  const [blocked, setBlocked] = useState<BlockedDate[]>([]);
+  const [blockTitle, setBlockTitle] = useState<string>('');
+  const [selectedRange, setSelectedRange] = useState<{ start: Date; end: Date } | null>(null);
+  const [currentDate, setCurrentDate] = useState(new Date());
+  const [currentView, setCurrentView] = useState<View>('month');
+
+  const createBlockedDateMutation = authClient.booking.createBlockedDate.useMutation();
+  const deleteBlockedDateMutation = authClient.booking.deleteBlockedDate.useMutation({
+    onSuccess: () => {
+      toast.success('Blocked date deleted');
+      fetchBlockedDates();
+    },
+    onError: () => {
+      toast.error('Failed to delete blocked date');
     },
   });
 
-  const onSubmit = (data: Omit<InsertAvailability,"assetId">) => {
-    console.log("submiting")
-    const newRange = {
-      startDate: data.startDate.toISOString(),
-      endDate: data.endDate.toISOString(),
-      price: data.price,
-      available: !data.available,
-      assetId: asset.id
-    };
+  const fetchBookings = async () => {
+    const res = await authClient.booking.getBookings.query({
+      query: { assetId: asset.id },
+    });
 
-    mutate(
-      { body: newRange },
-      {
-        onSuccess: () => {
-          toast.success('Availability added successfully');
-          queryClient.invalidateQueries({ queryKey: ['availability', asset.id]});
-          form.reset();
+    const bookingsData: Booking[] = Array.isArray(res.body)
+      ? res.body.map((b: any) => ({
+          id: Number(b.id),
+          startDate: b.startDate,
+          endDate: b.endDate,
+          customerName: b.user?.name || 'Unknown',
+        }))
+      : [];
+
+    setBookings(bookingsData);
+  };
+
+  const fetchBlockedDates = async () => {
+    const res = await authClient.booking.getBlockedDates.query({
+      query: { assetId: asset.id },
+    });
+
+    const blockedData: BlockedDate[] = Array.isArray(res.body)
+      ? res.body.map((b: any) => ({
+          id: b.id,
+          startDate: b.startDate,
+          endDate: b.endDate,
+          title: b.title,
+          reason: b.reason,
+        }))
+      : [];
+
+    setBlocked(blockedData);
+  };
+
+  useEffect(() => {
+    fetchBookings();
+    fetchBlockedDates();
+  }, [asset.id]);
+
+  // Build Calendar Events
+  const bookingEvents: Event[] = bookings.map((b) => {
+    const start = new Date(b.startDate);
+    const end = new Date(b.endDate);
+    const startPlusOne = new Date(start);
+    startPlusOne.setDate(startPlusOne.getDate() + 1);
+    const endPlusOne = new Date(end);
+    endPlusOne.setDate(endPlusOne.getDate() + 1);
+    return {
+      title: `${asset.name} - Booking: ${b.customerName}`,
+      start: startPlusOne,
+      end: endPlusOne,
+      allDay: true,
+      resource: { type: 'booking' },
+    };
+  });
+
+  const blockedEvents: Event[] = blocked.map((b) => {
+    // Use parseDateOnly so 'YYYY-MM-DD' is treated as local midnight
+    const start = parseDateOnly(b.startDate);
+    const end = parseDateOnly(b.endDate);
+    const startPlusOne = new Date(start);
+    startPlusOne.setDate(startPlusOne.getDate());
+    const endPlusOne = new Date(end);
+    endPlusOne.setDate(endPlusOne.getDate() + 1);
+    return {
+      title: `${asset.name} - ${b.title || 'Blocked'}`,
+      start: startPlusOne,
+      end: endPlusOne,
+      allDay: true,
+      resource: { type: 'blocked', id: b.id },
+    };
+  });
+
+  const tempEvent: Event[] = selectedRange
+    ? [
+        {
+          title: blockTitle || 'New Block',
+          start: selectedRange.start,
+          end: selectedRange.end,
+          allDay: true,
+          resource: { temp: true },
         },
-        onError: (error: any) => {
-          toast.error('Failed to add availability');
-          console.error(error);
-        },
-      }
-    );
+      ]
+    : [];
+
+  const events = [...bookingEvents, ...blockedEvents, ...tempEvent];
+
+  const handleBlock = async () => {
+    if (!selectedRange) return;
+
+    const currentTenant = StorageService.getTenant();
+    const tenantId = currentTenant?.id ?? '';
+
+    const startDate = formatLocalDate(selectedRange.start);
+    const endCopy = new Date(selectedRange.end);
+    endCopy.setDate(endCopy.getDate() - 1);
+    const endDate = formatLocalDate(endCopy);
+
+    await createBlockedDateMutation.mutateAsync({
+      body: {
+        tenantId,
+        assetId: asset.id,
+        startDate,
+        endDate,
+        title: blockTitle,
+        reason: 'Manual Block',
+      },
+    });
+
+    setSelectedRange(null);
+    setBlockTitle('');
+    fetchBlockedDates();
+  };
+
+  const handleDelete = (id: number) => {
+    if (confirm('Delete this blocked date?')) {
+      deleteBlockedDateMutation.mutate({ params: { id: String(id) }, body: undefined });
+    }
   };
 
   return (
-    <div className="space-y-6">
-      <Card>
-        <CardHeader>
-          <CardTitle>Add Availability</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-              <FormField
-          control={form.control}
-          name="startDate"
-          render={({ field }) => (
-            <FormItem className="flex flex-col">
-              <FormLabel>Start Date</FormLabel>
-              <Popover>
-                <PopoverTrigger asChild>
-                  <FormControl>
+    <Card className="w-full max-w-6xl mx-auto p-4">
+      <CardHeader>
+        <CardTitle>{asset.name} Availability Calendar</CardTitle>
+      </CardHeader>
+      <CardContent>
+        <div style={{ height: 700 }}>
+          <Calendar
+            localizer={localizer}
+            events={events}
+            startAccessor="start"
+            endAccessor="end"
+            date={currentDate}
+            view={currentView}
+            onNavigate={setCurrentDate}
+            onView={setCurrentView}
+            selectable
+            onSelectSlot={(slotInfo: SlotInfo) => setSelectedRange({ start: slotInfo.start, end: slotInfo.end })}
+            eventPropGetter={(event) => {
+              if (event.resource?.temp) {
+                return {
+                  style: { backgroundColor: 'rgba(0,128,255,0.3)', border: '1px solid #007BFF' },
+                };
+              }
+              if (event.resource?.type === 'booking') {
+                return {
+                  style: { backgroundColor: 'rgba(0,180,0,0.7)', color: 'white', fontWeight: 'bold' },
+                };
+              }
+              if (event.resource?.type === 'blocked') {
+                return {
+                  style: { backgroundColor: 'rgba(255,0,0,0.7)', color: 'white' },
+                };
+              }
+              return {};
+            }}
+            components={{
+              event: ({ event }: any) => (
+                <div className="truncate text-xs text-center">{event.title}</div>
+              ),
+            }}
+          />
+        </div>
+
+        <div className="mt-2">
+          <input
+            type="text"
+            placeholder="Blocked date title"
+            value={blockTitle}
+            onChange={(e) => setBlockTitle(e.target.value)}
+            className="border rounded p-1 w-full"
+          />
+        </div>
+
+        <div className="flex gap-2 mt-4">
+          <Button onClick={handleBlock} disabled={!selectedRange}>
+            Add Blocked Dates
+          </Button>
+        </div>
+
+        <div className="mt-6">
+          <h2 className="text-lg font-semibold mb-2">Blocked Dates</h2>
+          {blocked.length === 0 ? (
+            <p className="text-muted-foreground">No blocked dates</p>
+          ) : (
+            <ul className="space-y-2">
+              {blocked.map((b) => {
+                // Use parseDateOnly for the list rendering too
+                const start = parseDateOnly(b.startDate);
+                const end = parseDateOnly(b.endDate);
+                return (
+                  <li key={b.id} className="flex items-center justify-between rounded-lg border p-2">
+                    <span>
+                      {start.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}{' '}
+                      -{' '}
+                      {end.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}
+                      {b.reason ? ` (${b.reason})` : ''}
+                    </span>
                     <Button
-                      variant={"outline"}
-                      className={cn(
-                        "w-[240px] pl-3 text-left font-normal",
-                        !field.value && "text-muted-foreground"
-                      )}
-                    >
-                      {field.value ? (
-                        format(field.value, "PPP")
-                      ) : (
-                        <span>Pick a date</span>
-                      )}
-                      <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                    </Button>
-                  </FormControl>
-                </PopoverTrigger>
-                <PopoverContent className="w-auto p-0" align="start">
-                  <Calendar
-                    mode="single"
-                    selected={field.value}
-                    onSelect={field.onChange}
-                    disabled={(date) =>
-                      date < new Date() || date < new Date("1900-01-01")
-                    }
-                    initialFocus
-                  />
-                </PopoverContent>
-              </Popover>
-              <FormDescription>
-               Start of Asset Availability
-              </FormDescription>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-
-<FormField
-          control={form.control}
-          name="endDate"
-          render={({ field }) => (
-            <FormItem className="flex flex-col">
-              <FormLabel>End Date</FormLabel>
-              <Popover>
-                <PopoverTrigger asChild>
-                  <FormControl>
-                    <Button
-                      variant={"outline"}
-                      className={cn(
-                        "w-[240px] pl-3 text-left font-normal",
-                        !field.value && "text-muted-foreground"
-                      )}
-                    >
-                      {field.value ? (
-                        format(field.value, "PPP")
-                      ) : (
-                        <span>Pick a date</span>
-                      )}
-                      <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                    </Button>
-                  </FormControl>
-                </PopoverTrigger>
-                <PopoverContent className="w-auto p-0" align="start">
-                  <Calendar
-                    mode="single"
-                    selected={field.value}
-                    onSelect={field.onChange}
-                    disabled={(date) =>
-                      date < new Date() || date < new Date("1900-01-01")
-                    }
-                    initialFocus
-                  />
-                </PopoverContent>
-              </Popover>
-              <FormDescription>
-                End of asset availability
-              </FormDescription>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-              </div>
-
-              <FormField
-                control={form.control}
-                name="price"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Price per day</FormLabel>
-                    <FormControl>
-                      <Input type="number" {...field} value={field.value || ''} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={form.control}
-                name="available"
-                render={({ field }) => (
-                  <FormItem className="flex items-center space-x-2">
-                    <FormControl>
-                      <input
-                        type="checkbox"
-                        checked={field.value}
-                        onChange={field.onChange}
-                        className="mr-2"
-                      />
-                    </FormControl>
-                    <FormLabel>Block these dates</FormLabel>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <Button type="submit" className="w-full">
-                Add Range
-              </Button>
-            </form>
-          </Form>
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>Availability Ranges</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Date Range</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Price</TableHead>
-                <TableHead>Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {ranges.map((range, index) => (
-                <TableRow key={index}>
-                  <TableCell>
-                    {new Date(range.startDate).toLocaleDateString()} - {new Date(range.endDate).toLocaleDateString()}
-                  </TableCell>
-                  <TableCell>{range.available ? 'Available' : 'Blocked'}</TableCell>
-                  <TableCell>{range.price ? `$${range.price}/day` : 'No price set'}</TableCell>
-                  <TableCell>
-                    <Button
+                      size="icon"
                       variant="destructive"
-                      size="sm"
-                      onClick={() => {
-                        // Add delete mutation here
-                      }}
+                      onClick={() => handleDelete(b.id)}
                     >
-                      Remove
+                      <Trash2 className="h-4 w-4" />
                     </Button>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </CardContent>
-      </Card>
-    </div>
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+        </div>
+      </CardContent>
+    </Card>
   );
 }

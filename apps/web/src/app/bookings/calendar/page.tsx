@@ -133,7 +133,7 @@ export default function BookingCalendar() {
 
     const currentTenant = StorageService.getTenant();
     const tenantId = currentTenant?.id ?? "";
-    const assetId = "some-asset-id";
+    const assetId = "null";
 
     const startDate = formatLocalDate(selectedRange.start);
     const endCopy = new Date(selectedRange.end);

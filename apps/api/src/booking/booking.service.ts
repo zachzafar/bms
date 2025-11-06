@@ -138,30 +138,41 @@ export class BookingService {
     });
   }
 
-  async getBookings(tenantId?: string) {
-    const bookings = await this.db
-      .select()
-      .from(schema.UserHasBookings)
-      .innerJoin(schema.User, eq(schema.UserHasBookings.userId, schema.User.id))
-      .innerJoin(schema.Booking, eq(schema.UserHasBookings.bookingId, schema.Booking.id))
-      .innerJoin(
-        schema.Asset,
-        tenantId
-          ? and(eq(schema.Booking.assetId, schema.Asset.id), eq(schema.Asset.tenantId, tenantId))
-          : eq(schema.Booking.assetId, schema.Asset.id)
-      )
-      .innerJoin(schema.Customer, eq(schema.Customer.userId, schema.User.id))
-      .execute();
+  async getBookings(tenantId?: string, assetId?: string) {
+  const filters: any[] = [];
 
-    return bookings.map((booking) => ({
-      ...booking.booking,
-      startDate: booking.booking.startDate.toISOString(),
-      endDate: booking.booking.endDate.toISOString(),
-      customer: booking.customer_details,
-      asset: booking.assets,
-      user: booking.users,
-    }));
+  if (tenantId) {
+    filters.push(eq(schema.Asset.tenantId, tenantId));
   }
+
+  if (assetId) {
+    filters.push(eq(schema.Booking.assetId, assetId));
+  }
+
+  const bookings = await this.db
+    .select()
+    .from(schema.UserHasBookings)
+    .innerJoin(schema.User, eq(schema.UserHasBookings.userId, schema.User.id))
+    .innerJoin(schema.Booking, eq(schema.UserHasBookings.bookingId, schema.Booking.id))
+    .innerJoin(
+      schema.Asset,
+      eq(schema.Booking.assetId, schema.Asset.id) // always required join
+    )
+    .where(filters.length ? and(...filters) : undefined) // <-- optional filters moved to .where()
+    .innerJoin(schema.Customer, eq(schema.Customer.userId, schema.User.id))
+    .execute();
+
+  return bookings.map((booking) => ({
+    ...booking.booking,
+    startDate: booking.booking.startDate.toISOString(),
+    endDate: booking.booking.endDate.toISOString(),
+    customer: booking.customer_details,
+    asset: booking.assets,
+    user: booking.users,
+  }));
+}
+
+
 
   async updateBooking(updateData: schema.UpdateBooking) {
     const startDate = new Date(updateData.startDate);

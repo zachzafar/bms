@@ -22,7 +22,7 @@ const CreateOwnerSchema = InsertUserSchema.extend({
   roles: z.array(z.number()).default([]),
   companyName: z.string().optional(),
   // taxId: z.string().optional(),
-  userType: z.array(z.string()).default(["owner"])
+  userType: z.string().default("owner")
 });
 
 type CreateOwnerFormData = z.infer<typeof CreateOwnerSchema>;
@@ -43,7 +43,7 @@ export default function Component() {
       roles: [],
       companyName: '',
       // taxId: '',
-      userType: ["owner"]
+      userType: "owner"
     },
   });
 
@@ -60,7 +60,7 @@ export default function Component() {
       {
         body: {
           ...userData,
-          userType: ["owner"]
+          userType: "owner"
         },
       },
       {
@@ -75,7 +75,7 @@ export default function Component() {
             roles: [],
             companyName: '',
             // taxId: '',
-            userType: ["owner"]
+            userType: "owner"
           });
         },
         onError: (error) => {
