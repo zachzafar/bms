@@ -29,12 +29,12 @@ export class InvoicesService {
     };
   }
 
-  async create(invoice: CreateInvoiceInput, items: ItemInput[]) {
+  async create(invoice: CreateInvoiceInput, items: ItemInput[], tenantId: string) {
     if (!items?.length) throw new BadRequestException('Invoice must have at least one item');
 
     const [{ id }] = await this.db.transaction(async (tx) => {
       // Optionally ensure invoiceNumber is unique or generate if missing
-      const invValues = { ...invoice };
+      const invValues = { ...invoice, tenantId };
       if (!invValues.invoiceNumber) {
         invValues.invoiceNumber = await this.generateInvoiceNumber();
       }

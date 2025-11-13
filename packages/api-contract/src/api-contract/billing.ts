@@ -146,7 +146,11 @@ export const billingContract = c.router({
     path: "/payment",
     summary: "Create a new payment",
     body: z.object({
-      payment: InsertPaymentSchema,
+      payment: InsertPaymentSchema.extend({
+        customerId: z.number(), // frontend sends string
+        amount: z.string(),
+        paymentDate: z.string(), // frontend sends ISO string
+      }),
       invoiceIds: z.array(z.number()),
       amountsApplied: z.array(z.string()),
     }),

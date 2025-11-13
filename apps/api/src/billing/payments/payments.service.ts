@@ -23,9 +23,18 @@ export class PaymentsService {
     return (c / 100).toFixed(2);
   }
 
-  async create(payment: CreatePaymentInput, invoiceIds: number[], amountsApplied: string[]) {
-    if (!invoiceIds?.length) throw new BadRequestException('No invoices specified');
-    if (invoiceIds.length !== amountsApplied.length) {
+  async create(payment: CreatePaymentInput, tenantId: string, invoiceIds?: number[], amountsApplied?: string[]) {
+    // If no invoice linkage provided, just insert the payment
+    const date = payment.paymentDate ? new Date(payment.paymentDate) : new Date();
+    if (!invoiceIds?.length) {
+      const [{ id }] = await this.db.transaction(async (tx) => {
+        const inserted = await tx.insert(schema.Payment).values({...payment, paymentDate: date, customerId: BigInt(payment.customerId), tenantId}).$returningId();
+        return inserted;
+      });
+      return id;
+    }
+
+    if (invoiceIds.length !== (amountsApplied?.length ?? 0)) {
       throw new BadRequestException('invoiceIds and amountsApplied length mismatch');
     }
 
@@ -45,13 +54,13 @@ export class PaymentsService {
 
     // Apply amounts and update invoice status (basic rule)
     const paymentCents = this.toCents(String(payment.amount));
-    const appliedCents = amountsApplied.reduce((acc, s) => acc + this.toCents(s), 0);
+    const appliedCents = (amountsApplied ?? []).reduce((acc, s) => acc + this.toCents(s), 0);
     if (appliedCents > paymentCents) {
       throw new BadRequestException('Applied amounts exceed payment amount');
     }
 
     const [{ id }] = await this.db.transaction(async (tx) => {
-      const inserted = await tx.insert(schema.Payment).values(payment).$returningId();
+      const inserted = await tx.insert(schema.Payment).values({...payment, paymentDate: date, customerId: BigInt(payment.customerId), tenantId}).$returningId();
       const paymentId = inserted[0].id;
 
       // Create PaymentInvoice rows
@@ -59,7 +68,7 @@ export class PaymentsService {
         invoiceIds.map((invoiceId, idx) => ({
           paymentId: BigInt(paymentId),
           invoiceId: BigInt(invoiceId),
-          amountApplied: amountsApplied[idx] as any,
+          amountApplied: (amountsApplied ?? [])[idx] as any,
         }))
       );
 
@@ -96,9 +105,8 @@ export class PaymentsService {
     const payments = await this.db.query.Payment.findMany({
       where: (p, { eq, and }) =>
         and(
+          eq(p.tenantId, tenantId),
           query.customerId ? eq(p.customerId, BigInt(query.customerId)) : undefined,
-          // If you keep tenantId on Payment via Customer link, filter in join or app layer.
-          // If you add tenantId to Payment, also add eq(p.tenantId, tenantId) here.
         ),
       orderBy: (p, { desc }) => [desc(p.createdAt)],
     });
@@ -124,7 +132,6 @@ export class PaymentsService {
 
     return {
       ...payment,
-      // Convert bigint values to numbers for API compatibility
       id: Number(payment.id),
       customerId: Number(payment.customerId),
       invoices: pivots.map((p) => ({

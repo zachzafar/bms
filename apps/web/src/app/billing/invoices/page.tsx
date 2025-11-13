@@ -8,10 +8,12 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Plus, Search, Eye, Edit, Download, Trash } from 'lucide-react';
+import { Plus, Search, Eye, Edit, Download } from 'lucide-react';
 import { authClient } from '@/lib/api/publicClient';
 import { toast } from 'sonner';
 import { Label } from '@/components/ui/label';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import ApplyPaymentModal from '@/components/billing/ApplyPaymentModal';
 
 
 interface Invoice {
@@ -39,6 +41,14 @@ export default function InvoicesPage() {
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [customerFilter, setCustomerFilter] = useState<string>('all');
+
+  const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
+    const [selectedInvoice, setSelectedInvoice] = useState<Invoice | null>(null);
+
+    const openPaymentModal = (invoice: Invoice) => {
+      setSelectedInvoice(invoice);
+      setIsPaymentModalOpen(true);
+    };
 
   // Fetch invoices and customers
   const { data: invoicesData, refetch: refetchInvoices } = authClient.billing.getInvoices.useQuery({
@@ -104,10 +114,10 @@ export default function InvoicesPage() {
   };
 
   const handleDeleteInvoice = (invoiceId: string) => {
-  if (confirm('Are you sure you want to delete this invoice? This action cannot be undone.')) {
-    deleteInvoice({ params: { id: invoiceId } }); 
-  }
-};
+    if (confirm('Are you sure you want to delete this invoice? This action cannot be undone.')) {
+      deleteInvoice({ params: { id: invoiceId } });
+    }
+  };
 
   const getTotalOutstanding = () => {
     return filteredInvoices
@@ -305,11 +315,26 @@ export default function InvoicesPage() {
                           Delete
                           {/* <Trash className="h-4 w-4" /> */}
                         </Button>
+                        {/* New: Apply Payment */}
+                        <Button
+                          variant="default"
+                          size="sm"
+                          onClick={() => openPaymentModal(invoice)}
+                        >
+                          Apply Payment
+                        </Button>
                       </div>
                     </TableCell>
                   </TableRow>
                 ))}
               </TableBody>
+              <ApplyPaymentModal
+                open={isPaymentModalOpen}
+                onOpenChange={setIsPaymentModalOpen}
+                invoice={selectedInvoice}
+                customerName={selectedInvoice ? getCustomerName(String(selectedInvoice.customerId)) : undefined}
+                onApplied={() => refetchInvoices()}
+              />
             </Table>
           )}
         </CardContent>

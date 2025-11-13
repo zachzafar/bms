@@ -12,6 +12,12 @@ import { Plus, Search, Eye, DollarSign, Calendar } from 'lucide-react';
 import { authClient } from '@/lib/api/publicClient';
 import { toast } from 'sonner';
 import { Label } from '@/components/ui/label';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Textarea } from '@/components/ui/textarea';
+import { Form,FormField, FormItem, FormLabel, FormControl, FormMessage } from '@/components/ui/form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { useForm, } from 'react-hook-form';
+import { z } from 'zod';
 
 interface Payment {
   id: number;
@@ -34,24 +40,66 @@ export default function PaymentsPage() {
   const [searchTerm, setSearchTerm] = useState('');
   const [customerFilter, setCustomerFilter] = useState<string>('all');
   const [methodFilter, setMethodFilter] = useState<string>('all');
+  const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
+  const [selectedCustomerId, setSelectedCustomerId] = useState<string | null>(null);
+  const [selectedInvoice, setSelectedInvoice] = useState<{
+    id: number;
+    invoiceNumber: string;
+    totalAmount: string;
+    customerId: number;
+  } | null>(null);
+  const [paymentAmount, setPaymentAmount] = useState('');
+  const [paymentMethod, setPaymentMethod] = useState('credit_card');
+  const [reference, setReference] = useState('');
+  const [notes, setNotes] = useState('');
+
+  // Add schema and form
+  const paymentFormSchema = z.object({
+    amount: z.string().min(1, 'Amount is required'),
+    paymentMethod: z.string().min(1, 'Method is required'),
+    reference: z.string().optional(),
+    notes: z.string().optional(),
+  });
+
+  type PaymentFormValues = z.infer<typeof paymentFormSchema>;
+
+  const form = useForm<PaymentFormValues>({
+    resolver: zodResolver(paymentFormSchema),
+    defaultValues: {
+      amount: '',
+      paymentMethod: 'credit_card',
+      reference: '',
+      notes: '',
+    },
+  });
 
   // Fetch payments and customers
   const { data: paymentsData, refetch: refetchPayments } = authClient.billing.getPayments.useQuery({
     queryKey: ['payments'],
-    query: {},
   });
 
   const { data: customersData } = authClient.users.getCustomers.useQuery({
     queryKey: ['customers'],
   });
 
+  // Fetch invoices for unpaid listing in modal
+  const { data: invoicesData } = authClient.billing.getInvoices.useQuery({
+    queryKey: ['invoices'],
+  });
+
   const payments = paymentsData?.body || [];
   const customers = customersData?.body || [];
+  const invoices = invoicesData?.body || [];
 
-  // Filter payments
+  const unpaidInvoicesForSelectedCustomer = invoices.filter(
+    (inv) => (!selectedCustomerId ? false : String(inv.customerId) === selectedCustomerId) && inv.status !== 'Paid'
+  );
+
+  // Modal side effects: prefill amount when invoice changes
   const filteredPayments = payments.filter((payment) => {
-    const matchesSearch = payment.reference?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         payment.notes?.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesSearch =
+      payment.reference?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      payment.notes?.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesCustomer = customerFilter === 'all' || String(payment.customerId) === customerFilter;
     const matchesMethod = methodFilter === 'all' || payment.paymentMethod === methodFilter;
 
@@ -59,8 +107,8 @@ export default function PaymentsPage() {
   });
 
   const getCustomerName = (customerId: string) => {
-    const customer = customers.find(c => String(c.customer.id) === customerId);
-    return customer ? (customer.user.name || customer.user.email) : 'Unknown Customer';
+    const customer = customers.find((c) => String(c.customer.id) === customerId);
+    return customer ? customer.user.name || customer.user.email : 'Unknown Customer';
   };
 
   const getMethodLabel = (method: string) => {
@@ -92,15 +140,63 @@ export default function PaymentsPage() {
     return filteredPayments.reduce((sum, payment) => sum + parseFloat(payment.amount), 0);
   };
 
-  const getTotalInvoicesPaid = () => {
-    return filteredPayments.reduce((sum, payment) => sum + payment.invoices.length, 0);
+  const unpaidInvoicesCount = invoices.filter((inv) => inv.status !== 'Paid').length;
+
+  const { mutate: createPayment, isPending: creatingPayment } = authClient.billing.createPayment.useMutation({
+    onSuccess: () => {
+      toast.success('Payment applied successfully!');
+      setIsPaymentModalOpen(false);
+      setSelectedCustomerId(null);
+      setSelectedInvoice(null);
+      form.reset();
+      refetchPayments();
+    },
+    onError: (error) => {
+      toast.error('Failed to apply payment');
+      console.error(error);
+    },
+  });
+
+  const submitPayment = (values: PaymentFormValues) => {
+    if (!selectedCustomerId) {
+      toast.error('Please select a customer');
+      return;
+    }
+    if (!selectedInvoice) {
+      toast.error('Please select an unpaid invoice');
+      return;
+    }
+    const parsedAmount = parseFloat(values.amount);
+    if (!values.amount || isNaN(parsedAmount) || parsedAmount <= 0) {
+      toast.error('Enter a valid payment amount');
+      return;
+    }
+
+    // FIX: Proper payload shape and required fields
+     createPayment({
+      body: {
+        payment: {
+          type: 'payment',
+          status: 'completed',
+          paymentDate: new Date().toISOString(),
+          paymentMethod: values.paymentMethod,
+          reference: values.reference,
+          notes: values.notes,
+          tenantId: "",
+          amount: values.amount,
+          customerId: Number(selectedCustomerId),
+        },
+        invoiceIds: [selectedInvoice.id],
+        amountsApplied: [values.amount],
+      },
+    });
   };
 
   return (
     <div className="container mx-auto py-10">
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-3xl font-bold">Payments</h1>
-        <Button onClick={() => router.push('/billing/payments/create')}>
+        <Button onClick={() => setIsPaymentModalOpen(true)}>
           <Plus className="h-4 w-4 mr-2" />
           Record Payment
         </Button>
@@ -117,7 +213,7 @@ export default function PaymentsPage() {
             <div className="text-2xl font-bold">{filteredPayments.length}</div>
           </CardContent>
         </Card>
-        
+
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Total Amount</CardTitle>
@@ -127,14 +223,14 @@ export default function PaymentsPage() {
             <div className="text-2xl font-bold">${getTotalPayments().toFixed(2)}</div>
           </CardContent>
         </Card>
-        
+
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Invoices Paid</CardTitle>
+            <CardTitle className="text-sm font-medium">Unpaid Invoices</CardTitle>
             <Calendar className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{getTotalInvoicesPaid()}</div>
+            <div className="text-2xl font-bold">{unpaidInvoicesCount}</div>
           </CardContent>
         </Card>
       </div>
@@ -207,9 +303,7 @@ export default function PaymentsPage() {
         </CardHeader>
         <CardContent>
           {filteredPayments.length === 0 ? (
-            <div className="text-center py-8 text-gray-500">
-              No payments found matching your criteria.
-            </div>
+            <div className="text-center py-8 text-gray-500">No payments found matching your criteria.</div>
           ) : (
             <Table>
               <TableHeader>
@@ -221,49 +315,25 @@ export default function PaymentsPage() {
                   <TableHead>Reference</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead>Date</TableHead>
-                  <TableHead>Invoices</TableHead>
                   <TableHead>Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {filteredPayments.map((payment) => (
                   <TableRow key={payment.id}>
-                    <TableCell className="font-medium">
-                      #{payment.id}
-                    </TableCell>
+                    <TableCell className="font-medium">#{payment.id}</TableCell>
+                    <TableCell>{getCustomerName(String(payment.customerId))}</TableCell>
+                    <TableCell className="font-medium">${parseFloat(payment.amount).toFixed(2)}</TableCell>
                     <TableCell>
-                      {getCustomerName(String(payment.customerId))}
+                      <Badge variant="outline">{getMethodLabel(payment.paymentMethod)}</Badge>
                     </TableCell>
-                    <TableCell className="font-medium">
-                      ${parseFloat(payment.amount).toFixed(2)}
-                    </TableCell>
+                    <TableCell>{payment.reference || '-'}</TableCell>
                     <TableCell>
-                      <Badge variant="outline">
-                        {getMethodLabel(payment.paymentMethod)}
-                      </Badge>
+                      <Badge className={getStatusColor(payment.status)}>{payment.status}</Badge>
                     </TableCell>
+                    <TableCell>{new Date(payment.createdAt).toLocaleDateString()}</TableCell>
                     <TableCell>
-                      {payment.reference || '-'}
-                    </TableCell>
-                    <TableCell>
-                      <Badge className={getStatusColor(payment.status)}>
-                        {payment.status}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>
-                      {new Date(payment.createdAt).toLocaleDateString()}
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant="secondary">
-                        {payment.invoices.length} invoice{payment.invoices.length !== 1 ? 's' : ''}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => router.push(`/billing/payments/${payment.id}`)}
-                      >
+                      <Button variant="outline" size="sm" onClick={() => router.push(`/billing/payments/${payment.id}`)}>
                         <Eye className="h-4 w-4" />
                       </Button>
                     </TableCell>
@@ -274,6 +344,155 @@ export default function PaymentsPage() {
           )}
         </CardContent>
       </Card>
+
+      {/* Record Payment Modal */}
+      <Dialog open={isPaymentModalOpen} onOpenChange={(open) => {
+        setIsPaymentModalOpen(open);
+        if (!open) {
+          form.reset();
+          setSelectedInvoice(null);
+          setSelectedCustomerId(null);
+        }
+      }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Record Payment</DialogTitle>
+            <DialogDescription>Select a customer, choose an unpaid invoice, and apply a payment.</DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label>Customer *</Label>
+              <Select
+                value={selectedCustomerId ?? ''}
+                onValueChange={(val) => {
+                  setSelectedCustomerId(val);
+                  setSelectedInvoice(null);
+                  form.setValue('amount', '');
+                }}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select customer" />
+                </SelectTrigger>
+                <SelectContent>
+                  {customers.map((customer) => (
+                    <SelectItem key={customer.customer.id} value={customer.customer.id.toString()}>
+                      {customer.user.name || customer.user.email}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <Label>Unpaid Invoice *</Label>
+              <Select
+                value={selectedInvoice ? String(selectedInvoice.id) : ''}
+                onValueChange={(invoiceId) => {
+                  const inv = unpaidInvoicesForSelectedCustomer.find((i) => String(i.id) === invoiceId) || null;
+                  setSelectedInvoice(inv ? { id: inv.id, invoiceNumber: inv.invoiceNumber, totalAmount: inv.totalAmount, customerId: inv.customerId } : null);
+                  form.setValue('amount', inv ? inv.totalAmount : '');
+                }}
+                disabled={!selectedCustomerId || unpaidInvoicesForSelectedCustomer.length === 0}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder={selectedCustomerId ? 'Select unpaid invoice' : 'Select customer first'} />
+                </SelectTrigger>
+                <SelectContent>
+                  {unpaidInvoicesForSelectedCustomer.map((inv) => (
+                    <SelectItem key={inv.id} value={inv.id.toString()}>
+                      #{inv.invoiceNumber} — ${parseFloat(inv.totalAmount).toFixed(2)}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <Form {...form}>
+              <form onSubmit={form.handleSubmit(submitPayment)} className="space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <FormField
+                    control={form.control}
+                    name="amount"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Amount *</FormLabel>
+                        <FormControl>
+                          <Input placeholder="0.00" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={form.control}
+                    name="paymentMethod"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Method *</FormLabel>
+                        <FormControl>
+                          <Select value={field.value} onValueChange={field.onChange}>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Select method" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="credit_card">Credit Card</SelectItem>
+                              <SelectItem value="bank_transfer">Bank Transfer</SelectItem>
+                              <SelectItem value="cash">Cash</SelectItem>
+                              <SelectItem value="check">Check</SelectItem>
+                              <SelectItem value="paypal">PayPal</SelectItem>
+                              <SelectItem value="other">Other</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={form.control}
+                    name="reference"
+                    render={({ field }) => (
+                      <FormItem className="md:col-span-2">
+                        <FormLabel>Reference</FormLabel>
+                        <FormControl>
+                          <Input placeholder="Optional reference" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={form.control}
+                    name="notes"
+                    render={({ field }) => (
+                      <FormItem className="md:col-span-2">
+                        <FormLabel>Notes</FormLabel>
+                        <FormControl>
+                          <Textarea placeholder="Optional notes" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+
+                <div className="flex justify-end space-x-2 pt-2">
+                  <Button type="button" variant="outline" onClick={() => setIsPaymentModalOpen(false)}>
+                    Cancel
+                  </Button>
+                  <Button type="submit" disabled={creatingPayment}>
+                    {creatingPayment ? 'Applying...' : 'Apply Payment'}
+                  </Button>
+                </div>
+              </form>
+            </Form>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

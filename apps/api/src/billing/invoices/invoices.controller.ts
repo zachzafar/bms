@@ -34,12 +34,12 @@ export class InvoicesController {
       const id = await this.invoices.create(
         {
           ...body.invoice,
-          tenantId,
           customerId,
           issueDate,
           dueDate,
         },
-        body.items
+        body.items,
+        tenantId,
       );
 
       return { status: 201, body: { message: 'invoice created', invoiceId: id } };
@@ -53,7 +53,10 @@ export class InvoicesController {
     return tsRestHandler(billingContract.getInvoices, async ({ query }) => {
       const tenantId = headers['x-tenant-id'];
       const rows = await this.invoices.list(tenantId, query);
-      return { status: 200, body: rows };
+      return { status: 200, body: rows.map(row => ({
+        ...row,
+        dueDate: row.dueDate.toISOString(),
+      })) };
     });
   }
 
@@ -64,7 +67,10 @@ export class InvoicesController {
       const tenantId = headers['x-tenant-id'];
       await this.tenantService.validateTenantAccess(tenantId, schema.Invoice, Number(params.id));
       const row = await this.invoices.get(Number(params.id));
-      return row ? { status: 200, body: row } : { status: 404, body: undefined };
+      return row ? { status: 200, body: {
+        ...row,
+        dueDate: row.dueDate.toISOString(),
+      } } : { status: 404, body: undefined };
     });
   }
 
