@@ -59,8 +59,11 @@ async function bootstrap() {
         'https://www.auth.bookos.xyz',
         'https://www.admin.bookos.xyz',
         'https://www.booking.bookos.xyz',
-        'https://barbadossothebysrealty.netlify.app',
-        'https://selectrentalsbarbados.com,',
+        'https://www.barbadossothebysrealty.netlify.app',
+        'https://www.selectrentalsbarbados.com,',
+        'https://selectrentalsbarbados.com',
+        'https://barbadossothebysrealty.netlify.app'
+
       ]
 
   // Enable CORS for development
