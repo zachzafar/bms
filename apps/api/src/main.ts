@@ -60,7 +60,7 @@ async function bootstrap() {
         'https://www.admin.bookos.xyz',
         'https://www.booking.bookos.xyz',
         'https://www.barbadossothebysrealty.netlify.app',
-        'https://www.selectrentalsbarbados.com,',
+        'https://www.selectrentalsbarbados.com',
         'https://selectrentalsbarbados.com',
         'https://barbadossothebysrealty.netlify.app'
 
