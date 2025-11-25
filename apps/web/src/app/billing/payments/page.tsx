@@ -16,7 +16,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { Textarea } from '@/components/ui/textarea';
 import { Form,FormField, FormItem, FormLabel, FormControl, FormMessage } from '@/components/ui/form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { useForm, } from 'react-hook-form';
+import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 
 interface Payment {
@@ -59,6 +59,7 @@ export default function PaymentsPage() {
     paymentMethod: z.string().min(1, 'Method is required'),
     reference: z.string().optional(),
     notes: z.string().optional(),
+    entryType: z.enum(['payment', 'refund']),
   });
 
   type PaymentFormValues = z.infer<typeof paymentFormSchema>;
@@ -70,6 +71,7 @@ export default function PaymentsPage() {
       paymentMethod: 'credit_card',
       reference: '',
       notes: '',
+      entryType: 'payment',
     },
   });
 
@@ -90,9 +92,17 @@ export default function PaymentsPage() {
   const payments = paymentsData?.body || [];
   const customers = customersData?.body || [];
   const invoices = invoicesData?.body || [];
+  const entryType = form.watch('entryType');
 
-  const unpaidInvoicesForSelectedCustomer = invoices.filter(
-    (inv) => (!selectedCustomerId ? false : String(inv.customerId) === selectedCustomerId) && inv.status !== 'Paid'
+  const eligibleInvoicesForSelectedCustomer = invoices.filter(
+    (inv) => {
+      const matchesCustomer = selectedCustomerId ? String(inv.customerId) === selectedCustomerId : false;
+      const eligibleByType =
+        entryType === 'refund'
+          ? (inv.status === 'Paid' || inv.status === 'Partial')
+          : inv.status !== 'Paid';
+      return matchesCustomer && eligibleByType;
+    }
   );
 
   // Modal side effects: prefill amount when invoice changes
@@ -163,31 +173,33 @@ export default function PaymentsPage() {
       return;
     }
     if (!selectedInvoice) {
-      toast.error('Please select an unpaid invoice');
+      toast.error('Please select a target invoice');
       return;
     }
     const parsedAmount = parseFloat(values.amount);
     if (!values.amount || isNaN(parsedAmount) || parsedAmount <= 0) {
-      toast.error('Enter a valid payment amount');
+      toast.error('Enter a valid amount greater than 0');
       return;
     }
 
-    // FIX: Proper payload shape and required fields
-     createPayment({
+    const isRefund = values.entryType === 'refund';
+    const amountForStorage = isRefund ? (-Math.abs(parsedAmount)).toFixed(2) : parsedAmount.toFixed(2);
+
+    createPayment({
       body: {
         payment: {
-          type: 'payment',
-          status: 'completed',
+          type: values.entryType,
+          status: isRefund ? 'completed' : 'completed',
           paymentDate: new Date().toISOString(),
           paymentMethod: values.paymentMethod,
           reference: values.reference,
           notes: values.notes,
-          tenantId: "",
-          amount: values.amount,
+          tenantId: "", // keep as-is per current app pattern
+          amount: amountForStorage,
           customerId: Number(selectedCustomerId),
         },
         invoiceIds: [selectedInvoice.id],
-        amountsApplied: [values.amount],
+        amountsApplied: [amountForStorage], // negative for refund
       },
     });
   };
@@ -356,61 +368,89 @@ export default function PaymentsPage() {
       }}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Record Payment</DialogTitle>
-            <DialogDescription>Select a customer, choose an unpaid invoice, and apply a payment.</DialogDescription>
+            <DialogTitle>Record Payment or Refund</DialogTitle>
+            <DialogDescription>
+              Choose entry type, select a customer, then choose an eligible invoice.
+            </DialogDescription>
           </DialogHeader>
 
           <div className="space-y-4">
-            <div className="space-y-2">
-              <Label>Customer *</Label>
-              <Select
-                value={selectedCustomerId ?? ''}
-                onValueChange={(val) => {
-                  setSelectedCustomerId(val);
-                  setSelectedInvoice(null);
-                  form.setValue('amount', '');
-                }}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Select customer" />
-                </SelectTrigger>
-                <SelectContent>
-                  {customers.map((customer) => (
-                    <SelectItem key={customer.customer.id} value={customer.customer.id.toString()}>
-                      {customer.user.name || customer.user.email}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="space-y-2">
-              <Label>Unpaid Invoice *</Label>
-              <Select
-                value={selectedInvoice ? String(selectedInvoice.id) : ''}
-                onValueChange={(invoiceId) => {
-                  const inv = unpaidInvoicesForSelectedCustomer.find((i) => String(i.id) === invoiceId) || null;
-                  setSelectedInvoice(inv ? { id: inv.id, invoiceNumber: inv.invoiceNumber, totalAmount: inv.totalAmount, customerId: inv.customerId } : null);
-                  form.setValue('amount', inv ? inv.totalAmount : '');
-                }}
-                disabled={!selectedCustomerId || unpaidInvoicesForSelectedCustomer.length === 0}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder={selectedCustomerId ? 'Select unpaid invoice' : 'Select customer first'} />
-                </SelectTrigger>
-                <SelectContent>
-                  {unpaidInvoicesForSelectedCustomer.map((inv) => (
-                    <SelectItem key={inv.id} value={inv.id.toString()}>
-                      #{inv.invoiceNumber} — ${parseFloat(inv.totalAmount).toFixed(2)}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
             <Form {...form}>
               <form onSubmit={form.handleSubmit(submitPayment)} className="space-y-4">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <FormField
+                    control={form.control}
+                    name="entryType"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Entry Type *</FormLabel>
+                        <FormControl>
+                          <Select value={field.value} onValueChange={field.onChange}>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Select type" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="payment">Payment</SelectItem>
+                              <SelectItem value="refund">Refund</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  {/* Customer — use plain Label/Select, not FormItem/FormLabel/FormMessage */}
+                  <div className="space-y-2">
+                    <Label>Customer *</Label>
+                    <Select
+                      value={selectedCustomerId ?? ''}
+                      onValueChange={(val) => {
+                        setSelectedCustomerId(val);
+                        setSelectedInvoice(null);
+                        form.setValue('amount', '');
+                      }}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select customer" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {customers.map((customer) => (
+                          <SelectItem key={customer.customer.id} value={customer.customer.id.toString()}>
+                            {customer.user.name || customer.user.email}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  {/* Target Invoice — use plain Label/Select, not FormItem/FormLabel/FormMessage */}
+                  <div className="space-y-2">
+                    <Label>Target Invoice *</Label>
+                    <Select
+                      value={selectedInvoice ? String(selectedInvoice.id) : ''}
+                      onValueChange={(invoiceId) => {
+                        const inv = eligibleInvoicesForSelectedCustomer.find((i) => String(i.id) === invoiceId) || null;
+                        setSelectedInvoice(
+                          inv ? { id: inv.id, invoiceNumber: inv.invoiceNumber, totalAmount: inv.totalAmount, customerId: inv.customerId } : null
+                        );
+                        form.setValue('amount', inv ? (entryType === 'refund' ? '' : inv.totalAmount) : '');
+                      }}
+                      disabled={!selectedCustomerId || eligibleInvoicesForSelectedCustomer.length === 0}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder={selectedCustomerId ? 'Select invoice' : 'Select customer first'} />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {eligibleInvoicesForSelectedCustomer.map((inv) => (
+                          <SelectItem key={inv.id} value={inv.id.toString()}>
+                            #{inv.invoiceNumber} — ${parseFloat(inv.totalAmount).toFixed(2)} ({inv.status})
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
                   <FormField
                     control={form.control}
                     name="amount"
@@ -418,7 +458,7 @@ export default function PaymentsPage() {
                       <FormItem>
                         <FormLabel>Amount *</FormLabel>
                         <FormControl>
-                          <Input placeholder="0.00" {...field} />
+                          <Input placeholder={entryType === 'refund' ? 'Refund amount' : 'Payment amount'} {...field} />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -485,7 +525,7 @@ export default function PaymentsPage() {
                     Cancel
                   </Button>
                   <Button type="submit" disabled={creatingPayment}>
-                    {creatingPayment ? 'Applying...' : 'Apply Payment'}
+                    {creatingPayment ? (entryType === 'refund' ? 'Refunding...' : 'Applying...') : (entryType === 'refund' ? 'Apply Refund' : 'Apply Payment')}
                   </Button>
                 </div>
               </form>
