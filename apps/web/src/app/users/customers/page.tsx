@@ -10,6 +10,7 @@ import { useForm, SubmitHandler } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { toast } from 'sonner';
 import { useRouter } from 'next/navigation';
+import { Eye } from 'lucide-react';
 import { authClient } from '@/lib/api/publicClient';
 import { CUSTOMERS_QUERY_KEY, } from '@/lib/api/queryKeys';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -328,6 +329,16 @@ export default function Component() {
                           aria-label={`Edit ${customer.user.name}`}
                         >
                           <Pencil className='h-4 w-4' />
+                        </Button>
+                      </TableCell>
+                      <TableCell>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => router.push(`/users/customers/${customer.user.id}`)}
+                          className="ml-2"
+                        >
+                          <Eye className="h-4 w-4" />
                         </Button>
                       </TableCell>
                     </TableRow>
