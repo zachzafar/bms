@@ -21,7 +21,8 @@ export default function RootLayout({
         <html lang="en">
       <body className={inter.className}>
         <TanstackProvider>
-    <SidebarProvider>
+    {/* Set a thinner sidebar width via CSS variable */}
+    <SidebarProvider style={{ '--sidebar-width': '14rem' } as React.CSSProperties}>
       <AppSidebar />
       <main className="w-full h-screen flex flex-col">
         <nav className="border-b px-4 py-3 flex items-center justify-between">
