@@ -122,7 +122,7 @@ export default function ReportsPage() {
           <Card className="w-full">
             <div className="flex h-[600px]">
               {/* Left side - Report list */}
-              <div className="w-80 border-r border-border">
+              <div className="w-50 border-r border-border">
                 <ScrollArea className="h-full">
                   <div className="p-4">
                     {reportCategories.map((category) => (
