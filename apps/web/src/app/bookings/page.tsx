@@ -39,6 +39,7 @@ function calculateNights(start: string, end: string) {
 
 type BlockedDate = {
   id: number;
+  asset_id: string;
   startDate: string; // ISO string
   endDate: string;   // ISO string
   title: string;
@@ -171,6 +172,7 @@ export default function Component() {
         const blocked: BlockedDate[] = Array.isArray(res.body)
           ? res.body.map(b => ({
             id: b.id,
+            asset_id: b.assetId,
             startDate: b.startDate,
             endDate: b.endDate,
             title: b.title,
@@ -188,87 +190,103 @@ export default function Component() {
   const [invalidStartOrEnd, setInvalidStartOrEnd] = useState<BlockedDate[]>([]);
 
   useEffect(() => {
-    if (startDate && endDate) {
-      const start = new Date(startDate);
-      const end = new Date(endDate);
+  if (startDate && endDate) {
+    const start = new Date(startDate);
+    const end = new Date(endDate);
 
-      const conflicts = blockedDates.filter(b => {
-        const blockedStart = new Date(b.startDate);
-        const blockedEnd = new Date(b.endDate);
+    const conflicts = blockedDates.filter(b => {
+      const blockedStart = new Date(b.startDate);
+      const blockedEnd = new Date(b.endDate);
 
-        // Conflict if the start or end date matches any blocked date exactly
-        return (
-          isSameDay(start, blockedStart) ||
-          isSameDay(start, blockedEnd) ||
-          isSameDay(end, blockedStart) ||
-          isSameDay(end, blockedEnd)
-        );
-      });
+      // Only global blocks (no specific asset)
+      const isGlobalBlock = !b.asset_id || b.asset_id === "null";
 
-      setInvalidStartOrEnd(conflicts);
-    } else {
-      setInvalidStartOrEnd([]);
-    }
-  }, [startDate, endDate, blockedDates]);
+      // Overlaps if same day or within range
+      const overlaps =
+        isSameDay(start, blockedStart) ||
+        isSameDay(start, blockedEnd) ||
+        isSameDay(end, blockedStart) ||
+        isSameDay(end, blockedEnd) ||
+        (start <= blockedEnd && end >= blockedStart);
+
+      return overlaps && isGlobalBlock;
+    });
+
+    // Only show invalids for global blocks now
+    setInvalidStartOrEnd(conflicts);
+  } else {
+    setInvalidStartOrEnd([]);
+  }
+}, [startDate, endDate, blockedDates]);
+
+
 
 
 
   // When dates change, fetch available assets and assign applicable rates
   useEffect(() => {
-    if (startDate && endDate) {
-      setDateRangeReady(true);
+  if (startDate && endDate) {
+    setDateRangeReady(true);
 
-      authClient.assets
-        .getAvailableAssets.query({
-          query: {
-            startDate,
-            endDate,
-          },
-        })
-        .then((res) => {
-          console.log('API Response:', res);  // Log the response for debugging
+    authClient.assets
+      .getAvailableAssets.query({
+        query: { startDate, endDate },
+      })
+      .then((res) => {
+        if (res.status === 200) {
+          const nights = calculateNights(startDate, endDate);
 
-          if (res.status === 200) {
-            const nights = Math.ceil(
-              (new Date(endDate).getTime() - new Date(startDate).getTime()) /
-              (1000 * 60 * 60 * 24)
+          // Exclude assets that are blocked in that date range
+          const blockedAssetIds = blockedDates
+            .filter(b => {
+              const blockedStart = new Date(b.startDate);
+              const blockedEnd = new Date(b.endDate);
+              const overlaps =
+                (new Date(startDate) <= blockedEnd && new Date(endDate) >= blockedStart);
+              return b.asset_id && b.asset_id !== "null" && overlaps;
+            })
+            .map(b => b.asset_id);
+
+          const filteredAssets = res.body.filter(
+            (asset) => !blockedAssetIds.includes(asset.id)
+          );
+
+          const assetsWithRates = filteredAssets.map((asset) => {
+            const applicableRates = rates.filter(
+              (rate) =>
+                rate.assetId === asset.id &&
+                (!rate.minNights || rate.minNights <= nights) &&
+                (!rate.maxNights || rate.maxNights >= nights)
             );
 
-            const assetsWithRates = res.body.map((asset) => {
-              const applicableRates = rates.filter(
-                (rate) =>
-                  rate.assetId === asset.id &&
-                  (!rate.minNights || rate.minNights <= nights) &&
-                  (!rate.maxNights || rate.maxNights >= nights)
-              );
-
-              const selectedRate =
-                applicableRates.length > 0
-                  ? applicableRates.reduce((prev, curr) =>
+            const selectedRate =
+              applicableRates.length > 0
+                ? applicableRates.reduce((prev, curr) =>
                     (prev.priority ?? 100) < (curr.priority ?? 100) ? prev : curr
                   )
-                  : null;
+                : null;
 
-              return {
-                ...asset,
-                applicableRate: selectedRate || undefined,
-              };
-            });
+            return {
+              ...asset,
+              applicableRate: selectedRate || undefined,
+            };
+          });
 
-            setAvailableAssets(assetsWithRates);
-          } else {
-            setAvailableAssets([]);
-          }
-        })
-        .catch((err) => {
-          console.error('Failed to fetch available assets:', err);
+          setAvailableAssets(assetsWithRates);
+        } else {
           setAvailableAssets([]);
-        });
-    } else {
-      setDateRangeReady(false);
-      setAvailableAssets([]);
-    }
-  }, [startDate, endDate, rates]);
+        }
+      })
+      .catch((err) => {
+        console.error('Failed to fetch available assets:', err);
+        setAvailableAssets([]);
+      });
+  } else {
+    setDateRangeReady(false);
+    setAvailableAssets([]);
+  }
+}, [startDate, endDate, rates, blockedDates]);
+
 
 
   const onSubmit = (values: BookingFormValues) => {

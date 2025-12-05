@@ -29,8 +29,10 @@ export const Invoice = mysqlTable("invoice", {
   bookingIdx: index("booking_idx").on(table.bookingId),
 }));
 
-export const SelectInvoiceSchema = createSelectSchema(Invoice);
-export const InsertInvoiceSchema = createInsertSchema(Invoice);
+export const SelectInvoiceSchema = createSelectSchema(Invoice).omit({ tenantId: true, dueDate: true }).extend({
+  dueDate: z.string(),
+});
+export const InsertInvoiceSchema = createInsertSchema(Invoice).omit({ tenantId: true });
 export const UpdateInvoiceSchema = InsertInvoiceSchema.partial();
 
 export type InsertInvoice = z.infer<typeof InsertInvoiceSchema>;
@@ -120,16 +122,29 @@ export const Payment = mysqlTable("payment", {
   status: varchar("status", { length: 255 }).notNull(),
   paymentDate: datetime("payment_date").notNull(),
   tenantId: varchar("tenant_id", { length: 255 }).notNull().references(() => Tenant.id),
+  // NEW: align with frontend usage
+  paymentMethod: varchar("payment_method", { length: 64 }).notNull(),
+  reference: varchar("reference", { length: 255 }),
+  notes: text("notes"),
+
   createdAt: timestamp('createdAt').notNull().defaultNow(),
   updatedAt: timestamp('updated_at', { mode: 'date', }).$onUpdate(() => new Date()),
   customerId: bigint("customer_id", { mode: 'bigint', unsigned: true }).notNull().references(() => Customer.id),
 
 }, (table) => ({
   customerIdx: index("customer_idx").on(table.customerId),
+  tenantIdx: index("tenant_idx").on(table.tenantId),
+  // Optionally: index("payment_date_idx").on(table.paymentDate),
 }));
 
-export const SelectPaymentSchema = createSelectSchema(Payment);
-export const InsertPaymentSchema = createInsertSchema(Payment);
+export const SelectPaymentSchema = createSelectSchema(Payment).extend({
+  paymentDate: z.string(),
+  customerId: z.number(),
+});
+export const InsertPaymentSchema = createInsertSchema(Payment).extend({
+  customerId: z.number(),
+  paymentDate: z.string(),
+});
 export const UpdatePaymentSchema = InsertPaymentSchema.partial();
 
 export type InsertPayment = z.infer<typeof InsertPaymentSchema>;

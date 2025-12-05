@@ -19,7 +19,12 @@ export class AssetsService {
 
   async getAssets(query: any, tenantId: string) {
     const assets = await this.db.query.Asset.findMany({
-      where: (asset, { eq }) => eq(asset.tenantId, tenantId),
+      where: (asset, { eq, and, like }) =>
+        and(
+          eq(asset.tenantId, tenantId),
+          query?.userId ? eq(asset.userId, query.userId) : undefined,
+          query?.search ? like(asset.name, `%${query.search}%`) : undefined
+        ),
     });
 
     return Promise.all(

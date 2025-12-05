@@ -1,19 +1,19 @@
 'use client';
 
-import { SetStateAction, useState } from 'react';
+import { SetStateAction, useMemo, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger, } from '@/components/ui/dialog';
-import { Search, PlusCircle, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Search, PlusCircle, ChevronLeft, ChevronRight, Eye, Pencil } from 'lucide-react';
 import { useForm, SubmitHandler } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { InsertUserSchema, SelectOwner} from '@repo/api-contract';
+import { InsertUserSchema } from '@repo/api-contract';
 import { toast } from 'sonner';
 import { useRouter } from 'next/navigation';
 import { authClient } from '@/lib/api/publicClient';
-import { OWNERS_QUERY_KEY, ROLES_QUERY_KEY } from '@/lib/api/queryKeys';
+import { OWNERS_QUERY_KEY } from '@/lib/api/queryKeys';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 
@@ -21,9 +21,15 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 const CreateOwnerSchema = InsertUserSchema.extend({
   roles: z.array(z.number()).default([]),
   companyName: z.string().optional(),
-  // taxId: z.string().optional(),
-  userType: z.array(z.string()).default(["owner"])
+  userType: z.string().default("owner")
 });
+
+const EditOwnerSchema = z.object({
+  name: z.string().min(1, 'Name is required'),
+  email: z.string().email('Invalid email'),
+  companyName: z.string().optional(),
+});
+type EditOwnerFormData = z.infer<typeof EditOwnerSchema>;
 
 type CreateOwnerFormData = z.infer<typeof CreateOwnerSchema>;
 
@@ -32,7 +38,22 @@ export default function Component() {
   const queryClient = authClient.useQueryClient();
   const { data: owners } = authClient.users.getOwners.useQuery({ queryKey: OWNERS_QUERY_KEY });
   const { mutate: createUserMutation, isPending } = authClient.users.createUser.useMutation();
+  const { mutate: updateUserMutation, isPending: updating } = authClient.users.updateUser.useMutation();
+  const { data: usersData } = authClient.users.getUsers.useQuery({ queryKey: ['users'] });
 
+  const users = usersData?.body ?? [];
+  const rolesByUserId = useMemo(() => {
+    const map = new Map<string, number[]>();
+    users.forEach((u: any) => map.set(u.id, u.roles ?? []));
+    return map;
+  }, [users]);
+
+  const [open, setOpen] = useState(false);
+  const [openEdit, setOpenEdit] = useState(false);
+  const [editingOwner, setEditingOwner] = useState<{ id: string; name: string; email: string; companyName?: string } | null>(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [searchTerm, setSearchTerm] = useState('');
+  const ownersPerPage = 10;
 
   const createForm = useForm<CreateOwnerFormData>({
     resolver: zodResolver(CreateOwnerSchema),
@@ -42,25 +63,55 @@ export default function Component() {
       password: '',
       roles: [],
       companyName: '',
-      // taxId: '',
-      userType: ["owner"]
+      userType: "owner"
     },
   });
 
-  const [open, setOpen] = useState(false);
-  const [currentPage, setCurrentPage] = useState(1);
-  const [searchTerm, setSearchTerm] = useState('');
-  const ownersPerPage = 10;
+  const editForm = useForm<EditOwnerFormData>({
+    resolver: zodResolver(EditOwnerSchema),
+  });
+
+  const onEditOwnerSubmit: SubmitHandler<EditOwnerFormData> = (data) => {
+  if (!editingOwner) return;
+  const roles = rolesByUserId.get(editingOwner.id) ?? [];
+  updateUserMutation(
+    {
+      params: { id: editingOwner.id },
+      body: {
+        user: { name: data.name, email: data.email },
+        roles,
+        owner: {
+          userId: editingOwner.id,
+          companyName: data.companyName || null,
+        },
+      },
+    },
+    {
+      onSuccess: () => {
+        toast.success('Owner updated successfully');
+        queryClient.invalidateQueries({ queryKey: OWNERS_QUERY_KEY });
+        queryClient.invalidateQueries({ queryKey: ['users'] });
+        setOpenEdit(false);
+        setEditingOwner(null);
+      },
+      onError: (error) => {
+        console.error('Update error:', error);
+        toast.error('Failed to update owner');
+      },
+    }
+  );
+};
+
 
   const handleCreateOwner: SubmitHandler<CreateOwnerFormData> = async (data) => {
     // Extract owner-specific fields
     const { companyName, ...userData } = data;
-    
+
     createUserMutation(
       {
         body: {
           ...userData,
-          userType: ["owner"]
+          userType: "owner"
         },
       },
       {
@@ -75,7 +126,7 @@ export default function Component() {
             roles: [],
             companyName: '',
             // taxId: '',
-            userType: ["owner"]
+            userType: "owner"
           });
         },
         onError: (error) => {
@@ -85,13 +136,12 @@ export default function Component() {
       }
     );
   };
-  
+
   const parsedOwners = owners?.body.map((item) => ({
     id: item.user.id,
     name: item.user.name,
     email: item.user.email,
     companyName: item.owner?.companyName,
-    // taxId: item.owner?.taxId
   })) || [];
 
   const filteredOwners = parsedOwners.filter(
@@ -128,6 +178,67 @@ export default function Component() {
                   onChange={(e) => setSearchTerm(e.target.value)}
                 />
               </div>
+              {/* Edit Owner Dialog */}
+              <Dialog open={openEdit} onOpenChange={(v) => { setOpenEdit(v); if (!v) setEditingOwner(null); }}>
+                <DialogContent>
+                  <DialogHeader>
+                    <DialogTitle>Edit Owner</DialogTitle>
+                    <DialogDescription>Update owner details</DialogDescription>
+                  </DialogHeader>
+                  <Form {...editForm}>
+                    <form onSubmit={editForm.handleSubmit(onEditOwnerSubmit)} className="space-y-4">
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <FormField
+                          control={editForm.control}
+                          name="name"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Name</FormLabel>
+                              <FormControl><Input {...field} /></FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                        <FormField
+                          control={editForm.control}
+                          name="email"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Email</FormLabel>
+                              <FormControl><Input type="email" {...field} /></FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                        <FormField
+                          control={editForm.control}
+                          name="companyName"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Company Name</FormLabel>
+                              <FormControl><Input {...field} /></FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                      </div>
+                      <div className="flex justify-end gap-2">
+                        <Button
+                          type="button"
+                          variant="outline"
+                          onClick={() => {
+                            setOpenEdit(false);
+                            setEditingOwner(null);
+                          }}
+                        >
+                          Cancel
+                        </Button>
+                        <Button type="submit" disabled={updating}>Save</Button>
+                      </div>
+                    </form>
+                  </Form>
+                </DialogContent>
+              </Dialog>
               <Dialog open={open} onOpenChange={setOpen}>
                 <DialogTrigger asChild>
                   <Button onClick={() => setOpen(true)}>
@@ -142,7 +253,7 @@ export default function Component() {
                       Enter owner details below
                     </DialogDescription>
                   </DialogHeader>
-                  
+
                   <Form {...createForm}>
                     <form onSubmit={createForm.handleSubmit(handleCreateOwner)} className='space-y-4'>
                       <div className='grid grid-cols-1 md:grid-cols-2 gap-4'>
@@ -179,9 +290,9 @@ export default function Component() {
                             <FormItem>
                               <FormLabel>Password</FormLabel>
                               <FormControl>
-                                <Input 
-                                  type="password" 
-                                  {...field} 
+                                <Input
+                                  type="password"
+                                  {...field}
                                   required
                                 />
                               </FormControl>
@@ -216,8 +327,8 @@ export default function Component() {
                           )}
                         /> */}
                       </div>
-                      
-                      
+
+
 
                       <div className='flex justify-end space-x-2'>
                         <Button
@@ -239,13 +350,14 @@ export default function Component() {
                 </DialogContent>
               </Dialog>
             </div>
-            
+
             <Table>
               <TableHeader>
                 <TableRow>
                   <TableHead>Name</TableHead>
                   <TableHead>Email</TableHead>
                   <TableHead>Company</TableHead>
+                  <TableHead>Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -255,11 +367,40 @@ export default function Component() {
                       <TableCell>{owner.name}</TableCell>
                       <TableCell>{owner.email}</TableCell>
                       <TableCell>{owner.companyName || '-'}</TableCell>
+                      <TableCell className="flex gap-2">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => {
+                            setEditingOwner({
+                              id: owner.id,
+                              name: owner.name,
+                              email: owner.email,
+                              companyName: owner.companyName ?? undefined,
+                            });
+                            editForm.reset({
+                              name: owner.name,
+                              email: owner.email,
+                              companyName: owner.companyName || '',
+                            });
+                            setOpenEdit(true);
+                          }}
+                        >
+                          <Pencil className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => router.push(`/users/owners/${owner.id}`)}
+                        >
+                          <Eye className="h-4 w-4" />
+                        </Button>
+                      </TableCell>
                     </TableRow>
                   ))
                 ) : (
                   <TableRow>
-                    <TableCell colSpan={3} className="text-center py-4">
+                    <TableCell colSpan={4} className="text-center py-4">
                       No owners found. Add your first owner to get started.
                     </TableCell>
                   </TableRow>
@@ -295,3 +436,9 @@ export default function Component() {
     </>
   );
 }
+
+
+
+
+
+

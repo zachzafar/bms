@@ -43,6 +43,7 @@ export const bookingContract = c.router({
         },
         query: z.object({
             search: z.string().optional(),
+            assetId: z.string().optional(),
         }),
         summary: 'Get all bookings'
     },

@@ -25,8 +25,8 @@ export class PaymentsController {
       await this.tenantService.validateTenantAccess(tenantId, schema.Customer, body.payment.customerId);
 
       const id = await this.payments.create({
-        ...body.payment,
-      }, body.invoiceIds, body.amountsApplied);
+        ...body.payment,  
+      }, tenantId, body.invoiceIds, body.amountsApplied);
 
       return { status: 201, body: { message: 'payment created', paymentId: id } };
     });
@@ -38,7 +38,7 @@ export class PaymentsController {
     return tsRestHandler(billingContract.getPayments, async ({ query }) => {
       const tenantId = headers['x-tenant-id'];
       const rows = await this.payments.list(tenantId, query);
-      return { status: 200, body: rows };
+      return { status: 200, body: rows.map((row) => ({ ...row, paymentDate: row.paymentDate.toISOString() })) };
     });
   }
 
@@ -52,7 +52,7 @@ export class PaymentsController {
       if (!row) {
         return { status: 404, body: undefined };
       }
-      return { status: 200, body: row };
+      return { status: 200, body: { ...row, paymentDate: row.paymentDate.toISOString() } };
     });
   }
 }

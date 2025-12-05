@@ -14,26 +14,26 @@ export class BookingController {
     constructor(private bookingService: BookingService, private tenantService: TenantService) { }
 
     @TsRestHandler(contract.booking.createBooking)
-@Roles(PermissionScope.BOOKINGS_WRITE)
-async createBooking(): Promise<ReturnType<typeof tsRestHandler>> {
-  return tsRestHandler(contract.booking.createBooking, async ({ body }) => {
-    const { booking, customers } = body;
+    @Roles(PermissionScope.BOOKINGS_WRITE)
+    async createBooking(): Promise<ReturnType<typeof tsRestHandler>> {
+        return tsRestHandler(contract.booking.createBooking, async ({ body }) => {
+            const { booking, customers } = body;
 
-    const bookingId = await this.bookingService.createBooking(booking, customers);
+            const bookingId = await this.bookingService.createBooking(booking, customers);
 
-    if (!bookingId) {
-      throw new ConflictException('Booking creation failed, no bookingId returned');
+            if (!bookingId) {
+                throw new ConflictException('Booking creation failed, no bookingId returned');
+            }
+
+            return {
+                status: 201,
+                body: {
+                    message: 'successfully added booking',
+                    bookingId, // ✅ now guaranteed to be string
+                },
+            };
+        });
     }
-
-    return {
-      status: 201,
-      body: {
-        message: 'successfully added booking',
-        bookingId, // ✅ now guaranteed to be string
-      },
-    };
-  });
-}
 
     @TsRestHandler(contract.booking.getBooking)
     @Roles(PermissionScope.BOOKINGS_READ)
@@ -47,22 +47,16 @@ async createBooking(): Promise<ReturnType<typeof tsRestHandler>> {
     }
 
     @TsRestHandler(contract.booking.getBookings)
-    @Roles(PermissionScope.BOOKINGS_READ)
     async getBookings(@Headers() headers: any): Promise<ReturnType<typeof tsRestHandler>> {
-        return tsRestHandler(contract.booking.getBookings, async () => {
-            this.logger.log("Get bookings for tenant: ", headers['x-tenant-id'] || "no tenant")
+        return tsRestHandler(contract.booking.getBookings, async ({ query }) => {
             const tenantId = headers['x-tenant-id'];
-            const bookings = (await this.bookingService.getBookings(tenantId)).map((booking) => {
-                let assetTypeId = booking.asset.assetTypeId ? Number(booking.asset.assetTypeId) : undefined;
-
-                return {
-                    ...booking,
-                    asset: {
-                        ...booking.asset,
-                        assetTypeId
-                    }
-                }
-            });
+            const bookings = (await this.bookingService.getBookings(tenantId, query.assetId)).map(booking => ({
+                ...booking,
+                asset: {
+                    ...booking.asset,
+                    assetTypeId: booking.asset.assetTypeId ? Number(booking.asset.assetTypeId) : undefined,
+                },
+            }));
 
             return { status: 200, body: bookings };
         });

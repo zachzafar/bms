@@ -40,6 +40,7 @@ export const assetsContract = c.router({
     },
     query: z.object({
       search: z.string().optional(),
+      userId: z.string().optional(),
     }),
     summary: 'Get all assets',
   },
