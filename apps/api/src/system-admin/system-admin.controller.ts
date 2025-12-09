@@ -69,6 +69,15 @@ export class SystemAdminController {
   }
 
   @IsAdminRoute()
+  @TsRestHandler(contract.systemAdmin.createTenant)
+  async createTenant(): Promise<ReturnType<typeof tsRestHandler>> {
+    return tsRestHandler(contract.systemAdmin.createTenant, async ({ body }) => {
+      const result = await this.systemAdminService.createTenant(body.tenant, body.adminUser);
+      return { status: 201, body: result };
+    });
+  }
+
+  @IsAdminRoute()
   @TsRestHandler(contract.systemAdmin.getTenants)
   async getTenants(): Promise<ReturnType<typeof tsRestHandler>> {
     return tsRestHandler(contract.systemAdmin.getTenants, async () => {
@@ -459,7 +468,7 @@ export class SystemAdminController {
   @TsRestHandler(contract.systemAdmin.getTags)
   async getTags(): Promise<ReturnType<typeof tsRestHandler>> {
     return tsRestHandler(contract.systemAdmin.getTags, async ({ params }) => {
-      
+
       // Fetch only tags belonging to this tenant
       const tags = await this.tagsService.getTags(params.tenantId);
       return { status: 200, body: tags };
@@ -481,7 +490,7 @@ export class SystemAdminController {
   @TsRestHandler(contract.settings.tags.deleteTag)
   async deleteTag(): Promise<ReturnType<typeof tsRestHandler>> {
     return tsRestHandler(contract.systemAdmin.deleteTag, async ({ params }) => {
-      
+
       const tag = await this.tagsService.getTag(Number(params.id));
 
       // Validate tenant access before deleting
