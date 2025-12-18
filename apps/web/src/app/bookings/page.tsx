@@ -190,34 +190,34 @@ export default function Component() {
   const [invalidStartOrEnd, setInvalidStartOrEnd] = useState<BlockedDate[]>([]);
 
   useEffect(() => {
-  if (startDate && endDate) {
-    const start = new Date(startDate);
-    const end = new Date(endDate);
+    if (startDate && endDate) {
+      const start = new Date(startDate);
+      const end = new Date(endDate);
 
-    const conflicts = blockedDates.filter(b => {
-      const blockedStart = new Date(b.startDate);
-      const blockedEnd = new Date(b.endDate);
+      const conflicts = blockedDates.filter(b => {
+        const blockedStart = new Date(b.startDate);
+        const blockedEnd = new Date(b.endDate);
 
-      // Only global blocks (no specific asset)
-      const isGlobalBlock = !b.asset_id || b.asset_id === "null";
+        // Only global blocks (no specific asset)
+        const isGlobalBlock = !b.asset_id || b.asset_id === "null";
 
-      // Overlaps if same day or within range
-      const overlaps =
-        isSameDay(start, blockedStart) ||
-        isSameDay(start, blockedEnd) ||
-        isSameDay(end, blockedStart) ||
-        isSameDay(end, blockedEnd) ||
-        (start <= blockedEnd && end >= blockedStart);
+        // Overlaps if same day or within range
+        const overlaps =
+          isSameDay(start, blockedStart) ||
+          isSameDay(start, blockedEnd) ||
+          isSameDay(end, blockedStart) ||
+          isSameDay(end, blockedEnd) ||
+          (start <= blockedEnd && end >= blockedStart);
 
-      return overlaps && isGlobalBlock;
-    });
+        return overlaps && isGlobalBlock;
+      });
 
-    // Only show invalids for global blocks now
-    setInvalidStartOrEnd(conflicts);
-  } else {
-    setInvalidStartOrEnd([]);
-  }
-}, [startDate, endDate, blockedDates]);
+      // Only show invalids for global blocks now
+      setInvalidStartOrEnd(conflicts);
+    } else {
+      setInvalidStartOrEnd([]);
+    }
+  }, [startDate, endDate, blockedDates]);
 
 
 
@@ -225,67 +225,67 @@ export default function Component() {
 
   // When dates change, fetch available assets and assign applicable rates
   useEffect(() => {
-  if (startDate && endDate) {
-    setDateRangeReady(true);
+    if (startDate && endDate) {
+      setDateRangeReady(true);
 
-    authClient.assets
-      .getAvailableAssets.query({
-        query: { startDate, endDate },
-      })
-      .then((res) => {
-        if (res.status === 200) {
-          const nights = calculateNights(startDate, endDate);
+      authClient.assets
+        .getAvailableAssets.query({
+          query: { startDate, endDate },
+        })
+        .then((res) => {
+          if (res.status === 200) {
+            const nights = calculateNights(startDate, endDate);
 
-          // Exclude assets that are blocked in that date range
-          const blockedAssetIds = blockedDates
-            .filter(b => {
-              const blockedStart = new Date(b.startDate);
-              const blockedEnd = new Date(b.endDate);
-              const overlaps =
-                (new Date(startDate) <= blockedEnd && new Date(endDate) >= blockedStart);
-              return b.asset_id && b.asset_id !== "null" && overlaps;
-            })
-            .map(b => b.asset_id);
+            // Exclude assets that are blocked in that date range
+            const blockedAssetIds = blockedDates
+              .filter(b => {
+                const blockedStart = new Date(b.startDate);
+                const blockedEnd = new Date(b.endDate);
+                const overlaps =
+                  (new Date(startDate) <= blockedEnd && new Date(endDate) >= blockedStart);
+                return b.asset_id && b.asset_id !== "null" && overlaps;
+              })
+              .map(b => b.asset_id);
 
-          const filteredAssets = res.body.filter(
-            (asset) => !blockedAssetIds.includes(asset.id)
-          );
-
-          const assetsWithRates = filteredAssets.map((asset) => {
-            const applicableRates = rates.filter(
-              (rate) =>
-                rate.assetId === asset.id &&
-                (!rate.minNights || rate.minNights <= nights) &&
-                (!rate.maxNights || rate.maxNights >= nights)
+            const filteredAssets = res.body.filter(
+              (asset) => !blockedAssetIds.includes(asset.id)
             );
 
-            const selectedRate =
-              applicableRates.length > 0
-                ? applicableRates.reduce((prev, curr) =>
+            const assetsWithRates = filteredAssets.map((asset) => {
+              const applicableRates = rates.filter(
+                (rate) =>
+                  rate.assetId === asset.id &&
+                  (!rate.minNights || rate.minNights <= nights) &&
+                  (!rate.maxNights || rate.maxNights >= nights)
+              );
+
+              const selectedRate =
+                applicableRates.length > 0
+                  ? applicableRates.reduce((prev, curr) =>
                     (prev.priority ?? 100) < (curr.priority ?? 100) ? prev : curr
                   )
-                : null;
+                  : null;
 
-            return {
-              ...asset,
-              applicableRate: selectedRate || undefined,
-            };
-          });
+              return {
+                ...asset,
+                applicableRate: selectedRate || undefined,
+              };
+            });
 
-          setAvailableAssets(assetsWithRates);
-        } else {
+            setAvailableAssets(assetsWithRates);
+          } else {
+            setAvailableAssets([]);
+          }
+        })
+        .catch((err) => {
+          console.error('Failed to fetch available assets:', err);
           setAvailableAssets([]);
-        }
-      })
-      .catch((err) => {
-        console.error('Failed to fetch available assets:', err);
-        setAvailableAssets([]);
-      });
-  } else {
-    setDateRangeReady(false);
-    setAvailableAssets([]);
-  }
-}, [startDate, endDate, rates, blockedDates]);
+        });
+    } else {
+      setDateRangeReady(false);
+      setAvailableAssets([]);
+    }
+  }, [startDate, endDate, rates, blockedDates]);
 
 
 
@@ -488,8 +488,11 @@ export default function Component() {
                   }}
                 />
 
-                <FormItem>
-                  <FormLabel>Customers</FormLabel>
+                <div className="space-y-2">
+                  <label className="text-sm font-medium leading-none">
+                    Customers
+                  </label>
+
                   <MultiSelector values={customers} onValuesChange={setCustomers}>
                     <MultiSelectorTrigger>
                       <MultiSelectorInput placeholder="Select Customers..." />
@@ -507,7 +510,7 @@ export default function Component() {
                       </MultiSelectorList>
                     </MultiSelectorContent>
                   </MultiSelector>
-                </FormItem>
+                </div>
                 <FormField
                   control={form.control}
                   name="assetId"

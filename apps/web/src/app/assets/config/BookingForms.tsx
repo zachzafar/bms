@@ -59,12 +59,12 @@ type FieldType = Field['type'];
 
 function BookingForms() {
   const tenant = StorageService.getTenant();
-  const [newField,setNewField] = useState<Field>({
+  const [newField, setNewField] = useState<Field>({
     name: '',
     type: 'text',
     required: false,
   })
-  
+
   const { data: bookingForms, isLoading } = authClient.settings.form.getForms.useQuery({
     queryKey: ['bookingForms'],
   });
@@ -97,7 +97,7 @@ function BookingForms() {
     const { fields, ...form } = data
     if (tenant) {
       createBookingForm({
-        body: { fields , form: { ...form, tenantId: tenant.id} },
+        body: { fields, form: { ...form, tenantId: tenant.id } },
       });
     }
   };
@@ -137,9 +137,9 @@ function BookingForms() {
                   <FormItem>
                     <FormLabel>Description</FormLabel>
                     <FormControl>
-                      <Textarea 
-                        placeholder="Enter form description" 
-                        className="resize-none" 
+                      <Textarea
+                        placeholder="Enter form description"
+                        className="resize-none"
                         {...field}
                       />
                     </FormControl>
@@ -149,7 +149,9 @@ function BookingForms() {
               />
 
               <div className="space-y-4">
-                <FormLabel>Form Fields</FormLabel>
+                <label className="text-sm font-medium leading-none">
+                  Form Fields
+                </label>
                 {fields.map((field, index) => (
                   <div key={field.id} className="flex items-center space-x-2">
                     <FormField
@@ -217,8 +219,8 @@ function BookingForms() {
                   </div>
                 ))}
                 <div className="flex items-center space-x-2">
-                  <Input placeholder="Field name" onChange={(e) => setNewField({...newField,name: e.target.value})}/>
-                  <Select onValueChange={(v) => setNewField({...newField,type: v as FieldType})} value={newField.type}>
+                  <Input placeholder="Field name" onChange={(e) => setNewField({ ...newField, name: e.target.value })} />
+                  <Select onValueChange={(v) => setNewField({ ...newField, type: v as FieldType })} value={newField.type}>
                     <SelectTrigger className="w-[180px]">
                       <SelectValue />
                     </SelectTrigger>
@@ -234,7 +236,7 @@ function BookingForms() {
                     <input
                       type="checkbox"
                       checked={newField.required}
-                      onChange={(e) => setNewField({...newField,required: e.target.checked})}
+                      onChange={(e) => setNewField({ ...newField, required: e.target.checked })}
                     />
                     <span>Required</span>
                   </div>
@@ -248,7 +250,7 @@ function BookingForms() {
                     Add Field
                   </Button>
                 </div>
-            </div>    
+              </div>
               <Button type="submit">Create Booking Form</Button>
             </form>
           </Form>
@@ -279,21 +281,21 @@ function BookingForms() {
                         <Button
                           variant="ghost"
                           size="icon"
-                          onClick={() => {/* Add edit handler */}}
+                          onClick={() => {/* Add edit handler */ }}
                         >
                           <PencilIcon className="h-4 w-4" />
                         </Button>
                         <Button
                           variant="ghost"
                           size="icon"
-                          onClick={() => {/* Add view handler */}}
+                          onClick={() => {/* Add view handler */ }}
                         >
                           <EyeIcon className="h-4 w-4" />
                         </Button>
                         <Button
                           variant="ghost"
                           size="icon"
-                          onClick={() => {/* Add delete handler */}}
+                          onClick={() => {/* Add delete handler */ }}
                         >
                           <TrashIcon className="h-4 w-4" />
                         </Button>

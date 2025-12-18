@@ -26,7 +26,7 @@ import { StorageService } from '@/lib/api/storage';
 const AssetTypeWithPropertiesSchema = z.object({
   name: z.string(),
   properties: z.array(z.number()),
-}) 
+})
 
 type AssetTypeWithProperties = z.infer<typeof AssetTypeWithPropertiesSchema>;
 
@@ -36,8 +36,8 @@ export default function AssetTypes() {
   const [selectedProperties, setSelectedProperties] = useState<string[]>([]);
   const queryClient = authClient.useQueryClient();
 
-  const { data: assetTypes, isLoading: isLoadingAssetTypes } = authClient.settings.assetType.getAssetTypes.useQuery({ 
-    queryKey: [ASSET_TYPE_QUERY_KEY] 
+  const { data: assetTypes, isLoading: isLoadingAssetTypes } = authClient.settings.assetType.getAssetTypes.useQuery({
+    queryKey: [ASSET_TYPE_QUERY_KEY]
   });
 
   const { data: properties, isLoading: isLoadingProperties } = authClient.settings.assetType.getProperties.useQuery({
@@ -48,14 +48,14 @@ export default function AssetTypes() {
     queryKey: [ASSET_TYPE_QUERY_KEY, editingAssetTypeId],
     enabled: !!editingAssetTypeId,
     queryData: {
-      params: { id: editingAssetTypeId?.toString() as string}
+      params: { id: editingAssetTypeId?.toString() as string }
     }
   });
 
   const { mutate: addAssetTypeMutation } = authClient.settings.assetType.createAssetType.useMutation({
     onSuccess: () => {
       toast.success('New asset type was added successfully');
-      queryClient.invalidateQueries({ queryKey: [ASSET_TYPE_QUERY_KEY]});
+      queryClient.invalidateQueries({ queryKey: [ASSET_TYPE_QUERY_KEY] });
       reset();
       setSelectedProperties([]);
     },
@@ -68,7 +68,7 @@ export default function AssetTypes() {
     onSuccess: () => {
       toast.success('Asset type was updated successfully');
       setEditingAssetType(undefined);
-      queryClient.invalidateQueries({ queryKey: [ASSET_TYPE_QUERY_KEY]});
+      queryClient.invalidateQueries({ queryKey: [ASSET_TYPE_QUERY_KEY] });
       reset();
     },
     onError: (error) => {
@@ -79,7 +79,7 @@ export default function AssetTypes() {
   const { mutate: deleteAssetTypeMutation } = authClient.settings.assetType.deleteAssetType.useMutation({
     onSuccess: () => {
       toast.success('Asset type was deleted successfully');
-      queryClient.invalidateQueries({ queryKey: [ASSET_TYPE_QUERY_KEY]});
+      queryClient.invalidateQueries({ queryKey: [ASSET_TYPE_QUERY_KEY] });
     },
     onError: (error) => {
       toast(`Error occurred: ${error instanceof Error ? error.message : 'Unknown error'}`);
@@ -89,7 +89,7 @@ export default function AssetTypes() {
   const form = useForm<AssetTypeWithProperties>({
     resolver: zodResolver(AssetTypeWithPropertiesSchema),
     defaultValues: {
-       name: '' ,
+      name: '',
       properties: []
     }
   });
@@ -102,15 +102,15 @@ export default function AssetTypes() {
         name: editingAssetType.body.assetType.name,
         properties: editingAssetType.body.properties.map(item => item.id)
       });
-      
+
       // Set selected properties for MultiSelect
       const selectedProps = editingAssetType.body.properties.map(item => {
 
-        const property = properties?.status === 200 && 
+        const property = properties?.status === 200 &&
           properties.body.find(p => p.id === item.id);
         return property ? property.name : '';
       }).filter(Boolean);
-      
+
       setSelectedProperties(selectedProps);
     }
   }, [editingAssetType, properties, reset]);
@@ -118,10 +118,10 @@ export default function AssetTypes() {
   const processForm = (data: AssetTypeWithProperties) => {
     // Convert selected property names to IDs and required status
     const propertyIds = selectedProperties.map(propName => {
-      const property = properties?.status === 200 && 
+      const property = properties?.status === 200 &&
         properties.body.find(p => p.name === propName);
-      return property ?  property.id
-         : null;
+      return property ? property.id
+        : null;
     })
 
     const nonNullPropertyIds = propertyIds.filter(prop => prop !== null);
@@ -134,10 +134,10 @@ export default function AssetTypes() {
     if (editingAssetType?.status === 200) {
       updateAssetTypeMutation({
         params: { id: editingAssetType.body.assetType.id.toString() },
-        body: {...formData, assetType: { name: formData.name}}
+        body: { ...formData, assetType: { name: formData.name } }
       });
     } else {
-      addAssetTypeMutation({ body: { assetType: { name:formData.name, tenantId: tenant?.id as string}, properties: formData.properties as number[] }});
+      addAssetTypeMutation({ body: { assetType: { name: formData.name, tenantId: tenant?.id as string }, properties: formData.properties as number[] } });
     }
   };
 
@@ -177,30 +177,39 @@ export default function AssetTypes() {
                   </FormItem>
                 )}
               />
-              <FormItem>
-                <FormLabel>Fields</FormLabel>
-                <MultiSelector
-                  values={selectedProperties}
-                  onValuesChange={setSelectedProperties}
-                >
-                  <MultiSelectorTrigger>
-                    <MultiSelectorInput placeholder="Select Fields..." />
-                  </MultiSelectorTrigger>
-                  <MultiSelectorContent>
-                    <MultiSelectorList>
-                      {properties?.status === 200 && properties.body.map((property) => (
-                        <MultiSelectorItem
-                          key={property.id}
-                          value={property.name}
-                        >
-                          {property.name}
-                        </MultiSelectorItem>
-                      ))}
-                    </MultiSelectorList>
-                  </MultiSelectorContent>
-                </MultiSelector>
-                <FormMessage />
-              </FormItem>
+              <FormField
+                control={form.control}
+                name="properties"
+                render={() => (
+                  <FormItem>
+                    <FormLabel>Fields</FormLabel>
+
+                    <MultiSelector
+                      values={selectedProperties}
+                      onValuesChange={setSelectedProperties}
+                    >
+                      <MultiSelectorTrigger>
+                        <MultiSelectorInput placeholder="Select Fields..." />
+                      </MultiSelectorTrigger>
+                      <MultiSelectorContent>
+                        <MultiSelectorList>
+                          {properties?.status === 200 &&
+                            properties.body.map((property) => (
+                              <MultiSelectorItem
+                                key={property.id}
+                                value={property.name}
+                              >
+                                {property.name}
+                              </MultiSelectorItem>
+                            ))}
+                        </MultiSelectorList>
+                      </MultiSelectorContent>
+                    </MultiSelector>
+
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
               <div className="flex space-x-2">
                 <Button type="submit">
                   {editingAssetType ? 'Update Asset Type' : 'Add Asset Type'}
