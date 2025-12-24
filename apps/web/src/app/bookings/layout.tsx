@@ -17,9 +17,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-        <html lang="en">
       <body className={inter.className}>
-        <TanstackProvider>
     {/* Set a thinner sidebar width via CSS variable */}
     <SidebarProvider style={{ '--sidebar-width': '14rem' } as React.CSSProperties}>
       <AppSidebar />
@@ -36,9 +34,7 @@ export default function RootLayout({
         </div>
       </main>
     </SidebarProvider>
-    </TanstackProvider>
-    <Toaster />
     </body>
-    </html>
+   
   );
 }

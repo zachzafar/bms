@@ -26,7 +26,7 @@ const appOptions: AppOption[] = [
     name: 'Booking Platform',
     description: 'Manage property bookings, availability, and reservations',
     icon: <Building className="h-8 w-8" />,
-    url: process.env.NODE_ENV === 'production' ? 'https://booking.bookos.xyz' : 'http://localhost:3000',
+    url: '/bookings',
     color: 'bg-blue-500'
   },
   {
@@ -34,7 +34,7 @@ const appOptions: AppOption[] = [
     name: 'CRM System',
     description: 'Customer relationship management and lead tracking',
     icon: <Users className="h-8 w-8" />,
-    url: process.env.NODE_ENV === 'production' ? 'https://crm.bookos.xyz' : 'http://localhost:3001',
+    url: '/crm',
     color: 'bg-green-500'
   }
 ];

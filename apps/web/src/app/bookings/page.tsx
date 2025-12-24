@@ -11,13 +11,9 @@ export default async function LandingPage() {
   
   if (session) {
     // User is authenticated, redirect to dashboard
-    redirect('/dashboard')
+    redirect('/bookings/dashboard')
   } else {
     // User is not authenticated, redirect to auth app
-    const authUrl = process.env.NODE_ENV === 'production' 
-      ? 'https://bookos.xyz'
-      : 'http://localhost:3002'
-    
-    redirect(authUrl)
+    redirect('/login')
   }
 }

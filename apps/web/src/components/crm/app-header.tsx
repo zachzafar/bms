@@ -36,7 +36,7 @@ const appOptions: AppOption[] = [
     name: 'Booking',
     description: 'Manage bookings, invoices, assets and payments',
     icon: <Calendar className="h-4 w-4" />,
-    url: process.env.NODE_ENV === 'production' ? 'https://booking.bookos.xyz' : 'http://localhost:3000',
+    url: '/bookings',
     color: 'text-purple-600'
   },
   {
@@ -44,7 +44,7 @@ const appOptions: AppOption[] = [
     name: 'Auth Hub',
     description: 'Central authentication and user management',
     icon: <Globe className="h-4 w-4" />,
-    url: process.env.NODE_ENV === 'production' ? 'https://bookos.xyz' : 'http://localhost:3002',
+    url: '/',
     color: 'text-green-600'
   }
 ]
@@ -72,18 +72,12 @@ export function AppHeader() {
   const handleLogout = async () => {
     try {
       await deleteSession()
-      // Redirect to auth app
-      const authUrl = process.env.NODE_ENV === 'production' 
-        ? 'https://bookos.xyz'
-        : 'http://localhost:3002'
-      window.location.href = authUrl
+      // Redirect to login
+      window.location.href = '/login'
     } catch (error) {
       console.error('Logout failed:', error)
       // Force redirect even if logout fails
-      const authUrl = process.env.NODE_ENV === 'production' 
-        ? 'https://bookos.xyz'
-        : 'http://localhost:3002'
-      window.location.href = authUrl
+      window.location.href = '/login'
     }
   }
 
