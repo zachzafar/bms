@@ -1,6 +1,6 @@
 import { BadRequestException, Inject, Injectable } from '@nestjs/common';
 import { MySql2Database } from 'drizzle-orm/mysql2';
-import * as schema from '@repo/api-contract';
+import * as schema from 'src/database-schema';
 import { DrizzleAsyncProvider } from 'src/drizzle/drizzle.provider';
 import { and, between, eq, gte, lte } from 'drizzle-orm';
 

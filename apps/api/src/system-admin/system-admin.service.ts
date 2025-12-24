@@ -1,12 +1,12 @@
 import { Injectable, Logger, NotFoundException, ConflictException, Inject } from '@nestjs/common';
 import { MySql2Database } from 'drizzle-orm/mysql2';
 import { DrizzleAsyncProvider } from 'src/drizzle/drizzle.provider';
-import * as schema from '@repo/api-contract';
 import { eq, and, count, countDistinct, desc, sql } from 'drizzle-orm';
 import { hash } from 'argon2';
 import { randomBytes } from 'crypto';
 import { UsersService } from 'src/users/users.service';
 import { promises as fs} from "fs";
+import * as schema from 'src/database-schema';
 
 @Injectable()
 export class SystemAdminService {

@@ -1,9 +1,9 @@
 import { ConflictException, forwardRef, Inject, Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { MySql2Database } from 'drizzle-orm/mysql2';
 import { DrizzleAsyncProvider } from 'src/drizzle/drizzle.provider';
-import * as schema from '@repo/api-contract';
+import * as schema from 'src/database-schema';
 import { TenantService } from 'src/tenant/tenant.service';
-import  type { InsertMaintenanceTask, UpdateMaintenanceTask } from '@repo/api-contract';
+import  type { InsertMaintenanceTask, UpdateMaintenanceTask } from 'src/database-schema';
 import { and, eq, inArray } from 'drizzle-orm';
 import { ObjectStorageService } from 'src/object-storage/object-storage.service';
 

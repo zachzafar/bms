@@ -1,9 +1,9 @@
 import { ConflictException, Inject, Injectable, NotFoundException } from '@nestjs/common';
 import { MySql2Database } from 'drizzle-orm/mysql2';
-import * as schema from '@repo/api-contract';
+import * as schema from 'src/database-schema';
 import { DrizzleAsyncProvider } from 'src/drizzle/drizzle.provider';
 import { and, eq, gte, inArray, lte, or } from 'drizzle-orm';
-import { ExtendedSelectBooking } from '@repo/api-contract/src/api-contract/booking';
+import { ExtendedSelectBooking } from 'src/api-contract/booking';
 import { SlotService } from '../slot/slot.service';
 
 // --- top of file or bottom (outside the class) ---

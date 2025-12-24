@@ -1,8 +1,8 @@
 import { Injectable, Inject, InternalServerErrorException } from '@nestjs/common';
 import { MySql2Database } from 'drizzle-orm/mysql2';
 import { DrizzleAsyncProvider } from 'src/drizzle/drizzle.provider';
-import * as schema from '@repo/api-contract';
-import { InsertUser, SelectUser, UpdateUser } from '@repo/api-contract';
+import * as schema from 'src/database-schema';
+import { InsertUser, SelectUser, UpdateUser } from 'src/database-schema';
 import { eq, and } from 'drizzle-orm';
 import { hash } from 'argon2';
 

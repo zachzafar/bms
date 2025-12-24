@@ -10,10 +10,7 @@ import { LocalStrategy } from './strategies/local.strategy';
 import { RefreshStrategy } from './strategies/refresh-token.strategy';
 import { UsersService } from 'src/users/users.service';
 import { DrizzleModule } from 'src/drizzle/drizzle.module';
-import { PassportModule } from '@nestjs/passport';
-import { Tenant } from '@repo/api-contract';
 import { TenantService } from 'src/tenant/tenant.service';
-import { EventEmitter2 } from '@nestjs/event-emitter';
 
 import { TenantGuard } from './guards/tenant/tenant.guard';
 import { ApiKeyStrategy } from './strategies/apikey.strategy';

@@ -1,7 +1,7 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { MySql2Database } from 'drizzle-orm/mysql2';
 import { DrizzleAsyncProvider } from 'src/drizzle/drizzle.provider';
-import * as schema from '@repo/api-contract';
+import * as schema from 'src/database-schema';
 import { and, eq } from 'drizzle-orm';
 
 @Injectable()

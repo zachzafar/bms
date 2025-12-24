@@ -1,9 +1,9 @@
 import { Controller, Header, Headers, Logger, UploadedFiles, UseGuards, UseInterceptors } from '@nestjs/common';
 import { MaintenanceService } from './maintenance.service';
 import {  tsRestHandler, TsRestHandler } from '@ts-rest/nest';
-import { contract } from '@repo/api-contract';
+import { contract } from 'src/api-contract';
 import { TenantService } from 'src/tenant/tenant.service';
-import * as schema from "@repo/api-contract"
+import * as schema from "src/database-schema"
 import { FileFieldsInterceptor } from '@nestjs/platform-express';
 import { Roles } from 'src/auth/decorators/permissions.decorator';
 import { PermissionScope } from 'src/auth/permissions';

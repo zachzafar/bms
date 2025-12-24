@@ -1,9 +1,9 @@
 import { ConflictException, Inject, Injectable, NotFoundException, UnauthorizedException } from '@nestjs/common';
 import { MySql2Database } from 'drizzle-orm/mysql2';
 import { and, eq, gte, lte } from 'drizzle-orm';
-import * as schema from '@repo/api-contract';
+import * as schema from 'src/database-schema';
 import { DrizzleAsyncProvider } from 'src/drizzle/drizzle.provider';
-import { InsertRate, UpdateRate } from '@repo/api-contract';
+import { InsertRate, UpdateRate } from 'src/database-schema';
 import { TenantService } from 'src/tenant/tenant.service';
 
 @Injectable()

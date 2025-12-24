@@ -1,9 +1,9 @@
 import { Inject, Injectable, InternalServerErrorException, Logger } from '@nestjs/common';
 import { MySql2Database } from 'drizzle-orm/mysql2';
 import { DrizzleAsyncProvider } from 'src/drizzle/drizzle.provider';
-import * as schema from '@repo/api-contract';
+import * as schema from 'src/database-schema';
 import { and, eq, gte, inArray, lte } from 'drizzle-orm';
-import type { InsertAsset, UpdateAsset } from '@repo/api-contract';
+import type { InsertAsset, UpdateAsset } from 'src/database-schema';
 import { ObjectStorageService } from 'src/object-storage/object-storage.service';
 import { Readable } from 'stream';
 

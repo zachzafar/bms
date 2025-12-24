@@ -1,6 +1,6 @@
 import { Controller, UseGuards } from '@nestjs/common';
 import { SlotService } from './slot.service';
-import { contract } from '@repo/api-contract';
+import { contract } from 'src/api-contract';
 import { TsRestHandler, tsRestHandler } from '@ts-rest/nest';
 // import { RequireRead, RequireWrite } from 'src/auth/decorators/permissions.decorator';
 import { Roles } from 'src/auth/decorators/permissions.decorator';

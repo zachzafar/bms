@@ -1,13 +1,9 @@
 import { BadRequestException, Body, Controller, HttpCode, Logger, Post, UploadedFile, UseInterceptors } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
-import { contract,} from '@repo/api-contract';
-import { TsRestHandler, tsRestHandler } from '@ts-rest/nest';
 import { IsAdminRoute } from 'src/auth/decorators/admin.decorator';
 
 import { TenantService } from 'src/tenant/tenant.service';
-import { AssetTypeService } from '../asset-type/asset-type.service';
-import { AssetsService } from 'src/assets/assets.service';
-import * as schema from "@repo/api-contract"
+import * as schema from 'src/database-schema';
 import { ImportService } from './import.service';
 
 @Controller()

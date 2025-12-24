@@ -1,8 +1,8 @@
 import { Body, Controller, Headers, Logger, Param, UseGuards } from '@nestjs/common';
 import { TsRestHandler, tsRestHandler } from '@ts-rest/nest';
-import { contract } from '@repo/api-contract';
+import { contract } from 'src/api-contract';
 import { RatesService } from './rates.service';
-import * as schema from '@repo/api-contract';
+import * as schema from 'src/database-schema';
 import { TenantService } from 'src/tenant/tenant.service';
 // import { RequireRead, RequireWrite, RequireDelete } from 'src/auth/decorators/permissions.decorator';
 import { Roles } from 'src/auth/decorators/permissions.decorator';

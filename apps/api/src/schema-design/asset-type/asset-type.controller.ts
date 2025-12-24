@@ -1,9 +1,9 @@
 import { Controller, Logger, Headers } from '@nestjs/common';
 import { AssetTypeService } from './asset-type.service';
 import { tsRestHandler, TsRestHandler } from '@ts-rest/nest';
-import { contract } from '@repo/api-contract';
+import { contract } from 'src/api-contract';
 import { TenantService } from 'src/tenant/tenant.service';
-import * as schema from "@repo/api-contract"
+import * as schema from "src/database-schema"
 
 @Controller()
 export class AssetTypeController {

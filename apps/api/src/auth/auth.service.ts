@@ -1,8 +1,8 @@
 import { Inject, Injectable, InternalServerErrorException, Logger, UnauthorizedException } from '@nestjs/common';
-import { InsertTenant, InsertUser, SelectTenant, SelectUser } from '@repo/api-contract';
+import { InsertTenant, InsertUser, SelectTenant, SelectUser } from 'src/database-schema';
 import { MySql2Database } from 'drizzle-orm/mysql2';
 import { DrizzleAsyncProvider } from 'src/drizzle/drizzle.provider';
-import * as schema from '@repo/api-contract';
+import * as schema from 'src/database-schema';
 import { JwtService } from '@nestjs/jwt';
 import { hash, verify } from 'argon2';
 import { ConfigType } from '@nestjs/config';

@@ -1,9 +1,9 @@
 import { Controller, Headers } from '@nestjs/common';
 import { TsRestHandler, tsRestHandler } from '@ts-rest/nest';
-import { crmContract } from '@repo/api-contract';
+import { crmContract } from 'src/api-contract';
 import { InquiriesService } from './inquiries.service';
 import { TenantService } from 'src/tenant/tenant.service';
-import * as schema from '@repo/api-contract';
+import * as schema from 'src/database-schema';
 import { convertBigIntToNumber } from 'src/utils/bigint-converter';
 
 @Controller()

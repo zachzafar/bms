@@ -2,7 +2,7 @@ import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 import { SwaggerModule } from '@nestjs/swagger';
 import { generateOpenApi } from '@ts-rest/open-api';
-import { contract } from '@repo/api-contract';
+import { contract } from 'src/api-contract';
 import { Reflector } from '@nestjs/core';
 import { Logger } from '@nestjs/common';
 import { TenantGuard } from './auth/guards/tenant/tenant.guard';

@@ -1,7 +1,7 @@
 import { Controller, Headers, Logger, NotFoundException, UseGuards } from '@nestjs/common';
 import { UsersService } from './users.service';
 import { tsRestHandler, TsRestHandler } from '@ts-rest/nest';
-import { contract as c } from "@repo/api-contract"
+import { contract as c } from "src/api-contract"
 // import { RequireRead, RequireWrite, RequireDelete, RequirePermissionsDecorator } from 'src/auth/decorators/permissions.decorator';
 import { Roles } from 'src/auth/decorators/permissions.decorator';
 import { PermissionScope } from 'src/auth/permissions';
