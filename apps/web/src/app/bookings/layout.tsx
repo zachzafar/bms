@@ -3,7 +3,6 @@ import { AppSidebar } from '@/components/custom/AppSidebar';
 import { AppHeader } from '@/components/app-header';
 import TanstackProvider from '@/providers/tanstack';
 import { Inter } from 'next/font/google';
-import './globals.css'
 import { Toaster } from '@/components/ui/sonner'
 
 

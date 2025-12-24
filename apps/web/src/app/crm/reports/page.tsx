@@ -1,7 +1,7 @@
 "use client"
 
 import { useState } from "react"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -13,24 +13,16 @@ import {
   YAxis,
   CartesianGrid,
   ResponsiveContainer,
-  LineChart,
-  Line,
   PieChart,
   Pie,
   Cell,
   AreaChart,
   Area,
 } from "recharts"
-import { TrendingUp, TrendingDown, Users, Home, MessageSquare, Download, DollarSign, Star, CheckCircle } from "lucide-react"
+import { Users, MessageSquare, Download, Star, CheckCircle } from "lucide-react"
 import { authClient } from "@/lib/api/publicClient"
 import { 
-  REPORTS_DASHBOARD_QUERY_KEY,
-  REPORTS_CONTACTS_SUMMARY_QUERY_KEY,
-  REPORTS_INQUIRIES_STATUS_QUERY_KEY,
-  REPORTS_COMMUNICATION_TRENDS_QUERY_KEY,
-  REPORTS_FEEDBACK_RATINGS_QUERY_KEY,
-  REPORTS_TASK_COMPLETION_QUERY_KEY
-} from "@/lib/api/queryKeys"
+  REPORTS_DASHBOARD_QUERY_KEY} from "@/lib/api/queryKeys"
 import { ReportFilters, ReportFiltersInputs } from "@/components/crm/report-filters"
 
 
