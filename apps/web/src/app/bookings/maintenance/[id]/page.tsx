@@ -11,7 +11,7 @@ import { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
-import { UpdateMaintenanceTaskSchema, UpdateMaintenanceTask } from '@/lib/api-contract';
+import { UpdateMaintenanceTaskSchema, UpdateMaintenanceTask } from '@repo/api-contract';
 import {toast} from "sonner"
 import AddMaintenanceFile from './AddMaintenanceFile';
 

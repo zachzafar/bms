@@ -19,7 +19,7 @@ import {
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { authClient } from '@/lib/api/publicClient';
-import { InsertBookingSchema, SelectAsset} from '@/lib/api-contract';
+import { InsertBookingSchema, SelectAsset} from '@repo/api-contract';
 import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';

@@ -9,7 +9,7 @@ import { Search, PlusCircle, ChevronLeft, ChevronRight, Eye, Pencil } from 'luci
 import { useForm, SubmitHandler } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { InsertUserSchema } from '@/lib/api-contract';
+import { InsertUserSchema } from '@repo/api-contract';
 import { toast } from 'sonner';
 import { useRouter } from 'next/navigation';
 import { authClient } from '@/lib/api/publicClient';

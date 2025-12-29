@@ -1,5 +1,5 @@
 import { Controller, Logger, UseGuards, Post, Request, Headers, InternalServerErrorException } from '@nestjs/common';
-import { contract } from 'src/api-contract';
+import { contract } from '@repo/api-contract';
 import { TsRestHandler, tsRestHandler } from '@ts-rest/nest';
 import { AuthService } from './auth.service';
 import { RefreshAuthGuard } from './guards/refresh-auth/refresh-auth.guard';

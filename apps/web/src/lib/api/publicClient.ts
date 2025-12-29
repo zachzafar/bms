@@ -1,4 +1,4 @@
-import { contract } from "@/lib/api-contract";
+import { contract } from "@repo/api-contract";
 import { initTsrReactQuery } from "@ts-rest/react-query/v5";
 import  axios, { AxiosError, AxiosResponse, isAxiosError, Method } from 'axios';
 import { memoizedRefreshToken } from "./refreshToken";

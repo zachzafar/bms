@@ -3,7 +3,7 @@ import { XIcon, UploadIcon, Loader2 } from 'lucide-react';
 import React, { useEffect, useState } from 'react';
 import Image from 'next/image';
 import { Button } from '@/components/ui/button';
-import { SelectAsset } from '@/lib/api-contract';
+import { SelectAsset } from '@repo/api-contract';
 import { authClient, axiosClient } from '@/lib/api/publicClient';
 import { Dialog, DialogContent, DialogTrigger } from '@/components/ui/dialog';
 import { toast } from 'sonner';

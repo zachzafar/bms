@@ -26,7 +26,7 @@ import { SubmitHandler, useForm } from 'react-hook-form';
 import { Plus, Trash2 } from 'lucide-react';
 import { authClient } from '@/lib/api/publicClient';
 import { toast } from 'sonner';
-import { InsertAssetProperty,InsertAssetPropertySchema } from '@/lib/api-contract';
+import { InsertAssetProperty,InsertAssetPropertySchema } from '@repo/api-contract';
 import { StorageService } from '@/lib/api/storage';
 
 export default function Properties({ tenantId }: { tenantId: string }) {

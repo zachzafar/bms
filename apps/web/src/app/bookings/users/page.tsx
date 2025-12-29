@@ -6,7 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Dialog, DialogTrigger } from '@/components/ui/dialog';
 import { Search, PlusCircle, ChevronLeft, ChevronRight } from 'lucide-react';
 import { z } from 'zod';
-import { SelectUser, SelectUserSchema } from '@/lib/api-contract';
+import { SelectUser, SelectUserSchema } from '@repo/api-contract';
 import { useRouter } from 'next/navigation';
 import { authClient } from '@/lib/api/publicClient';
 import { ROLES_QUERY_KEY, USERS_QUERY_KEY } from '@/lib/api/queryKeys';

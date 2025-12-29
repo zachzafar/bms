@@ -22,7 +22,7 @@ import { InquiryDetail } from "@/components/crm/inquiry-detail"
 import { authClient } from "@/lib/api/publicClient"
 import { INQUIRIES_QUERY_KEY } from "@/lib/api/queryKeys"
 import { toast } from "sonner"
-import { ExtendedSelectInquirySchema } from "@/lib/api-contract"
+import { ExtendedSelectInquirySchema } from "@repo/api-contract"
 import { InquiryFormInputs } from "@/lib/schemas"
 
 type Inquiry = typeof ExtendedSelectInquirySchema._type

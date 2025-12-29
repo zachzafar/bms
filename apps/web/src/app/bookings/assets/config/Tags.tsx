@@ -24,7 +24,7 @@ import { SubmitHandler, useForm } from 'react-hook-form';
 import { Plus, Trash2 } from 'lucide-react';
 import { authClient } from '@/lib/api/publicClient';
 import { toast } from 'sonner';
-import { InsertTag, InsertTagSchema } from '@/lib/api-contract';
+import { InsertTag, InsertTagSchema } from '@repo/api-contract';
 import { Textarea } from '@/components/ui/textarea';
 import { useQueryClient } from '@tanstack/react-query';
 import { StorageService } from '@/lib/api/storage';

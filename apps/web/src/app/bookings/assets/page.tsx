@@ -23,7 +23,7 @@ import { PlusIcon, Pencil, Trash2 as TrashIcon } from 'lucide-react'
 import AddAssetForm from './AddAssetForm'
 
 import { authClient } from '@/lib/api/publicClient'
-import { SelectAsset } from '@/lib/api-contract'
+import { SelectAsset } from '@repo/api-contract'
 import Link from 'next/link'
 import { StorageService } from '@/lib/api/storage'
 import { toast } from 'sonner'

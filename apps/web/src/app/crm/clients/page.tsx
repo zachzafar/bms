@@ -21,7 +21,7 @@ import { ClientDetail } from "@/components/crm/client-detail"
 import { authClient } from "@/lib/api/publicClient"
 import { CONTACTS_QUERY_KEY } from "@/lib/api/queryKeys"
 import { toast } from "sonner"
-import { ExtendedSelectContactSchema } from "@/lib/api-contract"
+import { ExtendedSelectContactSchema } from "@repo/api-contract"
 import { ContactFormInputs } from "@/lib/schemas"
 
 type Contact = typeof ExtendedSelectContactSchema._type

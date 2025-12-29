@@ -1,6 +1,6 @@
 import { Controller, Logger, UseGuards } from '@nestjs/common';
 import { TeamsService } from './teams.service';
-import { contract as c } from "src/api-contract"
+import { contract as c } from "@repo/api-contract"
 import { TsRestHandler, tsRestHandler } from '@ts-rest/nest';
 // import { RequireRead, RequireWrite, RequireDelete, RequirePermissionsDecorator } from 'src/auth/decorators/permissions.decorator';
 import { Roles } from 'src/auth/decorators/permissions.decorator';

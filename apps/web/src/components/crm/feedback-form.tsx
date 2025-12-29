@@ -19,7 +19,7 @@ import {
   InsertFeedback, 
   InsertFeedbackSchema, 
   SelectFeedback,
-} from "@/lib/api-contract"
+} from "@repo/api-contract"
 import { useQueryClient } from "@tanstack/react-query"
 
 interface FeedbackFormProps {

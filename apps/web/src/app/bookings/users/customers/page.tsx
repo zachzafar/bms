@@ -15,7 +15,7 @@ import { authClient } from '@/lib/api/publicClient';
 import { CUSTOMERS_QUERY_KEY, } from '@/lib/api/queryKeys';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
-import { InsertCustomerSchema, InsertUserSchema, SelectCustomer, SelectCustomerSchema } from '@/lib/api-contract';
+import { InsertCustomerSchema, InsertUserSchema, SelectCustomer, SelectCustomerSchema } from '@repo/api-contract';
 import { date, z } from 'zod';
 import { EditCustomerForm } from '@/components/users/EditCustomerForm';
 

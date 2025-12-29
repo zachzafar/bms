@@ -10,7 +10,7 @@ import { SearchIcon } from 'lucide-react';
 import { Label } from '@/components/ui/label';
 import { authClient } from '@/lib/api/publicClient';
 import { BOOKINGS_QUERY_KEY, RATES_QUERY_KEY } from '@/lib/api/queryKeys';
-import { ExtendedSelectBooking } from '@/lib/api-contract/src/api-contract/booking';
+import { ExtendedSelectBooking } from '@repo/api-contract/src/api-contract/booking';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';

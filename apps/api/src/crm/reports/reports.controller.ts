@@ -1,6 +1,6 @@
 import { Controller, Headers } from '@nestjs/common';
 import { TsRestHandler, tsRestHandler } from '@ts-rest/nest';
-import { reportsContract } from 'src/api-contract';
+import { reportsContract } from '@repo/api-contract';
 import { ReportsService } from './reports.service';
 import { TenantService } from 'src/tenant/tenant.service';
 

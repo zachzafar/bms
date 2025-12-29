@@ -1,6 +1,6 @@
 import { Controller, Headers, Logger } from '@nestjs/common';
 import { TsRestHandler, tsRestHandler } from '@ts-rest/nest';
-import { crmContract } from 'src/api-contract'; // { contacts: ..., profiles: ... }
+import { crmContract } from '@repo/api-contract'; // { contacts: ..., profiles: ... }
 import { ContactsService } from './contacts.service';
 import * as schema from 'src/database-schema';
 import { TenantService } from 'src/tenant/tenant.service';

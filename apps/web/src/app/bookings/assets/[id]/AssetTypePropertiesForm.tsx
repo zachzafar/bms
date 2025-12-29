@@ -6,7 +6,7 @@ import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/com
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { authClient } from '@/lib/api/publicClient';
-import { SelectAsset } from '@/lib/api-contract';
+import { SelectAsset } from '@repo/api-contract';
 import { useEffect, useState } from 'react';
 import { toast } from 'sonner';
 

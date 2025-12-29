@@ -1,7 +1,7 @@
-import { BadRequestException, Controller, Headers, Logger, MaxFileSizeValidator, ParseFilePipe, ParseFilePipeBuilder, Query, UploadedFiles, UseGuards, UseInterceptors } from '@nestjs/common';
+import { BadRequestException, Controller, Headers, Logger, UploadedFiles, UseGuards, UseInterceptors } from '@nestjs/common';
 import { AssetsService } from './assets.service';
 import { TsRestHandler, tsRestHandler } from '@ts-rest/nest';
-import { contract } from 'src/api-contract';
+import { contract } from '@repo/api-contract';
 import { TenantService } from 'src/tenant/tenant.service';
 import * as schema from "src/database-schema"
 import { FileFieldsInterceptor } from '@nestjs/platform-express';

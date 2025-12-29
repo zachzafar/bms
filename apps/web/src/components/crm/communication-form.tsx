@@ -11,7 +11,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Badge } from "@/components/ui/badge"
 import { X } from "lucide-react"
-import { SelectContactType, SelectUser, SelectContact } from "@/lib/api-contract"
+import { SelectContactType, SelectUser, SelectContact } from "@repo/api-contract"
 
 interface CommunicationFormProps {
   initialData?: any

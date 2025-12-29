@@ -1,5 +1,5 @@
 import { ConflictException, Controller, Headers, Logger, Query } from '@nestjs/common';
-import { contract } from 'src/api-contract';
+import { contract } from '@repo/api-contract';
 import { tsRestHandler, TsRestHandler } from '@ts-rest/nest';
 import { BookingService } from './booking.service';
 import * as schema from "src/database-schema"

@@ -10,7 +10,7 @@ import { authClient } from '@/lib/api/publicClient';
 import { Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { StorageService } from '@/lib/api/storage';
-import { SelectAsset } from '@/lib/api-contract';
+import { SelectAsset } from '@repo/api-contract';
 
 type Booking = {
   id: number;

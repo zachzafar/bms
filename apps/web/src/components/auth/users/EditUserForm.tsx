@@ -1,7 +1,7 @@
 import { useForm, SubmitHandler } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { InsertUserSchema, SelectUser } from '@/lib/api-contract';
+import { InsertUserSchema, SelectUser } from '@repo/api-contract';
 import { toast } from 'sonner';
 import { authClient } from '@/lib/api/publicClient';
 import { DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';

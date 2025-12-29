@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { StorageService } from "@/lib/api/storage";
-import { SelectTenant, SelectUser } from "@/lib/api-contract";
+import { SelectTenant, SelectUser } from "@repo/api-contract";
 
 export const useStorage = () => {
     const [token, setToken] = useState<string | null>();

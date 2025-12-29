@@ -34,7 +34,7 @@ import { Textarea } from '@/components/ui/textarea'
 import { cn } from '@/lib/utils'
 import { authClient } from '@/lib/api/publicClient'
 import { CONTACTS_QUERY_KEY, USERS_QUERY_KEY, TASKS_QUERY_KEY } from '@/lib/api/queryKeys'
-import { InsertTask, InsertTaskSchema } from '@/lib/api-contract'
+import { InsertTask, InsertTaskSchema } from '@repo/api-contract'
 
 interface TaskFormProps {
   taskId?: number

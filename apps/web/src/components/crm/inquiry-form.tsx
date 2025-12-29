@@ -8,7 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Textarea } from "@/components/ui/textarea"
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form"
 import { InquiryFormSchema, InquiryFormInputs } from "@/lib/schemas"
-import { ExtendedSelectInquirySchema } from "@/lib/api-contract"
+import { ExtendedSelectInquirySchema } from "@repo/api-contract"
 import { authClient } from "@/lib/api/publicClient"
 import { CONTACTS_QUERY_KEY, ASSETS_QUERY_KEY, USERS_QUERY_KEY } from "@/lib/api/queryKeys"
 

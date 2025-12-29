@@ -8,7 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Textarea } from "@/components/ui/textarea"
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form"
 import { ContactFormSchema, ContactFormInputs } from "@/lib/schemas"
-import { ExtendedSelectContactSchema } from "@/lib/api-contract"
+import { ExtendedSelectContactSchema } from "@repo/api-contract"
 
 type Contact = typeof ExtendedSelectContactSchema._type
 

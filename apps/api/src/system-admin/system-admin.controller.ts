@@ -1,7 +1,7 @@
 import { Controller, Logger } from '@nestjs/common';
 import { SystemAdminService } from './system-admin.service';
 import { tsRestHandler, TsRestHandler } from '@ts-rest/nest';
-import { contract } from 'src/api-contract';
+import { contract } from '@repo/api-contract';
 import { UseGuards } from '@nestjs/common';
 import { AdminGuard } from '../auth/guards/admin/admin.guard';
 import { getAllScopes } from 'src/auth/permissions';

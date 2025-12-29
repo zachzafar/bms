@@ -5,7 +5,7 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Separator } from "@/components/ui/separator"
 import { Mail, Phone, MapPin, Calendar, MessageSquare, FileText, User, Building } from "lucide-react"
-import { ExtendedSelectContactSchema } from "@/lib/api-contract"
+import { ExtendedSelectContactSchema } from "@repo/api-contract"
 import { authClient } from "@/lib/api/publicClient"
 import { CONTACT_INQUIRIES_QUERY_KEY, CONTACT_COMMUNICATIONS_QUERY_KEY, CONTACT_FEEDBACK_QUERY_KEY } from "@/lib/api/queryKeys"
 

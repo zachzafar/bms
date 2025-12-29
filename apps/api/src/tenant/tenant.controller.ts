@@ -1,7 +1,7 @@
 import { Controller, Logger } from '@nestjs/common';
 import { TenantService } from './tenant.service';
 import { tsRestHandler, TsRestHandler } from '@ts-rest/nest';
-import { contract } from 'src/api-contract';
+import { contract } from '@repo/api-contract';
 // import { RequireRead } from 'src/auth/decorators/permissions.decorator';
 import { Roles } from 'src/auth/decorators/permissions.decorator';
 import { PermissionScope } from 'src/auth/permissions';

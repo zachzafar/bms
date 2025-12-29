@@ -37,7 +37,7 @@ import { useForm, useFieldArray } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { authClient } from '@/lib/api/publicClient';
 import { toast } from 'sonner';
-import { InsertBookingFormFieldSchema } from '@/lib/api-contract';
+import { InsertBookingFormFieldSchema } from '@repo/api-contract';
 import * as z from 'zod';
 import { Textarea } from '@/components/ui/textarea';
 import { useState } from 'react';

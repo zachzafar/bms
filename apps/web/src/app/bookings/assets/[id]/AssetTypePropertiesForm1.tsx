@@ -8,7 +8,7 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { authClient } from '@/lib/api/publicClient';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { SelectAsset } from '@/lib/api-contract';
+import { SelectAsset } from '@repo/api-contract';
 import { useEffect } from 'react';
 import { SubmitHandler, useForm } from 'react-hook-form';
 import { z } from 'zod';

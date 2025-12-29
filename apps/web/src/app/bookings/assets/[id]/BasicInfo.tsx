@@ -7,7 +7,7 @@ import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import { authClient } from '@/lib/api/publicClient';
 import { toast } from 'sonner';
-import { SelectAsset } from '@/lib/api-contract';
+import { SelectAsset } from '@repo/api-contract';
 
 function BasicInfo({ asset, refetch }: { asset: SelectAsset; refetch: () => void }) {
   const [name, setName] = useState(asset.name ?? '');

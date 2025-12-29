@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { authClient } from "@/lib/api/publicClient";
-import { rateContract } from "@/lib/api-contract";
+import { rateContract } from "@repo/api-contract";
 
 import { z } from "zod";
 import { Button } from '@/components/ui/button';

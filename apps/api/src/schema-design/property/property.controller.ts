@@ -1,6 +1,6 @@
 import { Controller, Logger, Headers } from '@nestjs/common';
 import { TsRestHandler, tsRestHandler } from '@ts-rest/nest';
-import { contract as c } from "src/api-contract"
+import { contract as c } from "@repo/api-contract"
 import { PropertyService } from './property.service';
 import { TenantService } from 'src/tenant/tenant.service';
 import * as schema from 'src/database-schema'

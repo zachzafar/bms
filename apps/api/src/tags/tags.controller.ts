@@ -1,5 +1,5 @@
 import { Controller, Headers } from '@nestjs/common';
-import { contract } from 'src/api-contract';
+import { contract } from '@repo/api-contract';
 import { tsRestHandler, TsRestHandler } from '@ts-rest/nest';
 import { TagsService } from './tags.service';
 import { TenantService } from 'src/tenant/tenant.service';
