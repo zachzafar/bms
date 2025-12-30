@@ -3,7 +3,7 @@ import { FileInterceptor } from '@nestjs/platform-express';
 import { IsAdminRoute } from 'src/auth/decorators/admin.decorator';
 
 import { TenantService } from 'src/tenant/tenant.service';
-import * as schema from 'src/database-schema';
+import * as schema from '@repo/api-contract';
 import { ImportService } from './import.service';
 
 @Controller()

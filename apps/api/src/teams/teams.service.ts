@@ -1,7 +1,7 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { MySql2Database } from 'drizzle-orm/mysql2';
 import { DrizzleAsyncProvider } from 'src/drizzle/drizzle.provider';
-import * as schema from 'src/database-schema';
+import * as schema from '@repo/api-contract';
 import { and, eq } from 'drizzle-orm';
 
 @Injectable()
@@ -42,10 +42,10 @@ export class TeamsService {
     }
 
     async addUserToTeam(userId: string, teamId: number) {
-        return await this.db.insert(schema.TenantTeamHasUsers).values({userId, teamId: BigInt(teamId)});
+        return await this.db.insert(schema.TenantTeamHasUsers).values({userId, teamId: (teamId)});
     }
 
     async removeUserFromTeam(userId: string, teamId: number) {
-        return await this.db.delete(schema.TenantTeamHasUsers).where(and(eq(schema.TenantTeamHasUsers.userId,userId),eq(schema.TenantTeamHasUsers.teamId,BigInt(teamId))))
+        return await this.db.delete(schema.TenantTeamHasUsers).where(and(eq(schema.TenantTeamHasUsers.userId,userId),eq(schema.TenantTeamHasUsers.teamId,(teamId))))
     }
 }

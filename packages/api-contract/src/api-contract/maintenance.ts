@@ -1,7 +1,7 @@
 import { initContract } from "@ts-rest/core";
 
 import { z } from "zod";
-import { InsertMaintenanceTaskSchema, SelectFileSchema, SelectMaintenanceTaskSchema, UpdateMaintenanceTaskSchema } from "./zod";
+import { InsertMaintenanceTaskSchema, SelectFileSchema, SelectMaintenanceTaskSchema, UpdateMaintenanceTaskSchema } from "../database-schema";
 
 
 

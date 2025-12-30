@@ -6,7 +6,7 @@ import { hash } from 'argon2';
 import { randomBytes } from 'crypto';
 import { UsersService } from 'src/users/users.service';
 import { promises as fs} from "fs";
-import * as schema from 'src/database-schema';
+import * as schema from '@repo/api-contract';
 
 @Injectable()
 export class SystemAdminService {
@@ -122,7 +122,7 @@ export class SystemAdminService {
 
         // Assign admin role to admin user
         await tx.insert(schema.UserHasRoles).values({
-          roleId: BigInt(adminRole.id),
+          roleId: adminRole.id,
           userId: adminUser.id,
           tenantId: tenant.id,
         });
@@ -136,7 +136,7 @@ export class SystemAdminService {
 
         await tx.insert(schema.RoleHasPermissions).values(
           basicPermissions.map(permission => ({
-            roleId: BigInt(adminRole.id),
+            roleId: adminRole.id,
             permission,
           }))
         );
@@ -206,7 +206,7 @@ export class SystemAdminService {
         });
         
         for (const role of roles) {
-          await tx.delete(schema.RoleHasPermissions).where(eq(schema.RoleHasPermissions.roleId, BigInt(role.id)));
+          await tx.delete(schema.RoleHasPermissions).where(eq(schema.RoleHasPermissions.roleId, role.id));
         }
         
         // Delete user roles
@@ -308,7 +308,7 @@ export class SystemAdminService {
         if (permissions.length > 0) {
           await tx.insert(schema.RoleHasPermissions).values(
             permissions.map(permission => ({
-              roleId: BigInt(role.id),
+              roleId: role.id,
               permission,
             }))
           );
@@ -363,13 +363,13 @@ export class SystemAdminService {
 
         // Delete existing permissions
         await tx.delete(schema.RoleHasPermissions)
-          .where(eq(schema.RoleHasPermissions.roleId, BigInt(Number(roleId))));
+          .where(eq(schema.RoleHasPermissions.roleId, Number(roleId)));
 
         // Add new permissions
         if (permissions.length > 0) {
           await tx.insert(schema.RoleHasPermissions).values(
             permissions.map(permission => ({
-              roleId: BigInt(Number(roleId)),
+              roleId: Number(roleId),
               permission,
             }))
           );
@@ -401,7 +401,7 @@ export class SystemAdminService {
       // Check if role is assigned to any users
       const userRoles = await this.db.query.UserHasRoles.findMany({
         where: (uhr, { and, eq }) => and(
-          eq(uhr.roleId, BigInt(Number(roleId))),
+          eq(uhr.roleId, Number(roleId)),
           eq(uhr.tenantId, tenantId)
         )
       });
@@ -414,7 +414,7 @@ export class SystemAdminService {
       await this.db.transaction(async (tx) => {
         // Delete permissions
         await tx.delete(schema.RoleHasPermissions)
-          .where(eq(schema.RoleHasPermissions.roleId, BigInt(Number(roleId))));
+          .where(eq(schema.RoleHasPermissions.roleId, Number(roleId)));
 
         // Delete role
         await tx.delete(schema.Roles)
@@ -445,7 +445,7 @@ export class SystemAdminService {
             .select({ count: count() })
             .from(schema.UserHasRoles)
             .where(and(
-              eq(schema.UserHasRoles.roleId, BigInt(role.id)),
+              eq(schema.UserHasRoles.roleId, Number(role.id)),
               eq(schema.UserHasRoles.tenantId, tenantId)
             ));
 
@@ -525,7 +525,7 @@ export class SystemAdminService {
         // Assign roles
         for (const roleId of roleIds) {
           await tx.insert(schema.UserHasRoles).values({
-            roleId: BigInt(roleId),
+            roleId: Number(roleId),
             userId,
             tenantId,
           });
@@ -608,7 +608,7 @@ export class SystemAdminService {
               roles: [] // The user schema expects roles as number[], not role objects
             },
             roles: userRoles.map(ur => ({
-              id: Number(ur.role.id), // Convert BigInt to number
+              id: Number(ur.role.id), // Convert  to number
               name: ur.role.name,
             })),
             isAdmin: tu.isAdmin || false, // Ensure boolean, not null

@@ -5,7 +5,7 @@ export const InsertBookingSchema = z.object({
     startDate: z.string(),
     endDate: z.string(),
     status: z.string().nullable().optional(),
-    totalPrice: z.number().nullable().optional(), // decimal -> number/string. drizzle-zod uses number usually or string? Decimal in mysql is string in JS usually?
+    totalPrice: z.string().regex(/^\d+(\.\d+)?$/, 'Total price must be a decimal number').nullable().optional(), // decimal -> number/string. drizzle-zod uses number usually or string? Decimal in mysql is string in JS usually?
     // Drizzle `decimal` maps to string in JS. `drizzle-zod` usually maps to string?
     // Let's assume string for decimal to be safe, or number if coerce.
     // However, user code: `totalPrice: decimal(...)`.

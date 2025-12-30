@@ -1,11 +1,11 @@
-import { mysqlTable, serial, varchar, int,index, datetime, boolean, timestamp, primaryKey } from 'drizzle-orm/mysql-core';
+import { mysqlTable, serial, varchar, int,index, datetime, boolean, timestamp, primaryKey, bigint } from 'drizzle-orm/mysql-core';
 import { relations } from 'drizzle-orm';
 import { User } from '../users'; 
 import { Tenant } from '../tenant';
 import { v4 as uuid } from "uuid";
 
 export const refreshTokens = mysqlTable('refresh_tokens', {
-    id: serial('id').primaryKey(), 
+    id: bigint("id", { mode: "number", unsigned: true }).autoincrement().primaryKey(), 
     userId: varchar("user_id", { length: 36 }).references(() => User.id).notNull(), 
     refreshToken: varchar('hashed_token', {length: 255}).notNull(), 
     deviceInfo: varchar('device_info', { length: 255}), 

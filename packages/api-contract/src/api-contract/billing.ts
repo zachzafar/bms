@@ -1,6 +1,6 @@
 import { initContract } from "@ts-rest/core";
 import { z } from "zod";
-import { SelectInvoiceSchema, InsertInvoiceSchema, UpdateInvoiceSchema, SelectPaymentSchema, InsertPaymentSchema } from "./zod";
+import { SelectInvoiceSchema, InsertInvoiceSchema, UpdateInvoiceSchema, SelectPaymentSchema, InsertPaymentSchema } from "../database-schema";
 
 const c = initContract();
 

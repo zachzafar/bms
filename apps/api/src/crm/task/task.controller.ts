@@ -3,7 +3,7 @@ import { TsRestHandler, tsRestHandler } from '@ts-rest/nest';
 import { crmContract } from '@repo/api-contract';
 import { TasksService } from './task.service'
 import { TenantService } from 'src/tenant/tenant.service';
-import * as schema from 'src/database-schema';
+import * as schema from '@repo/api-contract';
 import { UserId, AuthUser } from '../../common/decorators/auth-user.decorator';
 
 @Controller()
@@ -49,7 +49,7 @@ export class TasksController {
     return tsRestHandler(crmContract.tasks.listTasks, async ({ query }) => {
       const tenantId = headers['x-tenant-id'];
       const rows = await this.tasks.list(tenantId, query);
-      return { status: 200, body: rows.map(row => ({...row,contactId: Number(row.contactId)})) };
+      return { status: 200, body: rows };
     });
   }
 

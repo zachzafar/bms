@@ -3,7 +3,7 @@ import { AssetTypeService } from './asset-type.service';
 import { tsRestHandler, TsRestHandler } from '@ts-rest/nest';
 import { contract } from '@repo/api-contract';
 import { TenantService } from 'src/tenant/tenant.service';
-import * as schema from "src/database-schema"
+import * as schema from "@repo/api-contract"
 
 @Controller()
 export class AssetTypeController {

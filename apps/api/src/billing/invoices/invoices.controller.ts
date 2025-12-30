@@ -1,7 +1,7 @@
 import { Controller, Headers, Logger, Req } from '@nestjs/common';
 import { TsRestHandler, tsRestHandler } from '@ts-rest/nest';
 import { billingContract } from '@repo/api-contract';
-import * as schema from 'src/database-schema';
+import * as schema from '@repo/api-contract';
 import { TenantService } from 'src/tenant/tenant.service';
 import { InvoicesService } from './invoices.service';
 // import { RequireRead, RequireWrite } from 'src/auth/decorators/permissions.decorator';
@@ -24,7 +24,7 @@ export class InvoicesController {
       const tenantId = headers['x-tenant-id'];
 
       // Convert string -> proper types
-      const customerId = BigInt(body.invoice.customerId);
+      const customerId = Number(body.invoice.customerId);
       const issueDate = new Date(body.invoice.issueDate);
       const dueDate = new Date(body.invoice.dueDate);
 
@@ -85,7 +85,7 @@ export class InvoicesController {
         ...body,
         issueDate: body.issueDate ? new Date(body.issueDate) : undefined,
         dueDate: body.dueDate ? new Date(body.dueDate) : undefined,
-        customerId: body.customerId ? BigInt(body.customerId) : undefined,
+        customerId: body.customerId ? Number(body.customerId) : undefined,
       };
 
       // 👇 NEW: handle updated items if included

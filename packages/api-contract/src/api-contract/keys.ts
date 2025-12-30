@@ -1,6 +1,6 @@
 import { initContract } from "@ts-rest/core";
 import { z } from "zod";
-import { SelectKeySchema } from "./zod";
+import { SelectKeySchema } from "../database-schema";
 
 
 

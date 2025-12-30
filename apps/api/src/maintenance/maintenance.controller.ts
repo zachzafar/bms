@@ -3,7 +3,7 @@ import { MaintenanceService } from './maintenance.service';
 import {  tsRestHandler, TsRestHandler } from '@ts-rest/nest';
 import { contract } from '@repo/api-contract';
 import { TenantService } from 'src/tenant/tenant.service';
-import * as schema from "src/database-schema"
+import * as schema from "@repo/api-contract"
 import { FileFieldsInterceptor } from '@nestjs/platform-express';
 import { Roles } from 'src/auth/decorators/permissions.decorator';
 import { PermissionScope } from 'src/auth/permissions';

@@ -1,8 +1,8 @@
 import { Inject, Injectable, InternalServerErrorException, Logger, NotFoundException } from '@nestjs/common';
 import { MySql2Database } from 'drizzle-orm/mysql2';
 import { DrizzleAsyncProvider } from 'src/drizzle/drizzle.provider';
-import * as schema from 'src/database-schema';
-import type { InsertAssetType, UpdateAssetType } from 'src/database-schema';
+import * as schema from '@repo/api-contract';
+import type { InsertAssetType, UpdateAssetType } from '@repo/api-contract';
 import { eq } from 'drizzle-orm';
 
 @Injectable()
@@ -56,8 +56,8 @@ export class AssetTypeService {
                         .insert(schema.AssetTypeHasProperties)
                         .values(
                             properties.map(property => ({
-                                assetTypeId: BigInt(id),
-                                assetPropertyId: BigInt(property)
+                                assetTypeId: id,
+                                assetPropertyId: property
                             }))
                         );
                 }
@@ -84,14 +84,14 @@ export class AssetTypeService {
     }
 
     async updateAssetTypeProperties(id: number, properties: number[]) {
-        await this.db.delete(schema.AssetTypeHasProperties).where(eq(schema.AssetTypeHasProperties.assetTypeId, BigInt(id))).execute()
+        await this.db.delete(schema.AssetTypeHasProperties).where(eq(schema.AssetTypeHasProperties.assetTypeId, id)).execute()
         if (properties.length > 0) {
             await this.db
                 .insert(schema.AssetTypeHasProperties)
                 .values(
                     properties.map(property => ({
-                        assetTypeId: BigInt(id),
-                        assetPropertyId: BigInt(property)
+                        assetTypeId: id,
+                        assetPropertyId: property
                     }))
                 );
         }

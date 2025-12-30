@@ -1,6 +1,6 @@
 import { initContract } from "@ts-rest/core";
 import { z } from "zod";
-import { InsertTenantSchema, SelectTenantSchema, InsertUserSchema, SelectUserSchema,InsertAssetTypeSchema, SelectAssetPropertySchema, SelectAssetTypeSchema, UpdateAssetTypeSchema,InsertAssetPropertySchema, UpdateAssetPropertySchema, InsertTagSchema, SelectTagSchema, InsertBookingFormSchema, SelectBookingFormSchema, InsertBookingFormFieldSchema, SelectBookingFormFieldSchema } from "./zod";
+import { InsertTenantSchema, SelectTenantSchema, InsertUserSchema, SelectUserSchema,InsertAssetTypeSchema, SelectAssetPropertySchema, SelectAssetTypeSchema, UpdateAssetTypeSchema,InsertAssetPropertySchema, UpdateAssetPropertySchema, InsertTagSchema, SelectTagSchema, InsertBookingFormSchema, SelectBookingFormSchema, InsertBookingFormFieldSchema, SelectBookingFormFieldSchema } from "../database-schema/schema";
 
 const c = initContract();
 

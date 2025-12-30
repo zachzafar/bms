@@ -1,7 +1,7 @@
 import { Inject, Injectable, InternalServerErrorException, Logger } from '@nestjs/common';
 import { MySql2Database } from 'drizzle-orm/mysql2';
 import { DrizzleAsyncProvider } from 'src/drizzle/drizzle.provider';
-import * as schema from 'src/database-schema';
+import * as schema from '@repo/api-contract';
 import { count, eq, lte ,gte, and, sql } from 'drizzle-orm';
 
 @Injectable()

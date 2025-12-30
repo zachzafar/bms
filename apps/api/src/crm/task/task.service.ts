@@ -1,6 +1,6 @@
 import { Inject, Injectable, NotFoundException } from '@nestjs/common';
 import { MySql2Database } from 'drizzle-orm/mysql2';
-import * as schema from 'src/database-schema';
+import * as schema from '@repo/api-contract';
 import { DrizzleAsyncProvider } from 'src/drizzle/drizzle.provider';
 import { and, eq } from 'drizzle-orm';
 
@@ -17,8 +17,7 @@ export class TasksService {
   }
 
   async create(data: Omit<schema.InsertTask, 'id'>,tenantId: string) {
-    const contactId = data.contactId ? BigInt(data.contactId) : undefined
-    const [{ id }] = await this.db.insert(schema.Task).values({...data, contactId,tenantId}).$returningId();
+    const [{ id }] = await this.db.insert(schema.Task).values({...data,tenantId}).$returningId();
     return id;
   }
 
@@ -69,8 +68,7 @@ export class TasksService {
   }
 
   async update(id: number, patch: Partial<schema.UpdateTask>) {
-    const contactId = patch.contactId ? BigInt(patch.contactId) : undefined
-    await this.db.update(schema.Task).set({...patch, contactId, }).where(eq(schema.Task.id, id)).execute();
+    await this.db.update(schema.Task).set(patch).where(eq(schema.Task.id, id)).execute();
   }
 
   async remove(id: number) {

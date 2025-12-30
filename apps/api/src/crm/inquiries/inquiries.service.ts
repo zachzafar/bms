@@ -1,6 +1,6 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { MySql2Database } from 'drizzle-orm/mysql2';
-import * as schema from 'src/database-schema';
+import * as schema from '@repo/api-contract';
 import { DrizzleAsyncProvider } from 'src/drizzle/drizzle.provider';
 import { and, eq, ilike, or } from 'drizzle-orm';
 
@@ -9,7 +9,7 @@ export class InquiriesService {
   constructor(@Inject(DrizzleAsyncProvider) private db: MySql2Database<typeof schema>) {}
 
   async createInquiry(data: Omit<schema.InsertInquiry, 'id'>) {
-    const [{ id }] = await this.db.insert(schema.Inquiry).values({...data, contactId: BigInt(data.contactId)}).$returningId();
+    const [{ id }] = await this.db.insert(schema.Inquiry).values(data).$returningId();
     return id;
   }
 
@@ -75,8 +75,7 @@ export class InquiriesService {
   }
 
   async updateInquiry(id: number, patch: Partial<schema.UpdateInquiry>) {
-    const contactId = patch.contactId ? BigInt(patch.contactId) : undefined
-    await this.db.update(schema.Inquiry).set({...patch, contactId}).where(eq(schema.Inquiry.id, id)).execute();
+    await this.db.update(schema.Inquiry).set(patch).where(eq(schema.Inquiry.id, id)).execute();
   }
 
   async deleteInquiry(id: number) {

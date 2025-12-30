@@ -34,9 +34,9 @@ export type UpdateBooking = z.infer<typeof UpdateBookingSchema>;
 
 
 export const BookingFormFieldValue = mysqlTable("booking_form_field_value", {
-    id: serial("id").primaryKey(),
+    id: bigint("id", { mode: "number", unsigned: true }).autoincrement().primaryKey(),
     bookingId: varchar("tenant_id", { length: 255 }).notNull().references(() => Booking.id),
-    formFieldId: bigint("form_field_id", { mode: 'bigint', unsigned: true}).notNull().references(() => BookingFormField.id),
+    formFieldId: bigint("form_field_id", { mode: 'number', unsigned: true}).notNull().references(() => BookingFormField.id),
     value: text("value").notNull(),
 }, (table) => ({
     bookingIdx: index("booking_idx").on(table.bookingId),
@@ -54,7 +54,7 @@ export const BookingRelations = relations(Booking, ({ one,many }) => ({
 
 // New Slot table for granular booking
 export const Slot = mysqlTable("slots", {
-    id: serial("id").primaryKey(),
+    id: bigint("id", { mode: "number", unsigned: true }).autoincrement().primaryKey(),
     assetId: varchar("asset_id", { length: 255 }).notNull().references(() => Asset.id),
     date: date("date").notNull(),
     startTime: datetime("start_time").notNull(), // Format: HH:MM:SS
@@ -93,7 +93,7 @@ export const SlotRelations = relations(Slot, ({ one }) => ({
 }));
 
 export const Rate = mysqlTable("rate", {
-  id: serial("id").primaryKey(),
+  id: bigint("id", { mode: "number", unsigned: true }).autoincrement().primaryKey(),
   name: varchar("name", { length: 255 }).notNull(),
   description: text("description"),
   startDate: date("start_date").notNull(),
@@ -125,7 +125,7 @@ export const RatesRelations = relations(Rate, ({ many }) => ({
 
 // Blocked Dates table
 export const BlockedDate = mysqlTable("blocked_date", {
-  id: serial("id").primaryKey(),
+  id: bigint("id", { mode: "number", unsigned: true }).autoincrement().primaryKey(),
   tenantId: varchar("tenant_id", { length: 255 }).notNull(),
   assetId: varchar("asset_id", { length: 255 }).notNull(), // optional if block is asset-specific
   startDate: date("start_date").notNull(),

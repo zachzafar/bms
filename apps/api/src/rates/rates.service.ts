@@ -1,9 +1,9 @@
 import { ConflictException, Inject, Injectable, NotFoundException, UnauthorizedException } from '@nestjs/common';
 import { MySql2Database } from 'drizzle-orm/mysql2';
 import { and, eq, gte, lte } from 'drizzle-orm';
-import * as schema from 'src/database-schema';
+import * as schema from '@repo/api-contract';
 import { DrizzleAsyncProvider } from 'src/drizzle/drizzle.provider';
-import { InsertRate, UpdateRate } from 'src/database-schema';
+import { InsertRate, UpdateRate } from '@repo/api-contract';
 import { TenantService } from 'src/tenant/tenant.service';
 
 @Injectable()
@@ -32,7 +32,7 @@ export class RatesService {
       await this.db.insert(schema.AssetHasRates).values(
         assetIds.map((assetId) => ({
           assetId,
-          rateId: BigInt(inserted.id),
+          rateId: inserted.id,
         }))
       );
     }
@@ -147,13 +147,13 @@ async updateRate(id: string, updateData: UpdateRate & { assetIds?: string[] }) {
       .where(eq(schema.Rate.id, numericId));
 
     if (updateData.assetIds) {
-      await this.db.delete(schema.AssetHasRates).where(eq(schema.AssetHasRates.rateId, BigInt(numericId)));
+      await this.db.delete(schema.AssetHasRates).where(eq(schema.AssetHasRates.rateId, numericId));
 
       if (updateData.assetIds.length > 0) {
         await this.db.insert(schema.AssetHasRates).values(
           updateData.assetIds.map(assetId => ({
             assetId,
-            rateId: BigInt(numericId),
+            rateId: numericId,
           }))
         );
       }
@@ -177,7 +177,7 @@ async deleteRate(id: string) {
   }
 
   // Delete associated asset
-  await this.db.delete(schema.AssetHasRates).where(eq(schema.AssetHasRates.rateId, BigInt(numericId)));
+  await this.db.delete(schema.AssetHasRates).where(eq(schema.AssetHasRates.rateId, numericId));
 
   // Then delete the rate itself
   await this.db.delete(schema.Rate)

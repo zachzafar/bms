@@ -1,7 +1,7 @@
 import { initContract } from "@ts-rest/core";
 
 import { z } from "zod";
-import { InsertAssetTypeSchema, SelectAssetPropertySchema, SelectAssetTypeSchema, UpdateAssetTypeSchema } from "../zod";
+import { Asset, InsertAssetPropertySchema, InsertAssetTypeSchema, SelectAssetPropertySchema, SelectAssetTypeSchema, UpdateAssetTypeSchema } from "../../database-schema";
 
 const c = initContract();
 

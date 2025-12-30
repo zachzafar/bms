@@ -1,8 +1,8 @@
-import { mysqlTable, varchar, date, double, decimal, int, serial } from 'drizzle-orm/mysql-core';
+import { mysqlTable, varchar, date, double, decimal, int, serial, bigint } from 'drizzle-orm/mysql-core';
 import { Asset } from '../asset';
 
 export const Rate = mysqlTable("rate", {
-  id: serial("id").primaryKey(),
+  id: bigint("id", { mode: "number", unsigned: true }).autoincrement().primaryKey(),
   assetId: varchar("asset_id", { length: 255 }).notNull().references(() => Asset.id),
   name: varchar("name", { length: 255 }),
   startDate: date("start_date"),         // For seasonal rates

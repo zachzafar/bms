@@ -1,6 +1,6 @@
 import { BadRequestException, Inject, Injectable } from '@nestjs/common';
 import { MySql2Database } from 'drizzle-orm/mysql2';
-import * as schema from 'src/database-schema';
+import * as schema from '@repo/api-contract';
 import { DrizzleAsyncProvider } from 'src/drizzle/drizzle.provider';
 import { and, between, eq, gte, lte } from 'drizzle-orm';
 
@@ -13,7 +13,7 @@ export class CommunicationsService {
       if (isNaN(date.getTime())) {
         throw new BadRequestException('invalid date format');
       }
-    const [{ id }] = await this.db.insert(schema.CommunicationLog).values({...data, contactId: BigInt(data.contactId), date}).$returningId();
+    const [{ id }] = await this.db.insert(schema.CommunicationLog).values({...data, date}).$returningId();
     return id;
   }
 
@@ -47,7 +47,7 @@ export class CommunicationsService {
     const comms = this.db.query.CommunicationLog.findMany({
       where: and(
         eq(schema.CommunicationLog.tenantId, tenantId),
-        query.contactId ? eq(schema.CommunicationLog.contactId, BigInt(query.contactId)) : undefined,
+        query.contactId ? eq(schema.CommunicationLog.contactId, Number(query.contactId)) : undefined,
         query.userId ? eq(schema.CommunicationLog.userId, query.userId) : undefined,
         query.type ? eq(schema.CommunicationLog.type, query.type) : undefined,
         query.from ? gte(schema.CommunicationLog.date, new Date(query.from)) : undefined,
@@ -78,7 +78,7 @@ export class CommunicationsService {
         return { status: 400, body: { message: 'invalid date format' } };
       }
     }
-    await this.db.update(schema.CommunicationLog).set({...patch, contactId: BigInt(patch.contactId), date}).where(eq(schema.CommunicationLog.id, id)).execute();
+    await this.db.update(schema.CommunicationLog).set({...patch, date}).where(eq(schema.CommunicationLog.id, id)).execute();
   }
 
   async remove(id: number) {

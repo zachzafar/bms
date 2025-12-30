@@ -2,7 +2,7 @@ import { Controller, Headers, Logger } from '@nestjs/common';
 import { TsRestHandler, tsRestHandler } from '@ts-rest/nest';
 import { crmContract } from '@repo/api-contract'; // { contacts: ..., profiles: ... }
 import { ContactsService } from './contacts.service';
-import * as schema from 'src/database-schema';
+import * as schema from '@repo/api-contract';
 import { TenantService } from 'src/tenant/tenant.service';
 // import { RequireRead, RequireWrite, RequireDelete } from 'src/auth/decorators/permissions.decorator';
 import { Roles } from 'src/auth/decorators/permissions.decorator';

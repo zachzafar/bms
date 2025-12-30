@@ -9,7 +9,7 @@ import z from "zod";
 
 // Invoice Model
 export const Invoice = mysqlTable("invoice", {
-  id: serial("id").primaryKey(),
+  id: bigint("id", { mode: "number", unsigned: true }).autoincrement().primaryKey(),
   tenantId: varchar("tenant_id", { length: 255 }).notNull().references(() => Tenant.id),
   invoiceNumber: varchar("invoice_number", { length: 255 }).notNull(),
   status: varchar("status", { length: 255 }).notNull(),
@@ -21,7 +21,7 @@ export const Invoice = mysqlTable("invoice", {
   notes: text("notes"),
   createdAt: timestamp('createdAt').notNull().defaultNow(),
   updatedAt: timestamp('updated_at', { mode: 'date', }).$onUpdate(() => new Date()),
-  customerId:bigint("customer_id", { mode: 'bigint', unsigned: true }).notNull().references(() => Customer.id),
+  customerId:bigint("customer_id", { mode: 'number', unsigned: true }).notNull().references(() => Customer.id),
   bookingId: varchar("booking_id", { length: 255 }).notNull(),
 }, (table) => ({
   invoiceNumberUniqueIdx: uniqueIndex("invoice_number_unique").on(table.invoiceNumber),
@@ -57,14 +57,14 @@ export const InvoiceRelations = relations(Invoice, ({ one, many }) => ({
 
 // InvoiceItem Model
 export const InvoiceItem = mysqlTable("invoice_item", {
-  id: serial("id").primaryKey(),
+  id: bigint("id", { mode: "number", unsigned: true }).autoincrement().primaryKey(),
   description: varchar("description", { length: 255 }).notNull(),
   quantity: int("quantity").notNull(),
   unitPrice: decimal("unit_price", { precision: 10, scale: 2 }).notNull(),
   totalPrice: decimal("total_price", { precision: 10, scale: 2 }).notNull(),
   createdAt: timestamp('createdAt').notNull().defaultNow(),
   updatedAt: timestamp('updated_at', { mode: 'date', }).$onUpdate(() => new Date()),
-  invoiceId: bigint("invoice_id", { mode: 'bigint', unsigned: true }).notNull().references(() => Invoice.id)
+  invoiceId: bigint("invoice_id", { mode: 'number', unsigned: true }).notNull().references(() => Invoice.id)
 }, (table) => ({
   invoiceIdx: index("invoice_idx").on(table.invoiceId),
 }));
@@ -85,9 +85,9 @@ export const InvoiceItemRelations = relations(InvoiceItem, ({ one }) => ({
 }));
 
 export const PaymentInvoice = mysqlTable("payment_invoice", {
-  id: serial("id").primaryKey(),
-  paymentId: bigint("payment_id", { mode: 'bigint', unsigned: true }).notNull().references(() => Payment.id),
-  invoiceId: bigint("invoice_id", { mode: 'bigint', unsigned: true }).notNull().references(() => Invoice.id),
+  id: bigint("id", { mode: "number", unsigned: true }).autoincrement().primaryKey(),
+  paymentId: bigint("payment_id", { mode: 'number', unsigned: true }).notNull().references(() => Payment.id),
+  invoiceId: bigint("invoice_id", { mode: 'number', unsigned: true }).notNull().references(() => Invoice.id),
   amountApplied: decimal("amount_applied", { precision: 10, scale: 2 }).notNull(),
   createdAt: timestamp('createdAt').notNull().defaultNow(),
   updatedAt: timestamp('updated_at', { mode: 'date', }).$onUpdate(() => new Date()),
@@ -116,7 +116,7 @@ export const PaymentInvoiceRelations = relations(PaymentInvoice, ({ one }) => ({
 
 // Payment Model
 export const Payment = mysqlTable("payment", {
-  id: serial("id").primaryKey(),
+  id: bigint("id", { mode: "number", unsigned: true }).autoincrement().primaryKey(),
   amount: decimal("amount", { precision: 10, scale: 2 }).notNull(),
   type: varchar("type", { length: 255 }).notNull(),
   status: varchar("status", { length: 255 }).notNull(),
@@ -129,7 +129,7 @@ export const Payment = mysqlTable("payment", {
 
   createdAt: timestamp('createdAt').notNull().defaultNow(),
   updatedAt: timestamp('updated_at', { mode: 'date', }).$onUpdate(() => new Date()),
-  customerId: bigint("customer_id", { mode: 'bigint', unsigned: true }).notNull().references(() => Customer.id),
+  customerId: bigint("customer_id", { mode: 'number', unsigned: true }).notNull().references(() => Customer.id),
 
 }, (table) => ({
   customerIdx: index("customer_idx").on(table.customerId),

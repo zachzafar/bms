@@ -3,7 +3,7 @@ import { TsRestHandler, tsRestHandler } from '@ts-rest/nest';
 import { crmContract } from '@repo/api-contract';
 import { BrochuresService } from './brochures.service';
 import { TenantService } from 'src/tenant/tenant.service';
-import * as schema from 'src/database-schema';
+import * as schema from '@repo/api-contract';
 
 @Controller()
 export class BrochuresController {

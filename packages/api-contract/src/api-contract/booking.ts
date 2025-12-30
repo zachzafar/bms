@@ -2,7 +2,7 @@ import { initContract } from "@ts-rest/core";
 
 import { z } from "zod";
 
-import { InsertBlockedDateSchema, InsertBookingSchema, SelectAssetSchema, SelectBookingSchema, SelectCustomerSchema, SelectUserSchema, UpdateBlockedDateSchema, UpdateBookingSchema } from "./zod";
+import { InsertBlockedDateSchema, InsertBookingSchema, SelectAssetSchema, SelectBookingSchema, SelectCustomerSchema, SelectUserSchema, UpdateBlockedDateSchema, UpdateBookingSchema } from "../database-schema";
 
 
 const c = initContract();

@@ -1,7 +1,7 @@
 import { Inject, Injectable, InternalServerErrorException } from '@nestjs/common';
 import { MySql2Database } from 'drizzle-orm/mysql2';
 import { DrizzleAsyncProvider } from 'src/drizzle/drizzle.provider';
-import * as schema from 'src/database-schema';
+import * as schema from '@repo/api-contract';
 import { eq } from 'drizzle-orm';
 
 @Injectable()
@@ -19,7 +19,7 @@ export class FormsService {
         try {
             await this.db.transaction(async (tx) => {
                 const [{ id }] = await tx.insert(schema.BookingForm).values(form).$returningId().execute()
-                await tx.insert(schema.BookingFormField).values(fields.map(field => ({ ...field, formId: BigInt(id) }))).execute();
+                await tx.insert(schema.BookingFormField).values(fields.map(field => ({ ...field, formId: (id) }))).execute();
                 formId = id;
             });
         } catch (error) {

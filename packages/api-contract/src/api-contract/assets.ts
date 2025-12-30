@@ -1,13 +1,14 @@
 import { initContract } from '@ts-rest/core';
 import { z } from 'zod';
 import {
+  assetProperty,
   InsertAssetSchema,
   SelectAssetHasPropertiesSchema,
   SelectAssetImagesSchema,
   SelectAssetPropertySchema,
   SelectAssetSchema,
   SelectTagSchema, // import tag schema
-} from './zod';
+} from '../database-schema';
 
 const c = initContract();
 

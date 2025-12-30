@@ -11,7 +11,7 @@ import { AssetHasBookingForms, AssetHasTags } from "../asset";
 export const Tags = mysqlTable(
   "tags",
   {
-    id: serial("id").primaryKey(),
+    id: bigint("id", { mode: "number", unsigned: true }).autoincrement().primaryKey(),
     name: varchar("name", { length: 255 }).notNull(),
     description: text("description"),
     tenantId: varchar("tenant_id", { length: 255 }).references(() => Tenant.id),
@@ -45,7 +45,7 @@ export const TagsRelations = relations(Tags, ({ many, one }) => ({
 
 // AssetType Model
 export const AssetType = mysqlTable("asset_type", {
-    id: serial("id").primaryKey().notNull(),
+    id: bigint("id", { mode: "number", unsigned: true }).autoincrement().primaryKey().notNull(),
     name: varchar("name", { length: 255 }).notNull(),
     description: text("description"),
     createdAt: timestamp('createdAt').notNull().defaultNow(),
@@ -74,7 +74,7 @@ export const AssetTypeRelations = relations(AssetType, ({ one, many }) => ({
 
 // AssetProperty Model
 export const assetProperty = mysqlTable("asset_properties", {
-    id: serial("id").primaryKey(),
+    id: bigint("id", { mode: "number", unsigned: true }).autoincrement().primaryKey(),
     name: varchar("name", { length: 255 }).notNull(),
     propertyType: mysqlEnum(['number','string','textbox','list']).notNull(),
     tenantId: varchar("tenant_id", { length: 255 }).notNull().references(() => Tenant.id),
@@ -105,9 +105,9 @@ export const AssetPropertyRelations = relations(assetProperty, ({ one }) => ({
 
 // AssetTypeHasProperties Model
 export const AssetTypeHasProperties = mysqlTable("asset_type_propertys", {
-    id: serial("id").primaryKey(),
-    assetTypeId: bigint("asset_type_id", { mode: 'bigint', unsigned: true}).notNull().references(() => AssetType.id, { onDelete: 'cascade' }),
-    assetPropertyId: bigint("asset_property_id", { mode: 'bigint', unsigned: true}).notNull().references(() => assetProperty.id, { onDelete: 'cascade' }),
+    id: bigint("id", { mode: "number", unsigned: true }).autoincrement().primaryKey(),
+    assetTypeId: bigint("asset_type_id", { mode: 'number', unsigned: true}).notNull().references(() => AssetType.id, { onDelete: 'cascade' }),
+    assetPropertyId: bigint("asset_property_id", { mode: 'number', unsigned: true}).notNull().references(() => assetProperty.id, { onDelete: 'cascade' }),
     required: boolean("required").default(false).notNull(),
 }, (table) => ({
     assetTypePropertyUniqueIdx: uniqueIndex("asset_type_property_unique").on(table.assetTypeId, table.assetPropertyId),
@@ -127,7 +127,7 @@ export const AssetTypeHasPropertiesRelations = relations(AssetTypeHasProperties,
 
 // BookingForm Model
 export const BookingForm = mysqlTable("booking_forms", {
-    id: serial("id").primaryKey(),
+    id: bigint("id", { mode: "number", unsigned: true }).autoincrement().primaryKey(),
     name: varchar("name", { length: 255 }).notNull(),
     description: text("description"),
     createdAt: timestamp('createdAt').notNull().defaultNow(),
@@ -153,8 +153,8 @@ export const BookingFormRelations = relations(BookingForm, ({ one,many }) => ({
 }));
 
 export const BookingFormField = mysqlTable("booking_form_fields", {
-    id: serial("id").primaryKey(),
-    formId: bigint("form_id",{ mode: 'bigint', unsigned: true}).notNull().references(() => BookingForm.id),
+    id: bigint("id", { mode: "number", unsigned: true }).autoincrement().primaryKey(),
+    formId: bigint("form_id",{ mode: 'number', unsigned: true}).notNull().references(() => BookingForm.id),
     name: varchar("name", { length: 255 }).notNull(),
     type: mysqlEnum(['number','text','textarea','date','time',"date_range","range","boolean"]).notNull(),
     required: boolean("required").notNull(),

@@ -1,6 +1,6 @@
 import { Injectable, Inject } from '@nestjs/common';
 import { MySql2Database } from 'drizzle-orm/mysql2';
-import * as schema from 'src/database-schema';
+import * as schema from '@repo/api-contract';
 import { DrizzleAsyncProvider } from 'src/drizzle/drizzle.provider';
 import { and, eq, gte, lte, count, avg, sql } from 'drizzle-orm';
 
@@ -161,7 +161,7 @@ export class ReportsService {
   async getCommunicationsReport(tenantId: string, query: { startDate?: string; endDate?: string; type?: "Email" | "Phone Call" | "Meeting"; contactId?: string }) {
     // const dateFilter = this.buildDateFilter(query.startDate, query.endDate, schema.CommunicationLog.date);
     const typeFilter = query.type ? eq(schema.CommunicationLog.type, query.type) : undefined;
-    const contactFilter = query.contactId ? eq(schema.CommunicationLog.contactId, BigInt(query.contactId)) : undefined;
+    const contactFilter = query.contactId ? eq(schema.CommunicationLog.contactId, Number(query.contactId)) : undefined;
     
     // Total communications
     const totalCommunicationsResult = await this.db

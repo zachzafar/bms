@@ -1,6 +1,6 @@
 import { Inject, Injectable, BadRequestException, NotFoundException } from '@nestjs/common';
 import { MySql2Database } from 'drizzle-orm/mysql2';
-import * as schema from 'src/database-schema';
+import * as schema from '@repo/api-contract';
 import { DrizzleAsyncProvider } from 'src/drizzle/drizzle.provider';
 import { and, eq, gte, inArray, lte } from 'drizzle-orm';
 import { SlotService } from 'src/slot/slot.service';
@@ -44,7 +44,7 @@ export class InvoicesService {
 
       await tx.insert(schema.InvoiceItem).values(
         items.map((i) => ({
-          invoiceId: BigInt(invoiceId),
+          invoiceId: invoiceId,
           description: i.description,
           quantity: i.quantity,
           unitPrice: i.unitPrice as any,
@@ -63,19 +63,19 @@ export class InvoicesService {
       where: (i, { eq, and }) =>
         and(
           eq(i.tenantId, tenantId),
-          query.customerId ? eq(i.customerId, BigInt(query.customerId)) : undefined,
+          query.customerId ? eq(i.customerId, Number(query.customerId)) : undefined,
           query.bookingId ? eq(i.bookingId, query.bookingId) : undefined,
           query.status ? eq(i.status, query.status) : undefined
         ),
       orderBy: (i, { desc }) => [desc(i.createdAt)],
     });
 
-    const ids = invoices.map((i) => BigInt(i.id));
+    const ids = invoices.map((i) => i.id);
     const items = ids.length
       ? await this.db.query.InvoiceItem.findMany({ where: (it, { inArray }) => inArray(it.invoiceId, ids) })
       : [];
 
-    const itemsMap = new Map<bigint, typeof items>();
+    const itemsMap = new Map<number, typeof items>();
     items.forEach((it) => {
       itemsMap.set(it.invoiceId, [...(itemsMap.get(it.invoiceId) ?? []), it]);
     });
@@ -83,12 +83,12 @@ export class InvoicesService {
     return invoices.map((inv) => ({
       ...inv,
       // Convert bigint values to numbers for API compatibility
-      id: Number(inv.id),
-      customerId: Number(inv.customerId),
-      items: (itemsMap.get(BigInt(inv.id)) ?? []).map((it) => ({
+      id: inv.id,
+      customerId: inv.customerId,
+      items: (itemsMap.get(inv.id) ?? []).map((it) => ({
         ...it,
-        id: Number(it.id),
-        invoiceId: Number(it.invoiceId),
+        id: it.id,
+        invoiceId: it.invoiceId,
         unitPrice: String(it.unitPrice),
         totalPrice: String(it.totalPrice),
       })),
@@ -102,7 +102,7 @@ export class InvoicesService {
     if (!invoice) return null;
 
     const items = await this.db.query.InvoiceItem.findMany({
-      where: (it, { eq }) => eq(it.invoiceId, BigInt(id)),
+      where: (it, { eq }) => eq(it.invoiceId, id),
     });
 
     return {
@@ -138,7 +138,7 @@ export class InvoicesService {
 
       if (items && items.length > 0) {
         // Delete existing items
-        await tx.delete(schema.InvoiceItem).where(eq(schema.InvoiceItem.invoiceId, BigInt(id))).execute();
+        await tx.delete(schema.InvoiceItem).where(eq(schema.InvoiceItem.invoiceId, id)).execute();
 
         // Insert updated items
         await tx.insert(schema.InvoiceItem).values(
@@ -147,7 +147,7 @@ export class InvoicesService {
             quantity: i.quantity,
             unitPrice: i.unitPrice as any,
             totalPrice: i.totalPrice as any,
-            invoiceId: BigInt(id),
+            invoiceId: id,
           }))
         ).execute();
       }
@@ -179,7 +179,7 @@ export class InvoicesService {
     // Wrap in transaction to also delete related items
     await this.db.transaction(async (tx) => {
       // Delete related invoice items first
-      await tx.delete(schema.InvoiceItem).where(eq(schema.InvoiceItem.invoiceId, BigInt(id))).execute();
+      await tx.delete(schema.InvoiceItem).where(eq(schema.InvoiceItem.invoiceId, id)).execute();
 
       // Delete the invoice itself
       await tx.delete(schema.Invoice).where(eq(schema.Invoice.id, id)).execute();
@@ -261,7 +261,7 @@ export class InvoicesService {
       taxAmount: '0.00' as any,
       totalAmount: total as any,
       notes: `Invoice for booking ${bookingId}`,
-      customerId: BigInt(customer.id),
+      customerId: customer.id,
       bookingId,
     }).$returningId();
 
@@ -269,7 +269,7 @@ export class InvoicesService {
 
     // 6) Insert invoice item
     await tx.insert(schema.InvoiceItem).values({
-      invoiceId: BigInt(invoiceId),
+      invoiceId,
       description: `Rate per night for ${booking.asset?.name ?? booking.assetId}`,
       quantity: nights,
       unitPrice: unitPrice as any,

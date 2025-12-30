@@ -1,8 +1,8 @@
 import { Injectable, Inject, InternalServerErrorException } from '@nestjs/common';
 import { MySql2Database } from 'drizzle-orm/mysql2';
 import { DrizzleAsyncProvider } from 'src/drizzle/drizzle.provider';
-import * as schema from 'src/database-schema';
-import { InsertUser, SelectUser, UpdateUser } from 'src/database-schema';
+import * as schema from '@repo/api-contract';
+import { InsertUser, SelectUser, UpdateUser } from '@repo/api-contract';
 import { eq, and } from 'drizzle-orm';
 import { hash } from 'argon2';
 
@@ -110,7 +110,7 @@ export class UsersService {
                 const existingRole = await tx.query.UserHasRoles.findFirst({
                     where: (ur, { and, eq }) => and(
                         eq(ur.userId, userId),
-                        eq(ur.roleId, BigInt(role)),
+                        eq(ur.roleId, (role)),
                         eq(ur.tenantId, tenantId)
                     )
                 });
@@ -118,7 +118,7 @@ export class UsersService {
                 if (!existingRole) {
                     await tx.insert(schema.UserHasRoles).values({ 
                         userId, 
-                        roleId: BigInt(role) ,
+                        roleId: (role) ,
                         tenantId
                     });
                 }
@@ -255,7 +255,7 @@ export class UsersService {
                 if (!existingRoleIds.includes(roleId)) {
                     await tx.insert(schema.UserHasRoles).values({
                         userId: id,
-                        roleId: BigInt(roleId),
+                        roleId: (roleId),
                         tenantId
                     });
                 }
@@ -267,7 +267,7 @@ export class UsersService {
                 await tx.delete(schema.UserHasRoles)
                     .where(and(
                         eq(schema.UserHasRoles.userId, id),
-                        eq(schema.UserHasRoles.roleId, BigInt(roleId))
+                        eq(schema.UserHasRoles.roleId, (roleId))
                     ));
             }
         });

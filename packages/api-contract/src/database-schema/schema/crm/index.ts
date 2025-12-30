@@ -34,7 +34,7 @@ export const inquirySource = mysqlEnum("inquiry_source", ["Website", "Referral",
 export const Contact = mysqlTable(
   "contact",
   {
-    id: serial("id").primaryKey(),
+    id: bigint("id", { mode: "number", unsigned: true }).autoincrement().primaryKey(),
     tenantId: varchar("tenant_id", { length: 36 }).notNull()
       .references(() => Tenant.id, { onDelete: "cascade" }),
     firstName: varchar("first_name", { length: 255 }).notNull(),
@@ -78,10 +78,10 @@ export const contactRelations = relations(Contact, ({ one, many }) => ({
 export const Inquiry = mysqlTable(
   "inquiry",
   {
-    id: serial("id").primaryKey(),
+    id: bigint("id", { mode: "number", unsigned: true }).autoincrement().primaryKey(),
     tenantId: varchar("tenant_id", { length: 36 }).notNull()
       .references(() => Tenant.id, { onDelete: "cascade" }),
-    contactId: bigint("contact_id", { mode: 'bigint', unsigned: true }).notNull()
+    contactId: bigint("contact_id", { mode: "number", unsigned: true }).notNull()
       .references(() => Contact.id, { onDelete: "cascade" }),
     assetId: varchar("asset_id", { length: 255 }).notNull()
       .references(() => Asset.id, { onDelete: "cascade" }),
@@ -110,10 +110,10 @@ export const inquiryRelations = relations(Inquiry, ({ one }) => ({
 }));
 
 export const Offers = mysqlTable("offers", {
-  id: serial("id").primaryKey(),
+  id: bigint("id", { mode: "number", unsigned: true }).autoincrement().primaryKey(),
   tenantId: varchar("tenant_id", { length: 36 }).notNull()
     .references(() => Tenant.id, { onDelete: "cascade" }),
-  contactId: bigint("contact_id", { mode: 'bigint', unsigned: true }).notNull()
+  contactId: bigint("contact_id", { mode: "number", unsigned: true }).notNull()
     .references(() => Contact.id, { onDelete: "cascade" }),
   assetId: varchar("asset_id", { length: 255 }).notNull()
     .references(() => Asset.id, { onDelete: "cascade" }),
@@ -130,10 +130,10 @@ export const Offers = mysqlTable("offers", {
 export const Feedback = mysqlTable(
   "feedback",
   {
-    id: serial("id").primaryKey(),
+    id: bigint("id", { mode: "number", unsigned: true }).autoincrement().primaryKey(),
     tenantId: varchar("tenant_id", { length: 36 }).notNull()
       .references(() => Tenant.id, { onDelete: "cascade" }),
-    contactId: bigint("contact_id", { mode: 'bigint', unsigned: true }).notNull()
+    contactId: bigint("contact_id", { mode: "number", unsigned: true }).notNull()
       .references(() => Contact.id, { onDelete: "cascade" }),
     assetId: varchar("asset_id", { length: 255 }).notNull()
       .references(() => Asset.id, { onDelete: "cascade" }),
@@ -160,7 +160,7 @@ export const feedbackRelations = relations(Feedback, ({ one }) => ({
 export const Brochure = mysqlTable(
   "brochure",
   {
-    id: serial("id").primaryKey(),
+    id: bigint("id", { mode: "number", unsigned: true }).autoincrement().primaryKey(),
     type: varchar("type", { length: 255 }).notNull(),
     content: text("content"),
     tenantId: varchar("tenant_id", { length: 36 }).notNull()
@@ -175,9 +175,9 @@ export const Brochure = mysqlTable(
 
 export const BrochureContact = mysqlTable(
   'brochure_has_contacts', {
-    contactId: bigint("contact_id", { mode: 'bigint', unsigned: true }).notNull()
+    contactId: bigint("contact_id", { mode: "number", unsigned: true }).notNull()
       .references(() => Contact.id, { onDelete: "cascade" }),
-    brochureId: bigint("brochure_id", { mode: 'bigint', unsigned: true }).notNull()
+    brochureId: bigint("brochure_id", { mode: "number", unsigned: true }).notNull()
       .references(() => Brochure.id, { onDelete: "cascade" }),
   }
 )
@@ -185,10 +185,10 @@ export const BrochureContact = mysqlTable(
 export const BrochureAsset = mysqlTable(
   "brochure_has_assets",
   {
-    id: serial("id").primaryKey(),
+    id: bigint("id", { mode: "number", unsigned: true }).autoincrement().primaryKey(),
     tenantId: varchar("tenant_id", { length: 36 }).notNull()
       .references(() => Tenant.id, { onDelete: "cascade" }),
-    brochureId: bigint("brochure_id", { mode: 'bigint', unsigned: true }).notNull()
+    brochureId: bigint("brochure_id", { mode: "number", unsigned: true }).notNull()
       .references(() => Brochure.id, { onDelete: "cascade" }),
     assetId: varchar("asset_id", { length: 255 }).notNull()
       .references(() => Asset.id, { onDelete: "cascade" }),
@@ -221,10 +221,10 @@ export const brochureAssetRelations = relations(BrochureAsset, ({ one }) => ({
 export const CommunicationLog = mysqlTable(
   "communication_log",
   {
-    id: serial("id").primaryKey(),
+    id: bigint("id", { mode: "number", unsigned: true }).autoincrement().primaryKey(),
     tenantId: varchar("tenant_id", { length: 36 }).notNull()
       .references(() => Tenant.id, { onDelete: "cascade" }),
-    contactId: bigint("contact_id", { mode: 'bigint', unsigned: true }).notNull()
+    contactId: bigint("contact_id", { mode: "number", unsigned: true }).notNull()
       .references(() => Contact.id, { onDelete: "cascade" }),
     userId: varchar("user_id", { length: 36 }).notNull()
       .references(() => User.id, { onDelete: "cascade" }),
@@ -252,13 +252,13 @@ export const communicationRelations = relations(CommunicationLog, ({ one }) => (
 export const Task = mysqlTable(
   "task",
   {
-    id: serial("id").primaryKey(),
+    id: bigint("id", { mode: "number", unsigned: true }).autoincrement().primaryKey(),
     tenantId: varchar("tenant_id", { length: 36 }).notNull()
       .references(() => Tenant.id, { onDelete: "cascade" }),
     userId: varchar("user_id", { length: 36 }).notNull()
       .references(() => User.id, { onDelete: "cascade" }),
     /** Tasks may or may not be tied to a specific contact */
-    contactId: bigint("contact_id", { mode: 'bigint', unsigned: true })
+    contactId: bigint("contact_id", { mode: "number", unsigned: true })
       .references(() => Contact.id, { onDelete: "set null" }),
     description: text("description").notNull(),
     dueDate: datetime("due_date").notNull(),
@@ -294,10 +294,10 @@ export const taskRelations = relations(Task, ({ one }) => ({
 export const Document = mysqlTable(
   "document",
   {
-    id: serial("id").primaryKey(),
+    id: bigint("id", { mode: "number", unsigned: true }).autoincrement().primaryKey(),
     tenantId: varchar("tenant_id", { length: 36 }).notNull()
       .references(() => Tenant.id, { onDelete: "cascade" }),
-    contactId: bigint("contact_id", { mode: 'bigint', unsigned: true }).notNull()
+    contactId: bigint("contact_id", { mode: "number", unsigned: true }).notNull()
       .references(() => Contact.id, { onDelete: "cascade" }),
     documentType: documentType.notNull().default("Other"),
     filePath: varchar("file_path", { length: 2048 }).notNull(),

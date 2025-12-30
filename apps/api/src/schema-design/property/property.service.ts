@@ -1,7 +1,7 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { DrizzleAsyncProvider } from 'src/drizzle/drizzle.provider';
 import { MySql2Database } from 'drizzle-orm/mysql2';
-import * as schema from 'src/database-schema';
+import * as schema from '@repo/api-contract';
 import { eq } from 'drizzle-orm';
 @Injectable()
 export class PropertyService {
@@ -32,7 +32,7 @@ export class PropertyService {
 
     async deleteProperty(id: number) {
   await this.db.transaction(async (tx) => {
-    await tx.delete(schema.AssetHasProperties).where(eq(schema.AssetHasProperties.assetPropertyId, BigInt(id)));
+    await tx.delete(schema.AssetHasProperties).where(eq(schema.AssetHasProperties.assetPropertyId, id));
     await tx.delete(schema.assetProperty).where(eq(schema.assetProperty.id, id));
   });
 }

@@ -2,7 +2,7 @@ import { ConflictException, Controller, Headers, Logger, Query } from '@nestjs/c
 import { contract } from '@repo/api-contract';
 import { tsRestHandler, TsRestHandler } from '@ts-rest/nest';
 import { BookingService } from './booking.service';
-import * as schema from "src/database-schema"
+import * as schema from "@repo/api-contract"
 import { TenantService } from 'src/tenant/tenant.service';
 // import { RequireRead, RequireWrite, RequireDelete, RequirePermissionsDecorator } from 'src/auth/decorators/permissions.decorator';
 import { Roles } from 'src/auth/decorators/permissions.decorator';

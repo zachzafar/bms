@@ -1,7 +1,7 @@
 import { Inject, Injectable, Logger } from '@nestjs/common';
 import { MySql2Database } from 'drizzle-orm/mysql2';
 import { DrizzleAsyncProvider } from 'src/drizzle/drizzle.provider';
-import * as schema from 'src/database-schema';
+import * as schema from '@repo/api-contract';
 import { count,eq, inArray, and,sql, gte, lte } from 'drizzle-orm';
 
 @Injectable()
@@ -24,7 +24,7 @@ export class AssetAnalyticsService {
             .where(
                 and(
                 eq(schema.Asset.tenantId,tenantId),
-                assetTypeIds.length > 0 ? inArray(schema.Asset.assetTypeId, assetTypeIds.map(id => BigInt(id))) : undefined
+                assetTypeIds.length > 0 ? inArray(schema.Asset.assetTypeId, assetTypeIds.map(id => (id))) : undefined
                 )
             )
             .groupBy(schema.Asset.assetTypeId)
@@ -68,7 +68,7 @@ export class AssetAnalyticsService {
                 and(
                     gte(schema.Slot.date, new Date(year, 0, 1)),
                     lte(schema.Slot.date, new Date(year, 11, 31)),
-                    inArray(schema.Asset.assetTypeId, assetTypes.map(assetType => BigInt(assetType.id))),
+                    inArray(schema.Asset.assetTypeId, assetTypes.map(assetType => (assetType.id))),
                      sql`${schema.Asset.assetTypeId} IS NOT NULL`
                 )
             )
@@ -80,7 +80,7 @@ export class AssetAnalyticsService {
             assetTypeId: schema.Asset.assetTypeId,
             totalSlots: count()
         }).from(schema.Slot)
-        .innerJoin(schema.Asset, and(eq(schema.Slot.assetId, schema.Asset.id),inArray(schema.Asset.assetTypeId, assetTypes.map(assetType => BigInt(assetType.id)))))
+        .innerJoin(schema.Asset, and(eq(schema.Slot.assetId, schema.Asset.id),inArray(schema.Asset.assetTypeId, assetTypes.map(assetType => (assetType.id)))))
         .where(
             and(
                 gte(schema.Slot.date, new Date(year, 0, 1)),
@@ -99,7 +99,7 @@ export class AssetAnalyticsService {
        
         const processedResults: Record<number,AssetUtilizationResult> = {};
         slots.forEach(slot => {
-            const assetTypeId = Number(slot.assetTypeId as bigint);
+            const assetTypeId = Number(slot.assetTypeId);
             processedResults[assetTypeId] = {
                 assetType: assetTypeMap[assetTypeId],
                 totalSlots: slot.totalSlots,
@@ -109,7 +109,7 @@ export class AssetAnalyticsService {
         })
         
         bookedslots.forEach(slot => {
-            const assetTypeId = Number(slot.assetTypeId as bigint);
+            const assetTypeId = Number(slot.assetTypeId);
             if(processedResults[assetTypeId]) {
                 processedResults[assetTypeId].bookedSlots = slot.totalSlots;
             }
@@ -145,7 +145,7 @@ export class AssetAnalyticsService {
                 eq(schema.Asset.tenantId, tenantId),
                 gte(schema.MaintenanceTask.createdAt, new Date(year, 0, 1)),
                 lte(schema.MaintenanceTask.createdAt, new Date(year, 11, 31)),
-                inArray(schema.Asset.assetTypeId, assetTypes.map(assetType => BigInt(assetType.id))),
+                inArray(schema.Asset.assetTypeId, assetTypes.map(assetType => (assetType.id))),
             ))
             .groupBy(schema.Asset.assetTypeId, sql`MONTH(${schema.MaintenanceTask.createdAt})`)
             .execute();
@@ -176,7 +176,7 @@ export class AssetAnalyticsService {
             maintenanceCost.forEach(cost => {
                  maintenance.push(
                     {
-                        assetType:assetTypeMap[Number(cost.assetTypeId as bigint)],
+                        assetType:assetTypeMap[Number(cost.assetTypeId)],
                         month: monthsAbbreviated[cost.month as number - 1],
                         totalCost: Number(cost.totalCost)
                     }
@@ -211,7 +211,7 @@ export class AssetAnalyticsService {
                 eq(schema.Asset.tenantId, tenantId),
                  gte(schema.Booking.createdAt, new Date(year, 0, 1)),
                 lte(schema.Booking.createdAt, new Date(year, 11, 31)),
-                inArray(schema.Asset.assetTypeId, assetTypes.map(assetType => BigInt(assetType.id))),
+                inArray(schema.Asset.assetTypeId, assetTypes.map(assetType => (assetType.id))),
             )).groupBy(schema.Asset.assetTypeId).execute();
             type RevenueResult = {
                 assetType: string;
@@ -221,7 +221,7 @@ export class AssetAnalyticsService {
             bookings.forEach(booking => {
                 revenue.push(
                     {
-                        assetType:assetTypeMap[Number(booking.assetTypeId as bigint)],
+                        assetType:assetTypeMap[Number(booking.assetTypeId)],
                         revenue: Number(booking.totalRevenue)
                     }
                 )

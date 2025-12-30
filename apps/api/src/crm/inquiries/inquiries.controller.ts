@@ -3,8 +3,7 @@ import { TsRestHandler, tsRestHandler } from '@ts-rest/nest';
 import { crmContract } from '@repo/api-contract';
 import { InquiriesService } from './inquiries.service';
 import { TenantService } from 'src/tenant/tenant.service';
-import * as schema from 'src/database-schema';
-import { convertBigIntToNumber } from 'src/utils/bigint-converter';
+import * as schema from '@repo/api-contract';
 
 @Controller()
 export class InquiriesController {
@@ -40,7 +39,7 @@ export class InquiriesController {
       const tenantId = headers['x-tenant-id'];
       const rows = await this.inquiries.listInquiries(tenantId, {});
       
-      return { status: 200, body: rows.map((i) => convertBigIntToNumber(i)) };
+      return { status: 200, body: rows };
     });
   }
 

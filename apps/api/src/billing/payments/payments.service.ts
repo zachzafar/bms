@@ -1,6 +1,6 @@
 import { Inject, Injectable, BadRequestException } from '@nestjs/common';
 import { MySql2Database } from 'drizzle-orm/mysql2';
-import * as schema from 'src/database-schema';
+import * as schema from '@repo/api-contract';
 import { DrizzleAsyncProvider } from 'src/drizzle/drizzle.provider';
 import { and, eq, inArray } from 'drizzle-orm';
 
@@ -39,7 +39,7 @@ export class PaymentsService {
           .values({
             ...payment,
             paymentDate: date,
-            customerId: BigInt(payment.customerId),
+            customerId: (payment.customerId),
             tenantId,
           })
           .$returningId();
@@ -83,7 +83,7 @@ export class PaymentsService {
           .values({
             ...payment,
             paymentDate: date,
-            customerId: BigInt(payment.customerId),
+            customerId: (payment.customerId),
             tenantId,
           })
           .$returningId();
@@ -92,25 +92,25 @@ export class PaymentsService {
         // Create PaymentInvoice rows
         await tx.insert(schema.PaymentInvoice).values(
           invoiceIds.map((invoiceId, idx) => ({
-            paymentId: BigInt(paymentId),
-            invoiceId: BigInt(invoiceId),
+            paymentId: (paymentId),
+            invoiceId: (invoiceId),
             amountApplied: (amountsApplied ?? [])[idx] as any,
           }))
         );
 
         // Collect current applied per invoice (including this insert)
         const pivots = await tx.query.PaymentInvoice.findMany({
-          where: (pi, { inArray }) => inArray(pi.invoiceId, invoiceIds.map((id) => BigInt(id))),
+          where: (pi, { inArray }) => inArray(pi.invoiceId, invoiceIds.map((id) => (id))),
         });
 
-        const appliedByInvoice = new Map<bigint, number>();
+        const appliedByInvoice = new Map<number, number>();
         pivots.forEach((p) => {
           appliedByInvoice.set(p.invoiceId, (appliedByInvoice.get(p.invoiceId) ?? 0) + toCents(String(p.amountApplied)));
         });
 
         for (const inv of invoices) {
           const total = toCents(String(inv.totalAmount));
-          const applied = appliedByInvoice.get(BigInt(inv.id)) ?? 0;
+          const applied = appliedByInvoice.get((inv.id)) ?? 0;
           const status = applied >= total ? 'Paid' : applied > 0 ? 'Partial' : 'Unpaid';
           if (status !== inv.status) {
             await tx.update(schema.Invoice).set({ status }).where(eq(schema.Invoice.id, inv.id));
@@ -140,17 +140,17 @@ export class PaymentsService {
     const [{ id }] = await this.db.transaction(async (tx) => {
       // 3) Validate not over-refunding per invoice: current applied >= refund magnitude
       const pivotsBefore = await tx.query.PaymentInvoice.findMany({
-        where: (pi, { inArray }) => inArray(pi.invoiceId, invoiceIds.map((id) => BigInt(id))),
+        where: (pi, { inArray }) => inArray(pi.invoiceId, invoiceIds.map((id) => (id))),
       });
 
-      const appliedByInvoiceBefore = new Map<bigint, number>();
+      const appliedByInvoiceBefore = new Map<number, number>();
       pivotsBefore.forEach((p) => {
         appliedByInvoiceBefore.set(p.invoiceId, (appliedByInvoiceBefore.get(p.invoiceId) ?? 0) + toCents(String(p.amountApplied)));
       });
 
       invoiceIds.forEach((invoiceId, idx) => {
         const refundAbs = Math.abs(refundsCents[idx]);
-        const currentApplied = appliedByInvoiceBefore.get(BigInt(invoiceId)) ?? 0;
+        const currentApplied = appliedByInvoiceBefore.get((invoiceId)) ?? 0;
         if (refundAbs > currentApplied) {
           throw new BadRequestException(`Refund exceeds applied amount for invoice ${invoiceId}`);
         }
@@ -168,7 +168,7 @@ export class PaymentsService {
           ...payment,
           amount: normalizedAmount as any,
           paymentDate: date,
-          customerId: BigInt(payment.customerId),
+          customerId: (payment.customerId),
           tenantId,
         })
         .$returningId();
@@ -177,25 +177,25 @@ export class PaymentsService {
       // 5) Insert refund pivots (negative amountsApplied)
       await tx.insert(schema.PaymentInvoice).values(
         invoiceIds.map((invoiceId, idx) => ({
-          paymentId: BigInt(paymentId),
-          invoiceId: BigInt(invoiceId),
+          paymentId: (paymentId),
+          invoiceId: (invoiceId),
           amountApplied: (amountsApplied ?? [])[idx] as any, // already negative
         }))
       );
 
       // 6) Recompute statuses from net applied
       const pivots = await tx.query.PaymentInvoice.findMany({
-        where: (pi, { inArray }) => inArray(pi.invoiceId, invoiceIds.map((id) => BigInt(id))),
+        where: (pi, { inArray }) => inArray(pi.invoiceId, invoiceIds.map((id) => (id))),
       });
 
-      const appliedByInvoice = new Map<bigint, number>();
+      const appliedByInvoice = new Map<number, number>();
       pivots.forEach((p) => {
         appliedByInvoice.set(p.invoiceId, (appliedByInvoice.get(p.invoiceId) ?? 0) + toCents(String(p.amountApplied)));
       });
 
       for (const inv of invoices) {
         const total = toCents(String(inv.totalAmount));
-        const applied = appliedByInvoice.get(BigInt(inv.id)) ?? 0;
+        const applied = appliedByInvoice.get((inv.id)) ?? 0;
         const status = applied >= total ? 'Paid' : applied > 0 ? 'Partial' : 'Unpaid';
         if (status !== inv.status) {
           await tx.update(schema.Invoice).set({ status }).where(eq(schema.Invoice.id, inv.id));
@@ -208,12 +208,12 @@ export class PaymentsService {
     return id;
   }
 
-  async list(tenantId: string, query: { customerId?: string }) {
+  async list(tenantId: string, query: { customerId?: number }) {
     const payments = await this.db.query.Payment.findMany({
       where: (p, { eq, and }) =>
         and(
           eq(p.tenantId, tenantId),
-          query.customerId ? eq(p.customerId, BigInt(query.customerId)) : undefined,
+          query.customerId ? eq(p.customerId, (query.customerId)) : undefined,
         ),
       orderBy: (p, { desc }) => [desc(p.createdAt)],
     });
@@ -233,7 +233,7 @@ export class PaymentsService {
     if (!payment) return null;
 
     const pivots = await this.db.query.PaymentInvoice.findMany({
-      where: (pi, { eq }) => eq(pi.paymentId, BigInt(id)),
+      where: (pi, { eq }) => eq(pi.paymentId, (id)),
       with: { invoice: true },
     });
 

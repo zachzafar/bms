@@ -1,7 +1,7 @@
 import { initContract } from "@ts-rest/core";
 
 import { z } from "zod";
-import { InsertBookingFormFieldSchema, InsertBookingFormSchema, SelectBookingFormSchema } from "../zod";
+import { InsertBookingFormFieldSchema, InsertBookingFormSchema, SelectBookingFormSchema } from "../../database-schema";
 
 const c = initContract();
 

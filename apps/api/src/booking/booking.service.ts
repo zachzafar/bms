@@ -1,9 +1,9 @@
 import { ConflictException, Inject, Injectable, NotFoundException } from '@nestjs/common';
 import { MySql2Database } from 'drizzle-orm/mysql2';
-import * as schema from 'src/database-schema';
+import * as schema from '@repo/api-contract';
 import { DrizzleAsyncProvider } from 'src/drizzle/drizzle.provider';
 import { and, eq, gte, inArray, lte, or } from 'drizzle-orm';
-import { ExtendedSelectBooking } from '@repo/api-contract/booking';
+import { ExtendedSelectBooking } from '@repo/api-contract';
 import { SlotService } from '../slot/slot.service';
 
 // --- top of file or bottom (outside the class) ---
@@ -268,7 +268,7 @@ export class BookingService {
       .from(schema.Asset)
       .innerJoin(schema.AssetHasTags, eq(schema.Asset.id, schema.AssetHasTags.assetId))
       .where(and(
-        eq(schema.AssetHasTags.tagId, BigInt(tagId)),
+        eq(schema.AssetHasTags.tagId, (tagId)),
         eq(schema.Asset.tenantId, tenantId)
       ));
 
@@ -308,7 +308,7 @@ export class BookingService {
       .select({ id: schema.Asset.id })
       .from(schema.Asset)
       .innerJoin(schema.AssetHasTags, eq(schema.Asset.id, schema.AssetHasTags.assetId))
-      .where(eq(schema.AssetHasTags.tagId, BigInt(tagId)));
+      .where(eq(schema.AssetHasTags.tagId, (tagId)));
 
     const assetIds = assets.map((a) => a.id);
     const totalAssets = assetIds.length;

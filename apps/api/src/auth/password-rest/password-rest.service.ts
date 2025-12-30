@@ -1,7 +1,7 @@
 import { Inject, Injectable, Logger } from '@nestjs/common';
 import { MySql2Database } from 'drizzle-orm/mysql2';
 import { DrizzleAsyncProvider } from 'src/drizzle/drizzle.provider';
-import * as schema from 'src/database-schema';
+import * as schema from '@repo/api-contract';
 import { EventEmitter2, OnEvent } from '@nestjs/event-emitter';
 import { randomBytes } from 'crypto';
 import { PasswordResetEvent } from './events';

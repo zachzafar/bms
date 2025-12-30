@@ -1,7 +1,9 @@
 import { initContract } from '@ts-rest/core';
 
 import { z } from "zod";
-import { InsertTenantSchema, SelectTenantSchema,InsertUserSchema,SelectUserSchema } from "./zod"
+import { InsertTenantSchema, SelectTenantSchema,InsertUserSchema,SelectUserSchema } from "../database-schema/schema"
+import { create } from 'domain';
+import { send } from 'process';
 
 
 const c = initContract();

@@ -15,7 +15,7 @@ import { z } from 'zod';
 
 const ModifiedInsertAssetSchema = z.object({
   name: z.string().min(1, 'Asset name is required'),
-  assetTypeId: z.bigint().min(BigInt(1), 'Asset type is required'),
+  assetTypeId: z.bigint().min((1), 'Asset type is required'),
   tagId: z.number().min(1, 'Tag is required') // 👈 new field
 });
 
@@ -77,7 +77,7 @@ function AddAssetForm() {
           render={({ field }) => (
             <FormItem>
               <FormLabel htmlFor="asset-type">Asset Type</FormLabel>
-              <Select onValueChange={(value) => field.onChange(BigInt(value))} value={field.value?.toString()}>
+              <Select onValueChange={(value) => field.onChange((value))} value={field.value?.toString()}>
                 <FormControl>
                   <SelectTrigger id="asset-type">
                     <SelectValue placeholder="Select asset type" />

@@ -1,7 +1,7 @@
 import { initContract } from "@ts-rest/core";
 
 import { z } from "zod";
-import { InsertTagSchema, SelectTagSchema } from "../zod";
+import { InsertTagSchema, SelectTagSchema } from "../../database-schema";
 
 const c = initContract();
 

@@ -1,6 +1,6 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { MySql2Database } from 'drizzle-orm/mysql2';
-import * as schema from 'src/database-schema';
+import * as schema from '@repo/api-contract';
 import { DrizzleAsyncProvider } from 'src/drizzle/drizzle.provider';
 import { and, eq, gte, lte } from 'drizzle-orm';
 
@@ -14,7 +14,7 @@ export class FeedbackService {
     if (isNaN(viewingDate.getTime())) {
       throw new Error('Invalid date format');
     }
-    const [{ id }] = await this.db.insert(schema.Feedback).values({...data, contactId: BigInt(data.contactId), tenantId,viewingDate}).$returningId();
+    const [{ id }] = await this.db.insert(schema.Feedback).values({...data, contactId: data.contactId, tenantId,viewingDate}).$returningId();
     return id;
   }
 
@@ -47,7 +47,7 @@ export class FeedbackService {
     const feedbackList = await this.db.query.Feedback.findMany({
       where: and(
         eq(schema.Feedback.tenantId, tenantId),
-        query.contactId ? eq(schema.Feedback.contactId, BigInt(query.contactId)) : undefined,
+        query.contactId ? eq(schema.Feedback.contactId, query.contactId) : undefined,
         query.assetId ? eq(schema.Feedback.assetId, query.assetId) : undefined,
         query.minRating ? gte(schema.Feedback.rating, query.minRating) : undefined,
         query.maxRating ? lte(schema.Feedback.rating, query.maxRating) : undefined,
@@ -80,7 +80,7 @@ export class FeedbackService {
         throw new Error('Invalid date format');
       }
     }
-    await this.db.update(schema.Feedback).set({...patch, contactId: BigInt(patch.contactId),viewingDate}).where(eq(schema.Feedback.id, id)).execute();
+    await this.db.update(schema.Feedback).set({...patch, contactId: patch.contactId,viewingDate}).where(eq(schema.Feedback.id, id)).execute();
   }
 
   async remove(id: number) {

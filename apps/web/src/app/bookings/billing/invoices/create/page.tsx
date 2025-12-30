@@ -118,7 +118,7 @@ export default function CreateInvoicePage() {
   const invoiceData = {
     invoice: {
       status: 'Unpaid',
-      customerId: data.customerId, // serialize BigInt as string for JSON
+      customerId: data.customerId, // serialize  as string for JSON
       bookingId: data.bookingId || '',
       invoiceNumber: data.invoiceNumber || '',
       issueDate: data.issueDate, 

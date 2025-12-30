@@ -54,4 +54,3 @@ export * from './billing';
 export * from './crm';
 export * from './system-admin';
 export * from './reports';
-export * from './zod'

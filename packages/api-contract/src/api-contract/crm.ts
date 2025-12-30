@@ -18,7 +18,7 @@ import {
   InsertDocumentSchema, SelectDocumentSchema, 
   // From your existing system
   SelectUserSchema, SelectAssetSchema,
-} from "./zod";
+} from "../database-schema";
 
 const c = initContract();
 

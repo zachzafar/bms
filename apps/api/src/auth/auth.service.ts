@@ -1,8 +1,8 @@
 import { Inject, Injectable, InternalServerErrorException, Logger, UnauthorizedException } from '@nestjs/common';
-import { InsertTenant, InsertUser, SelectTenant, SelectUser } from 'src/database-schema';
+import { InsertTenant, InsertUser, SelectTenant, SelectUser } from '@repo/api-contract';
 import { MySql2Database } from 'drizzle-orm/mysql2';
 import { DrizzleAsyncProvider } from 'src/drizzle/drizzle.provider';
-import * as schema from 'src/database-schema';
+import * as schema from '@repo/api-contract';
 import { JwtService } from '@nestjs/jwt';
 import { hash, verify } from 'argon2';
 import { ConfigType } from '@nestjs/config';
@@ -436,7 +436,7 @@ export class AuthService {
       roleId = id;
       this.logger.log('Creating a role permissions relationship');
       await tx.insert(schema.RoleHasPermissions).values(permissions.map(permission => ({
-        roleId: BigInt(roleId),
+        roleId: (roleId),
         permission
       })))
     });
@@ -452,9 +452,9 @@ export class AuthService {
         name: roleName,
       }).where(eq(schema.Roles.id, Number(roleId)))
       this.logger.log('Updating a role permissions relationship');
-      await tx.delete(schema.RoleHasPermissions).where(eq(schema.RoleHasPermissions.roleId, BigInt(roleId)))
+      await tx.delete(schema.RoleHasPermissions).where(eq(schema.RoleHasPermissions.roleId, Number(roleId)))
       await tx.insert(schema.RoleHasPermissions).values(permissions.map(permission => ({
-        roleId: BigInt(roleId),
+        roleId: Number(roleId),
         permission
       })))
     })
@@ -466,7 +466,7 @@ export class AuthService {
     await this.db.transaction(async (tx) => {
     // First remove the role from the junction table
     await tx.delete(schema.RoleHasPermissions).where(
-      eq(schema.RoleHasPermissions.roleId, BigInt(roleId))
+      eq(schema.RoleHasPermissions.roleId, Number(roleId))
     );
     await tx.delete(schema.Roles).where(eq(schema.Roles.id, Number(roleId)));
 })

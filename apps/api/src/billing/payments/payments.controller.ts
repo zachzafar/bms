@@ -1,7 +1,7 @@
 import { Controller, Headers } from '@nestjs/common';
 import { TsRestHandler, tsRestHandler } from '@ts-rest/nest';
 import { billingContract } from '@repo/api-contract';
-import * as schema from 'src/database-schema';
+import * as schema from '@repo/api-contract';
 import { TenantService } from 'src/tenant/tenant.service';
 import { PaymentsService } from './payments.service';
 // import { RequireRead, RequireWrite } from 'src/auth/decorators/permissions.decorator';
@@ -37,7 +37,7 @@ export class PaymentsController {
   async list(@Headers() headers: any): Promise<ReturnType<typeof tsRestHandler>> {
     return tsRestHandler(billingContract.getPayments, async ({ query }) => {
       const tenantId = headers['x-tenant-id'];
-      const rows = await this.payments.list(tenantId, query);
+      const rows = await this.payments.list(tenantId, { customerId: query.customerId ? Number(query.customerId) : undefined });
       return { status: 200, body: rows.map((row) => ({ ...row, paymentDate: row.paymentDate.toISOString() })) };
     });
   }

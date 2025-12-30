@@ -1,9 +1,9 @@
 import { Inject, Injectable, InternalServerErrorException, Logger } from '@nestjs/common';
 import { MySql2Database } from 'drizzle-orm/mysql2';
 import { DrizzleAsyncProvider } from 'src/drizzle/drizzle.provider';
-import * as schema from 'src/database-schema';
+import * as schema from '@repo/api-contract';
 import { and, eq, gte, inArray, lte } from 'drizzle-orm';
-import type { InsertAsset, UpdateAsset } from 'src/database-schema';
+import type { InsertAsset, UpdateAsset } from '@repo/api-contract';
 import { ObjectStorageService } from 'src/object-storage/object-storage.service';
 import { Readable } from 'stream';
 
@@ -67,7 +67,7 @@ export class AssetsService {
 
 
   async createAsset(data: InsertAsset, tagIds?: string[]) {
-    let assetTypeId = data.assetTypeId ? BigInt(data.assetTypeId) : undefined;
+    let assetTypeId = data.assetTypeId ? (data.assetTypeId) : undefined;
 
     try {
       const result = await this.db
@@ -81,7 +81,7 @@ export class AssetsService {
         for (const tagId of tagIds) {
           await this.db.insert(schema.AssetHasTags).values({
             assetId,
-            tagId: BigInt(tagId),
+            tagId: Number(tagId),
           });
         }
       }
@@ -95,7 +95,7 @@ export class AssetsService {
   }
 
   async updateAsset(id: string, data: UpdateAsset) {
-    let assetTypeId = data.assetTypeId ? BigInt(data.assetTypeId) : undefined;
+    let assetTypeId = data.assetTypeId ? (data.assetTypeId) : undefined;
     await this.db
       .update(schema.Asset)
       .set({ ...data, assetTypeId })
@@ -145,7 +145,7 @@ export class AssetsService {
     return await this.db.insert(schema.AssetHasProperties).values(
       propertyValues.map(({ propertyId, value }) => ({
         assetId,
-        assetPropertyId: BigInt(propertyId),
+        assetPropertyId: (propertyId),
         value
       }))
     ).$returningId().execute();
@@ -225,7 +225,7 @@ export class AssetsService {
       where: (asset, { eq, and, inArray }) =>
         and(
           eq(asset.tenantId, tenant),
-          assetTypes ? inArray(asset.assetTypeId, assetTypes.map((id) => BigInt(id))) : undefined
+          assetTypes ? inArray(asset.assetTypeId, assetTypes.map((id) => (id))) : undefined
         ),
       with: {
         assetType: true,

@@ -14,7 +14,7 @@ export const SelectKeySchema = z.object({
     id: z.string(),
     key: z.string(),
     name: z.string(),
-    scopes: z.array(z.string()),
+    scopes: z.array(z.string()).nullable(),
     isActive: z.boolean().nullable(), // boolean with default is nullable in select? No, boolean default makes it not null in DB if column is not null. 
     // `isActive: boolean("is_active").default(true)` - Drizzle boolean is nullable by default unless .notNull() is called.
     // So it is nullable.

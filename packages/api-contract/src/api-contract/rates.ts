@@ -4,7 +4,7 @@ import {
   InsertRateSchema,
   SelectRateSchema,
   UpdateRateSchema,
-} from "./zod";
+} from "../database-schema";
 
 const c = initContract();
 
