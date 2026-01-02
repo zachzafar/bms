@@ -221,8 +221,8 @@ export class PaymentsService {
     // Convert bigint values to numbers for API compatibility
     return payments.map(payment => ({
       ...payment,
-      id: Number(payment.id),
-      customerId: Number(payment.customerId),
+      id: (payment.id),
+      customerId: (payment.customerId),
     }));
   }
 
@@ -239,10 +239,10 @@ export class PaymentsService {
 
     return {
       ...payment,
-      id: Number(payment.id),
-      customerId: Number(payment.customerId),
+      id: (payment.id),
+      customerId: (payment.customerId),
       invoices: pivots.map((p) => ({
-        invoiceId: Number(p.invoiceId),
+        invoiceId: (p.invoiceId),
         amountApplied: String(p.amountApplied),
         invoiceNumber: p.invoice.invoiceNumber,
       })),

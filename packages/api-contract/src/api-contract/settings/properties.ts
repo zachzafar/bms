@@ -63,7 +63,7 @@ export const propertiesContract = c.router({
             })
         },
         pathParams: z.object({
-            id: z.string()
+            id: z.coerce.number(),
         }),
         summary: 'Delete a asset property'
     },

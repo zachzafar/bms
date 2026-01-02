@@ -23,7 +23,7 @@ export const Booking = mysqlTable("booking", {
     assetIdx: index("asset_idx").on(table.assetId),
 }));
 
-export const InsertBookingSchema = createInsertSchema(Booking).omit({ startDate: true, endDate: true }).extend({ startDate: z.string(), endDate: z.string() });
+export const InsertBookingSchema = createInsertSchema(Booking).omit({ startDate: true, endDate: true }).extend({ startDate: z.coerce.date(), endDate: z.coerce.date() });
 export const SelectBookingSchema = createSelectSchema(Booking);
 
 export const UpdateBookingSchema = InsertBookingSchema.partial().required({id:true, startDate: true, endDate: true, status: true, totalPrice: true, assetId: true});
@@ -108,8 +108,8 @@ export const Rate = mysqlTable("rate", {
 export const InsertRateSchema = createInsertSchema(Rate)
   .omit({ startDate: true, endDate: true })
   .extend({
-    startDate: z.string(),
-    endDate: z.string(),
+    startDate: z.coerce.date(),
+    endDate: z.coerce.date(),
     assetIds: z.array(z.string()).optional(),
   });
 export const SelectRateSchema = createSelectSchema(Rate);
@@ -144,8 +144,8 @@ export const BlockedDate = mysqlTable("blocked_date", {
 export const InsertBlockedDateSchema = createInsertSchema(BlockedDate)
   .omit({ startDate: true, endDate: true })
   .extend({
-    startDate: z.string(),
-    endDate: z.string(),
+    startDate: z.coerce.date(),
+    endDate: z.coerce.date(),
     reason: z.string().optional(),
     assetId: z.string(), // optional if you allow global blocks
     tenantId: z.string(),

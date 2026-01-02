@@ -41,8 +41,8 @@ export class ContactsController {
   async getContact(@Headers() headers: any): Promise<ReturnType<typeof tsRestHandler>> {
     return tsRestHandler(crmContract.contacts.getContact, async ({ params }) => {
       const tenantId = headers['x-tenant-id'];
-      await this.tenantService.validateTenantAccess(tenantId, schema.Contact, Number(params.id));
-      const row = await this.contacts.getContact(Number(params.id));
+      await this.tenantService.validateTenantAccess(tenantId, schema.Contact, (params.id));
+      const row = await this.contacts.getContact(params.id);
       if (!row) return { status: 404, body: undefined };
       return { status: 200, body: row };
     });
@@ -53,8 +53,8 @@ export class ContactsController {
   async updateContact(@Headers() headers: any): Promise<ReturnType<typeof tsRestHandler>> {
     return tsRestHandler(crmContract.contacts.updateContact, async ({ params, body }) => {
       const tenantId = headers['x-tenant-id'];
-      await this.tenantService.validateTenantAccess(tenantId, schema.Contact, Number(params.id));
-      await this.contacts.updateContact(Number(params.id), body);
+      await this.tenantService.validateTenantAccess(tenantId, schema.Contact, (params.id));
+      await this.contacts.updateContact(params.id, body);
       return { status: 200, body: { message: 'contact updated' } };
     });
   }
@@ -64,8 +64,8 @@ export class ContactsController {
   async deleteContact(@Headers() headers: any): Promise<ReturnType<typeof tsRestHandler>> {
     return tsRestHandler(crmContract.contacts.deleteContact, async ({ params }) => {
       const tenantId = headers['x-tenant-id'];
-      await this.tenantService.validateTenantAccess(tenantId, schema.Contact, Number(params.id));
-      await this.contacts.deleteContact(Number(params.id));
+      await this.tenantService.validateTenantAccess(tenantId, schema.Contact, (params.id));
+      await this.contacts.deleteContact(params.id);
       return { status: 204, body: undefined };
     });
   }
@@ -75,7 +75,7 @@ export class ContactsController {
   // async mergeContacts(@Headers() headers: any): Promise<ReturnType<typeof tsRestHandler>> {
   //   return tsRestHandler(crmContract.contacts.mergeContacts, async ({ params, body }) => {
   //     const tenantId = headers['x-tenant-id'];
-  //     const targetId = Number(params.id);
+  //     const targetId = (params.id);
   //     const sourceId = body.sourceContactId;
   //     await this.tenantService.validateTenantAccess(tenantId, schema.Contact, targetId);
   //     await this.tenantService.validateTenantAccess(tenantId, schema.Contact, sourceId);
@@ -89,7 +89,7 @@ export class ContactsController {
   // async attachUser(@Headers() headers: any): Promise<ReturnType<typeof tsRestHandler>> {
   //   return tsRestHandler(crmContract.contacts.attachUser, async ({ params, body }) => {
   //     const tenantId = headers['x-tenant-id'];
-  //     const contactId = Number(params.id);
+  //     const contactId = (params.id);
   //     await this.tenantService.validateTenantAccess(tenantId, schema.Contact, contactId);
   //     await this.contacts.attachUser(contactId, body.userId);
   //     return { status: 200, body: { message: 'user attached' } };
@@ -101,7 +101,7 @@ export class ContactsController {
   // async detachUser(@Headers() headers: any): Promise<ReturnType<typeof tsRestHandler>> {
   //   return tsRestHandler(crmContract.contacts.detachUser, async ({ params }) => {
   //     const tenantId = headers['x-tenant-id'];
-  //     const contactId = Number(params.id);
+  //     const contactId = (params.id);
   //     await this.tenantService.validateTenantAccess(tenantId, schema.Contact, contactId);
   //     await this.contacts.detachUser(contactId);
   //     return { status: 200, body: { message: 'user detached' } };

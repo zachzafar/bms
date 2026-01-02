@@ -34,7 +34,7 @@ export class BookingsAnalyticsController {
     async getBookingCountsByMonthPerYear(@Headers() headers: any): Promise<ReturnType<typeof tsRestHandler>> {
         return tsRestHandler(contract.analytics.getBookingCountsByMonthPerYear, async ({query}) => {
             const tenantId = headers['x-tenant-id'];
-            const result = await this.BookingsAnalyticsService.getBookingCountByMonth(tenantId,Number(query.year))
+            const result = await this.BookingsAnalyticsService.getBookingCountByMonth(tenantId,(query.year))
             const monthsAbbreviated = [
                 "Jan", 
                 "Feb", 

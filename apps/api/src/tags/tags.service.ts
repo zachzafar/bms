@@ -50,7 +50,7 @@ export class TagsService {
   async deleteTag(id: number) {
     const deleted = await this.db
       .delete(schema.Tags)
-      .where(eq(schema.Tags.id, Number(id)));
+      .where(eq(schema.Tags.id, id));
 
     return { message: 'Tag deleted' };
   }

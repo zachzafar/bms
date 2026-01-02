@@ -99,7 +99,7 @@ export class AssetAnalyticsService {
        
         const processedResults: Record<number,AssetUtilizationResult> = {};
         slots.forEach(slot => {
-            const assetTypeId = Number(slot.assetTypeId);
+            const assetTypeId = (slot.assetTypeId);
             processedResults[assetTypeId] = {
                 assetType: assetTypeMap[assetTypeId],
                 totalSlots: slot.totalSlots,
@@ -109,7 +109,7 @@ export class AssetAnalyticsService {
         })
         
         bookedslots.forEach(slot => {
-            const assetTypeId = Number(slot.assetTypeId);
+            const assetTypeId = (slot.assetTypeId);
             if(processedResults[assetTypeId]) {
                 processedResults[assetTypeId].bookedSlots = slot.totalSlots;
             }
@@ -140,7 +140,7 @@ export class AssetAnalyticsService {
             const maintenanceCost = await this.db.select({
                 assetTypeId: schema.Asset.assetTypeId,
                 month: sql`MONTH(${schema.MaintenanceTask.createdAt})`,
-                totalCost: sql`SUM(${schema.MaintenanceTask.cost})`
+                totalCost: sql<number>`SUM(${schema.MaintenanceTask.cost})`
             }).from(schema.MaintenanceTask).innerJoin(schema.Asset, eq(schema.MaintenanceTask.assetId, schema.Asset.id)).where(and(
                 eq(schema.Asset.tenantId, tenantId),
                 gte(schema.MaintenanceTask.createdAt, new Date(year, 0, 1)),
@@ -176,9 +176,9 @@ export class AssetAnalyticsService {
             maintenanceCost.forEach(cost => {
                  maintenance.push(
                     {
-                        assetType:assetTypeMap[Number(cost.assetTypeId)],
+                        assetType:assetTypeMap[(cost.assetTypeId)],
                         month: monthsAbbreviated[cost.month as number - 1],
-                        totalCost: Number(cost.totalCost)
+                        totalCost: (cost.totalCost)
                     }
                 )
 
@@ -206,7 +206,7 @@ export class AssetAnalyticsService {
 
             const bookings = await this.db.select({
                 assetTypeId: schema.Asset.assetTypeId,
-                totalRevenue: sql`SUM(${schema.Booking.totalPrice})`
+                totalRevenue: sql<number>`SUM(${schema.Booking.totalPrice})`
             }).from(schema.Booking).innerJoin(schema.Asset, eq(schema.Booking.assetId, schema.Asset.id)).where(and(
                 eq(schema.Asset.tenantId, tenantId),
                  gte(schema.Booking.createdAt, new Date(year, 0, 1)),
@@ -221,8 +221,8 @@ export class AssetAnalyticsService {
             bookings.forEach(booking => {
                 revenue.push(
                     {
-                        assetType:assetTypeMap[Number(booking.assetTypeId)],
-                        revenue: Number(booking.totalRevenue)
+                        assetType:assetTypeMap[(booking.assetTypeId)],
+                        revenue: (booking.totalRevenue)
                     }
                 )
             })

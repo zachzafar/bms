@@ -34,7 +34,7 @@ export class AssetTypeController {
         return tsRestHandler(contract.settings.assetType.getAssetType, async ({ params }) => {
             const tenantId = headers['x-tenant-id']
             await this.TenantService.validateTenantAccess(tenantId, schema.AssetType, params.id)
-            const assetType = await this.assetTypeService.getAssetType(Number(params.id));
+            const assetType = await this.assetTypeService.getAssetType((params.id));
             
             if (!assetType) {
                 return {
@@ -56,8 +56,8 @@ export class AssetTypeController {
         return tsRestHandler(contract.settings.assetType.updateAssetType, async ({ params, body }) => {
             const tenantId = headers['x-tenant-id']
             await this.TenantService.validateTenantAccess(tenantId, schema.AssetType, params.id)
-            const assetType = await this.assetTypeService.updateAssetType(Number(params.id), body.assetType);
-             await this.assetTypeService.updateAssetTypeProperties(Number(params.id), body.properties);
+            const assetType = await this.assetTypeService.updateAssetType((params.id), body.assetType);
+             await this.assetTypeService.updateAssetTypeProperties((params.id), body.properties);
             if (!assetType) {
                 return { 
                     status: 500 as const, 
@@ -78,7 +78,7 @@ export class AssetTypeController {
         return tsRestHandler(contract.settings.assetType.deleteAssetType, async ({ params }) => {
             const tenantId = headers['x-tenant-id']
             await this.TenantService.validateTenantAccess(tenantId, schema.AssetType, params.id)
-            await this.assetTypeService.deleteAssetType(Number(params.id));
+            await this.assetTypeService.deleteAssetType(params.id);
             return { 
                 status: 204 as const, 
                 body: undefined 

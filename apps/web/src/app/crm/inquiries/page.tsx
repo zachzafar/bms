@@ -76,7 +76,7 @@ export default function InquiryManagement() {
     if (!selectedInquiry) return
     updateInquiry(
       {
-        params: { id: selectedInquiry.id.toString() },
+        params: { id: selectedInquiry.id },
         body: inquiryData,
       },
       {
@@ -95,7 +95,7 @@ export default function InquiryManagement() {
 
   const handleDeleteInquiry = (inquiryId: number) => {
     deleteInquiry(
-      { params: { id: inquiryId.toString() },
+      { params: { id: inquiryId },
         body: {},
       },
       {

@@ -324,6 +324,9 @@ export const documentRelations = relations(Document, ({ one }) => ({
 export const InsertContactSchema = createInsertSchema(Contact).omit({
   createdAt: true,
   updatedAt: true,
+  dob: true,
+}).extend({
+  dob: z.coerce.date().optional().nullable(),
 });
 export const SelectContactSchema = createSelectSchema(Contact);
 export const UpdateContactSchema = InsertContactSchema.partial().required({ id: true, tenantId: true });
@@ -334,8 +337,12 @@ export type UpdateContact = z.infer<typeof UpdateContactSchema>;
 
 /* -------------------------------- Inquiry -------------------------- */
 export const InsertInquirySchema = createInsertSchema(Inquiry)
-  .omit({ createdAt: true, updatedAt: true, contactId: true })
-  .extend({ contactId: z.number() });
+  .omit({ createdAt: true, updatedAt: true, contactId: true, inquiryDate: true, followUpDate: true })
+  .extend({
+    contactId: z.number(),
+    inquiryDate: z.coerce.date(),
+    followUpDate: z.coerce.date().optional().nullable(),
+  });
 export const SelectInquirySchema = createSelectSchema(Inquiry)
   .omit({ contactId: true })
   .extend({ contactId: z.number() });
@@ -348,7 +355,7 @@ export type UpdateInquiry = z.infer<typeof UpdateInquirySchema>;
 /* ---------------------------- Communication Log -------------------- */
 export const InsertCommunicationLogSchema = createInsertSchema(CommunicationLog)
   .omit({ createdAt: true, updatedAt: true, contactId: true,date: true })
-  .extend({ contactId: z.number(),date: z.string() });
+  .extend({ contactId: z.number(),date: z.coerce.date() });
 export const SelectCommunicationLogSchema = createSelectSchema(CommunicationLog)
   .omit({ contactId: true })
   .extend({ contactId: z.number() });
@@ -364,7 +371,7 @@ export const InsertFeedbackSchema = createInsertSchema(Feedback)
   .extend({
     rating: z.number().int().min(1).max(5),
     contactId: z.number(),
-    viewingDate: z.string(),
+    viewingDate: z.coerce.date(),
   });
 export const SelectFeedbackSchema = createSelectSchema(Feedback).omit({ tenantId: true, contactId:true})
   .extend({ contactId: z.number()});
@@ -397,8 +404,11 @@ export type SelectBrochureAsset = z.infer<typeof SelectBrochureAssetSchema>;
 export type UpdateBrochureAsset = z.infer<typeof UpdateBrochureAssetSchema>;
 /* ---------------------------------- Task --------------------------- */
 export const InsertTaskSchema = createInsertSchema(Task)
-  .omit({ createdAt: true, updatedAt: true, contactId: true, tenantId:true })
-  .extend({ contactId: z.number().optional() });
+  .omit({ createdAt: true, updatedAt: true, contactId: true, tenantId:true, dueDate: true })
+  .extend({
+    contactId: z.number().optional(),
+    dueDate: z.coerce.date(),
+  });
 export const SelectTaskSchema = createSelectSchema(Task)
   .omit({ contactId: true })
   .extend({ contactId: z.number().nullable() });
@@ -409,8 +419,11 @@ export type SelectTask = z.infer<typeof SelectTaskSchema>;
 export type UpdateTask = z.infer<typeof UpdateTaskSchema>;
 /* -------------------------------- Document ------------------------- */
 export const InsertDocumentSchema = createInsertSchema(Document)
-  .omit({ createdAt: true, updatedAt: true, contactId: true })
-  .extend({ contactId: z.number() });
+  .omit({ createdAt: true, updatedAt: true, contactId: true, uploadedAt: true })
+  .extend({
+    contactId: z.number(),
+    uploadedAt: z.coerce.date(),
+  });
 export const SelectDocumentSchema = createSelectSchema(Document)
   .omit({ contactId: true })
   .extend({ contactId: z.number() });
@@ -439,8 +452,11 @@ export type SelectBrochureContact = z.infer<typeof SelectBrochureContactSchema>;
 
 /* -------------------------------- Offers --------------------------- */
 export const InsertOffersSchema = createInsertSchema(Offers)
-  .omit({ createdAt: true, updatedAt: true, contactId: true })
-  .extend({ contactId: z.number() });
+  .omit({ createdAt: true, updatedAt: true, contactId: true, offerDate: true })
+  .extend({
+    contactId: z.number(),
+    offerDate: z.coerce.date(),
+  });
 export const SelectOffersSchema = createSelectSchema(Offers)
   .omit({ contactId: true })
   .extend({ contactId: z.number() });

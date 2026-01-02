@@ -28,13 +28,7 @@ export class AssetsController {
 
             const assets = await this.assetService.getAssets(query, tenantId);
 
-            // Convert assetTypeId to number
-            const assetsWithTypeId = assets.map((asset) => {
-                let assetTypeId = asset.assetTypeId ? Number(asset.assetTypeId) : undefined;
-                return { ...asset, assetTypeId };
-            });
-
-            return { status: 200, body: assetsWithTypeId };
+            return { status: 200, body: assets };
         });
     }
 
@@ -49,9 +43,8 @@ export class AssetsController {
             if (!asset) {
                 return { status: 404, message: 'Asset not found' };
             }
-            let assetTypeId = asset.assetTypeId ? Number(asset.assetTypeId) : undefined;
 
-            return { status: 200, body: { ...asset, assetTypeId } };
+            return { status: 200, body: asset };
         });
     }
 
@@ -84,7 +77,7 @@ export class AssetsController {
                 return { status: 500, body: { message: 'Error updating asset' } };
             }
 
-            return { status: 200, body: { ...asset, assetTypeId: Number(asset.assetTypeId) } };
+            return { status: 200, body: asset };
         });
     }
 
@@ -137,7 +130,7 @@ export class AssetsController {
                 status: 200,
                 body: properties.map((property) => ({
                     ...property,
-                    assetPropertyId: Number(property.assetPropertyId),
+                    assetPropertyId: property.assetPropertyId,
                     assetId: property.assetId.toString() // Convert assetId to string to match expected type
                 }))
             };

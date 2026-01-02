@@ -50,13 +50,7 @@ export class BookingController {
     async getBookings(@Headers() headers: any): Promise<ReturnType<typeof tsRestHandler>> {
         return tsRestHandler(contract.booking.getBookings, async ({ query }) => {
             const tenantId = headers['x-tenant-id'];
-            const bookings = (await this.bookingService.getBookings(tenantId, query.assetId)).map(booking => ({
-                ...booking,
-                asset: {
-                    ...booking.asset,
-                    assetTypeId: booking.asset.assetTypeId ? Number(booking.asset.assetTypeId) : undefined,
-                },
-            }));
+            const bookings = await this.bookingService.getBookings(tenantId, query.assetId);
 
             return { status: 200, body: bookings };
         });
@@ -96,7 +90,7 @@ export class BookingController {
         return tsRestHandler(contract.booking.checkTagAvailability, async ({ query }) => {
             const tenantId = headers['x-tenant-id'];
 
-            const tagId = Number(query.tagId);
+            const tagId = (query.tagId);
             if (isNaN(tagId)) {
                 return { status: 400, body: { message: "Invalid tagId" } };
             }
@@ -158,9 +152,8 @@ export class BookingController {
     @Roles(PermissionScope.BOOKINGS_DELETE)
     async deleteBlockedDate(): Promise<ReturnType<typeof tsRestHandler>> {
         return tsRestHandler(contract.booking.deleteBlockedDate, async ({ params }) => {
-            const id = String(params.id);
+            const id = params.id;
             // if (isNaN(id)) throw new BadRequestException("Invalid blocked date ID");
-
             await this.bookingService.deleteBlockedDate(id);
             return { status: 204, body: undefined };
         });

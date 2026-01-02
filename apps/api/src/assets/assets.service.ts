@@ -66,13 +66,12 @@ export class AssetsService {
   }
 
 
-  async createAsset(data: InsertAsset, tagIds?: string[]) {
-    let assetTypeId = data.assetTypeId ? (data.assetTypeId) : undefined;
+  async createAsset(data: InsertAsset, tagIds?: number[]) {
 
     try {
       const result = await this.db
         .insert(schema.Asset)
-        .values({ ...data, assetTypeId })
+        .values(data)
         .$returningId();
 
       const assetId = result[0].id;
@@ -81,7 +80,7 @@ export class AssetsService {
         for (const tagId of tagIds) {
           await this.db.insert(schema.AssetHasTags).values({
             assetId,
-            tagId: Number(tagId),
+            tagId: (tagId),
           });
         }
       }
@@ -255,9 +254,7 @@ export class AssetsService {
     return assetsWithDetails;
   }
 
-  async getAvailableAssets(startDate: string, endDate: string, tenantId: string) {
-  const start = new Date(startDate);
-  const end = new Date(endDate);
+  async getAvailableAssets(startDate: Date, endDate: Date, tenantId: string) {
 
   // 1. Get all assets for the current tenant
   const allAssets = await this.db
@@ -280,8 +277,8 @@ export class AssetsService {
     .where(
       and(
         inArray(schema.Booking.assetId, allAssetIds),
-        lte(schema.Booking.startDate, end),
-        gte(schema.Booking.endDate, start)
+        lte(schema.Booking.startDate, endDate),
+        gte(schema.Booking.endDate, startDate)
       )
     );
 

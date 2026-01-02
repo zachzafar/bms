@@ -9,7 +9,7 @@ import { and, eq, gte, lte, count, avg, sql } from 'drizzle-orm';
 export class ReportsService {
   constructor(@Inject(DrizzleAsyncProvider) private db: MySql2Database<typeof schema>) {}
 
-  async getOverview(tenantId: string, query: { startDate?: string; endDate?: string; period?: string }) {
+  async getOverview(tenantId: string, query: { startDate?: Date; endDate?: Date; period?: string }) {
     const { startDate, endDate } = this.getDateRange(query.period, query.startDate, query.endDate);
     
     const [contacts, inquiries, communications, feedback, tasks] = await Promise.all([
@@ -29,7 +29,7 @@ export class ReportsService {
     };
   }
 
-  async getContactsReport(tenantId: string, query: { startDate?: string; endDate?: string; source?: "Website" | "Referral" | "Walk-In" | "Social" | "Other" }) {
+  async getContactsReport(tenantId: string, query: { startDate?: Date; endDate?: Date; source?: "Website" | "Referral" | "Walk-In" | "Social" | "Other" }) {
     // const dateFilter = this.buildDateFilter(query.startDate, query.endDate, schema.Contact.createdAt);
     const sourceFilter = query.source ? eq(schema.Contact.source, query.source) : undefined;
     
@@ -95,7 +95,7 @@ export class ReportsService {
     };
   }
 
-  async getInquiriesReport(tenantId: string, query: { startDate?: string; endDate?: string; status?: "New" | "Follow-Up" | "Closed"; assignedTo?: string; assetId?: string }) {
+  async getInquiriesReport(tenantId: string, query: { startDate?: Date; endDate?: Date; status?: "New" | "Follow-Up" | "Closed"; assignedTo?: string; assetId?: string }) {
     // const dateFilter = this.buildDateFilter(query.startDate, query.endDate, schema.Inquiry.inquiryDate);
     const statusFilter = query.status ? eq(schema.Inquiry.status, query.status) : undefined;
     const assignedToFilter = query.assignedTo ? eq(schema.Inquiry.assignedTo, query.assignedTo) : undefined;
@@ -158,10 +158,10 @@ export class ReportsService {
     };
   }
 
-  async getCommunicationsReport(tenantId: string, query: { startDate?: string; endDate?: string; type?: "Email" | "Phone Call" | "Meeting"; contactId?: string }) {
+  async getCommunicationsReport(tenantId: string, query: { startDate?: Date; endDate?: Date; type?: "Email" | "Phone Call" | "Meeting"; contactId?: number }) {
     // const dateFilter = this.buildDateFilter(query.startDate, query.endDate, schema.CommunicationLog.date);
     const typeFilter = query.type ? eq(schema.CommunicationLog.type, query.type) : undefined;
-    const contactFilter = query.contactId ? eq(schema.CommunicationLog.contactId, Number(query.contactId)) : undefined;
+    const contactFilter = query.contactId ? eq(schema.CommunicationLog.contactId, (query.contactId)) : undefined;
     
     // Total communications
     const totalCommunicationsResult = await this.db
@@ -220,7 +220,7 @@ export class ReportsService {
     };
   }
 
-  async getFeedbackReport(tenantId: string, query: { startDate?: string; endDate?: string; assetId?: string; minRating?: number; maxRating?: number }) {
+  async getFeedbackReport(tenantId: string, query: { startDate?: Date; endDate?: Date; assetId?: string; minRating?: number; maxRating?: number }) {
     // const dateFilter = this.buildDateFilter(query.startDate, query.endDate, schema.Feedback.viewingDate);
     const assetFilter = query.assetId ? eq(schema.Feedback.assetId, query.assetId) : undefined;
     const ratingFilter = and(
@@ -278,20 +278,20 @@ export class ReportsService {
     
     return {
       totalFeedback: feedbackStatsResult[0]?.count || 0,
-      averageRating: Number(feedbackStatsResult[0]?.avgRating || 0),
+      averageRating: (feedbackStatsResult[0]?.avgRating || 0),
       ratingDistribution: ratingDistributionResult.map(r => ({
         rating: r.rating,
         count: r.count
       })),
       feedbackTrend: feedbackTrendResult.map(r => ({
         period: r.period,
-        averageRating: Number(r.averageRating || 0),
+        averageRating: (r.averageRating || 0),
         count: r.count
       }))
     };
   }
 
-  async getTasksReport(tenantId: string, query: { startDate?: string; endDate?: string; assignedTo?: string; completed?: boolean }) {
+  async getTasksReport(tenantId: string, query: { startDate?: Date; endDate?: Date; assignedTo?: string; completed?: boolean }) {
     // const dateFilter = this.buildDateFilter(query.startDate, query.endDate, schema.Task.dueDate);
     const assignedToFilter = query.assignedTo ? eq(schema.Task.userId, query.assignedTo) : undefined;
     const completedFilter = query.completed !== undefined 
@@ -352,12 +352,12 @@ export class ReportsService {
         assigneeId: r.assigneeId,
         assigneeName: r.assigneeName,
         totalTasks: r.totalTasks,
-        completedTasks: Number(r.completedTasks)
+        completedTasks: (r.completedTasks)
       }))
     };
   }
 
-  private getDateRange(period?: string, startDate?: string, endDate?: string) {
+  private getDateRange(period?: string, startDate?: Date, endDate?: Date) {
     if (startDate && endDate) {
       return { startDate, endDate };
     }
@@ -382,8 +382,8 @@ export class ReportsService {
     }
     
     return {
-      startDate: start.toISOString(),
-      endDate: end.toISOString()
+      startDate,
+      endDate
     };
   }
 

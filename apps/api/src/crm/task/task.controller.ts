@@ -57,8 +57,8 @@ export class TasksController {
   async get(@Headers() headers: any): Promise<ReturnType<typeof tsRestHandler>> {
     return tsRestHandler(crmContract.tasks.getTask, async ({ params }) => {
       const tenantId = headers['x-tenant-id'];
-      await this.tenantService.validateTenantAccess(tenantId, schema.Task, Number(params.id));
-      const row = await this.tasks.get(Number(params.id));
+      await this.tenantService.validateTenantAccess(tenantId, schema.Task, (params.id));
+      const row = await this.tasks.get((params.id));
       return row ? { status: 200, body: row } : { status: 404, body: undefined };
     });
   }
@@ -67,14 +67,14 @@ export class TasksController {
   async update(@Headers() headers: any): Promise<ReturnType<typeof tsRestHandler>> {
     return tsRestHandler(crmContract.tasks.updateTask, async ({ params, body }) => {
       const tenantId = headers['x-tenant-id'];
-      await this.tenantService.validateTenantAccess(tenantId, schema.Task, Number(params.id));
+      await this.tenantService.validateTenantAccess(tenantId, schema.Task, (params.id));
       if (body.userId) await this.tasks.assertUserInTenant(tenantId, body.userId);
       if (body.contactId) await this.tenantService.validateTenantAccess(tenantId, schema.Contact, body.contactId);
       
       // Validate and convert dueDate if provided
 
       
-      await this.tasks.update(Number(params.id), {...body, dueDate: body.dueDate ? this.validateAndConvertDate(body.dueDate): undefined});
+      await this.tasks.update((params.id), {...body, dueDate: body.dueDate ? this.validateAndConvertDate(body.dueDate): undefined});
       return { status: 200, body: { message: 'task updated' } };
     });
   }
@@ -83,8 +83,8 @@ export class TasksController {
   async remove(@Headers() headers: any): Promise<ReturnType<typeof tsRestHandler>> {
     return tsRestHandler(crmContract.tasks.deleteTask, async ({ params }) => {
       const tenantId = headers['x-tenant-id'];
-      await this.tenantService.validateTenantAccess(tenantId, schema.Task, Number(params.id));
-      await this.tasks.remove(Number(params.id));
+      await this.tenantService.validateTenantAccess(tenantId, schema.Task, (params.id));
+      await this.tasks.remove((params.id));
       return { status: 204, body: undefined };
     });
   }
@@ -93,8 +93,8 @@ export class TasksController {
   async complete(@Headers() headers: any): Promise<ReturnType<typeof tsRestHandler>> {
     return tsRestHandler(crmContract.tasks.completeTask, async ({ params }) => {
       const tenantId = headers['x-tenant-id'];
-      await this.tenantService.validateTenantAccess(tenantId, schema.Task, Number(params.id));
-      await this.tasks.complete(Number(params.id));
+      await this.tenantService.validateTenantAccess(tenantId, schema.Task, (params.id));
+      await this.tasks.complete((params.id));
       return { status: 200, body: { message: 'task completed' } };
     });
   }

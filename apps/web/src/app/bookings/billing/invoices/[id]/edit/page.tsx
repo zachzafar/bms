@@ -45,7 +45,7 @@ export default function EditInvoicePage() {
   // Fetch invoice
   const { data: invoiceData, isLoading } = authClient.billing.getInvoice.useQuery({
     queryKey: [...INVOICES_QUERY_KEY, invoiceId],
-    queryData: { params: { id: invoiceId } },
+    queryData: { params: { id: Number(invoiceId) } },
   });
 
   // Fetch customers
@@ -117,7 +117,7 @@ export default function EditInvoicePage() {
 
     updateInvoice(
       {
-        params: { id: invoiceId },
+        params: { id: Number(invoiceId) },
         body: {
           invoiceNumber,
           status,

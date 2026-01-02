@@ -153,7 +153,7 @@ export default function Tags() {
                       <Button
                         variant="ghost"
                         size="sm"
-                        onClick={() => deleteTag({ params: { id: String(tag.id) }, body: {} })}
+                        onClick={() => deleteTag({ params: { id: tag.id }, body: {} })}
                       >
                         <Trash2 className="h-4 w-4" />
                       </Button>

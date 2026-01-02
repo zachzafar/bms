@@ -11,7 +11,7 @@ export const userContract = c.router({
         method: "POST",
         path: "/users/",
         body:   InsertUserSchema.extend({
-             roles: z.array(z.number()),
+             roles: z.array(z.coerce.number()),
              ownerDetails: InsertOwnerSchema.omit({tenantId: true, userId: true, }).optional(),
              customerDetails: InsertCustomerSchema.omit({ tenantId: true, userId: true, dateOfBirth: true}).extend({ dateOfBirth: z.string().optional()}).optional(),
             }),
@@ -50,7 +50,7 @@ export const userContract = c.router({
             user: InsertUserSchema.partial(),
             customer : UpdateCustomerSchema.partial().optional(),
             owner: UpdateOwnerSchema.partial().optional(),
-            roles: z.array(z.number()),
+            roles: z.array(z.coerce.number()),
            }),
         responses: {
             200: z.object({

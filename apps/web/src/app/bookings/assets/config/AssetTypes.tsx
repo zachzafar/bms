@@ -48,7 +48,7 @@ export default function AssetTypes() {
     queryKey: [ASSET_TYPE_QUERY_KEY, editingAssetTypeId],
     enabled: !!editingAssetTypeId,
     queryData: {
-      params: { id: editingAssetTypeId?.toString() as string }
+      params: { id: editingAssetTypeId as number}
     }
   });
 
@@ -133,7 +133,7 @@ export default function AssetTypes() {
 
     if (editingAssetType?.status === 200) {
       updateAssetTypeMutation({
-        params: { id: editingAssetType.body.assetType.id.toString() },
+        params: { id: editingAssetType.body.assetType.id },
         body: { ...formData, assetType: { name: formData.name } }
       });
     } else {
@@ -142,7 +142,7 @@ export default function AssetTypes() {
   };
 
   const handleDeleteAssetType = (id: number) => {
-    deleteAssetTypeMutation({ params: { id: id.toString() } });
+    deleteAssetTypeMutation({ params: { id } });
   };
 
   const cancelEdit = () => {

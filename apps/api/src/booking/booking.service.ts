@@ -113,16 +113,11 @@ export class BookingService {
 
     return {
       ...booking.booking,
-      startDate: booking.booking.startDate.toISOString(),
-      endDate: booking.booking.endDate.toISOString(),
+      startDate: booking.booking.startDate, 
+      endDate: booking.booking.endDate,
       user: booking.users,
       customer: booking.customer_details,
-      asset: {
-        ...booking.assets,
-        assetTypeId: booking.assets.assetTypeId
-          ? Number(booking.assets.assetTypeId)
-          : undefined,
-      },
+      asset:booking.assets,
     };
   }
 
@@ -164,8 +159,8 @@ export class BookingService {
 
   return bookings.map((booking) => ({
     ...booking.booking,
-    startDate: booking.booking.startDate.toISOString(),
-    endDate: booking.booking.endDate.toISOString(),
+    startDate: booking.booking.startDate,
+    endDate: booking.booking.endDate,
     customer: booking.customer_details,
     asset: booking.assets,
     user: booking.users,
@@ -254,8 +249,8 @@ export class BookingService {
   async createBookingByTag(
     data: {
       tagId: number;
-      startDate: string;
-      endDate: string;
+      startDate: Date;
+      endDate: Date;
       customerIds: number[];
     },
     tenantId: string
@@ -268,7 +263,7 @@ export class BookingService {
       .from(schema.Asset)
       .innerJoin(schema.AssetHasTags, eq(schema.Asset.id, schema.AssetHasTags.assetId))
       .where(and(
-        eq(schema.AssetHasTags.tagId, (tagId)),
+        eq(schema.AssetHasTags.tagId, tagId),
         eq(schema.Asset.tenantId, tenantId)
       ));
 
@@ -327,18 +322,17 @@ export class BookingService {
     if (!bookings.length) return [];
 
     // Step 3: Map bookings to individual dates and count frequency
-    const dateMap = new Map<string, number>(); // key: YYYY-MM-DD, value: count of booked assets
+    const dateMap = new Map<Date, number>(); // key: YYYY-MM-DD, value: count of booked assets
 
     for (const booking of bookings) {
-      const start = new Date(booking.startDate);
-      const end = new Date(booking.endDate);
+      const start = booking.startDate;
+      const end = booking.endDate;
       for (
-        let d = new Date(start);
+        let d = start;
         d <= end;
-        d.setDate(d.getDate() + 1)
+        d.setDate(d.getDate() + 1)  
       ) {
-        const key = d.toISOString().slice(0, 10);
-        dateMap.set(key, (dateMap.get(key) ?? 0) + 1);
+        dateMap.set(d, (dateMap.get(d) ?? 0) + 1);
       }
     }
 
@@ -351,7 +345,7 @@ export class BookingService {
     if (!fullyBookedDates.length) return [];
 
     // Step 5: Group consecutive dates into ranges
-    const ranges: { from: string; to: string }[] = [];
+    const ranges: { from: Date; to: Date }[] = [];
 
     let rangeStart = fullyBookedDates[0];
     let prev = new Date(rangeStart);
@@ -361,9 +355,9 @@ export class BookingService {
       const prevPlusOne = new Date(prev);
       prevPlusOne.setDate(prevPlusOne.getDate() + 1);
 
-      if (current.toISOString().slice(0, 10) !== prevPlusOne.toISOString().slice(0, 10)) {
+      if (current.getTime() !== prevPlusOne.getTime()) {
         // Range ends
-        ranges.push({ from: rangeStart, to: prev.toISOString().slice(0, 10) });
+        ranges.push({ from: rangeStart, to: prev});
         rangeStart = fullyBookedDates[i];
       }
 
@@ -371,7 +365,7 @@ export class BookingService {
     }
 
     // Push the final range
-    ranges.push({ from: rangeStart, to: prev.toISOString().slice(0, 10) });
+    ranges.push({ from: rangeStart, to: prev });
 
     return ranges;
   }
@@ -389,10 +383,6 @@ export class BookingService {
 
     return blocked.map(b => ({
       ...b,
-      startDate: b.startDate.toISOString().split('T')[0],   // YYYY-MM-DD
-      endDate: b.endDate.toISOString().split('T')[0],       // YYYY-MM-DD
-      createdAt: b.createdAt.toISOString(),
-      updatedAt: b.updatedAt ? b.updatedAt.toISOString() : null,
       reason: b.reason ?? undefined,
     }));
   }
@@ -456,11 +446,9 @@ export class BookingService {
     return { message: 'Blocked date updated' };
   }
 
-  async deleteBlockedDate(id: string) {
-    const numericId = Number(id);
-    if (isNaN(numericId)) throw new NotFoundException('Invalid rate id');
+  async deleteBlockedDate(id: number) {
     const existing = await this.db.query.BlockedDate.findFirst({
-      where: (bd, { eq }) => eq(bd.id, numericId),
+      where: (bd, { eq }) => eq(bd.id, id),
     });
 
     if (!existing) {
@@ -468,7 +456,7 @@ export class BookingService {
     }
 
     await this.db.delete(schema.BlockedDate)
-      .where(eq(schema.BlockedDate.id, numericId))
+      .where(eq(schema.BlockedDate.id, id))
       .execute();
   }
 

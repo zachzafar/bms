@@ -48,7 +48,7 @@ export const rateContract = c.router({
     path: "/rate/:id",
     summary: "Get a rate by ID",
     pathParams: z.object({
-      id: z.string(),
+      id: z.number(),
     }),
     responses: {
       200: SelectRateSchema,
@@ -61,7 +61,7 @@ export const rateContract = c.router({
     path: "/rate/:id",
     summary: "Update a rate by ID",
     pathParams: z.object({
-      id: z.string(),
+      id: z.coerce.number(),
     }),
     body: UpdateRateSchema,
     responses: {
@@ -79,7 +79,7 @@ export const rateContract = c.router({
     path: "/rate/:id",
     summary: "Delete a rate by ID",
     pathParams: z.object({
-      id: z.string(),
+      id: z.coerce.number(),
     }),
     body: z.object({}).optional(),
     responses: {

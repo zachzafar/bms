@@ -28,7 +28,7 @@ export const assetsContract = c.router({
     body: z.object({
       tenant: z.string(),
       asset: InsertAssetSchema.omit({ tenantId: true }),
-      tagIds: z.array(z.string()).optional(),
+      tagIds: z.array(z.number()).optional(),
     }),
     summary: 'Create a new asset',
   },
@@ -93,7 +93,7 @@ export const assetsContract = c.router({
     }),
     body: z.object({
       properties: z.array(z.object({
-        propertyId: z.number(),
+        propertyId: z.coerce.number(),
         value: z.string()
       }))
     }),
@@ -147,7 +147,7 @@ export const assetsContract = c.router({
       }))
     },
     query: z.object({
-      assetTypes: z.array(z.number()).optional(),
+      assetTypes: z.array(z.coerce.number()).optional(),
     })
   },
   getAssetImages: {
@@ -175,7 +175,7 @@ export const assetsContract = c.router({
       id: z.string(),
     }),
     body: z.object({
-      images: z.array(z.number())
+      images: z.array(z.coerce.number())
     }),
     summary: 'Delete images for an asset'
   },
@@ -184,8 +184,8 @@ export const assetsContract = c.router({
         path: '/assets/available',
         summary: 'Get all assets available between a date range',
         query: z.object({
-            startDate: z.string(), // ISO date
-            endDate: z.string()
+            startDate: z.coerce.date(), // ISO date
+            endDate: z.coerce.date()
         }),
         responses: {
             200: z.array(

@@ -29,7 +29,7 @@ export class BrochuresService {
       : [];
     const assetsByBrochure = new Map<number, string[]>();
     links.forEach((l) => {
-      assetsByBrochure.set(Number(l.brochureId), [...(assetsByBrochure.get(Number(l.brochureId)) ?? []), l.assetId]);
+      assetsByBrochure.set((l.brochureId), [...(assetsByBrochure.get((l.brochureId)) ?? []), l.assetId]);
     });
 
     // hydrate contact + assets
@@ -40,7 +40,7 @@ export class BrochuresService {
         where: (a, { inArray }) => inArray(a.id, assetsByBrochure.get(b.id) ?? []),
       });
       // res.push({ ...b, contact, assets });
-      res.push({ ...b, assets: assets.map(a => ({ ...a, assetTypeId: Number(a.assetTypeId) })) });
+      res.push({ ...b, assets: assets.map(a => ({ ...a, assetTypeId: (a.assetTypeId) })) });
     }
     return res;
   }
@@ -55,7 +55,7 @@ export class BrochuresService {
     const assets = await this.db.query.Asset.findMany({
       where: (a, { inArray }) => inArray(a.id, links.map((l) => l.assetId)),
     });
-    return { ...brochure, assets: assets.map(a => ({ ...a, assetTypeId: Number(a.assetTypeId) })) };
+    return { ...brochure, assets: assets.map(a => ({ ...a, assetTypeId: (a.assetTypeId) })) };
   }
 
   async remove(id: number) {

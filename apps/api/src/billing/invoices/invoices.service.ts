@@ -58,12 +58,12 @@ export class InvoicesService {
     return id;
   }
 
-  async list(tenantId: string, query: { customerId?: string; bookingId?: string; status?: string }) {
+  async list(tenantId: string, query: { customerId?: number; bookingId?: string; status?: string }) {
     const invoices = await this.db.query.Invoice.findMany({
       where: (i, { eq, and }) =>
         and(
           eq(i.tenantId, tenantId),
-          query.customerId ? eq(i.customerId, Number(query.customerId)) : undefined,
+          query.customerId ? eq(i.customerId, (query.customerId)) : undefined,
           query.bookingId ? eq(i.bookingId, query.bookingId) : undefined,
           query.status ? eq(i.status, query.status) : undefined
         ),
@@ -108,12 +108,12 @@ export class InvoicesService {
     return {
       ...invoice,
       // Convert bigint values to numbers for API compatibility
-      id: Number(invoice.id),
-      customerId: Number(invoice.customerId),
+      id: invoice.id,
+      customerId: invoice.customerId,
       items: items.map((it) => ({
         ...it,
-        id: Number(it.id),
-        invoiceId: Number(it.invoiceId),
+        id: it.id,
+        invoiceId: it.invoiceId,
         unitPrice: String(it.unitPrice),
         totalPrice: String(it.totalPrice),
       })),

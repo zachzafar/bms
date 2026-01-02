@@ -69,7 +69,7 @@ export default function ClientManagement() {
     if (!selectedClient) return
     updateClient(
       {
-        params: { id: selectedClient.id.toString() },
+        params: { id: selectedClient.id },
         body: clientData,
       },
       {
@@ -88,7 +88,7 @@ export default function ClientManagement() {
 
   const handleDeleteClient = (clientId: number) => {
     deleteClient(
-      { params: { id: clientId.toString() },
+      { params: { id: clientId },
         body: {},
       },
       {

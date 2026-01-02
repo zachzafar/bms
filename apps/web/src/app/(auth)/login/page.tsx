@@ -38,7 +38,7 @@ export default function LoginPage() {
         password: data.password,
       }
     }, {
-      onSuccess: async (response:any) => {
+      onSuccess: async (response) => {
         if (response.status !== 200) throw new Error('Invalid response');
         
         // Store tokens and user data
@@ -49,6 +49,7 @@ export default function LoginPage() {
 
         // Create session
         const session: Session = {
+          accessToken: response.body.token,
           refreshToken: response.body.refreshToken,
         };
 

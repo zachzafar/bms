@@ -53,7 +53,7 @@ export class MaintenanceController {
             this.logger.log(`Get maintenances for tenant: ${tenantId}`)
             const maintenances = await this.maintenanceService.getMaintenances(tenantId);
             
-            return { status: 200, body:  maintenances.map(m => ({...m, asset: {...m.asset, assetTypeId: Number(m.asset.assetTypeId)}}))  };
+            return { status: 200, body:  maintenances.map(m => ({...m, asset: {...m.asset, assetTypeId: m.asset.assetTypeId}}))  };
         });
     }
 

@@ -15,7 +15,7 @@ export const Asset = mysqlTable("assets", {
     name: varchar("name", { length: 255 }).notNull(),
     description: text("description"),
     requiresApproval: boolean("requires_approval").default(false).notNull(),
-    assetTypeId: bigint("asset_type_id", { mode: 'number', unsigned: true}).references(() => AssetType.id),
+    assetTypeId: bigint("asset_type_id", { mode: 'number', unsigned: true}).references(() => AssetType.id).notNull(),
     userId: varchar("user_id",{length: 255}).references(() => User.id),
     tenantId: varchar("tenant_id", { length: 255 }).notNull().references(() => Tenant.id),
     createdAt: timestamp('createdAt').notNull().defaultNow(),
@@ -26,16 +26,9 @@ export const Asset = mysqlTable("assets", {
 }));
 
 export const SelectAssetSchema = createSelectSchema(Asset)
-  .omit({ assetTypeId: true })
-  .extend({ 
-    assetTypeId: z.coerce.number().optional()
-  });
 
 export const InsertAssetSchema = createInsertSchema(Asset)
-  .omit({ assetTypeId: true })
-  .extend({ 
-    assetTypeId: z.coerce.number().optional()
-  });
+
 export const UpdateAssetSchema = InsertAssetSchema.partial();
 
 export type SelectAsset = z.infer<typeof SelectAssetSchema>;

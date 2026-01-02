@@ -36,7 +36,7 @@ export class RatesController {
                 status: 201,
                 body: {
                     message: "Successfully created rate",
-                    rateId: Number(rateId),
+                    rateId: rateId,
                 },
             };
         });
@@ -47,7 +47,7 @@ export class RatesController {
     async getRate(@Headers() headers: any): Promise<ReturnType<typeof tsRestHandler>> {
         return tsRestHandler(contract.rates.getRate, async ({ params }) => {
             const tenantId = headers["x-tenant-id"];
-            const rate = await this.rateService.getRate(params.id);
+            const rate = await this.rateService.getRate((params.id));
 
             for (const asset of rate.assets ?? []) {
                 await this.tenantService.validateTenantAccess(tenantId, schema.Asset, asset.id);

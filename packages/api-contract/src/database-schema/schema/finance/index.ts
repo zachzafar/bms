@@ -32,7 +32,10 @@ export const Invoice = mysqlTable("invoice", {
 export const SelectInvoiceSchema = createSelectSchema(Invoice).omit({ tenantId: true, dueDate: true }).extend({
   dueDate: z.string(),
 });
-export const InsertInvoiceSchema = createInsertSchema(Invoice).omit({ tenantId: true });
+export const InsertInvoiceSchema = createInsertSchema(Invoice).omit({ tenantId: true, issueDate: true, dueDate: true }).extend({
+  issueDate: z.coerce.date(),
+  dueDate: z.coerce.date(),
+});
 export const UpdateInvoiceSchema = InsertInvoiceSchema.partial();
 
 export type InsertInvoice = z.infer<typeof InsertInvoiceSchema>;
@@ -143,7 +146,7 @@ export const SelectPaymentSchema = createSelectSchema(Payment).extend({
 });
 export const InsertPaymentSchema = createInsertSchema(Payment).extend({
   customerId: z.number(),
-  paymentDate: z.string(),
+  paymentDate: z.coerce.date(),
 });
 export const UpdatePaymentSchema = InsertPaymentSchema.partial();
 

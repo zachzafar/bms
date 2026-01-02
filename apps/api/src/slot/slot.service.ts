@@ -218,31 +218,31 @@ export class SlotService {
       orderBy: (slot, { asc }) => [asc(slot.date)],
     });
 
-    const ranges: { startDate: string; endDate: string; price: string; available: boolean }[] = [];
-    let currentRange: { startDate: string; endDate: string; price: string; available: boolean } | null = null;
+    const ranges: { startDate: Date; endDate: Date; price: string; available: boolean }[] = [];
+    let currentRange: { startDate: Date; endDate: Date; price: string; available: boolean } | null = null;
 
     for (const slot of slots) {
       const isAvailable = slot.status === 'available' || slot.status === 'booked';
 
       if (!currentRange) {
         currentRange = {
-          startDate: slot.date.toISOString(),
-          endDate: slot.date.toISOString(),
+          startDate: slot.date,
+          endDate: slot.date,
           price: slot.price ?? '0',
           available: isAvailable,
         };
       } else {
         const samePrice = slot.price === currentRange.price;
         const sameAvailability = isAvailable === currentRange.available;
-        const isConsecutive = slot.date.getTime() === new Date(currentRange.endDate).getTime() + 86400000;
+        const isConsecutive = slot.date.getTime() === currentRange.endDate.getTime() + 86400000;
 
         if (isConsecutive && samePrice && sameAvailability) {
-          currentRange.endDate = slot.date.toISOString();
+          currentRange.endDate = slot.date;
         } else {
           ranges.push(currentRange);
           currentRange = {
-            startDate: slot.date.toISOString(),
-            endDate: slot.date.toISOString(),
+            startDate: slot.date,
+            endDate: slot.date,
             price: slot.price ?? '0',
             available: isAvailable,
           };

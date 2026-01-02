@@ -28,7 +28,7 @@ export class CommunicationsController {
     return tsRestHandler(crmContract.communications.listComms, async ({ query }) => {
       const tenantId = headers['x-tenant-id'];
       const rows = await this.comms.list(tenantId, query);
-      return { status: 200, body: rows.map(row => ({...row, contactId: Number(row.contactId)})) };
+      return { status: 200, body: rows.map(row => ({...row, contactId: (row.contactId)})) };
     });
   }
 
@@ -36,8 +36,8 @@ export class CommunicationsController {
   async get(@Headers() headers: any): Promise<ReturnType<typeof tsRestHandler>> {
     return tsRestHandler(crmContract.communications.getComm, async ({ params }) => {
       const tenantId = headers['x-tenant-id'];
-      await this.tenantService.validateTenantAccess(tenantId, schema.CommunicationLog, Number(params.id));
-      const row = await this.comms.get(Number(params.id));
+      await this.tenantService.validateTenantAccess(tenantId, schema.CommunicationLog, (params.id));
+      const row = await this.comms.get((params.id));
       return row ? { status: 200, body: row } : { status: 404, body: undefined };
     });
   }
@@ -46,8 +46,8 @@ export class CommunicationsController {
   async update(@Headers() headers: any): Promise<ReturnType<typeof tsRestHandler>> {
     return tsRestHandler(crmContract.communications.updateComm, async ({ params, body }) => {
       const tenantId = headers['x-tenant-id'];
-      await this.tenantService.validateTenantAccess(tenantId, schema.CommunicationLog, Number(params.id));
-      await this.comms.update(Number(params.id), body);
+      await this.tenantService.validateTenantAccess(tenantId, schema.CommunicationLog, (params.id));
+      await this.comms.update((params.id), body);
       return { status: 200, body: { message: 'communication updated' } };
     });
   }
@@ -56,8 +56,8 @@ export class CommunicationsController {
   async remove(@Headers() headers: any): Promise<ReturnType<typeof tsRestHandler>> {
     return tsRestHandler(crmContract.communications.deleteComm, async ({ params }) => {
       const tenantId = headers['x-tenant-id'];
-      await this.tenantService.validateTenantAccess(tenantId, schema.CommunicationLog, Number(params.id));
-      await this.comms.remove(Number(params.id));
+      await this.tenantService.validateTenantAccess(tenantId, schema.CommunicationLog, (params.id));
+      await this.comms.remove((params.id));
       return { status: 204, body: undefined };
     });
   }

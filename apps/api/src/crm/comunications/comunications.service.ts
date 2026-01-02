@@ -47,7 +47,7 @@ export class CommunicationsService {
     const comms = this.db.query.CommunicationLog.findMany({
       where: and(
         eq(schema.CommunicationLog.tenantId, tenantId),
-        query.contactId ? eq(schema.CommunicationLog.contactId, Number(query.contactId)) : undefined,
+        query.contactId ? eq(schema.CommunicationLog.contactId, (query.contactId)) : undefined,
         query.userId ? eq(schema.CommunicationLog.userId, query.userId) : undefined,
         query.type ? eq(schema.CommunicationLog.type, query.type) : undefined,
         query.from ? gte(schema.CommunicationLog.date, new Date(query.from)) : undefined,

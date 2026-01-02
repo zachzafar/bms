@@ -157,10 +157,10 @@ export default function AssetAvailabilityCalendar({ asset }: { asset: SelectAsse
     const currentTenant = StorageService.getTenant();
     const tenantId = currentTenant?.id ?? '';
 
-    const startDate = formatLocalDate(selectedRange.start);
-    const endCopy = new Date(selectedRange.end);
+    const startDate = selectedRange.start
+    const endCopy = selectedRange.end
     endCopy.setDate(endCopy.getDate() - 1);
-    const endDate = formatLocalDate(endCopy);
+    const endDate = endCopy
 
     await createBlockedDateMutation.mutateAsync({
       body: {
@@ -180,7 +180,7 @@ export default function AssetAvailabilityCalendar({ asset }: { asset: SelectAsse
 
   const handleDelete = (id: number) => {
     if (confirm('Delete this blocked date?')) {
-      deleteBlockedDateMutation.mutate({ params: { id: String(id) }, body: undefined });
+      deleteBlockedDateMutation.mutate({ params: { id }, body: undefined });
     }
   };
 

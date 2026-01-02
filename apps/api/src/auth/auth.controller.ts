@@ -124,8 +124,9 @@ export class AuthController {
     async deleteRole(@Headers() headers:any): Promise<ReturnType<typeof tsRestHandler>> {
         return tsRestHandler(contract.auth.deleteRole, async ({ params }) => {
             const tenantId = headers['x-tenant-id'];
-            await this.authService.deleteRole(tenantId, String(params.roleId));
-
+            await this.authService.deleteRole(tenantId, params.roleId);
+            
+            
             return { status: 204, body: {message: "role deleted successfully"} };
         })
     }

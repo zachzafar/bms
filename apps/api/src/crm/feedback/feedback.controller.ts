@@ -28,7 +28,7 @@ export class FeedbackController {
     return tsRestHandler(crmContract.feedback.listFeedback, async ({ query }) => {
       const tenantId = headers['x-tenant-id'];
       const rows = await this.feedback.list(tenantId, query);
-      return { status: 200, body: rows.map(row => ({...row, contactId: Number(row.contactId)})) };
+      return { status: 200, body: rows };
     });
   }
 
@@ -36,8 +36,8 @@ export class FeedbackController {
   async get(@Headers() headers: any): Promise<ReturnType<typeof tsRestHandler>> {
     return tsRestHandler(crmContract.feedback.getFeedback, async ({ params }) => {
       const tenantId = headers['x-tenant-id'];
-      await this.tenantService.validateTenantAccess(tenantId, schema.Feedback, Number(params.id));
-      const row = await this.feedback.get(Number(params.id));
+      await this.tenantService.validateTenantAccess(tenantId, schema.Feedback, (params.id));
+      const row = await this.feedback.get((params.id));
       return row ? { status: 200, body: row } : { status: 404, body: undefined };
     });
   }
@@ -46,8 +46,8 @@ export class FeedbackController {
   async update(@Headers() headers: any): Promise<ReturnType<typeof tsRestHandler>> {
     return tsRestHandler(crmContract.feedback.updateFeedback, async ({ params, body }) => {
       const tenantId = headers['x-tenant-id'];
-      await this.tenantService.validateTenantAccess(tenantId, schema.Feedback, Number(params.id));
-      await this.feedback.update(Number(params.id), body);
+      await this.tenantService.validateTenantAccess(tenantId, schema.Feedback, (params.id));
+      await this.feedback.update((params.id), body);
       return { status: 200, body: { message: 'feedback updated' } };
     });
   }
@@ -56,8 +56,8 @@ export class FeedbackController {
   async remove(@Headers() headers: any): Promise<ReturnType<typeof tsRestHandler>> {
     return tsRestHandler(crmContract.feedback.deleteFeedback, async ({ params }) => {
       const tenantId = headers['x-tenant-id'];
-      await this.tenantService.validateTenantAccess(tenantId, schema.Feedback, Number(params.id));
-      await this.feedback.remove(Number(params.id));
+      await this.tenantService.validateTenantAccess(tenantId, schema.Feedback, (params.id));
+      await this.feedback.remove((params.id));
       return { status: 204, body: undefined };
     });
   }

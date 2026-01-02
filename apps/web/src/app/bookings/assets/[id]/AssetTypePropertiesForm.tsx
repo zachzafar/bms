@@ -30,7 +30,7 @@ export default function AssetTypePropertiesForm({ asset }: { asset: SelectAsset 
   const { data: assetType } = authClient.settings.assetType.getAssetType.useQuery({
     queryKey: ['assetType', asset.assetTypeId],
     queryData: {
-      params: { id: asset?.assetTypeId?.toString() as string },
+      params: { id: asset?.assetTypeId },
     },
     enabled: !!asset?.assetTypeId,
   });

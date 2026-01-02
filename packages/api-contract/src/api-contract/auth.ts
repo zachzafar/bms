@@ -210,7 +210,7 @@ export const authContract = c.router({
         })
     },
     pathParams: z.object({
-      roleId: z.string()
+      roleId: z.coerce.number()
     })
   },
   deleteRole: {
@@ -223,7 +223,7 @@ export const authContract = c.router({
         })
     },
     pathParams: z.object({
-      roleId: z.string()
+      roleId: z.coerce.number()
     })
   }
 })

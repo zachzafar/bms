@@ -42,7 +42,7 @@ function AddAssetForm() {
           assetTypeId: Number(data.assetTypeId),
         },
         tenant: tenant.id,
-        tagIds: [data.tagId.toString()]  // Use only the selected tag
+        tagIds: [data.tagId]  // Use only the selected tag
       }
     }, {
       onSuccess: (response) => {

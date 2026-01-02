@@ -11,8 +11,8 @@ export const ExtendedSelectBookingSchema = SelectBookingSchema.omit({ startDate:
     customer: SelectCustomerSchema,
     asset: SelectAssetSchema,
     user: SelectUserSchema.omit({ roles: true }),
-    startDate: z.string(),
-    endDate: z.string(),
+    startDate: z.coerce.date(),
+    endDate: z.coerce.date(),
 })
 
 export type ExtendedSelectBooking = z.infer<typeof ExtendedSelectBookingSchema>
@@ -30,7 +30,7 @@ export const bookingContract = c.router({
         },
         body: z.object({
             booking: InsertBookingSchema,
-            customers: z.array(z.number()),
+            customers: z.array(z.coerce.number()),
         }),
 
         summary: 'Create a new booking'
@@ -96,22 +96,22 @@ export const bookingContract = c.router({
             })
         },
         body: z.object({
-            tagId: z.number(),
-            startDate: z.string(),
-            endDate: z.string(),
-            customerIds: z.array(z.number())
+            tagId: z.coerce.number(),
+            startDate: z.coerce.date(),
+            endDate: z.coerce.date(),
+            customerIds: z.array(z.coerce.number())
         })
     },
     checkTagAvailability: {
         method: 'GET',
         path: '/booking/availability/by-tag',
         query: z.object({
-            tagId: z.string(),
+            tagId: z.coerce.number(),
         }),
         responses: {
             200: z.array(z.object({
-                from: z.string(),
-                to: z.string(),
+                from: z.coerce.date(),
+                to: z.coerce.date(),
             })),
             400: z.object({ message: z.string() }),
         },
@@ -132,12 +132,12 @@ export const bookingContract = c.router({
           id: z.number(),
           tenantId: z.string(),
           assetId: z.string(),
-          startDate: z.string(),
-          endDate: z.string(),
+          startDate: z.coerce.date(),
+          endDate: z.coerce.date(),
           title: z.string().min(1, "Title is required"),
           reason: z.string().optional(),
-          createdAt: z.string(),
-          updatedAt: z.string(),
+          createdAt: z.coerce.date(),
+          updatedAt: z.coerce.date().optional(),
         })
       ),
     },
@@ -160,7 +160,7 @@ export const bookingContract = c.router({
   updateBlockedDate: {
     method: "PUT",
     path: "/blocked-dates/:id",
-    pathParams: z.object({ id: z.number() }),
+    pathParams: z.object({ id: z.coerce.number() }),
     body: UpdateBlockedDateSchema,
     responses: {
       200: z.object({ message: z.string() }),
@@ -171,7 +171,7 @@ export const bookingContract = c.router({
   deleteBlockedDate: {
     method: "DELETE",
     path: "/blocked-dates/:id",
-    pathParams: z.object({ id: z.string() }),
+    pathParams: z.object({ id: z.coerce.number() }),
     body: z.object({}).optional(),
     responses: {
       204: z.undefined(),

@@ -161,7 +161,7 @@ export const systemAdminContract = c.router({
     path: '/system-admin/tenants/:tenantId/roles/:roleId',
     pathParams: z.object({
       tenantId: z.string(),
-      roleId: z.string(),
+      roleId: z.coerce.number(),
     }),
     body: z.object({
       name: z.string().min(1),
@@ -181,7 +181,7 @@ export const systemAdminContract = c.router({
     path: '/system-admin/tenants/:tenantId/roles/:roleId',
     pathParams: z.object({
       tenantId: z.string(),
-      roleId: z.string(),
+      roleId: z.coerce.number(),
     }),
     responses: {
       204: z.object({
@@ -367,8 +367,8 @@ export const systemAdminContract = c.router({
     path: '/system-admin/logs',
     query: z.object({
       level: z.enum(['info', 'warn', 'error']).optional(),
-      startDate: z.string().optional(),
-      endDate: z.string().optional(),
+      startDate: z.coerce.date().optional(),
+      endDate: z.coerce.date().optional(),
       limit: z.number().min(1).max(100).default(50),
       offset: z.number().min(0).default(0),
     }),
@@ -439,7 +439,7 @@ export const systemAdminContract = c.router({
             })
         },
         pathParams: z.object({
-            id: z.string()
+            id: z.coerce.number()
         }),
         summary: 'Get asset type by id'
     },
@@ -448,13 +448,13 @@ export const systemAdminContract = c.router({
         path: '/system-admin/asset-type/:id',
         body: z.object({
             assetType: UpdateAssetTypeSchema,
-            properties: z.array(z.number())
+            properties: z.array(z.coerce.number())
     }),
         responses: {
             200: z.null()
         },
         pathParams: z.object({
-            id: z.string()
+            id: z.coerce.number()
         }),
         summary: 'Update asset type by id'
     },
@@ -468,7 +468,7 @@ export const systemAdminContract = c.router({
             })
         },
         pathParams: z.object({
-            id: z.string()
+            id: z.coerce.number()
         }),
         summary: 'Delete asset type by id'
     },
@@ -504,7 +504,7 @@ export const systemAdminContract = c.router({
             })
         },
         pathParams: z.object({
-            id: z.number()
+            id: z.coerce.number()
         }),
         summary: 'Get a asset property'
     },
@@ -515,14 +515,14 @@ export const systemAdminContract = c.router({
         body: UpdateAssetPropertySchema,
         responses: {
             200: z.object({
-                id: z.number(),
+                id: z.coerce.number(),
             }),
             404: z.object({
                 message: z.string()
             })
         },
         pathParams: z.object({
-            id: z.number()
+            id: z.coerce.number()
         }),
         summary: 'Update a asset property'
     },
@@ -539,7 +539,7 @@ export const systemAdminContract = c.router({
             })
         },
         pathParams: z.object({
-            id: z.string()
+            id: z.coerce.number()
         }),
         summary: 'Delete a asset property'
     },
@@ -549,7 +549,7 @@ export const systemAdminContract = c.router({
         body: InsertTagSchema,
         responses: {
             201: z.object({
-                id: z.string(),
+                id: z.coerce.number(),
             })
         },
         summary: 'Create a new tag'
@@ -564,7 +564,7 @@ export const systemAdminContract = c.router({
             })
         },
         pathParams: z.object({
-            id: z.string()
+            id: z.coerce.number()
         }),
         summary: 'Get a tag'
     },
@@ -581,7 +581,7 @@ export const systemAdminContract = c.router({
             })
         },
         pathParams: z.object({
-            id: z.string()
+            id: z.coerce.number()
         }),
         summary: 'Delete a tag'
     },
@@ -607,7 +607,7 @@ export const systemAdminContract = c.router({
         }),
         responses: {
             201: z.object({
-                id: z.number()
+                id: z.coerce.number(),
             })
         },
         summary: 'Create a new form'
@@ -630,7 +630,7 @@ export const systemAdminContract = c.router({
             }),
         },
         pathParams: z.object({
-            id: z.number()
+            id: z.coerce.number()
         }),
         summary: 'Get a form by id'
     },
@@ -639,7 +639,7 @@ export const systemAdminContract = c.router({
         path: '/system-admin/bulk-upload',
         body: z.object({
             file: z.any(),
-            assetTypeId: z.number(),
+            assetTypeId: z.coerce.number(),
             tenantId: z.string() ,
         }),
         responses: {

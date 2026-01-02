@@ -152,12 +152,12 @@ export class UsersService {
     if (!userMap.has(row.user.id)) {
       userMap.set(row.user.id, {
         ...row.user,
-        roles: row.roles?.roleId ? [Number(row.roles.roleId)] : []
+        roles: row.roles?.roleId ? [row.roles.roleId] : []
       });
     } else if (row.roles?.roleId) {
       const user = userMap.get(row.user.id)!;
-      if (!user.roles.includes(Number(row.roles.roleId))) {
-        user.roles.push(Number(row.roles.roleId));
+      if (!user.roles.includes(row.roles.roleId)) {
+        user.roles.push(row.roles.roleId);
       }
     }
   });
@@ -187,8 +187,8 @@ export class UsersService {
         // Process the results to include roles
         const roleIds: number[] = [];
         userWithRoles.forEach(row => {
-            if (row.roles?.roleId && !roleIds.includes(Number(row.roles.roleId))) {
-                roleIds.push(Number(row.roles.roleId));
+            if (row.roles?.roleId && !roleIds.includes(row.roles.roleId)) {
+                roleIds.push(row.roles.roleId);
             }
         });
 
@@ -248,7 +248,7 @@ export class UsersService {
                 where: (userRole, { eq }) => eq(userRole.userId, id)
             });
 
-            const existingRoleIds = existingRoles.map(role => Number(role.roleId));
+            const existingRoleIds = existingRoles.map(role => (role.roleId));
 
             // Add new roles that don't exist yet
             for (const roleId of roles) {

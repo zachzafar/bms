@@ -122,12 +122,12 @@ export default function CommunicationManagement() {
   const handleEditCommunication = useCallback(
     (commData: any) => {
       if (!selectedCommunication?.id) return
-      updateComm({ params: { id: String(selectedCommunication.id) }, body: commData })
+      updateComm({ params: { id: selectedCommunication.id }, body: commData })
     },
     [selectedCommunication?.id, updateComm]
   )
 
-  const handleDeleteCommunication = useCallback((commId: number) => deleteComm({ params: { id: String(commId) }, body: {} }), [deleteComm])
+  const handleDeleteCommunication = useCallback((commId: number) => deleteComm({ params: { id: commId }, body: {} }), [deleteComm])
 
   // ——— UI helpers ———
   const getTypeIcon = (type: string) => {

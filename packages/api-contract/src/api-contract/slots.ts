@@ -11,8 +11,8 @@ export const ExtendedSelectBookingSchema = SelectBookingSchema.omit({startDate: 
     customer: SelectCustomerSchema,
     asset: SelectAssetSchema,
     user: SelectUserSchema,
-    startDate: z.string(),
-    endDate: z.string(),
+    startDate: z.coerce.date(),
+    endDate: z.coerce.date(),
 })
 
 export type ExtendedSelectBooking = z.infer<typeof ExtendedSelectBookingSchema>
@@ -45,8 +45,8 @@ export const slotContract = c.router({
         },
         body: z.object({
             assetId: z.string(),
-            startDate: z.string(),
-            endDate: z.string(),
+            startDate: z.coerce.date(),
+            endDate: z.coerce.date(),
             available: z.boolean(),
             price: z.string(),
         }),
@@ -57,8 +57,8 @@ export const slotContract = c.router({
         path: '/asset-availability/:id',
         responses: {
             200: z.array(z.object({
-                startDate: z.string(),
-                endDate: z.string(),
+                startDate: z.coerce.date(),
+                endDate: z.coerce.date(),
                 available: z.boolean(),
                 price: z.string(),
             }))

@@ -51,7 +51,7 @@ export const assetTypeContract = c.router({
             })
         },
         pathParams: z.object({
-            id: z.string()
+            id: z.coerce.number()
         }),
         summary: 'Get asset type by id'
     },
@@ -66,7 +66,7 @@ export const assetTypeContract = c.router({
             200: z.null()
         },
         pathParams: z.object({
-            id: z.string()
+            id: z.coerce.number()
         }),
         summary: 'Update asset type by id'
     },
@@ -80,7 +80,7 @@ export const assetTypeContract = c.router({
             })
         },
         pathParams: z.object({
-            id: z.string()
+            id: z.coerce.number()
         }),
         summary: 'Delete asset type by id'
     },

@@ -48,7 +48,7 @@ export class FormsController {
             const fields = rawFields.map(field => ({
                 description: null,
                 tenantId: formData.tenantId,
-                id: Number(field.id),
+                id: (field.id),
                 name: field.name,
                 createdAt: new Date(),
                 updatedAt: null

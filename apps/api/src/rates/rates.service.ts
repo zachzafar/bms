@@ -13,7 +13,7 @@ export class RatesService {
     @Inject(DrizzleAsyncProvider) private db: MySql2Database<typeof schema>,
   ) {}
 
- async createRate(data: InsertRate, assetIds?: string[]): Promise<string> {
+ async createRate(data: InsertRate, assetIds?: string[]): Promise<number> {
   try {
     // Insert Rate record, convert dates properly
     const [inserted] = await this.db
@@ -25,7 +25,7 @@ export class RatesService {
       })
       .$returningId();
 
-    const newRateId = inserted.id.toString();
+    const newRateId = inserted.id;
 
     // If assetIds provided, bulk insert join rows
     if (assetIds && assetIds.length > 0) {
@@ -102,12 +102,9 @@ export class RatesService {
 
 
 
-async getRate(id: string) {
-  const numericId = Number(id);
-  if (isNaN(numericId)) throw new NotFoundException('Invalid rate id');
-
+async getRate(id: number) {
   const rate = await this.db.query.Rate.findFirst({
-    where: (r, { eq }) => eq(r.id, numericId),
+    where: (r, { eq }) => eq(r.id, id),
     with: {
       assets: true,
     },
@@ -120,12 +117,9 @@ async getRate(id: string) {
   return rate;
 }
 
-async updateRate(id: string, updateData: UpdateRate & { assetIds?: string[] }) {
-  const numericId = Number(id);
-  if (isNaN(numericId)) throw new NotFoundException('Invalid rate id');
-
+async updateRate(id: number, updateData: UpdateRate & { assetIds?: string[] }) {
   const existing = await this.db.query.Rate.findFirst({
-    where: (r, { eq }) => eq(r.id, numericId),
+    where: (r, { eq }) => eq(r.id, id),
   });
 
   if (!existing) {
@@ -144,16 +138,16 @@ async updateRate(id: string, updateData: UpdateRate & { assetIds?: string[] }) {
 
     await this.db.update(schema.Rate)
       .set(safeUpdate)
-      .where(eq(schema.Rate.id, numericId));
+      .where(eq(schema.Rate.id, id));
 
     if (updateData.assetIds) {
-      await this.db.delete(schema.AssetHasRates).where(eq(schema.AssetHasRates.rateId, numericId));
+      await this.db.delete(schema.AssetHasRates).where(eq(schema.AssetHasRates.rateId, id));
 
       if (updateData.assetIds.length > 0) {
         await this.db.insert(schema.AssetHasRates).values(
           updateData.assetIds.map(assetId => ({
             assetId,
-            rateId: numericId,
+            rateId: id,
           }))
         );
       }
@@ -164,12 +158,9 @@ async updateRate(id: string, updateData: UpdateRate & { assetIds?: string[] }) {
 }
 
 
-async deleteRate(id: string) {
-  const numericId = Number(id);
-  if (isNaN(numericId)) throw new NotFoundException('Invalid rate id');
-
+async deleteRate(id: number) {
   const existing = await this.db.query.Rate.findFirst({
-    where: (r, { eq }) => eq(r.id, numericId),
+    where: (r, { eq }) => eq(r.id, id),
   });
 
   if (!existing) {
@@ -177,10 +168,10 @@ async deleteRate(id: string) {
   }
 
   // Delete associated asset
-  await this.db.delete(schema.AssetHasRates).where(eq(schema.AssetHasRates.rateId, numericId));
+  await this.db.delete(schema.AssetHasRates).where(eq(schema.AssetHasRates.rateId, id));
 
   // Then delete the rate itself
   await this.db.delete(schema.Rate)
-    .where(eq(schema.Rate.id, numericId));
+    .where(eq(schema.Rate.id, id));
 }
 }

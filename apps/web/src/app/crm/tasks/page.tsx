@@ -101,8 +101,8 @@ export default function TaskManagement() {
   }, [tasks, priorityFilter, searchTerm])
 
   // Handlers
-  const handleDeleteTask = useCallback((id: number) => deleteTask({ params: { id: String(id) }, body: {} }), [deleteTask])
-  const handleToggleComplete = useCallback((id: number) => completeTask({ params: { id: String(id) }, body: {} }), [completeTask])
+  const handleDeleteTask = useCallback((id: number) => deleteTask({ params: { id: id }, body: {} }), [deleteTask])
+  const handleToggleComplete = useCallback((id: number) => completeTask({ params: { id: id }, body: {} }), [completeTask])
 
   const getStatusBadge = (status: string) => ({ Pending: 'bg-yellow-100 text-yellow-800', Completed: 'bg-green-100 text-green-800', Overdue: 'bg-red-100 text-red-800' }[status] ?? 'bg-gray-100 text-gray-800')
   const getPriorityBadge = (priority: string) => ({ High: 'bg-red-100 text-red-800', Medium: 'bg-orange-100 text-orange-800', Low: 'bg-gray-100 text-gray-800' }[priority] ?? 'bg-gray-100 text-gray-800')
