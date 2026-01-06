@@ -5,6 +5,9 @@ import { DrizzleAsyncProvider } from 'src/drizzle/drizzle.provider';
 import { and, eq, gte, inArray, lte, or } from 'drizzle-orm';
 import { ExtendedSelectBooking } from '@repo/api-contract';
 import { SlotService } from '../slot/slot.service';
+import { OnEvent, EventEmitter2 } from '@nestjs/event-emitter';
+import { EmailEvent } from 'src/email/events';
+import { randomBytes } from 'crypto';
 
 // --- top of file or bottom (outside the class) ---
 function toUTCDateTime(input: string | Date): Date {
@@ -27,11 +30,12 @@ export class BookingService {
   constructor(
     @Inject(DrizzleAsyncProvider) private db: MySql2Database<typeof schema>,
     private readonly slotService: SlotService,
+    private readonly eventEmitter: EventEmitter2,
   ) { }
 
   async createBooking(booking: schema.InsertBooking, customerIds: number[]): Promise<string | void> {
-    const startDate = new Date(booking.startDate);
-    const endDate = new Date(booking.endDate);
+    const startDate = booking.startDate;
+    const endDate = booking.endDate;
 
     const utcStart = new Date(startDate.getTime() - startDate.getTimezoneOffset() * 60000);
     const utcEnd = new Date(endDate.getTime() - endDate.getTimezoneOffset() * 60000);
@@ -87,11 +91,223 @@ export class BookingService {
         await tx.insert(schema.UserHasBookings).values(
           customers.map((customer) => ({ bookingId, userId: customer.userId }))
         );
+
+        const updateBookingToken = `uptk_${randomBytes(32).toString('hex')}`
+
+        await tx.insert(schema.BookingUpdateToken).values({
+          bookingId: bookingId,
+          customerId: customers[0].id,
+          token: updateBookingToken,
+          expiresAt: startDate
+        })
+
       });
+
+      this.eventEmitter.emit('create-booking', bookingId)
 
       return bookingId;
     } catch (e) {
       throw new ConflictException('Error occurred while creating booking: ' + e);
+    }
+  }
+
+  @OnEvent('create-booking')
+  async sendBookingConfirmation(bookingId: string) {
+    try {
+      // Fetch booking details with all related data
+      const bookingData = await this.db
+        .select()
+        .from(schema.Booking)
+        .innerJoin(schema.Asset, eq(schema.Booking.assetId, schema.Asset.id))
+        .innerJoin(schema.UserHasBookings, eq(schema.UserHasBookings.bookingId, schema.Booking.id))
+        .innerJoin(schema.User, eq(schema.UserHasBookings.userId, schema.User.id))
+        .innerJoin(schema.Customer, eq(schema.Customer.userId, schema.User.id))
+        .innerJoin(schema.BookingUpdateToken, eq(schema.Booking.id, schema.BookingUpdateToken.bookingId))
+        .where(eq(schema.Booking.id, bookingId))
+        .execute()
+        .then((rows) => rows[0]);
+
+      if (!bookingData) {
+        throw new NotFoundException('Booking not found');
+      }
+
+      const { booking, assets: asset, users: customer, customer_details, booking_upate_token } = bookingData;
+
+      // Get tenant admins
+      const tenantAdmins = await this.db
+        .select({
+          email: schema.User.email,
+          name: schema.User.name,
+        })
+        .from(schema.TenantHasUsers)
+        .innerJoin(schema.User, eq(schema.TenantHasUsers.userId, schema.User.id))
+        .where(
+          and(
+            eq(schema.TenantHasUsers.tenantId, asset.tenantId),
+            eq(schema.TenantHasUsers.isAdmin, true)
+          )
+        )
+        .execute();
+
+      // Format dates for display
+      const startDate = new Date(booking.startDate).toLocaleDateString('en-US', {
+        weekday: 'long',
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric',
+      });
+      const endDate = new Date(booking.endDate).toLocaleDateString('en-US', {
+        weekday: 'long',
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric',
+      });
+
+      // Create email HTML template for customer
+      const updateUrl = `${process.env.FRONTEND_URL}/booking/update-booking-by-token/${booking_upate_token.token}`;
+      // const cancelUrl = `${process.env.FRONTEND_URL}/booking/cancel-booking-by-token/${booking_upate_token.token}`;
+
+      const customerEmailContent = `
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <style>
+            body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+            .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+            .header { background-color: #4CAF50; color: white; padding: 20px; text-align: center; }
+            .content { background-color: #f9f9f9; padding: 20px; border: 1px solid #ddd; }
+            .booking-details { background-color: white; padding: 15px; margin: 15px 0; border-left: 4px solid #4CAF50; }
+            .detail-row { margin: 10px 0; }
+            .label { font-weight: bold; color: #555; }
+            .actions { text-align: center; margin: 25px 0; }
+            .btn { display: inline-block; padding: 12px 30px; margin: 0 10px; text-decoration: none; border-radius: 5px; font-weight: bold; font-size: 14px; }
+            .btn-primary { background-color: #2196F3; color: white; }
+            .btn-danger { background-color: #f44336; color: white; }
+            .btn:hover { opacity: 0.9; }
+            .footer { text-align: center; padding: 20px; color: #888; font-size: 12px; }
+          </style>
+        </head>
+        <body>
+          <div class="container">
+            <div class="header">
+              <h1>Booking Confirmation</h1>
+            </div>
+            <div class="content">
+              <p>Dear ${customer.name},</p>
+              <p>Your booking has been confirmed! Here are the details:</p>
+
+              <div class="booking-details">
+                <div class="detail-row">
+                  <span class="label">Booking ID:</span> ${booking.id}
+                </div>
+                <div class="detail-row">
+                  <span class="label">Asset:</span> ${asset.name}
+                </div>
+                <div class="detail-row">
+                  <span class="label">Start Date:</span> ${startDate}
+                </div>
+                <div class="detail-row">
+                  <span class="label">End Date:</span> ${endDate}
+                </div>
+                <div class="detail-row">
+                  <span class="label">Total Price:</span> $${booking.totalPrice}
+                </div>
+              </div>
+
+              <div class="actions">
+                <a href="${updateUrl}" class="btn btn-primary">Update Booking</a>
+              </div>
+
+              <p>If you have any questions, please don't hesitate to contact us.</p>
+              <p>Thank you for your booking!</p>
+            </div>
+            <div class="footer">
+              <p>This is an automated message. Please do not reply to this email.</p>
+            </div>
+          </div>
+        </body>
+        </html>
+      `;
+
+      // Create email HTML template for tenant admin
+      const adminEmailContent = `
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <style>
+            body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+            .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+            .header { background-color: #2196F3; color: white; padding: 20px; text-align: center; }
+            .content { background-color: #f9f9f9; padding: 20px; border: 1px solid #ddd; }
+            .booking-details { background-color: white; padding: 15px; margin: 15px 0; border-left: 4px solid #2196F3; }
+            .detail-row { margin: 10px 0; }
+            .label { font-weight: bold; color: #555; }
+            .footer { text-align: center; padding: 20px; color: #888; font-size: 12px; }
+          </style>
+        </head>
+        <body>
+          <div class="container">
+            <div class="header">
+              <h1>New Booking Received</h1>
+            </div>
+            <div class="content">
+              <p>A new booking has been created in your system.</p>
+
+              <div class="booking-details">
+                <div class="detail-row">
+                  <span class="label">Booking ID:</span> ${booking.id}
+                </div>
+                <div class="detail-row">
+                  <span class="label">Customer:</span> ${customer.name} (${customer.email})
+                </div>
+                <div class="detail-row">
+                  <span class="label">Asset:</span> ${asset.name}
+                </div>
+                <div class="detail-row">
+                  <span class="label">Start Date:</span> ${startDate}
+                </div>
+                <div class="detail-row">
+                  <span class="label">End Date:</span> ${endDate}
+                </div>
+                <div class="detail-row">
+                  <span class="label">Total Price:</span> $${booking.totalPrice}
+                </div>
+              </div>
+
+              <p>Please log in to your admin panel to view more details.</p>
+            </div>
+            <div class="footer">
+              <p>This is an automated notification from your booking system.</p>
+            </div>
+          </div>
+        </body>
+        </html>
+      `;
+
+      // Send email to customer
+      this.eventEmitter.emit(
+        'send-email',
+        new EmailEvent(
+          customer.email,
+          'Booking Confirmation - Your reservation is confirmed!',
+          customerEmailContent
+        )
+      );
+
+      // Send emails to all tenant admins
+      for (const admin of tenantAdmins) {
+        this.eventEmitter.emit(
+          'send-email',
+          new EmailEvent(
+            admin.email,
+            `New Booking: ${asset.name} - ${customer.name}`,
+            adminEmailContent
+          )
+        );
+      }
+    } catch (error) {
+      console.error('Error sending booking confirmation:', error);
+      // Don't throw - we don't want to fail the booking if email fails
     }
   }
 
@@ -113,11 +329,11 @@ export class BookingService {
 
     return {
       ...booking.booking,
-      startDate: booking.booking.startDate, 
+      startDate: booking.booking.startDate,
       endDate: booking.booking.endDate,
       user: booking.users,
       customer: booking.customer_details,
-      asset:booking.assets,
+      asset: booking.assets,
     };
   }
 
@@ -134,38 +350,38 @@ export class BookingService {
   }
 
   async getBookings(tenantId?: string, assetId?: string) {
-  const filters: any[] = [];
+    const filters: any[] = [];
 
-  if (tenantId) {
-    filters.push(eq(schema.Asset.tenantId, tenantId));
+    if (tenantId) {
+      filters.push(eq(schema.Asset.tenantId, tenantId));
+    }
+
+    if (assetId) {
+      filters.push(eq(schema.Booking.assetId, assetId));
+    }
+
+    const bookings = await this.db
+      .select()
+      .from(schema.UserHasBookings)
+      .innerJoin(schema.User, eq(schema.UserHasBookings.userId, schema.User.id))
+      .innerJoin(schema.Booking, eq(schema.UserHasBookings.bookingId, schema.Booking.id))
+      .innerJoin(
+        schema.Asset,
+        eq(schema.Booking.assetId, schema.Asset.id) // always required join
+      )
+      .where(filters.length ? and(...filters) : undefined) // <-- optional filters moved to .where()
+      .innerJoin(schema.Customer, eq(schema.Customer.userId, schema.User.id))
+      .execute();
+
+    return bookings.map((booking) => ({
+      ...booking.booking,
+      startDate: booking.booking.startDate,
+      endDate: booking.booking.endDate,
+      customer: booking.customer_details,
+      asset: booking.assets,
+      user: booking.users,
+    }));
   }
-
-  if (assetId) {
-    filters.push(eq(schema.Booking.assetId, assetId));
-  }
-
-  const bookings = await this.db
-    .select()
-    .from(schema.UserHasBookings)
-    .innerJoin(schema.User, eq(schema.UserHasBookings.userId, schema.User.id))
-    .innerJoin(schema.Booking, eq(schema.UserHasBookings.bookingId, schema.Booking.id))
-    .innerJoin(
-      schema.Asset,
-      eq(schema.Booking.assetId, schema.Asset.id) // always required join
-    )
-    .where(filters.length ? and(...filters) : undefined) // <-- optional filters moved to .where()
-    .innerJoin(schema.Customer, eq(schema.Customer.userId, schema.User.id))
-    .execute();
-
-  return bookings.map((booking) => ({
-    ...booking.booking,
-    startDate: booking.booking.startDate,
-    endDate: booking.booking.endDate,
-    customer: booking.customer_details,
-    asset: booking.assets,
-    user: booking.users,
-  }));
-}
 
 
 
@@ -241,6 +457,21 @@ export class BookingService {
 
     // Delete the booking
     await this.db.delete(schema.Booking).where(eq(schema.Booking.id, bookingId)).execute();
+  }
+
+  async validateUpdateToken(token: string, bookingId: string) {
+    const row = await this.db.query.BookingUpdateToken.findFirst({
+      where: (but, { eq, and }) => and(eq(but.token, token), eq(but.bookingId, bookingId))
+    })
+
+    if (!row) {
+      return false
+    }
+    if (row.expiresAt < new Date()) {
+      return false
+    }
+
+    return true
   }
 
 
@@ -330,7 +561,7 @@ export class BookingService {
       for (
         let d = start;
         d <= end;
-        d.setDate(d.getDate() + 1)  
+        d.setDate(d.getDate() + 1)
       ) {
         dateMap.set(d, (dateMap.get(d) ?? 0) + 1);
       }
@@ -357,7 +588,7 @@ export class BookingService {
 
       if (current.getTime() !== prevPlusOne.getTime()) {
         // Range ends
-        ranges.push({ from: rangeStart, to: prev});
+        ranges.push({ from: rangeStart, to: prev });
         rangeStart = fullyBookedDates[i];
       }
 

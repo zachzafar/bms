@@ -1,6 +1,6 @@
 import { relations} from "drizzle-orm";
 import { mysqlTable, varchar, datetime, decimal, text, timestamp, int, index, serial, boolean, bigint, date } from "drizzle-orm/mysql-core";
-import { UserHasBookings } from "../users";
+import { Customer, User, UserHasBookings } from "../users";
 import { Asset, AssetHasRates } from "../asset";
 import { createInsertSchema, createSelectSchema } from "drizzle-zod";
 import { z } from "zod";
@@ -168,3 +168,30 @@ export const BlockedDateRelations = relations(BlockedDate, ({ one }) => ({
 
 
 
+
+
+export const BookingUpdateToken = mysqlTable('booking_upate_token',{
+    id: varchar("id", { length: 36 }).primaryKey().$default(uuid),    
+    customerId: bigint("id", { mode: "number", unsigned: true }).references(() => Customer.id),
+    bookingId: varchar("id", { length: 36 }).references(() => Booking.id),
+    token: varchar('token', { length: 255 }).notNull(),
+    expiresAt: timestamp('expires_at').notNull(),
+    createdAt: timestamp('created_at').defaultNow().notNull(),
+    usedAt: timestamp('used_at'),
+  }, (table) => ({
+    userIdIdx: index('user_id_idx').on(table.customerId),
+    tokenIdx: index('token_idx').on(table.token),
+  }))
+
+  export const BookingUpdateTokenRelations = relations(BookingUpdateToken, ({ one }) => ({
+    booking: one(Booking, {
+      fields: [BookingUpdateToken.bookingId],
+      references: [Booking.id]
+    }),
+    customerId: one(Customer,{
+      fields: [BookingUpdateToken.customerId],
+      references: [Customer.id]
+    })
+  }))
+
+  

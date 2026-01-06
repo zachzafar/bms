@@ -11,7 +11,7 @@ import { v4 as uuid } from "uuid";
 export const Tenant = mysqlTable("tenants", {
     id: varchar("id", { length: 36 }).primaryKey().$default(() => uuid()),
     name: varchar("name", { length: 255 }).notNull(),
-    subdomain: varchar("subdomain", { length: 255 }),
+    subdomain: varchar("subdomain", { length: 255 }).unique(),
     createdAt: timestamp('createdAt',{mode: 'string'}).notNull().defaultNow(),
     updatedAt: timestamp('updatedAt',{mode: 'string'}).defaultNow().onUpdateNow()
 }, (tenant) => ({

@@ -2,7 +2,7 @@ import { Inject, Injectable, InternalServerErrorException, Logger } from '@nestj
 import { MySql2Database } from 'drizzle-orm/mysql2';
 import { DrizzleAsyncProvider } from 'src/drizzle/drizzle.provider';
 import * as schema from '@repo/api-contract';
-import { and, eq, gte, inArray, lte } from 'drizzle-orm';
+import { and, eq, gte, inArray, lte, sql } from 'drizzle-orm';
 import type { InsertAsset, UpdateAsset } from '@repo/api-contract';
 import { ObjectStorageService } from 'src/object-storage/object-storage.service';
 import { Readable } from 'stream';
@@ -17,7 +17,7 @@ export class AssetsService {
     private objectStorageService: ObjectStorageService
   ) { }
 
-  async getAssets(query: any, tenantId: string) {
+  async getAssets(query: any, tenantId: string, page: number = 1,pageSize: number = 10) {
     const assets = await this.db.query.Asset.findMany({
       where: (asset, { eq, and, like }) =>
         and(
@@ -154,7 +154,7 @@ export class AssetsService {
     return await this.db.query.AssetHasProperties.findMany({ where: (assetHasProperties, { eq }) => eq(assetHasProperties.assetId, assetId), with: { assetProperty: true } })
   }
 
-  async uploadAssetImages(tenant: string, assetId: string, images: (Buffer|Readable)[]) {
+  async uploadAssetImages(tenant: string, assetId: string, images: (Buffer | Readable)[]) {
     this.logger.log("Attempting to use storage service")
     const imageUrls = await Promise.all(images.map(async (image) => {
       const imageUrl = await this.objectStorageService.uploadObject(image, "image", tenant, assetId);
@@ -256,46 +256,149 @@ export class AssetsService {
 
   async getAvailableAssets(startDate: Date, endDate: Date, tenantId: string) {
 
-  // 1. Get all assets for the current tenant
-  const allAssets = await this.db
-    .select({
-      id: schema.Asset.id,
-      name: schema.Asset.name,
-      tenantId: schema.Asset.tenantId,
-    })
-    .from(schema.Asset)
-    .where(eq(schema.Asset.tenantId, tenantId)); // Filter by tenant
+    // 1. Get all assets for the current tenant
+    const allAssets = await this.db
+      .select({
+        id: schema.Asset.id,
+        name: schema.Asset.name,
+        tenantId: schema.Asset.tenantId,
+      })
+      .from(schema.Asset)
+      .where(eq(schema.Asset.tenantId, tenantId)); // Filter by tenant
 
-  console.log('Fetched Assets for Tenant:', allAssets); // Debugging log
+    console.log('Fetched Assets for Tenant:', allAssets); // Debugging log
 
-  const allAssetIds = allAssets.map((a) => a.id);
+    const allAssetIds = allAssets.map((a) => a.id);
 
-  // 2. Get bookings that overlap with the range for the current tenant's assets
-  const bookings = await this.db
-    .select({ assetId: schema.Booking.assetId })
-    .from(schema.Booking)
-    .where(
-      and(
-        inArray(schema.Booking.assetId, allAssetIds),
-        lte(schema.Booking.startDate, endDate),
-        gte(schema.Booking.endDate, startDate)
-      )
+    // 2. Get bookings that overlap with the range for the current tenant's assets
+    const bookings = await this.db
+      .select({ assetId: schema.Booking.assetId })
+      .from(schema.Booking)
+      .where(
+        and(
+          inArray(schema.Booking.assetId, allAssetIds),
+          lte(schema.Booking.startDate, endDate),
+          gte(schema.Booking.endDate, startDate)
+        )
+      );
+
+    console.log('Bookings Found:', bookings); // Debugging log
+
+    const bookedAssetIds = new Set(bookings.map((b) => b.assetId));
+
+    // 3. Filter available assets for the tenant
+    const availableAssets = allAssets.filter(
+      (asset) => !bookedAssetIds.has(asset.id)
     );
 
-  console.log('Bookings Found:', bookings); // Debugging log
+    console.log('Filtered Available Assets:', availableAssets); // Debugging log
 
-  const bookedAssetIds = new Set(bookings.map((b) => b.assetId));
+    return availableAssets;
+  }
 
-  // 3. Filter available assets for the tenant
-  const availableAssets = allAssets.filter(
-    (asset) => !bookedAssetIds.has(asset.id)
-  );
+  async getAssetsBySubdomain(
+    subdomain: string,
+    page: number = 1,
+    pageSize: number = 10
+  ) {
+    const offset = (page - 1) * pageSize;
 
-  console.log('Filtered Available Assets:', availableAssets); // Debugging log
+    // Get total count for pagination metadata
+    const totalCountResult = await this.db
+      .select({ count: sql<number>`COUNT(*)` })
+      .from(schema.Asset)
+      .innerJoin(schema.Tenant, eq(schema.Asset.tenantId, schema.Tenant.id))
+      .where(eq(schema.Tenant.subdomain, subdomain))
+      .execute();
 
-  return availableAssets;
-}
+    const totalCount = totalCountResult[0]?.count || 0;
 
+    // Get paginated results
+    const results = await this.db
+      .select()
+      .from(schema.Asset)
+      .innerJoin(schema.Tenant, eq(schema.Asset.tenantId, schema.Tenant.id))
+      .where(eq(schema.Tenant.subdomain, subdomain))
+      .limit(pageSize)
+      .offset(offset)
+      .execute();
+
+    // Calculate pagination metadata
+    const paginationData = {
+      page,
+      pageSize,
+      totalCount,
+      totalPages: Math.ceil(totalCount / pageSize),
+      hasNextPage: page * pageSize < totalCount,
+      hasPreviousPage: page > 1,
+    };
+
+    // Fetch tags, properties, and images for each asset
+    const assetsWithDetails = await Promise.all(
+      results.map(async (res) => {
+        const assetTags = await this.getTagsForAsset(res.assets.id);
+        const propertyValues = await this.getPropertyValues(res.assets.id);
+        const assetImages = await this.getAssetImages(res.assets.id);
+
+        return {
+          id: res.assets.id,
+          name: res.assets.name,
+          description: res.assets.description || undefined,
+          images: assetImages.map((img) => img.filePath),
+          properties: propertyValues.map((prop) => ({
+            id: prop.assetProperty.id,
+            name: prop.assetProperty.name,
+            value: prop.value,
+          })),
+          tags: assetTags
+            .map((rel) => rel.tag)
+            .filter((tag): tag is NonNullable<typeof tag> => tag !== null)
+            .map((tag) => ({
+              id: tag.id,
+              name: tag.name,
+            })),
+          pagination: paginationData,
+        };
+      })
+    );
+
+    return {
+      data: assetsWithDetails,
+    };
+  }
+
+  async getAssetDetailsBySubdomain(subdomain: string, assetId: string) {
+    // First verify the asset belongs to this subdomain's tenant
+    const result = await this.db
+      .select()
+      .from(schema.Asset)
+      .innerJoin(schema.Tenant, eq(schema.Asset.tenantId, schema.Tenant.id))
+      .where(and(eq(schema.Tenant.subdomain, subdomain), eq(schema.Asset.id, assetId)))
+      .execute()
+      .then((rows) => rows[0]);
+
+    if (!result) {
+      return null;
+    }
+
+    const asset = result.assets;
+
+    // Fetch related data
+    const [assetTags, assetImages, propertyValues] = await Promise.all([
+      this.getTagsForAsset(assetId),
+      this.getAssetImages(assetId),
+      this.getPropertyValues(assetId),
+    ]);
+
+    return {
+      ...asset,
+      tags: assetTags
+        .map((rel) => rel.tag)
+        .filter((tag): tag is NonNullable<typeof tag> => tag !== null),
+      images: assetImages,
+      properties: propertyValues,
+    };
+  }
 
 
 }

@@ -7,6 +7,7 @@ import { TenantService } from 'src/tenant/tenant.service';
 // import { RequireRead, RequireWrite, RequireDelete, RequirePermissionsDecorator } from 'src/auth/decorators/permissions.decorator';
 import { Roles } from 'src/auth/decorators/permissions.decorator';
 import { PermissionScope } from 'src/auth/permissions';
+import { Public } from 'src/auth/decorators/public.decorator';
 
 @Controller()
 export class BookingController {
@@ -157,5 +158,20 @@ export class BookingController {
             await this.bookingService.deleteBlockedDate(id);
             return { status: 204, body: undefined };
         });
+    }
+
+    @Public()
+    @TsRestHandler(contract.booking.updateBookingByToken)
+    async updateBookingWithToken(): Promise<ReturnType<typeof tsRestHandler>> {
+        return tsRestHandler(contract.booking.updateBookingByToken,async ({params, body}) => {
+            const { bookingId, token} = params
+            if(await this.bookingService.validateUpdateToken(token,bookingId)){
+                await this.bookingService.updateBooking(body);
+                return { status: 200, body: { message: "succesffully updated booking" } };
+            }
+
+            return { status: 403}
+            
+        })
     }
 }

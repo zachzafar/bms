@@ -9,12 +9,18 @@ import {
   SelectAssetSchema,
   SelectTagSchema, // import tag schema
 } from '../database-schema';
+import { pagination } from './utils';
 
 const c = initContract();
 
 const SelectAssetWithTagsSchema = SelectAssetSchema.extend({
   tags: z.array(SelectTagSchema).optional(),
 });
+
+const SelectAssetWithTagsSchemaList = z.object({
+  data: z.array(SelectAssetWithTagsSchema),
+  pagination
+})
 
 export const assetsContract = c.router({
   createAsset: {
@@ -180,20 +186,81 @@ export const assetsContract = c.router({
     summary: 'Delete images for an asset'
   },
   getAvailableAssets: {
-        method: 'GET',
-        path: '/assets/available',
-        summary: 'Get all assets available between a date range',
-        query: z.object({
-            startDate: z.coerce.date(), // ISO date
-            endDate: z.coerce.date()
-        }),
-        responses: {
-            200: z.array(
-                z.object({
-                    id: z.string(),
-                    name: z.string(),
-                })
-            )
-        }
+    method: 'GET',
+    path: '/assets/available',
+    summary: 'Get all assets available between a date range',
+    query: z.object({
+      startDate: z.coerce.date(), // ISO date
+      endDate: z.coerce.date()
+    }),
+    responses: {
+      200: z.array(
+        z.object({
+          id: z.string(),
+          name: z.string(),
+        })
+      )
     }
+  },
+
+  getAssetsBySubdomain: {
+    method: 'GET',
+    path: 'assets-by-sub/:subdomain',
+    pathParams: z.object({
+      subdomain: z.string()
+    }),
+    query: z.object({
+      page: z.coerce.number().optional(),
+      pageSize: z.coerce.number().optional()
+    }),
+    responses: {
+      200: z.object({
+        data: z.array(z.object({
+          id: z.string(),
+          name: z.string(),
+          description: z.string().optional(),
+          images: z.array(z.string()),
+          properties: z.array(z.object({
+            id: z.number(),
+            name: z.string(),
+            value: z.string()
+          })),
+          tags: z.array(z.object({
+            id: z.number(),
+            name: z.string()
+          })),
+          pagination
+        })),
+
+      })
+    },
+    summary: 'Get assets by tenant subdomain (public)'
+  },
+  getAssetDetailsBySubdomain: {
+    method: 'GET',
+    path: 'assets-by-sub/:subdomain/:assetId',
+    pathParams: z.object({
+      subdomain: z.string(),
+      assetId: z.string()
+    }),
+    responses: {
+      200: z.object({
+        id: z.string(),
+        name: z.string(),
+        description: z.string().nullable(),
+        tenantId: z.string(),
+        assetTypeId: z.number().nullable(),
+        createdAt: z.coerce.date(),
+        updatedAt: z.coerce.date().nullable(),
+        tags: z.array(SelectTagSchema),
+        images: z.array(SelectAssetImagesSchema),
+        properties: z.array(SelectAssetHasPropertiesSchema.omit({ assetPropertyId: true }).extend({
+          assetPropertyId: z.number(),
+          assetProperty: SelectAssetPropertySchema
+        }))
+      }),
+      404: z.undefined()
+    },
+    summary: 'Get asset details with images and properties (public)'
+  }
 })

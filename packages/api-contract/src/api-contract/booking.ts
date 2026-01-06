@@ -178,4 +178,16 @@ export const bookingContract = c.router({
     },
     summary: "Delete a blocked date by ID",
   },
+
+  updateBookingByToken: {
+    method: "PUT",
+    path:"/update-booking-by-token/:token/:bookingId",
+    body:UpdateBookingSchema,
+    responses: {
+      200: z.object({ message: z.string()}),
+      403: z.undefined()
+    },
+    pathParams: z.object({token: z.string(),bookingId:z.string()}),
+    summary: 'create and share token for updating '
+  }
 });

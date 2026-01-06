@@ -239,6 +239,33 @@ export class AssetsController {
         });
     }
 
+    @Public()
+    @TsRestHandler(contract.assets.getAssetsBySubdomain)
+    async getAssetsBySubdomain(@Headers() headers: any): Promise<ReturnType<typeof tsRestHandler>> {
+        return tsRestHandler(contract.assets.getAssetsBySubdomain, async ({ params, query }) => {
+            const { subdomain } = params;
+            const { page = 1, pageSize = 10 } = query;
+            const assets = await this.assetService.getAssetsBySubdomain(subdomain, page, pageSize);
 
+            return { status: 200, body: assets };
+        });
+    }
+
+    @Public()
+    @TsRestHandler(contract.assets.getAssetDetailsBySubdomain)
+    async getAssetDetailsBySubdomain(): Promise<ReturnType<typeof tsRestHandler>> {
+        return tsRestHandler(contract.assets.getAssetDetailsBySubdomain, async ({ params }) => {
+            const { subdomain, assetId } = params;
+            const asset = await this.assetService.getAssetDetailsBySubdomain(subdomain, assetId);
+
+            if (!asset) {
+                return { status: 404, body: undefined };
+            }
+
+            return { status: 200, body: asset };
+        });
+    }
+
+    
 
 }

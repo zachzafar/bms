@@ -1,8 +1,8 @@
 import { mysqlTable, serial, varchar, int,index, datetime, boolean, timestamp, primaryKey, bigint } from 'drizzle-orm/mysql-core';
 import { relations } from 'drizzle-orm';
 import { User } from '../users'; 
-import { Tenant } from '../tenant';
 import { v4 as uuid } from "uuid";
+
 
 export const refreshTokens = mysqlTable('refresh_tokens', {
     id: bigint("id", { mode: "number", unsigned: true }).autoincrement().primaryKey(), 

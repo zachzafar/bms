@@ -9,7 +9,7 @@ export async function middleware(req: NextRequest) {
   }
 
   // Public paths
-  const publicPaths = ['/login', '/forgot-password', '/password-reset'];
+  const publicPaths = ['/login', '/forgot-password', '/password-reset', '/customer'];
   if (publicPaths.some(path => pathname.startsWith(path))) {
     return NextResponse.next();
   }
