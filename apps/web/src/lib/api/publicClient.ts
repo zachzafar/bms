@@ -7,12 +7,48 @@ import { StorageService } from "./storage";
 
 export const baseUrl = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:4000'
 
+// Public axios instance (no auth)
+const publicAxiosInstance = axios.create({
+  baseURL: baseUrl,
+});
 
-export const client = initTsrReactQuery(contract,{
-    baseUrl
-})
+export const client = initTsrReactQuery(contract, {
+    baseUrl,
+    api: async ({ path, method, headers, body }) => {
+      try {
+        console.log(path)
+        const result = await publicAxiosInstance.request({
+          method: method as Method,
+          url: path,
+          headers,
+          data: body,
+        });
 
+        const headersObj = new Headers();
+        Object.entries(result.headers).forEach(([key, value]) => {
+          if (value) headersObj.append(key, value.toString());
+        });
 
+        return { status: result.status, body: result.data, headers: headersObj };
+      } catch (e: Error | AxiosError | any) {
+        console.error(e)
+        if (isAxiosError(e)) {
+          const error = e as AxiosError;
+          const response = error.response as AxiosResponse;
+
+          const headersObj = new Headers();
+          Object.entries(response.headers).forEach(([key, value]) => {
+            if (value) headersObj.append(key, value.toString());
+          });
+
+          return { status: response.status, body: response.data, headers: headersObj };
+        }
+        throw e;
+      }
+    },
+});
+
+// Authenticated axios instance
 const axiosInstance = axios.create({
   baseURL: baseUrl,
 })

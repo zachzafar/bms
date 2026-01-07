@@ -205,7 +205,7 @@ export const assetsContract = c.router({
 
   getAssetsBySubdomain: {
     method: 'GET',
-    path: 'assets-by-sub/:subdomain',
+    path: '/assets-by-sub/:subdomain',
     pathParams: z.object({
       subdomain: z.string()
     }),
@@ -238,7 +238,7 @@ export const assetsContract = c.router({
   },
   getAssetDetailsBySubdomain: {
     method: 'GET',
-    path: 'assets-by-sub/:subdomain/:assetId',
+    path: '/assets-by-sub/:subdomain/:assetId',
     pathParams: z.object({
       subdomain: z.string(),
       assetId: z.string()

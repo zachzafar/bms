@@ -54,7 +54,7 @@ export default function CustomerAssetListPage() {
       query: { page: currentPage, pageSize },
     },
   });
-
+  
   const assets = response?.status === 200 ? response.body.data : [];
   const pagination = assets.length > 0 ? assets[0].pagination : null;
 
