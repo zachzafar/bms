@@ -9,7 +9,8 @@ import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from '@
 import { Pencil, Trash2 } from 'lucide-react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { Form, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
+import { Label } from '@/components/ui/label';
 import { authClient } from '@/lib/api/publicClient';
 import {
   MultiSelector,
@@ -176,13 +177,15 @@ export default function AssetTypes({ tenantId }: { tenantId: string }) {
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Asset Type Name</FormLabel>
-                    <Input id="asset-type-name" placeholder="Enter asset type name" {...field} />
+                    <FormControl>
+                      <Input id="asset-type-name" placeholder="Enter asset type name" {...field} />
+                    </FormControl>
                     <FormMessage />
                   </FormItem>
                 )}
               />
-              <FormItem>
-                <FormLabel>Fields</FormLabel>
+              <div className="space-y-2">
+                <Label>Fields</Label>
                 <MultiSelector
                   values={selectedProperties}
                   onValuesChange={setSelectedProperties}
@@ -203,8 +206,7 @@ export default function AssetTypes({ tenantId }: { tenantId: string }) {
                     </MultiSelectorList>
                   </MultiSelectorContent>
                 </MultiSelector>
-                <FormMessage />
-              </FormItem>
+              </div>
               <div className="flex space-x-2">
                 <Button type="submit">
                   {editingAssetType ? 'Update Asset Type' : 'Add Asset Type'}

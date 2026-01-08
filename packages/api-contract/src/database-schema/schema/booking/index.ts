@@ -166,20 +166,16 @@ export const BlockedDateRelations = relations(BlockedDate, ({ one }) => ({
   }),
 }));
 
-
-
-
-
 export const BookingUpdateToken = mysqlTable('booking_upate_token',{
-    id: varchar("id", { length: 36 }).primaryKey().$default(uuid),    
-    customerId: bigint("id", { mode: "number", unsigned: true }).references(() => Customer.id),
-    bookingId: varchar("id", { length: 36 }).references(() => Booking.id),
+    id: varchar("id", { length: 36 }).primaryKey().$default(uuid),
+    customerId: bigint("customer_id", { mode: "number", unsigned: true }).references(() => Customer.id),
+    bookingId: varchar("booking_id", { length: 36 }).references(() => Booking.id),
     token: varchar('token', { length: 255 }).notNull(),
     expiresAt: timestamp('expires_at').notNull(),
     createdAt: timestamp('created_at').defaultNow().notNull(),
     usedAt: timestamp('used_at'),
   }, (table) => ({
-    userIdIdx: index('user_id_idx').on(table.customerId),
+    customerIdIdx: index('customer_id_idx').on(table.customerId),
     tokenIdx: index('token_idx').on(table.token),
   }))
 

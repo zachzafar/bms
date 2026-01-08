@@ -3,7 +3,7 @@ import { MySql2Database } from 'drizzle-orm/mysql2';
 import * as schema from '@repo/api-contract';
 import { DrizzleAsyncProvider } from 'src/drizzle/drizzle.provider';
 import { and, eq, gte, inArray, lte, or } from 'drizzle-orm';
-import { ExtendedSelectBooking } from '@repo/api-contract';
+import { ExtendedSelectBooking, InsertBooking } from '@repo/api-contract';
 import { SlotService } from '../slot/slot.service';
 import { OnEvent, EventEmitter2 } from '@nestjs/event-emitter';
 import { EmailEvent } from 'src/email/events';
@@ -33,23 +33,19 @@ export class BookingService {
     private readonly eventEmitter: EventEmitter2,
   ) { }
 
-  async createBooking(booking: schema.InsertBooking, customerIds: number[]): Promise<string | void> {
+  async createBooking(
+    booking: schema.InsertBooking,
+    customerIds: number[],
+    newCustomer?: { name: string; email: string; phone?: string; tenantId: string }
+  ): Promise<string | void> {
     const startDate = booking.startDate;
     const endDate = booking.endDate;
 
     const utcStart = new Date(startDate.getTime() - startDate.getTimezoneOffset() * 60000);
     const utcEnd = new Date(endDate.getTime() - endDate.getTimezoneOffset() * 60000);
 
-    if (!customerIds.length) {
-      throw new ConflictException('No customers selected');
-    }
-
-    const customers = await this.db.query.Customer.findMany({
-      where: (customer, { inArray }) => inArray(customer.id, customerIds),
-    });
-
-    if (!customers.length) {
-      throw new ConflictException('No customers found');
+    if (!customerIds.length && !newCustomer) {
+      throw new ConflictException('No customers selected or provided');
     }
 
     const available = await this.slotService.checkSlotsAvailability(booking.assetId, startDate, endDate);
@@ -61,6 +57,37 @@ export class BookingService {
       let bookingId: string = '';
 
       await this.db.transaction(async (tx) => {
+        let customerIdsToUse = [...customerIds];
+
+        // Create new customer if provided
+        if (newCustomer) {
+          // Create user first
+          const [{ id: userId }] = await tx.insert(schema.User).values({
+            name: newCustomer.name,
+            email: newCustomer.email,
+            password: randomBytes(32).toString('hex'), // Random password for public customers
+            userType: 'customer',
+          }).$returningId();
+
+          // Create customer details
+          const [{ id: customerId }] = await tx.insert(schema.Customer).values({
+            userId,
+            phone: newCustomer.phone,
+            tenantId: newCustomer.tenantId,
+          }).$returningId();
+
+          customerIdsToUse.push(customerId);
+        }
+
+        // Fetch existing customers
+        const customers = await tx.query.Customer.findMany({
+          where: (customer, { inArray }) => inArray(customer.id, customerIdsToUse),
+        });
+
+        if (!customers.length) {
+          throw new ConflictException('No customers found');
+        }
+
         // Calculate total price for the slot range
         const totalPrice = await this.slotService.getTotalPriceForSlots(booking.assetId, startDate, endDate);
 

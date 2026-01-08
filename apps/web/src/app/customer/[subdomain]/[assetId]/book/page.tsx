@@ -1,9 +1,36 @@
 'use client';
 
 import { useParams, useRouter } from 'next/navigation';
-import { useState } from 'react';
 import { client } from '@/lib/api/publicClient';
 import Link from 'next/link';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { z } from 'zod';
+import { toast } from 'sonner';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
+import { Input } from '@/components/ui/input';
+import { Button } from '@/components/ui/button';
+import { Separator } from '@/components/ui/separator';
+import { ArrowLeft, Calendar, CheckCircle2, Loader2 } from 'lucide-react';
+
+const CustomerBookingSchema = z.object({
+  startDate: z.string().min(1, 'Start date is required'),
+  endDate: z.string().min(1, 'End date is required'),
+  customerName: z.string().min(2, 'Name must be at least 2 characters'),
+  customerEmail: z.string().email('Invalid email address'),
+  customerPhone: z.string().min(10, 'Phone number must be at least 10 characters'),
+}).refine((data) => {
+  if (data.startDate && data.endDate) {
+    return new Date(data.endDate) >= new Date(data.startDate);
+  }
+  return true;
+}, {
+  message: 'End date must be after or equal to start date',
+  path: ['endDate'],
+});
+
+type CustomerBookingFormData = z.infer<typeof CustomerBookingSchema>;
 
 export default function CustomerBookingPage() {
   const params = useParams();
@@ -22,111 +49,66 @@ export default function CustomerBookingPage() {
     id: response.body.id,
     name: response.body.name,
     description: response.body.description,
+    tenantId: response.body.tenantId,
   } : null;
 
-  const [submitting, setSubmitting] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [success, setSuccess] = useState(false);
-
-  // Form state
-  const [formData, setFormData] = useState({
-    startDate: '',
-    endDate: '',
-    customerName: '',
-    customerEmail: '',
-    customerPhone: '',
+  const form = useForm<CustomerBookingFormData>({
+    resolver: zodResolver(CustomerBookingSchema),
+    defaultValues: {
+      startDate: '',
+      endDate: '',
+      customerName: '',
+      customerEmail: '',
+      customerPhone: '',
+    },
   });
 
-  const [formErrors, setFormErrors] = useState<Record<string, string>>({});
+  const { mutate: createBooking, isPending } = client.booking.customerCreateBooking.useMutation();
 
-  const validateForm = () => {
-    const errors: Record<string, string> = {};
+  const onSubmit = (data: CustomerBookingFormData) => {
+    if (!asset) return;
 
-    if (!formData.startDate) errors.startDate = 'Start date is required';
-    if (!formData.endDate) errors.endDate = 'End date is required';
-    if (!formData.customerName) errors.customerName = 'Name is required';
-    if (!formData.customerEmail) {
-      errors.customerEmail = 'Email is required';
-    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.customerEmail)) {
-      errors.customerEmail = 'Invalid email format';
-    }
-    if (!formData.customerPhone) errors.customerPhone = 'Phone number is required';
-
-    if (formData.startDate && formData.endDate) {
-      const start = new Date(formData.startDate);
-      const end = new Date(formData.endDate);
-      if (end < start) {
-        errors.endDate = 'End date must be after start date';
-      }
-    }
-
-    setFormErrors(errors);
-    return Object.keys(errors).length === 0;
-  };
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-
-    if (!validateForm()) {
-      return;
-    }
-
-    try {
-      setSubmitting(true);
-      setError(null);
-
-      // Note: This is a simplified version. In a real implementation, you'd need to:
-      // 1. Create or find the customer record first
-      // 2. Then create the booking with the customer ID
-
-      // For now, this is a placeholder that shows the structure
-      // You'll need to implement the actual customer creation endpoint
-
-      alert('Booking functionality requires customer management to be implemented first. This is a UI demo.');
-
-      // Example of what the actual implementation would look like:
-      /*
-      const bookingResponse = await client.booking.createBooking({
+    createBooking(
+      {
+        params: {
+          tenantId: asset.tenantId,
+        },
         body: {
           booking: {
-            assetId,
-            startDate: new Date(formData.startDate),
-            endDate: new Date(formData.endDate),
+            assetId: asset.id,
+            startDate: new Date(data.startDate),
+            endDate: new Date(data.endDate),
           },
-          customers: [customerId], // You'd get this from customer creation
+          customer: {
+            name: data.customerName,
+            email: data.customerEmail,
+            phone: data.customerPhone,
+          },
         },
-      });
-
-      if (bookingResponse.status === 201) {
-        setSuccess(true);
-        setTimeout(() => {
-          router.push(`/customer/${subdomain}`);
-        }, 2000);
+      },
+      {
+        onSuccess: (response) => {
+          if (response.status === 201) {
+            toast.success('Booking confirmed! Check your email for details.');
+            router.push(`/customer/${subdomain}`);
+          } else {
+            toast.error('Failed to create booking. Please try again.');
+          }
+        },
+        onError: (err: any) => {
+          toast.error(err.message || 'Failed to create booking. Please try again.');
+          console.error(err);
+        },
       }
-      */
-    } catch (err: any) {
-      setError(err.message || 'Failed to create booking. Please try again.');
-      console.error(err);
-    } finally {
-      setSubmitting(false);
-    }
-  };
-
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-    const { name, value } = e.target;
-    setFormData((prev) => ({ ...prev, [name]: value }));
-    // Clear error for this field
-    if (formErrors[name]) {
-      setFormErrors((prev) => ({ ...prev, [name]: '' }));
-    }
+    );
   };
 
   if (isLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
+      <div className="min-h-screen flex items-center justify-center bg-slate-50">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
-          <p className="mt-4 text-gray-600">Loading...</p>
+          <Loader2 className="h-12 w-12 animate-spin text-blue-600 mx-auto" />
+          <p className="mt-4 text-slate-600">Loading booking details...</p>
         </div>
       </div>
     );
@@ -134,201 +116,200 @@ export default function CustomerBookingPage() {
 
   if (queryError || !asset) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-center">
-          <p className="text-red-600 text-lg">Failed to load asset information.</p>
-          <Link
-            href={`/customer/${subdomain}`}
-            className="mt-4 inline-block px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
-          >
-            Back to Assets
-          </Link>
-        </div>
-      </div>
-    );
-  }
-
-  if (success) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
-        <div className="bg-white p-8 rounded-lg shadow-lg text-center max-w-md">
-          <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
-            <svg className="w-8 h-8 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-            </svg>
-          </div>
-          <h2 className="text-2xl font-bold text-gray-900 mb-2">Booking Confirmed!</h2>
-          <p className="text-gray-600 mb-6">
-            You'll receive a confirmation email shortly with your booking details.
-          </p>
-          <Link
-            href={`/customer/${subdomain}`}
-            className="inline-block px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
-          >
-            Browse More Assets
-          </Link>
-        </div>
+      <div className="min-h-screen flex items-center justify-center bg-slate-50">
+        <Card className="max-w-md">
+          <CardContent className="pt-6">
+            <div className="text-center">
+              <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                <svg className="w-8 h-8 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </div>
+              <h2 className="text-xl font-bold text-slate-900 mb-2">Asset Not Found</h2>
+              <p className="text-slate-600 mb-6">
+                We couldn't find the asset you're trying to book.
+              </p>
+              <Button asChild>
+                <Link href={`/customer/${subdomain}`}>
+                  Back to Assets
+                </Link>
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 py-8">
+    <div className="min-h-screen bg-slate-50 py-8">
       <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Back Button */}
         <Link
           href={`/customer/${subdomain}/${assetId}`}
           className="inline-flex items-center text-blue-600 hover:text-blue-700 mb-6"
         >
-          <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-          </svg>
+          <ArrowLeft className="w-5 h-5 mr-2" />
           Back to asset details
         </Link>
 
-        <div className="bg-white rounded-lg shadow-lg p-8">
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">Book {asset?.name}</h1>
-          <p className="text-gray-600 mb-8">Fill out the form below to make a reservation</p>
-
-          {error && (
-            <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg">
-              <p className="text-red-600">{error}</p>
-            </div>
-          )}
-
-          <form onSubmit={handleSubmit} className="space-y-6">
-            {/* Date Selection */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <Card>
+          <CardHeader>
+            <div className="flex items-center space-x-3">
+              <div className="w-12 h-12 bg-blue-600 rounded-full flex items-center justify-center">
+                <Calendar className="h-6 w-6 text-white" />
+              </div>
               <div>
-                <label htmlFor="startDate" className="block text-sm font-medium text-gray-700 mb-2">
-                  Start Date *
-                </label>
-                <input
-                  type="date"
-                  id="startDate"
-                  name="startDate"
-                  value={formData.startDate}
-                  onChange={handleInputChange}
-                  min={new Date().toISOString().split('T')[0]}
-                  className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
-                    formErrors.startDate ? 'border-red-500' : 'border-gray-300'
-                  }`}
-                />
-                {formErrors.startDate && (
-                  <p className="mt-1 text-sm text-red-600">{formErrors.startDate}</p>
-                )}
-              </div>
-
-              <div>
-                <label htmlFor="endDate" className="block text-sm font-medium text-gray-700 mb-2">
-                  End Date *
-                </label>
-                <input
-                  type="date"
-                  id="endDate"
-                  name="endDate"
-                  value={formData.endDate}
-                  onChange={handleInputChange}
-                  min={formData.startDate || new Date().toISOString().split('T')[0]}
-                  className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
-                    formErrors.endDate ? 'border-red-500' : 'border-gray-300'
-                  }`}
-                />
-                {formErrors.endDate && (
-                  <p className="mt-1 text-sm text-red-600">{formErrors.endDate}</p>
-                )}
+                <CardTitle className="text-2xl">Book {asset.name}</CardTitle>
+                <CardDescription>Fill out the form below to make a reservation</CardDescription>
               </div>
             </div>
+          </CardHeader>
+          <CardContent>
+            <Form {...form}>
+              <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+                {/* Date Selection */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <FormField
+                    control={form.control}
+                    name="startDate"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Start Date *</FormLabel>
+                        <FormControl>
+                          <Input
+                            type="date"
+                            min={new Date().toISOString().split('T')[0]}
+                            {...field}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
 
-            <div className="border-t pt-6">
-              <h2 className="text-lg font-semibold text-gray-900 mb-4">Your Information</h2>
+                  <FormField
+                    control={form.control}
+                    name="endDate"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>End Date *</FormLabel>
+                        <FormControl>
+                          <Input
+                            type="date"
+                            min={form.watch('startDate') || new Date().toISOString().split('T')[0]}
+                            {...field}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
 
-              {/* Customer Name */}
-              <div className="mb-4">
-                <label htmlFor="customerName" className="block text-sm font-medium text-gray-700 mb-2">
-                  Full Name *
-                </label>
-                <input
-                  type="text"
-                  id="customerName"
-                  name="customerName"
-                  value={formData.customerName}
-                  onChange={handleInputChange}
-                  placeholder="John Doe"
-                  className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
-                    formErrors.customerName ? 'border-red-500' : 'border-gray-300'
-                  }`}
-                />
-                {formErrors.customerName && (
-                  <p className="mt-1 text-sm text-red-600">{formErrors.customerName}</p>
-                )}
-              </div>
+                <Separator />
 
-              {/* Customer Email */}
-              <div className="mb-4">
-                <label htmlFor="customerEmail" className="block text-sm font-medium text-gray-700 mb-2">
-                  Email Address *
-                </label>
-                <input
-                  type="email"
-                  id="customerEmail"
-                  name="customerEmail"
-                  value={formData.customerEmail}
-                  onChange={handleInputChange}
-                  placeholder="john@example.com"
-                  className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
-                    formErrors.customerEmail ? 'border-red-500' : 'border-gray-300'
-                  }`}
-                />
-                {formErrors.customerEmail && (
-                  <p className="mt-1 text-sm text-red-600">{formErrors.customerEmail}</p>
-                )}
-              </div>
+                {/* Customer Information */}
+                <div className="space-y-4">
+                  <h3 className="text-lg font-semibold text-slate-900">Your Information</h3>
 
-              {/* Customer Phone */}
-              <div className="mb-4">
-                <label htmlFor="customerPhone" className="block text-sm font-medium text-gray-700 mb-2">
-                  Phone Number *
-                </label>
-                <input
-                  type="tel"
-                  id="customerPhone"
-                  name="customerPhone"
-                  value={formData.customerPhone}
-                  onChange={handleInputChange}
-                  placeholder="+1 (555) 123-4567"
-                  className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
-                    formErrors.customerPhone ? 'border-red-500' : 'border-gray-300'
-                  }`}
-                />
-                {formErrors.customerPhone && (
-                  <p className="mt-1 text-sm text-red-600">{formErrors.customerPhone}</p>
-                )}
-              </div>
-            </div>
+                  <FormField
+                    control={form.control}
+                    name="customerName"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Full Name *</FormLabel>
+                        <FormControl>
+                          <Input placeholder="John Doe" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
 
-            {/* Submit Button */}
-            <div className="flex gap-4 pt-6">
-              <button
-                type="submit"
-                disabled={submitting}
-                className="flex-1 py-3 px-6 bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-              >
-                {submitting ? 'Processing...' : 'Confirm Booking'}
-              </button>
-              <Link
-                href={`/customer/${subdomain}/${assetId}`}
-                className="px-6 py-3 border border-gray-300 text-gray-700 font-semibold rounded-lg hover:bg-gray-50 transition-colors text-center"
-              >
-                Cancel
-              </Link>
-            </div>
+                  <FormField
+                    control={form.control}
+                    name="customerEmail"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Email Address *</FormLabel>
+                        <FormControl>
+                          <Input type="email" placeholder="john@example.com" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
 
-            <p className="text-sm text-gray-500 text-center">
-              * Required fields
-            </p>
-          </form>
-        </div>
+                  <FormField
+                    control={form.control}
+                    name="customerPhone"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Phone Number *</FormLabel>
+                        <FormControl>
+                          <Input type="tel" placeholder="+1 (555) 123-4567" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+
+                {/* Important Notice */}
+                <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
+                  <div className="flex items-start">
+                    <svg className="w-5 h-5 text-amber-600 mt-0.5 mr-2 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                    </svg>
+                    <div className="text-sm text-amber-800">
+                      <p className="font-medium mb-1">Please note:</p>
+                      <ul className="list-disc list-inside space-y-1">
+                        <li>You'll receive a confirmation email with booking details</li>
+                        <li>New dates are subject to availability</li>
+                        <li>The email will include a link to update your booking</li>
+                      </ul>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Submit Button */}
+                <div className="flex gap-4 pt-4">
+                  <Button
+                    type="submit"
+                    disabled={isPending}
+                    className="flex-1"
+                  >
+                    {isPending ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Processing...
+                      </>
+                    ) : (
+                      <>
+                        <CheckCircle2 className="mr-2 h-4 w-4" />
+                        Confirm Booking
+                      </>
+                    )}
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    asChild
+                  >
+                    <Link href={`/customer/${subdomain}/${assetId}`}>
+                      Cancel
+                    </Link>
+                  </Button>
+                </div>
+
+                <p className="text-sm text-slate-500 text-center">
+                  * Required fields
+                </p>
+              </form>
+            </Form>
+          </CardContent>
+        </Card>
       </div>
     </div>
   );

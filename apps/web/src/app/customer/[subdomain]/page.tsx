@@ -1,10 +1,22 @@
 'use client';
 
 import { useParams, useSearchParams, useRouter } from 'next/navigation';
-import { useEffect, useState } from 'react';
 import { client } from '@/lib/api/publicClient';
 import Link from 'next/link';
 import Image from 'next/image';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { Loader2, ArrowRight } from 'lucide-react';
+import {
+  Pagination,
+  PaginationContent,
+  PaginationEllipsis,
+  PaginationItem,
+  PaginationLink,
+  PaginationNext,
+  PaginationPrevious,
+} from '@/components/ui/pagination';
 
 type Asset = {
   id: string;
@@ -30,15 +42,6 @@ type Asset = {
   };
 };
 
-type PaginationData = {
-  page: number;
-  pageSize: number;
-  totalCount: number;
-  totalPages: number;
-  hasNextPage: boolean;
-  hasPreviousPage: boolean;
-};
-
 export default function CustomerAssetListPage() {
   const params = useParams();
   const searchParams = useSearchParams();
@@ -54,7 +57,7 @@ export default function CustomerAssetListPage() {
       query: { page: currentPage, pageSize },
     },
   });
-  
+
   const assets = response?.status === 200 ? response.body.data : [];
   const pagination = assets.length > 0 ? assets[0].pagination : null;
 
@@ -62,12 +65,47 @@ export default function CustomerAssetListPage() {
     router.push(`/customer/${subdomain}?page=${page}&pageSize=${pageSize}`);
   };
 
+  // Generate page numbers for pagination
+  const getPageNumbers = () => {
+    if (!pagination) return [];
+    const { totalPages } = pagination;
+    const pages: (number | 'ellipsis')[] = [];
+
+    if (totalPages <= 7) {
+      // Show all pages if 7 or fewer
+      return Array.from({ length: totalPages }, (_, i) => i + 1);
+    }
+
+    // Always show first page
+    pages.push(1);
+
+    if (currentPage > 3) {
+      pages.push('ellipsis');
+    }
+
+    // Show pages around current page
+    for (let i = Math.max(2, currentPage - 1); i <= Math.min(totalPages - 1, currentPage + 1); i++) {
+      pages.push(i);
+    }
+
+    if (currentPage < totalPages - 2) {
+      pages.push('ellipsis');
+    }
+
+    // Always show last page
+    if (totalPages > 1) {
+      pages.push(totalPages);
+    }
+
+    return pages;
+  };
+
   if (isLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
+      <div className="min-h-screen flex items-center justify-center bg-slate-50">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
-          <p className="mt-4 text-gray-600">Loading assets...</p>
+          <Loader2 className="h-12 w-12 animate-spin text-blue-600 mx-auto" />
+          <p className="mt-4 text-slate-600">Loading assets...</p>
         </div>
       </div>
     );
@@ -75,36 +113,41 @@ export default function CustomerAssetListPage() {
 
   if (error) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-center">
-          <p className="text-red-600">Failed to load assets. Please try again.</p>
-          <button
-            onClick={() => refetch()}
-            className="mt-4 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
-          >
-            Retry
-          </button>
-        </div>
+      <div className="min-h-screen flex items-center justify-center bg-slate-50">
+        <Card className="max-w-md">
+          <CardContent className="pt-6">
+            <div className="text-center">
+              <p className="text-red-600 mb-4">Failed to load assets. Please try again.</p>
+              <Button onClick={() => refetch()}>
+                Retry
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-slate-50">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
         {/* Header */}
         <div className="mb-8">
-          <h1 className="text-4xl font-bold text-gray-900">Available Assets</h1>
-          <p className="mt-2 text-lg text-gray-600">
+          <h1 className="text-4xl font-bold text-slate-900">Available Assets</h1>
+          <p className="mt-2 text-lg text-slate-600">
             Browse our selection and book what you need
           </p>
         </div>
 
         {/* Assets Grid */}
         {assets.length === 0 ? (
-          <div className="text-center py-12">
-            <p className="text-gray-500 text-lg">No assets available at the moment.</p>
-          </div>
+          <Card>
+            <CardContent className="py-12">
+              <div className="text-center">
+                <p className="text-slate-500 text-lg">No assets available at the moment.</p>
+              </div>
+            </CardContent>
+          </Card>
         ) : (
           <>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
@@ -112,107 +155,106 @@ export default function CustomerAssetListPage() {
                 <Link
                   key={asset.id}
                   href={`/customer/${subdomain}/${asset.id}`}
-                  className="group bg-white rounded-lg shadow-md overflow-hidden hover:shadow-xl transition-shadow duration-300"
+                  className="group"
                 >
-                  {/* Asset Image */}
-                  <div className="relative h-48 bg-gradient-to-br from-blue-400 to-blue-600 flex items-center justify-center">
-                    {asset.images.length > 0 ? (
-                      <Image
-                        src={asset.images[0]}
-                        alt={asset.name}
-                        fill
-                        className="object-cover"
-                      />
-                    ) : (
-                      <span className="text-white text-6xl font-bold opacity-20">
-                        {asset.name.charAt(0)}
-                      </span>
-                    )}
-                  </div>
-
-                  {/* Asset Info */}
-                  <div className="p-4">
-                    <h3 className="text-lg font-semibold text-gray-900 group-hover:text-blue-600 transition-colors">
-                      {asset.name}
-                    </h3>
-                    {asset.description && (
-                      <p className="mt-2 text-sm text-gray-600 line-clamp-2">
-                        {asset.description}
-                      </p>
-                    )}
-
-                    {/* Tags */}
-                    {asset.tags && asset.tags.length > 0 && (
-                      <div className="mt-3 flex flex-wrap gap-2">
-                        {asset.tags.slice(0, 3).map((tag) => (
-                          <span
-                            key={tag.id}
-                            className="inline-block px-2 py-1 text-xs font-medium text-blue-700 bg-blue-100 rounded"
-                          >
-                            {tag.name}
-                          </span>
-                        ))}
-                        {asset.tags.length > 3 && (
-                          <span className="inline-block px-2 py-1 text-xs font-medium text-gray-500 bg-gray-100 rounded">
-                            +{asset.tags.length - 3} more
-                          </span>
-                        )}
-                      </div>
-                    )}
-
-                    <div className="mt-4 flex items-center justify-between">
-                      <span className="text-sm font-medium text-blue-600 group-hover:text-blue-700">
-                        View Details →
-                      </span>
+                  <Card className="h-full hover:shadow-xl transition-shadow duration-300">
+                    {/* Asset Image */}
+                    <div className="relative h-48 bg-gradient-to-br from-blue-400 to-blue-600 flex items-center justify-center overflow-hidden">
+                      {asset.images.length > 0 ? (
+                        <Image
+                          src={asset.images[0]}
+                          alt={asset.name}
+                          fill
+                          className="object-cover"
+                        />
+                      ) : (
+                        <span className="text-white text-6xl font-bold opacity-20">
+                          {asset.name.charAt(0)}
+                        </span>
+                      )}
                     </div>
-                  </div>
+
+                    <CardHeader>
+                      <CardTitle className="group-hover:text-blue-600 transition-colors">
+                        {asset.name}
+                      </CardTitle>
+                      {asset.description && (
+                        <CardDescription className="line-clamp-2">
+                          {asset.description}
+                        </CardDescription>
+                      )}
+                    </CardHeader>
+
+                    <CardContent>
+                      {/* Tags */}
+                      {asset.tags && asset.tags.length > 0 && (
+                        <div className="flex flex-wrap gap-2 mb-4">
+                          {asset.tags.slice(0, 3).map((tag) => (
+                            <Badge key={tag.id} variant="secondary">
+                              {tag.name}
+                            </Badge>
+                          ))}
+                          {asset.tags.length > 3 && (
+                            <Badge variant="outline">
+                              +{asset.tags.length - 3} more
+                            </Badge>
+                          )}
+                        </div>
+                      )}
+
+                      <div className="flex items-center text-sm font-medium text-blue-600 group-hover:text-blue-700">
+                        View Details
+                        <ArrowRight className="ml-1 h-4 w-4" />
+                      </div>
+                    </CardContent>
+                  </Card>
                 </Link>
               ))}
             </div>
 
             {/* Pagination */}
             {pagination && pagination.totalPages > 1 && (
-              <div className="mt-8 flex items-center justify-center gap-2">
-                <button
-                  onClick={() => goToPage(currentPage - 1)}
-                  disabled={!pagination.hasPreviousPage}
-                  className="px-4 py-2 bg-white border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  Previous
-                </button>
+              <div className="mt-8">
+                <Pagination>
+                  <PaginationContent>
+                    <PaginationItem>
+                      <PaginationPrevious
+                        onClick={() => pagination.hasPreviousPage && goToPage(currentPage - 1)}
+                        className={!pagination.hasPreviousPage ? 'pointer-events-none opacity-50' : 'cursor-pointer'}
+                      />
+                    </PaginationItem>
 
-                <div className="flex gap-1">
-                  {Array.from({ length: pagination.totalPages }, (_, i) => i + 1).map((page) => (
-                    <button
-                      key={page}
-                      onClick={() => goToPage(page)}
-                      className={`px-3 py-2 rounded-md text-sm font-medium ${
-                        page === currentPage
-                          ? 'bg-blue-600 text-white'
-                          : 'bg-white border border-gray-300 text-gray-700 hover:bg-gray-50'
-                      }`}
-                    >
-                      {page}
-                    </button>
-                  ))}
+                    {getPageNumbers().map((page, index) => (
+                      <PaginationItem key={index}>
+                        {page === 'ellipsis' ? (
+                          <PaginationEllipsis />
+                        ) : (
+                          <PaginationLink
+                            onClick={() => goToPage(page)}
+                            isActive={page === currentPage}
+                            className="cursor-pointer"
+                          >
+                            {page}
+                          </PaginationLink>
+                        )}
+                      </PaginationItem>
+                    ))}
+
+                    <PaginationItem>
+                      <PaginationNext
+                        onClick={() => pagination.hasNextPage && goToPage(currentPage + 1)}
+                        className={!pagination.hasNextPage ? 'pointer-events-none opacity-50' : 'cursor-pointer'}
+                      />
+                    </PaginationItem>
+                  </PaginationContent>
+                </Pagination>
+
+                {/* Results Info */}
+                <div className="mt-4 text-center text-sm text-slate-600">
+                  Showing {(currentPage - 1) * pageSize + 1} to{' '}
+                  {Math.min(currentPage * pageSize, pagination.totalCount)} of{' '}
+                  {pagination.totalCount} assets
                 </div>
-
-                <button
-                  onClick={() => goToPage(currentPage + 1)}
-                  disabled={!pagination.hasNextPage}
-                  className="px-4 py-2 bg-white border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  Next
-                </button>
-              </div>
-            )}
-
-            {/* Results Info */}
-            {pagination && (
-              <div className="mt-4 text-center text-sm text-gray-600">
-                Showing {(currentPage - 1) * pageSize + 1} to{' '}
-                {Math.min(currentPage * pageSize, pagination.totalCount)} of{' '}
-                {pagination.totalCount} assets
               </div>
             )}
           </>

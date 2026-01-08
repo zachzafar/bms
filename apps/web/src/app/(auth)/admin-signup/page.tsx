@@ -49,7 +49,7 @@ export default function AdminRegistration() {
           
           // Redirect back to dashboard after successful registration
           setTimeout(() => {
-            router.push('/dashboard');
+            router.push('/admin');
           }, 2000);
         } else {
           toast.error('Registration failed. Please try again.');
@@ -67,16 +67,9 @@ export default function AdminRegistration() {
       <div className="max-w-4xl mx-auto">
         {/* Header */}
         <div className="mb-8">
-          <Link 
-            href="/dashboard" 
-            className="inline-flex items-center text-slate-400 hover:text-slate-200 mb-4"
-          >
-            <ArrowLeft className="h-4 w-4 mr-2" />
-            Back to Dashboard
-          </Link>
           <h1 className="text-3xl font-bold text-white">Admin Registration</h1>
           <p className="text-slate-300 mt-2">
-            Register new system administrators for your organization
+            Register new system administrators
           </p>
         </div>
 
@@ -143,7 +136,7 @@ export default function AdminRegistration() {
                   <Button
                     type="button"
                     variant="outline"
-                    onClick={() => router.push('/dashboard')}
+                    onClick={() => router.push('/admin')}
                     className="border-slate-600 text-slate-300 hover:bg-slate-700"
                   >
                     Cancel

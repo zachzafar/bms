@@ -25,7 +25,7 @@ export default function DashboardPage() {
       title: 'Create New Admin',
       description: 'Add a new system administrator',
       icon: Shield,
-      href: '/dashboard/users',
+      href: '/admin/users',
       color: 'bg-purple-600',
       action: 'Create Admin'
     },
@@ -33,7 +33,7 @@ export default function DashboardPage() {
       title: 'Create New Tenant',
       description: 'Set up a new tenant with admin user',
       icon: Building,
-      href: '/dashboard/tenants',
+      href: '/admin/tenants',
       color: 'bg-blue-600',
       action: 'Create Tenant'
     },
@@ -41,7 +41,7 @@ export default function DashboardPage() {
       title: 'Manage Roles',
       description: 'Create and manage user roles',
       icon: Users,
-      href: '/dashboard/tenants',
+      href: '/admin/tenants',
       color: 'bg-green-600',
       action: 'Manage Roles'
     },
@@ -49,7 +49,7 @@ export default function DashboardPage() {
       title: 'API Keys',
       description: 'Generate and manage API keys',
       icon: Key,
-      href: '/dashboard/tenants',
+      href: '/admin/tenants',
       color: 'bg-orange-600',
       action: 'Manage Keys'
     }

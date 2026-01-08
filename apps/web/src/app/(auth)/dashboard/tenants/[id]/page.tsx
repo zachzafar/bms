@@ -71,7 +71,7 @@ export default function TenantDetailPage() {
         {/* Header */}
         <div className="flex items-center justify-between mb-8">
           <div className="flex items-center space-x-4">
-            <Link href="/dashboard/tenants">
+            <Link href="/admin/tenants">
               <Button variant="outline" size="sm" className="border-slate-600 text-slate-300 hover:bg-slate-700">
                 <ArrowLeft className="h-4 w-4 mr-2" />
                 Back

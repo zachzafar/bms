@@ -15,8 +15,8 @@ import { z } from 'zod';
 
 const ModifiedInsertAssetSchema = z.object({
   name: z.string().min(1, 'Asset name is required'),
-  assetTypeId: z.bigint().min((1), 'Asset type is required'),
-  tagId: z.number().min(1, 'Tag is required') // 👈 new field
+  assetTypeId: z.coerce.number().min(1, 'Asset type is required'),
+  tagId: z.coerce.number().min(1, 'Tag is required')
 });
 
 type ModifiedInsertAsset = z.infer<typeof ModifiedInsertAssetSchema>;
@@ -66,7 +66,10 @@ function AddAssetForm() {
           render={({ field }) => (
             <FormItem>
               <FormLabel htmlFor="asset-name">Asset Name</FormLabel>
-              <Input id="asset-name" placeholder="Enter asset name" {...field} />
+              <FormControl>
+                <Input id="asset-name" placeholder="Enter asset name" {...field} />
+              </FormControl>
+              <FormMessage />
             </FormItem>
           )}
         />
@@ -77,7 +80,7 @@ function AddAssetForm() {
           render={({ field }) => (
             <FormItem>
               <FormLabel htmlFor="asset-type">Asset Type</FormLabel>
-              <Select onValueChange={(value) => field.onChange((value))} value={field.value?.toString()}>
+              <Select onValueChange={(value) => field.onChange(Number(value))} value={field.value?.toString()}>
                 <FormControl>
                   <SelectTrigger id="asset-type">
                     <SelectValue placeholder="Select asset type" />

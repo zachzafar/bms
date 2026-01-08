@@ -14,6 +14,7 @@ export const Asset = mysqlTable("assets", {
     id: varchar("id", { length: 36 }).primaryKey().$default(() => uuid()),
     name: varchar("name", { length: 255 }).notNull(),
     description: text("description"),
+    available: boolean("available").default(true).notNull(),
     requiresApproval: boolean("requires_approval").default(false).notNull(),
     assetTypeId: bigint("asset_type_id", { mode: 'number', unsigned: true}).references(() => AssetType.id).notNull(),
     userId: varchar("user_id",{length: 255}).references(() => User.id),

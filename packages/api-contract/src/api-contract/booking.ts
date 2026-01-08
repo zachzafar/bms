@@ -2,7 +2,7 @@ import { initContract } from "@ts-rest/core";
 
 import { z } from "zod";
 
-import { InsertBlockedDateSchema, InsertBookingSchema, SelectAssetSchema, SelectBookingSchema, SelectCustomerSchema, SelectUserSchema, UpdateBlockedDateSchema, UpdateBookingSchema } from "../database-schema";
+import { InsertBlockedDateSchema, InsertBookingSchema, InsertCustomerSchema, SelectAssetSchema, SelectBookingSchema, SelectCustomerSchema, SelectUserSchema, UpdateBlockedDateSchema, UpdateBookingSchema } from "../database-schema";
 
 
 const c = initContract();
@@ -189,5 +189,36 @@ export const bookingContract = c.router({
     },
     pathParams: z.object({token: z.string(),bookingId:z.string()}),
     summary: 'create and share token for updating '
+  },
+  customerCreateBooking: {
+    method: "POST",
+    path:"/customer-create-booking/:tenantId",
+    pathParams: z.object({
+      tenantId:z.string()
+    }),
+    body: z.object({
+      booking: InsertBookingSchema,
+      customer: z.object({
+        name: z.string(),
+        email: z.string(),
+        phone: z.string().optional(),
+      })
+    }),
+    responses: {
+      201: z.object({ message: z.string()})
+    },
+    summary: 'endpoint for unauthenticated new customers to create bookings'
+  },
+
+  customerViewBooking: {
+    method: 'GET',
+    path: '/customer-view-booking/:bookingId/:token',
+    pathParams: z.object({
+      bookingId: z.string(),
+      token:z.string(),
+    }),
+    responses: {
+      200: ExtendedSelectBookingSchema
+    }
   }
 });

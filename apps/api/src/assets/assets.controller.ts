@@ -266,6 +266,16 @@ export class AssetsController {
         });
     }
 
+    @TsRestHandler(contract.assets.updateAssetIsAvailable)
+    async updateAssetIsAvailable(): Promise<ReturnType<typeof tsRestHandler>> {
+        return tsRestHandler(contract.assets.updateAssetIsAvailable, async ({ params, body }) => {
+            const { id } = params
+            const { available } = body
+            const message = await this.assetService.updateAssetIsAvailable(available,id)
+            return { status: 200, body: message }
+        });
+    }
+
     
 
 }

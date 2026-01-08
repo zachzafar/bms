@@ -400,5 +400,11 @@ export class AssetsService {
     };
   }
 
+  async updateAssetIsAvailable(available:boolean,assetId:string){
+    await this.db.update(schema.Asset).set({available}).where(eq(schema.Asset.id,assetId)).execute();
+
+    return { message: 'Asset availability updated successfully' };
+  }
+
 
 }

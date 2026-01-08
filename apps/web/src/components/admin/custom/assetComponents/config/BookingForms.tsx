@@ -40,6 +40,7 @@ import { toast } from 'sonner';
 import { InsertBookingFormFieldSchema } from '@repo/api-contract';
 import * as z from 'zod';
 import { Textarea } from '@/components/ui/textarea';
+import { Label } from '@/components/ui/label';
 import { useState } from 'react';
 
 const bookingFormSchema = z.object({
@@ -147,7 +148,7 @@ function BookingForms({ tenantId }: { tenantId: string }) {
               />
 
               <div className="space-y-4">
-                <FormLabel>Form Fields</FormLabel>
+                <Label>Form Fields</Label>
                 {fields.map((field, index) => (
                   <div key={field.id} className="flex items-center space-x-2">
                     <FormField

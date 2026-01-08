@@ -5,6 +5,11 @@ import { useState } from 'react';
 import { client } from '@/lib/api/publicClient';
 import Link from 'next/link';
 import Image from 'next/image';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { Separator } from '@/components/ui/separator';
+import { ArrowLeft, Loader2, Calendar } from 'lucide-react';
 
 export default function CustomerAssetDetailPage() {
   const params = useParams();
@@ -24,10 +29,10 @@ export default function CustomerAssetDetailPage() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
+      <div className="min-h-screen flex items-center justify-center bg-slate-50">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
-          <p className="mt-4 text-gray-600">Loading asset details...</p>
+          <Loader2 className="h-12 w-12 animate-spin text-blue-600 mx-auto" />
+          <p className="mt-4 text-slate-600">Loading asset details...</p>
         </div>
       </div>
     );
@@ -35,37 +40,48 @@ export default function CustomerAssetDetailPage() {
 
   if (error || !asset) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-center">
-          <p className="text-red-600 text-lg">
-            {response?.status !== 200 ? 'Asset not found' : 'Failed to load asset details. Please try again.'}
-          </p>
-          <Link
-            href={`/customer/${subdomain}`}
-            className="mt-4 inline-block px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
-          >
-            Back to Assets
-          </Link>
-        </div>
+      <div className="min-h-screen flex items-center justify-center bg-slate-50">
+        <Card className="max-w-md">
+          <CardContent className="pt-6">
+            <div className="text-center">
+              <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                <svg className="w-8 h-8 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </div>
+              <h2 className="text-xl font-bold text-slate-900 mb-2">
+                {response?.status !== 200 ? 'Asset not found' : 'Failed to load asset details'}
+              </h2>
+              <p className="text-slate-600 mb-6">
+                {response?.status !== 200
+                  ? 'The asset you\'re looking for doesn\'t exist or has been removed.'
+                  : 'Please try again later.'}
+              </p>
+              <Button asChild>
+                <Link href={`/customer/${subdomain}`}>
+                  Back to Assets
+                </Link>
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-slate-50">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Back Button */}
         <Link
           href={`/customer/${subdomain}`}
           className="inline-flex items-center text-blue-600 hover:text-blue-700 mb-6"
         >
-          <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-          </svg>
+          <ArrowLeft className="w-5 h-5 mr-2" />
           Back to all assets
         </Link>
 
-        <div className="bg-white rounded-lg shadow-lg overflow-hidden">
+        <Card className="overflow-hidden">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 p-8">
             {/* Left Column - Images */}
             <div>
@@ -91,13 +107,14 @@ export default function CustomerAssetDetailPage() {
               {asset.images.length > 1 && (
                 <div className="grid grid-cols-4 gap-2">
                   {asset.images.map((image, index) => (
-                    <button
+                    <Button
                       key={image.id}
+                      variant="outline"
                       onClick={() => setSelectedImageIndex(index)}
-                      className={`relative h-20 rounded-lg overflow-hidden border-2 ${
+                      className={`relative h-20 p-0 overflow-hidden ${
                         selectedImageIndex === index
-                          ? 'border-blue-600'
-                          : 'border-gray-200 hover:border-gray-300'
+                          ? 'ring-2 ring-blue-600 border-blue-600'
+                          : ''
                       }`}
                     >
                       <Image
@@ -106,7 +123,7 @@ export default function CustomerAssetDetailPage() {
                         fill
                         className="object-cover"
                       />
-                    </button>
+                    </Button>
                   ))}
                 </div>
               )}
@@ -114,62 +131,65 @@ export default function CustomerAssetDetailPage() {
 
             {/* Right Column - Details */}
             <div>
-              <h1 className="text-3xl font-bold text-gray-900 mb-4">{asset.name}</h1>
+              <CardHeader className="px-0 pt-0">
+                <CardTitle className="text-3xl">{asset.name}</CardTitle>
+              </CardHeader>
 
-              {/* Tags */}
-              {asset.tags.length > 0 && (
-                <div className="flex flex-wrap gap-2 mb-6">
-                  {asset.tags.map((tag) => (
-                    <span
-                      key={tag.id}
-                      className="inline-block px-3 py-1 text-sm font-medium text-blue-700 bg-blue-100 rounded-full"
-                    >
-                      {tag.name}
-                    </span>
-                  ))}
-                </div>
-              )}
-
-              {/* Description */}
-              {asset.description && (
-                <div className="mb-6">
-                  <h2 className="text-lg font-semibold text-gray-900 mb-2">Description</h2>
-                  <p className="text-gray-600 leading-relaxed">{asset.description}</p>
-                </div>
-              )}
-
-              {/* Properties */}
-              {asset.properties.length > 0 && (
-                <div className="mb-8">
-                  <h2 className="text-lg font-semibold text-gray-900 mb-3">Specifications</h2>
-                  <dl className="space-y-2">
-                    {asset.properties.map((prop) => (
-                      <div
-                        key={prop.id}
-                        className="flex justify-between py-2 border-b border-gray-200"
-                      >
-                        <dt className="font-medium text-gray-700">{prop.assetProperty.name}:</dt>
-                        <dd className="text-gray-900">{prop.value}</dd>
-                      </div>
+              <CardContent className="px-0">
+                {/* Tags */}
+                {asset.tags.length > 0 && (
+                  <div className="flex flex-wrap gap-2 mb-6">
+                    {asset.tags.map((tag) => (
+                      <Badge key={tag.id} variant="secondary">
+                        {tag.name}
+                      </Badge>
                     ))}
-                  </dl>
-                </div>
-              )}
+                  </div>
+                )}
 
-              {/* Book Now Button */}
-              <Link
-                href={`/customer/${subdomain}/${assetId}/book`}
-                className="block w-full py-3 px-6 text-center text-white bg-blue-600 hover:bg-blue-700 rounded-lg font-semibold shadow-md hover:shadow-lg transition-all duration-200"
-              >
-                Book Now
-              </Link>
+                {/* Description */}
+                {asset.description && (
+                  <div className="mb-6">
+                    <h2 className="text-lg font-semibold text-slate-900 mb-2">Description</h2>
+                    <p className="text-slate-600 leading-relaxed">{asset.description}</p>
+                  </div>
+                )}
 
-              <p className="mt-3 text-sm text-gray-500 text-center">
-                Check availability and make a reservation
-              </p>
+                <Separator className="my-6" />
+
+                {/* Properties */}
+                {asset.properties.length > 0 && (
+                  <div className="mb-8">
+                    <h2 className="text-lg font-semibold text-slate-900 mb-3">Specifications</h2>
+                    <dl className="space-y-2">
+                      {asset.properties.map((prop) => (
+                        <div
+                          key={prop.id}
+                          className="flex justify-between py-2 border-b border-slate-200"
+                        >
+                          <dt className="font-medium text-slate-700">{prop.assetProperty.name}:</dt>
+                          <dd className="text-slate-900">{prop.value}</dd>
+                        </div>
+                      ))}
+                    </dl>
+                  </div>
+                )}
+
+                {/* Book Now Button */}
+                <Button asChild size="lg" className="w-full">
+                  <Link href={`/customer/${subdomain}/${assetId}/book`}>
+                    <Calendar className="mr-2 h-5 w-5" />
+                    Book Now
+                  </Link>
+                </Button>
+
+                <p className="mt-3 text-sm text-slate-500 text-center">
+                  Check availability and make a reservation
+                </p>
+              </CardContent>
             </div>
           </div>
-        </div>
+        </Card>
       </div>
     </div>
   );

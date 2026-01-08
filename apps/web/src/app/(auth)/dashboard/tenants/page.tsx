@@ -261,7 +261,7 @@ function TenantRow({id}:{id: string}) {
                     <td className="p-3 text-slate-300">{tenant.tenant.createdAt}</td>
                     <td className="p-3">
                       <div className="flex items-center space-x-2">
-                        <Link href={`/dashboard/tenants/${tenant.tenant.id}`}>
+                        <Link href={`/tenants/${tenant.tenant.id}`}>
                           <Button
                             variant="ghost"
                             size="sm"
@@ -337,7 +337,7 @@ function CreateTenantModal() {
       form.reset();
       queryClient.invalidateQueries({ queryKey: ['tenants'] });
       // Redirect to the new tenant page
-      router.push(`/dashboard/tenants/${response.body.tenantId}`);
+      router.push(`/admin/tenants/${response.body.tenantId}`);
     },
     onError: (error) => {
       console.error('Create tenant error:', error);

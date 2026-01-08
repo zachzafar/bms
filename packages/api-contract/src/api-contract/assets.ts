@@ -262,5 +262,20 @@ export const assetsContract = c.router({
       404: z.undefined()
     },
     summary: 'Get asset details with images and properties (public)'
+  },
+  updateAssetIsAvailable: {
+    method: "PUT",
+    path: "/assets/availability/:id",
+    pathParams: z.object({
+      id: z.string()
+    }),
+    body: z.object({
+      available: z.boolean(),
+    }),
+    responses: {
+      201: z.object({ mesage: z.string()})
+    }
+
+
   }
 })
