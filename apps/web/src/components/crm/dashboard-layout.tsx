@@ -12,14 +12,14 @@ import { AppHeader } from "./app-header"
 
 const navigation = [
   { name: "Dashboard", href: "/", icon: BarChart3 },
-  { name: "Clients", href: "/clients", icon: Users },
+  { name: "Clients", href: "/crm/clients", icon: Users },
   // { name: "Properties", href: "/properties", icon: Building },
-  { name: "Feedback", href: "/feedback", icon: MessageSquare },
-  { name: "Brochures", href: "/brochure", icon: FileText },
-  { name: "Inquiries", href: "/inquiries", icon: MessageSquare },
-  { name: "Tasks", href: "/tasks", icon: CheckSquare },
-  { name: "Communications", href: "/communications", icon: FileText },
-  { name: "Reports", href: "/reports", icon: BarChart3 },
+  { name: "Feedback", href: "/crm/feedback", icon: MessageSquare },
+  { name: "Brochures", href: "/crm/brochure", icon: FileText },
+  { name: "Inquiries", href: "/crm/inquiries", icon: MessageSquare },
+  { name: "Tasks", href: "/crm/tasks", icon: CheckSquare },
+  { name: "Communications", href: "/crm/communications", icon: FileText },
+  { name: "Reports", href: "/crm/reports", icon: BarChart3 },
   // { name: "Settings", href: "/settings", icon: Settings },
 ]
 

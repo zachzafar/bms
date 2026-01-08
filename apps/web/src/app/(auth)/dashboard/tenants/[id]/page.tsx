@@ -7,13 +7,13 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ArrowLeft, Settings, Trash2 } from 'lucide-react';
 import Link from 'next/link';
 import { authClient } from '@/lib/api/publicClient';
-import { TenantOverview } from '@/components/admin/custom/assetComponents/components/TenantOverview';
-import { TenantUsers } from '@/components/admin/custom/assetComponents/components/TenantUsers';
-import { TenantRoles } from '@/components/admin/custom/assetComponents/components/TenantRoles';
-import { TenantApiKeys } from '@/components/admin/custom/assetComponents/components/TenantApiKeys';
+import { TenantOverview } from '@/components/custom/assetComponents/components/TenantOverview';
+import { TenantUsers } from '@/components/custom/assetComponents/components/TenantUsers';
+import { TenantRoles } from '@/components/custom/assetComponents/components/TenantRoles';
+import { TenantApiKeys } from '@/components/custom/assetComponents/components/TenantApiKeys';
 import { TENANTS_QUERY_KEY } from '@/lib/api/queryKeys';
-import AssetConfig from '@/components/admin/custom/assetComponents/components/TenantAssetConfig';
-import TenantAssets from '@/components/admin/custom/assetComponents/components/TenantAssets';
+import AssetConfig from '@/components/custom/assetComponents/components/TenantAssetConfig';
+import TenantAssets from '@/components/custom/assetComponents/components/TenantAssets';
 
 export default function TenantDetailPage() {
   const params = useParams();

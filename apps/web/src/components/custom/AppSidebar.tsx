@@ -1,3 +1,5 @@
+'use client'
+
 import {
   Sidebar,
   SidebarContent,
@@ -11,16 +13,45 @@ import {
   SidebarMenuSubItem,
 } from "@/components/ui/sidebar"
 import { Collapsible, CollapsibleTrigger, CollapsibleContent } from "@radix-ui/react-collapsible"
-import { Home, Box, Calendar, Clipboard, Cog, Settings, User2, CircleDollarSign, CreditCard, DollarSign, FileText } from "lucide-react"
+import {
+  Home,
+  Box,
+  Calendar,
+  Clipboard,
+  Cog,
+  Settings,
+  User2,
+  CreditCard,
+  DollarSign,
+  FileText,
+  CircleDollarSign,
+} from "lucide-react"
 
+import { FEATURE_PERMISSIONS } from "@/lib/feature-permissions"
+import { canAccessFeature } from "@/lib/permissions"
+import { usePermissions } from "@/lib/auth/use-permissions" // ✅ ADD
 
+type FeatureKey = keyof typeof FEATURE_PERMISSIONS
 
-// Menu items.
-const items = [
+type SidebarItem = {
+  title: string
+  icon: any
+  url?: string
+  feature?: FeatureKey
+  children?: {
+    title: string
+    url: string
+    icon: any
+    feature?: FeatureKey
+  }[]
+}
+
+const items: SidebarItem[] = [
   {
     title: "Dashboard",
-    url: "/dashboard",
+    url: "/bookings/dashboard",
     icon: Home,
+    feature: "analytics",
   },
   {
     title: "Bookings",
@@ -28,25 +59,29 @@ const items = [
     children: [
       {
         title: "Rates",
-        url: "/bookings/rates",
+        url: "/bookings/booking/rates",
         icon: CircleDollarSign,
+        feature: "settings",
       },
       {
         title: "Bookings",
-        url: "/bookings",
+        url: "/bookings/booking",
         icon: Calendar,
+        feature: "bookings_assets",
       },
       {
         title: "Booking Calendar",
-        url: "/bookings/calendar",
+        url: "/bookings/booking/calendar",
         icon: Calendar,
-      }
-    ]
+        feature: "bookings_assets",
+      },
+    ],
   },
   {
     title: "Maintenance",
-    url: "/maintenance",
+    url: "/bookings/maintenance",
     icon: Cog,
+    feature: "settings",
   },
   {
     title: "Assets",
@@ -54,20 +89,23 @@ const items = [
     children: [
       {
         title: "Asset List",
-        url: "/assets",
+        url: "/bookings/assets",
         icon: Box,
+        feature: "bookings_assets",
       },
       {
         title: "Config",
-        url: "/assets/config",
-        icon: Settings
+        url: "/bookings/assets/config",
+        icon: Settings,
+        feature: "settings",
       },
     ],
   },
   {
     title: "Reports",
-    url: "/reports",
+    url: "/bookings/reports",
     icon: Clipboard,
+    feature: "reports",
   },
   {
     title: "Users",
@@ -75,36 +113,43 @@ const items = [
     children: [
       {
         title: "Owners",
-        url: "/users/owners",
+        url: "/bookings/users/owners",
         icon: User2,
+        feature: "settings",
       },
       {
         title: "Customers",
-        url: "/users/customers",
+        url: "/bookings/users/customers",
         icon: User2,
+        feature: "settings",
       },
-    ]
+    ],
   },
   {
     title: "Billing",
-    url: "/billing",
     icon: DollarSign,
     children: [
       {
         title: "Invoices",
-        url: "/billing/invoices",
+        url: "/bookings/billing/invoices",
         icon: FileText,
+        feature: "invoices",
       },
       {
         title: "Payments",
-        url: "/billing/payments",
+        url: "/bookings/billing/payments",
         icon: CreditCard,
+        feature: "invoices",
       },
-    ]
+    ],
   },
 ]
 
 export function AppSidebar() {
+  const { permissions: userPermissions, loading } = usePermissions() // ✅ CHANGE
+
+  if (loading) return null // ✅ ADD
+
   return (
     <Sidebar>
       <SidebarContent>
@@ -112,39 +157,63 @@ export function AppSidebar() {
           <SidebarGroupLabel>Application</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
-              {items.map((item) => (
-                <SidebarMenuItem key={item.title}>
-                  {item.children ? (
-                    <Collapsible defaultOpen className="group/collapsible">
-                      <CollapsibleTrigger asChild>
-                        <SidebarMenuButton>
+              {items.map((item) => {
+                const visibleChildren = item.children?.filter(
+                  (child) =>
+                    !child.feature ||
+                    canAccessFeature(
+                      userPermissions,
+                      FEATURE_PERMISSIONS[child.feature]
+                    )
+                )
+
+                const canShowParent =
+                  (!item.feature ||
+                    canAccessFeature(
+                      userPermissions,
+                      FEATURE_PERMISSIONS[item.feature]
+                    )) &&
+                  (!item.children || visibleChildren?.length)
+
+                if (!canShowParent) return null
+
+                return (
+                  <SidebarMenuItem key={item.title}>
+                    {visibleChildren ? (
+                      <Collapsible defaultOpen className="group/collapsible">
+                        <CollapsibleTrigger asChild>
+                          <SidebarMenuButton>
+                            <item.icon />
+                            <span>{item.title}</span>
+                          </SidebarMenuButton>
+                        </CollapsibleTrigger>
+                        <CollapsibleContent>
+                          <SidebarMenuSub>
+                            {visibleChildren.map((child) => (
+                              <SidebarMenuSubItem key={child.title}>
+                                <a
+                                  href={child.url}
+                                  className="flex items-center gap-2"
+                                >
+                                  <child.icon className="h-4 w-4" />
+                                  <span>{child.title}</span>
+                                </a>
+                              </SidebarMenuSubItem>
+                            ))}
+                          </SidebarMenuSub>
+                        </CollapsibleContent>
+                      </Collapsible>
+                    ) : (
+                      <SidebarMenuButton asChild>
+                        <a href={item.url!}>
                           <item.icon />
                           <span>{item.title}</span>
-                        </SidebarMenuButton>
-                      </CollapsibleTrigger>
-                      <CollapsibleContent>
-                        <SidebarMenuSub>
-                          {item.children.map((child) => (
-                            <SidebarMenuSubItem key={child.title}>
-                              <a href={child.url} className="flex items-center gap-2">
-                                <child.icon className="h-4 w-4" />
-                                <span>{child.title}</span>
-                              </a>
-                            </SidebarMenuSubItem>
-                          ))}
-                        </SidebarMenuSub>
-                      </CollapsibleContent>
-                    </Collapsible>
-                  ) : (
-                    <SidebarMenuButton asChild>
-                      <a href={item.url}>
-                        <item.icon />
-                        <span>{item.title}</span>
-                      </a>
-                    </SidebarMenuButton>
-                  )}
-                </SidebarMenuItem>
-              ))}
+                        </a>
+                      </SidebarMenuButton>
+                    )}
+                  </SidebarMenuItem>
+                )
+              })}
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>

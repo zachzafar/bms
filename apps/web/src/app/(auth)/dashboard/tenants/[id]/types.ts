@@ -57,9 +57,7 @@ export const AVAILABLE_PERMISSIONS = [
   'settings:write',
   'analytics:read',
   'reports:read',
-  'reports:write',
-  'assets:read',
-  'assets:write',
+  'reports:write'
 ];
 
 export const AVAILABLE_SCOPES = [
