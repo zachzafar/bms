@@ -1,11 +1,12 @@
 import { relations} from "drizzle-orm";
-import { mysqlTable, varchar, datetime, decimal, text, timestamp, int, index, serial, boolean, bigint, date } from "drizzle-orm/mysql-core";
+import { mysqlTable, varchar, datetime, decimal, text, timestamp, int, index, serial, boolean, bigint, date, mysqlEnum } from "drizzle-orm/mysql-core";
 import { Customer, User, UserHasBookings } from "../users";
 import { Asset, AssetHasRates } from "../asset";
 import { createInsertSchema, createSelectSchema } from "drizzle-zod";
 import { z } from "zod";
 import { BookingFormField } from "../settings";
 import { v4 as uuid } from "uuid";
+import { Tenant } from "../tenant";
 
 
 
@@ -14,7 +15,7 @@ export const Booking = mysqlTable("booking", {
     id: varchar("id", { length: 36 }).primaryKey().$default(uuid),
     startDate: datetime("start_date").notNull(),
     endDate: datetime("end_date").notNull(),
-    status: varchar("status", { length: 255 }),
+    status: mysqlEnum("status", ["Pending", "Confirmed", "Cancelled"]).notNull().$default(() => "Pending"),
     totalPrice: decimal({ precision: 10,scale: 2 }),
     createdAt: timestamp('createdAt').notNull().defaultNow(),
     updatedAt: timestamp('updated_at', { mode: 'date', }).$onUpdate(() => new Date()),
@@ -190,4 +191,3 @@ export const BookingUpdateToken = mysqlTable('booking_upate_token',{
     })
   }))
 
-  

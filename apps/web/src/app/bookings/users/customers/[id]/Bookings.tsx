@@ -22,7 +22,7 @@ const BookingSchema = z.object({
   assetId: z.string().min(1, 'Asset is required'),
   startDate: z.string().min(1, 'Start date required'),
   endDate: z.string().min(1, 'End date required'),
-  status: z.string().default('confirmed').optional(),
+  status: z.enum(["Confirmed","Pending","Cancelled"]).default("Confirmed").optional(),
 });
 
 type BookingForm = z.infer<typeof BookingSchema>;
@@ -60,7 +60,7 @@ export default function Bookings({ userId }: { userId: string }) {
 
   const createForm = useForm<BookingForm>({
     resolver: zodResolver(BookingSchema),
-    defaultValues: { status: 'confirmed' },
+    defaultValues: { status: 'Confirmed' },
   });
 
   const editForm = useForm<BookingForm>({
@@ -81,7 +81,7 @@ export default function Bookings({ userId }: { userId: string }) {
             assetId: values.assetId,
             startDate: new Date(values.startDate),
             endDate: new Date(values.endDate),
-            status: values.status || 'confirmed',
+            status: values.status || 'Confirmed',
           },
           customers: [customerIdNum],
         },

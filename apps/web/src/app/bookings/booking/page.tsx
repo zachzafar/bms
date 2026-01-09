@@ -20,6 +20,16 @@ import { MultiSelector, MultiSelectorTrigger, MultiSelectorInput, MultiSelectorC
 import { StorageService } from '@/lib/api/storage';
 import { usePagination } from '@/hooks/usePagination';
 import { DataTablePagination } from '@/components/ui/data-table-pagination';
+import { Badge } from '@/components/ui/badge';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import { MoreHorizontal, CheckCircle, Clock, XCircle } from 'lucide-react';
 
 import { isSameDay } from "date-fns";
 
@@ -37,6 +47,20 @@ function calculateNights(start: Date, end: Date) {
   return Math.ceil(
     (end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)
   );
+}
+
+// Helper: get status badge variant and icon
+function getStatusBadge(status: string) {
+  switch (status) {
+    case 'Confirmed':
+      return { variant: 'default' as const, color: 'bg-green-100 text-green-800', icon: CheckCircle };
+    case 'Pending':
+      return { variant: 'secondary' as const, color: 'bg-yellow-100 text-yellow-800', icon: Clock };
+    case 'Cancelled':
+      return { variant: 'destructive' as const, color: 'bg-red-100 text-red-800', icon: XCircle };
+    default:
+      return { variant: 'outline' as const, color: 'bg-gray-100 text-gray-800', icon: Clock };
+  }
 }
 
 type BlockedDate = {
@@ -370,11 +394,28 @@ export default function Component() {
     },
   });
 
+  const { mutate: updateBookingStatus } = authClient.booking.updateBookingStatus.useMutation({
+    onSuccess: () => {
+      toast.success('Booking status updated.');
+      refetch();
+    },
+    onError: () => {
+      toast.error('Failed to update booking status.');
+    },
+  });
+
   const handleCancel = (booking: { id: string }) => {
     const confirmed = confirm(`Cancel booking?`);
     if (confirmed) {
       cancelBooking({ params: { id: booking.id }, body: {} });
     }
+  };
+
+  const handleStatusChange = (bookingId: string, newStatus: 'Pending' | 'Confirmed' | 'Cancelled') => {
+    updateBookingStatus({
+      params: { id: bookingId },
+      body: { status: newStatus },
+    });
   };
 
   return (
@@ -661,6 +702,9 @@ export default function Component() {
                 const pricePerNight = rate?.pricePerNight ?? 0;
                 const totalPrice = pricePerNight * nights;
 
+                const statusBadge = getStatusBadge(booking.status || '');
+                const StatusIcon = statusBadge.icon;
+
                 return (
                   <TableRow key={booking.id}>
                     <TableCell className="font-medium">{booking.id}</TableCell>
@@ -669,7 +713,12 @@ export default function Component() {
                     <TableCell>{booking.customer.id}</TableCell>
                     <TableCell>{new Date(booking.startDate).toLocaleDateString()}</TableCell>
                     <TableCell>{new Date(booking.endDate).toLocaleDateString()}</TableCell>
-                    <TableCell>{booking.status}</TableCell>
+                    <TableCell>
+                      <Badge className={statusBadge.color}>
+                        <StatusIcon className="h-3 w-3 mr-1" />
+                        {booking.status}
+                      </Badge>
+                    </TableCell>
 
                     <TableCell>${pricePerNight.toFixed(2)}</TableCell>
                     <TableCell>${totalPrice.toFixed(2)}</TableCell>
@@ -712,9 +761,12 @@ export default function Component() {
                                     {new Date(selectedBooking.endDate).toLocaleString()}
                                   </div>
 
-
                                   <Label className="text-right font-semibold">Status:</Label>
-                                  <div className="col-span-3">{selectedBooking.status}</div>
+                                  <div className="col-span-3">
+                                    <Badge className={getStatusBadge(selectedBooking.status || '').color}>
+                                      {selectedBooking.status}
+                                    </Badge>
+                                  </div>
 
                                   <Label className="text-right font-semibold">Rate / Night:</Label>
                                   <div className="col-span-3">
@@ -755,12 +807,45 @@ export default function Component() {
                           </DialogContent>
                         </Dialog>
 
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="sm">
+                              <MoreHorizontal className="h-4 w-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuLabel>Change Status</DropdownMenuLabel>
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem
+                              onClick={() => handleStatusChange(booking.id, 'Confirmed')}
+                              disabled={booking.status === 'Confirmed'}
+                            >
+                              <CheckCircle className="h-4 w-4 mr-2 text-green-600" />
+                              Confirm
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
+                              onClick={() => handleStatusChange(booking.id, 'Pending')}
+                              disabled={booking.status === 'Pending'}
+                            >
+                              <Clock className="h-4 w-4 mr-2 text-yellow-600" />
+                              Set Pending
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
+                              onClick={() => handleStatusChange(booking.id, 'Cancelled')}
+                              disabled={booking.status === 'Cancelled'}
+                            >
+                              <XCircle className="h-4 w-4 mr-2 text-red-600" />
+                              Cancel
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+
                         <Button
                           variant="destructive"
                           size="sm"
                           onClick={() => handleCancel(booking)}
                         >
-                          Cancel
+                          Delete
                         </Button>
                       </div>
                     </TableCell>

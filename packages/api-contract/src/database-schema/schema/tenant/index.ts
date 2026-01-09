@@ -12,6 +12,7 @@ export const Tenant = mysqlTable("tenants", {
     id: varchar("id", { length: 36 }).primaryKey().$default(() => uuid()),
     name: varchar("name", { length: 255 }).notNull(),
     subdomain: varchar("subdomain", { length: 255 }).unique(),
+    enableAutomaticConfirmation: boolean("enable_automatic_confirmation").notNull().default(true),
     createdAt: timestamp('createdAt',{mode: 'string'}).notNull().defaultNow(),
     updatedAt: timestamp('updatedAt',{mode: 'string'}).defaultNow().onUpdateNow()
 }, (tenant) => ({

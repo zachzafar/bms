@@ -88,6 +88,23 @@ export class BookingService {
           throw new ConflictException('No customers found');
         }
 
+        // Get asset to find tenantId
+        const asset = await tx.query.Asset.findFirst({
+          where: (a, { eq }) => eq(a.id, booking.assetId),
+        });
+
+        if (!asset) {
+          throw new ConflictException('Asset not found');
+        }
+
+        // Get tenant settings to check enableAutomaticConfirmation
+        const tenant = await tx.query.Tenant.findFirst({
+          where: (t, { eq }) => eq(t.id, asset.tenantId),
+        });
+
+        // Determine booking status based on tenant settings
+        const bookingStatus = tenant?.enableAutomaticConfirmation ? 'Confirmed' : 'Pending';
+
         // Calculate total price for the slot range
         const totalPrice = await this.slotService.getTotalPriceForSlots(booking.assetId, startDate, endDate);
 
@@ -96,6 +113,7 @@ export class BookingService {
           ...booking,
           startDate: utcStart, // ✅ real Date object, UTC normalized
           endDate: utcEnd,
+          status: bookingStatus,
           totalPrice: totalPrice.toString(),
         }).$returningId();
 
@@ -194,6 +212,13 @@ export class BookingService {
       const updateUrl = `${process.env.FRONTEND_URL}/booking/update-booking-by-token/${booking_upate_token.token}`;
       // const cancelUrl = `${process.env.FRONTEND_URL}/booking/cancel-booking-by-token/${booking_upate_token.token}`;
 
+      const isPending = booking.status === 'Pending';
+      const headerColor = isPending ? '#FF9800' : '#4CAF50';
+      const title = isPending ? 'Booking Received - Awaiting Confirmation' : 'Booking Confirmation';
+      const message = isPending
+        ? 'Your booking has been received and is awaiting confirmation from our team. Here are the details:'
+        : 'Your booking has been confirmed! Here are the details:';
+
       const customerEmailContent = `
         <!DOCTYPE html>
         <html>
@@ -201,11 +226,14 @@ export class BookingService {
           <style>
             body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
             .container { max-width: 600px; margin: 0 auto; padding: 20px; }
-            .header { background-color: #4CAF50; color: white; padding: 20px; text-align: center; }
+            .header { background-color: ${headerColor}; color: white; padding: 20px; text-align: center; }
             .content { background-color: #f9f9f9; padding: 20px; border: 1px solid #ddd; }
-            .booking-details { background-color: white; padding: 15px; margin: 15px 0; border-left: 4px solid #4CAF50; }
+            .booking-details { background-color: white; padding: 15px; margin: 15px 0; border-left: 4px solid ${headerColor}; }
             .detail-row { margin: 10px 0; }
             .label { font-weight: bold; color: #555; }
+            .status-badge { display: inline-block; padding: 5px 10px; border-radius: 4px; font-weight: bold; }
+            .status-pending { background-color: #FFF3E0; color: #F57C00; }
+            .status-confirmed { background-color: #E8F5E9; color: #2E7D32; }
             .actions { text-align: center; margin: 25px 0; }
             .btn { display: inline-block; padding: 12px 30px; margin: 0 10px; text-decoration: none; border-radius: 5px; font-weight: bold; font-size: 14px; }
             .btn-primary { background-color: #2196F3; color: white; }
@@ -217,15 +245,18 @@ export class BookingService {
         <body>
           <div class="container">
             <div class="header">
-              <h1>Booking Confirmation</h1>
+              <h1>${title}</h1>
             </div>
             <div class="content">
               <p>Dear ${customer.name},</p>
-              <p>Your booking has been confirmed! Here are the details:</p>
+              <p>${message}</p>
 
               <div class="booking-details">
                 <div class="detail-row">
                   <span class="label">Booking ID:</span> ${booking.id}
+                </div>
+                <div class="detail-row">
+                  <span class="label">Status:</span> <span class="status-badge status-${booking.status.toLowerCase()}">${booking.status}</span>
                 </div>
                 <div class="detail-row">
                   <span class="label">Asset:</span> ${asset.name}
@@ -245,6 +276,7 @@ export class BookingService {
                 <a href="${updateUrl}" class="btn btn-primary">Update Booking</a>
               </div>
 
+              ${isPending ? '<p><strong>Note:</strong> Your booking is pending and will be confirmed by our team shortly. You will receive another email once it has been confirmed.</p>' : ''}
               <p>If you have any questions, please don't hesitate to contact us.</p>
               <p>Thank you for your booking!</p>
             </div>
@@ -257,6 +289,11 @@ export class BookingService {
       `;
 
       // Create email HTML template for tenant admin
+      const adminTitle = isPending ? 'New Booking - Requires Confirmation' : 'New Booking Received';
+      const adminMessage = isPending
+        ? 'A new booking has been created and is awaiting your confirmation.'
+        : 'A new booking has been automatically confirmed in your system.';
+
       const adminEmailContent = `
         <!DOCTYPE html>
         <html>
@@ -269,20 +306,26 @@ export class BookingService {
             .booking-details { background-color: white; padding: 15px; margin: 15px 0; border-left: 4px solid #2196F3; }
             .detail-row { margin: 10px 0; }
             .label { font-weight: bold; color: #555; }
+            .status-badge { display: inline-block; padding: 5px 10px; border-radius: 4px; font-weight: bold; }
+            .status-pending { background-color: #FFF3E0; color: #F57C00; }
+            .status-confirmed { background-color: #E8F5E9; color: #2E7D32; }
             .footer { text-align: center; padding: 20px; color: #888; font-size: 12px; }
           </style>
         </head>
         <body>
           <div class="container">
             <div class="header">
-              <h1>New Booking Received</h1>
+              <h1>${adminTitle}</h1>
             </div>
             <div class="content">
-              <p>A new booking has been created in your system.</p>
+              <p>${adminMessage}</p>
 
               <div class="booking-details">
                 <div class="detail-row">
                   <span class="label">Booking ID:</span> ${booking.id}
+                </div>
+                <div class="detail-row">
+                  <span class="label">Status:</span> <span class="status-badge status-${booking.status.toLowerCase()}">${booking.status}</span>
                 </div>
                 <div class="detail-row">
                   <span class="label">Customer:</span> ${customer.name} (${customer.email})
@@ -301,6 +344,7 @@ export class BookingService {
                 </div>
               </div>
 
+              ${isPending ? '<p><strong>Action Required:</strong> Please log in to your admin panel to confirm or cancel this booking.</p>' : ''}
               <p>Please log in to your admin panel to view more details.</p>
             </div>
             <div class="footer">
@@ -312,22 +356,30 @@ export class BookingService {
       `;
 
       // Send email to customer
+      const customerSubject = isPending
+        ? 'Booking Received - Awaiting Confirmation'
+        : 'Booking Confirmation - Your reservation is confirmed!';
+
       this.eventEmitter.emit(
         'send-email',
         new EmailEvent(
           customer.email,
-          'Booking Confirmation - Your reservation is confirmed!',
+          customerSubject,
           customerEmailContent
         )
       );
 
       // Send emails to all tenant admins
+      const adminSubject = isPending
+        ? `New Booking - Requires Confirmation: ${asset.name} - ${customer.name}`
+        : `New Booking: ${asset.name} - ${customer.name}`;
+
       for (const admin of tenantAdmins) {
         this.eventEmitter.emit(
           'send-email',
           new EmailEvent(
             admin.email,
-            `New Booking: ${asset.name} - ${customer.name}`,
+            adminSubject,
             adminEmailContent
           )
         );
@@ -539,6 +591,20 @@ export class BookingService {
     } catch (e) {
       throw new ConflictException('Error occurred while updating booking:' + e);
     }
+  }
+
+  async updateBookingStatus(bookingId: string, status: 'Pending' | 'Confirmed' | 'Cancelled') {
+    const existingBooking = await this.getBooking(bookingId);
+    if (!existingBooking) {
+      throw new NotFoundException('Booking not found');
+    }
+
+    await this.db.update(schema.Booking)
+      .set({ status })
+      .where(eq(schema.Booking.id, bookingId))
+      .execute();
+
+    return { message: `Booking status updated to ${status}` };
   }
 
   async deleteBooking(bookingId: string) {

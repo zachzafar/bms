@@ -189,4 +189,13 @@ export class BookingController {
             return { status: 201, body: { message: "successfully created new booking"}}
         })
     }
+
+    @TsRestHandler(contract.booking.updateBookingStatus)
+    @Roles(PermissionScope.BOOKINGS_WRITE)
+    async updateBookingStatus(): Promise<ReturnType<typeof tsRestHandler>> {
+        return tsRestHandler(contract.booking.updateBookingStatus, async ({ params, body }) => {
+            const result = await this.bookingService.updateBookingStatus(params.id, body.status);
+            return { status: 200, body: result };
+        });
+    }
 }

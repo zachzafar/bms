@@ -226,5 +226,22 @@ export const bookingContract = c.router({
     responses: {
       200: ExtendedSelectBookingSchema
     }
+  },
+
+  // Update booking status
+  updateBookingStatus: {
+    method: 'PATCH',
+    path: '/booking/:id/status',
+    pathParams: z.object({
+      id: z.string()
+    }),
+    body: z.object({
+      status: z.enum(["Pending", "Confirmed", "Cancelled"])
+    }),
+    responses: {
+      200: z.object({ message: z.string() }),
+      404: z.undefined()
+    },
+    summary: 'Update booking status'
   }
 });
