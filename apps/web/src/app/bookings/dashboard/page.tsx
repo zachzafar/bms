@@ -26,49 +26,49 @@ import { BOOKINGS_QUERY_KEY } from '@/lib/api/queryKeys';
 
 export default function Component() {
   const [selectedAssetType, setSelectedAssetType] = useState('all');
-  
+
   // Fetch bookings data
   const { data: bookingsData } = authClient.booking.getBookings.useQuery({
     queryKey: BOOKINGS_QUERY_KEY,
   });
-  
+
   // Fetch customers data
   const { data: customersData } = authClient.users.getCustomers.useQuery({
     queryKey: ['customers'],
   });
-  
+
   // Fetch assets data
   const { data: assetCountData } = authClient.analytics.getAssetCount.useQuery({
     queryKey: ['assetCount'],
   });
 
-  const { data: assetTypeData} = authClient.settings.assetType.getAssetTypes.useQuery({
+  const { data: assetTypeData } = authClient.settings.assetType.getAssetTypes.useQuery({
     queryKey: ['assetTypes'],
   });
 
   // Process data for display
-  const bookings = bookingsData?.body ?? [];
-  const customers = customersData?.body ?? [];
-  const assetCount = assetCountData?.body ?? {} 
-  const assetTypes = assetTypeData?.body ?? [];
-  
+  const bookings = bookingsData?.body.data ?? [];
+  const customers = customersData?.body.data ?? [];
+  const totalAssets = assetCountData?.body.totalAssets ?? 0
+  const assetTypes = assetTypeData?.body.data ?? [];
+
   // Calculate totals
   const totalBookings = bookings.length;
   const totalCustomers = customers.length;
-  
+
   // Group bookings by asset type
   const bookingsByAssetType = bookings.reduce((acc, booking) => {
     const assetType = booking.asset.assetTypeId?.toString() || 'unknown';
     acc[assetType] = (acc[assetType] || 0) + 1;
     return acc;
   }, {} as Record<string, number>);
-  
+
   // Get asset type names for dropdown
-  
-  
+
+
   // Get bookings count for selected asset type
-  const selectedTypeBookings = selectedAssetType === 'all' 
-    ? totalBookings 
+  const selectedTypeBookings = selectedAssetType === 'all'
+    ? totalBookings
     : bookingsByAssetType[selectedAssetType] || 0;
 
   return (
@@ -79,7 +79,7 @@ export default function Component() {
         </h1>
       </div>
       <div className='grid gap-4 md:grid-cols-2 lg:grid-cols-3 mt-6'>
-      <Card>
+        <Card>
           <CardHeader className='flex flex-row items-center justify-between space-y-0 pb-2'>
             <CardTitle className='text-sm font-medium'>
               Total Bookings
@@ -125,7 +125,7 @@ export default function Component() {
             <Package2Icon className='w-4 h-4 text-muted-foreground' />
           </CardHeader>
           <CardContent>
-            <div className='text-2xl font-bold'>{assetCount.totalAssets || 0}</div>
+            <div className='text-2xl font-bold'>{totalAssets || 0}</div>
             <p className='text-xs text-muted-foreground'>
               Available assets
             </p>

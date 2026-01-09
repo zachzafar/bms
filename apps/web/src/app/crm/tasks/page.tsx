@@ -30,10 +30,13 @@ import { TaskDetail } from '@/components/crm/task-detail'
 
 import { authClient } from '@/lib/api/publicClient'
 import { TASKS_QUERY_KEY, USERS_QUERY_KEY } from '@/lib/api/queryKeys'
+import { usePagination } from '@/hooks/usePagination'
+import { DataTablePagination } from '@/components/ui/data-table-pagination'
 
 
 
 export default function TaskManagement() {
+  const { page, pageSize, queryParams, goToPage, changePageSize } = usePagination(1, 10)
   const queryClient = authClient.useQueryClient()
 
   const [searchTerm, setSearchTerm] = useState('')
@@ -48,24 +51,26 @@ export default function TaskManagement() {
   // Query params for server
   const serverQuery = useMemo(
     () => ({
+      ...queryParams,
       status: statusFilter === 'all' ? undefined : statusFilter,
       userId: assigneeFilter === 'all' ? undefined : assigneeFilter,
     }),
-    [statusFilter, assigneeFilter]
+    [statusFilter, assigneeFilter, queryParams]
   )
 
   const { data: tasksResp, isLoading: tasksLoading } = authClient.crm.tasks.listTasks.useQuery({
-    queryKey: [...TASKS_QUERY_KEY, serverQuery, searchTerm],
+    queryKey: [...TASKS_QUERY_KEY, page, pageSize, serverQuery, searchTerm],
     queryData: { query: serverQuery },
   })
 
   const { data: usersResp } = authClient.users.getUsers.useQuery({ queryKey: USERS_QUERY_KEY })
 
-  const users = useMemo(() => (usersResp?.status === 200 ? usersResp.body : []), [usersResp])
+  const users = useMemo(() => (usersResp?.status === 200 ? (usersResp.body.data ?? usersResp.body) : []), [usersResp])
 
 
 
-  const tasks = useMemo(() => (tasksResp?.status === 200 ? tasksResp.body : []), [tasksResp])
+  const tasks = useMemo(() => (tasksResp?.status === 200 ? (tasksResp.body.data ?? tasksResp.body) : []), [tasksResp])
+  const paginationMeta = useMemo(() => (tasksResp?.status === 200 ? tasksResp.body.pagination : undefined), [tasksResp])
 
 
 
@@ -203,6 +208,14 @@ export default function TaskManagement() {
           </div>
         </CardContent>
       </Card>
+
+      {paginationMeta && (
+        <DataTablePagination
+          pagination={paginationMeta}
+          onPageChange={goToPage}
+          onPageSizeChange={changePageSize}
+        />
+      )}
 
       {/* Edit Dialog */}
       <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>

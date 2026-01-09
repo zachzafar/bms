@@ -10,7 +10,7 @@ import { SearchIcon } from 'lucide-react';
 import { Label } from '@/components/ui/label';
 import { authClient } from '@/lib/api/publicClient';
 import { BOOKINGS_QUERY_KEY, RATES_QUERY_KEY } from '@/lib/api/queryKeys';
-import { ExtendedSelectBooking } from '@repo/api-contract/src/api-contract/booking';
+import { ExtendedSelectBooking } from '@repo/api-contract'
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -18,22 +18,24 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage, } from 
 import { toast } from 'sonner';
 import { MultiSelector, MultiSelectorTrigger, MultiSelectorInput, MultiSelectorContent, MultiSelectorList, MultiSelectorItem, } from '@/components/extension/multi-select';
 import { StorageService } from '@/lib/api/storage';
+import { usePagination } from '@/hooks/usePagination';
+import { DataTablePagination } from '@/components/ui/data-table-pagination';
 
 import { isSameDay } from "date-fns";
 
 // Booking form schema
 const bookingFormSchema = z.object({
   assetId: z.string().min(1, { message: 'Asset is required' }),
-  startDate: z.string().min(1, { message: 'Start date is required' }),
-  endDate: z.string().min(1, { message: 'End date is required' }),
+  startDate: z.date(),
+  endDate: z.date(),
 });
 
 type BookingFormValues = z.infer<typeof bookingFormSchema>;
 
 // Helper: calculate nights between two dates
-function calculateNights(start: string, end: string) {
+function calculateNights(start: Date, end: Date) {
   return Math.ceil(
-    (new Date(end).getTime() - new Date(start).getTime()) / (1000 * 60 * 60 * 24)
+    (end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)
   );
 }
 
@@ -73,16 +75,21 @@ function getApplicableRate(
 
 export default function Component() {
   const currentTenant = StorageService.getTenant();
+  const { page, pageSize, queryParams, goToPage, changePageSize } = usePagination(1, 10);
 
   const queryClient = authClient.useQueryClient();
   const { data: bookings, refetch } = authClient.booking.getBookings.useQuery({
-    queryKey: BOOKINGS_QUERY_KEY,
+    queryKey: [...BOOKINGS_QUERY_KEY, page, pageSize],
+    queryData: {query:queryParams},
   });
 
   const { data: tagsResponse } = authClient.settings.tags.getTags.useQuery({
     queryKey: ['tags'],
   });
-  const tagList = tagsResponse?.body ?? [];
+  const tagList = tagsResponse?.body?.data ?? [];
+
+  const bookingList = bookings?.status === 200 ? bookings.body.data : [];
+  const paginationMeta = bookings?.status === 200 ? bookings.body.pagination : undefined;
 
   const { mutate: createBooking } = authClient.booking.createBooking.useMutation();
   const { mutate: generateInvoiceFromBooking } = authClient.billing.generateInvoiceFromBooking.useMutation();
@@ -109,7 +116,7 @@ export default function Component() {
   const assetList = assets?.body ?? [];
 
   const { data: customerResponse } = authClient.users.getCustomers.useQuery({ queryKey: ['customers'] });
-  const customerList = customerResponse?.body ?? [];
+  const customerList = customerResponse?.body.data ?? [];
   const [customers, setCustomers] = useState<string[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [filterType, setFilterType] = useState('All');
@@ -138,7 +145,7 @@ export default function Component() {
 
   useEffect(() => {
     if (ratesResponse?.status === 200) {
-      const allRates = ratesResponse.body.flatMap((item) =>
+      const allRates = ratesResponse.body.data.flatMap((item) =>
         item.assetIds.map((assetId) => ({
           ...item.rate,
           assetId,
@@ -161,8 +168,6 @@ export default function Component() {
     resolver: zodResolver(bookingFormSchema),
     defaultValues: {
       assetId: '',
-      startDate: '',
-      endDate: '',
     },
   });
 
@@ -247,7 +252,7 @@ export default function Component() {
               })
               .map(b => b.asset_id);
 
-            const filteredAssets = res.body.filter(
+            const filteredAssets = res.body.data.filter(
               (asset) => !blockedAssetIds.includes(asset.id)
             );
 
@@ -404,7 +409,7 @@ export default function Component() {
                   name="startDate"
                   render={({ field }) => {
                     // Split current value into date/time parts or defaults
-                    const [datePart, timePart] = (field.value || '').split('T');
+                    const [datePart, timePart] = (field.value || '').toISOString().split('T');
                     return (
                       <FormItem>
                         <FormLabel>Start Date & Time</FormLabel>
@@ -458,7 +463,7 @@ export default function Component() {
                   name="endDate"
                   render={({ field }) => {
                     // Split current value into date/time parts or defaults
-                    const [datePart, timePart] = (field.value || '').split('T');
+                    const [datePart, timePart] = (field.value || '').toISOString().split('T');
                     return (
                       <FormItem>
                         <FormLabel>End Date & Time</FormLabel>
@@ -649,8 +654,8 @@ export default function Component() {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {bookings?.status === 200 && bookings.body.length > 0 ? (
-              bookings.body.map((booking) => {
+            {bookingList.length > 0 ? (
+              bookingList.map((booking) => {
                 const nights = calculateNights(booking.startDate, booking.endDate);
                 const rate = getApplicableRate(booking.asset.id, nights, rates);
                 const pricePerNight = rate?.pricePerNight ?? 0;
@@ -772,6 +777,14 @@ export default function Component() {
           </TableBody>
         </Table>
       </div>
+
+      {paginationMeta && (
+        <DataTablePagination
+          pagination={paginationMeta}
+          onPageChange={goToPage}
+          onPageSizeChange={changePageSize}
+        />
+      )}
     </>
   );
 }

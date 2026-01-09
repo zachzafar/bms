@@ -2,7 +2,7 @@ import { Inject, Injectable } from '@nestjs/common';
 import { MySql2Database } from 'drizzle-orm/mysql2';
 import * as schema from '@repo/api-contract';
 import { DrizzleAsyncProvider } from 'src/drizzle/drizzle.provider';
-import { and, eq, gte, lte } from 'drizzle-orm';
+import { and, eq, gte, lte, sql } from 'drizzle-orm';
 
 @Injectable()
 export class FeedbackService {
@@ -27,22 +27,16 @@ export class FeedbackService {
     };
   }
 
-  async list(tenantId: string, query: any) {
-    const rows = await this.db
-      .select()
+  async list(tenantId: string, query: any, page: number = 1, pageSize: number = 10) {
+    const offset = (page - 1) * pageSize;
+
+    // Get total count
+    const totalCountResult = await this.db
+      .select({ count: sql<number>`COUNT(*)` })
       .from(schema.Feedback)
       .where(eq(schema.Feedback.tenantId, tenantId))
-      .innerJoin(schema.Contact, eq(schema.Feedback.contactId, schema.Contact.id))
-      .innerJoin(schema.Asset, eq(schema.Feedback.assetId, schema.Asset.id))
       .execute();
-
-    const filtered = rows.filter((r) => {
-      if (query.contactId && String(r.contact.id) !== String(query.contactId)) return false;
-      if (query.assetId && r.assets.id !== query.assetId) return false;
-      if (query.minRating && r.feedback.rating < query.minRating) return false;
-      if (query.maxRating && r.feedback.rating > query.maxRating) return false;
-      return true;
-    });
+    const totalCount = totalCountResult[0]?.count || 0;
 
     const feedbackList = await this.db.query.Feedback.findMany({
       where: and(
@@ -52,10 +46,23 @@ export class FeedbackService {
         query.minRating ? gte(schema.Feedback.rating, query.minRating) : undefined,
         query.maxRating ? lte(schema.Feedback.rating, query.maxRating) : undefined,
       ),
-      
+      limit: pageSize,
+      offset: offset,
     });
 
-    return feedbackList
+    const paginationData = {
+      page,
+      pageSize,
+      totalCount,
+      totalPages: Math.ceil(totalCount / pageSize),
+      hasNextPage: page * pageSize < totalCount,
+      hasPreviousPage: page > 1,
+    };
+
+    return {
+      data: feedbackList,
+      pagination: paginationData,
+    };
   }
 
   async get(id: number) {

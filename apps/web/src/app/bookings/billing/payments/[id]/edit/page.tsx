@@ -34,14 +34,14 @@ export default function EditPaymentPage() {
 
   const { data: paymentData, isLoading: paymentLoading } = authClient.billing.getPayment.useQuery({
     queryKey: ['payment', paymentId],
-    queryData: { params: { id: paymentId } },
+    queryData: { params: { id: Number(paymentId) } },
   });
 
   const { data: customersData } = authClient.users.getCustomers.useQuery({
     queryKey: ['customers'],
   });
 
-  const customers = customersData?.body ?? [];
+  const customers = customersData?.body.data ?? [];
 
   const customerName = useMemo(() => {
     if (!payment) return '';

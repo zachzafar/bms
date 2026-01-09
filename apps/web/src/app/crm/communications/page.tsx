@@ -67,9 +67,9 @@ export default function CommunicationManagement() {
     queryKey: USERS_QUERY_KEY,
   })
 
-  const communications = useMemo(() => (commsResp?.status === 200 ? commsResp.body : []), [commsResp])
-  const contacts = useMemo(() => (clientsData?.status === 200 ? clientsData.body : []), [clientsData])
-  const users = useMemo(() => (usersResp?.status === 200 ? usersResp.body : []), [usersResp])
+  const communications = useMemo(() => (commsResp?.status === 200 ? commsResp.body.data : []), [commsResp])
+  const contacts = useMemo(() => (clientsData?.status === 200 ? clientsData.body.data : []), [clientsData])
+  const users = useMemo(() => (usersResp?.status === 200 ? usersResp.body.data : []), [usersResp])
 
   // ——— Mutations (ts-rest style) ———
   const { mutate: createComm, isPending: isCreating } = authClient.crm.communications.createComm.useMutation({

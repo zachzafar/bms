@@ -145,7 +145,7 @@ export default function Tags() {
             </TableHeader>
             <TableBody>
               {tags?.status === 200 ? (
-                tags.body.map((tag) => (
+                tags.body.data.map((tag) => (
                   <TableRow key={tag.id}>
                     <TableCell className="font-medium">{tag.name}</TableCell>
                     <TableCell>{tag.description}</TableCell>

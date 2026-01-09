@@ -51,7 +51,10 @@ export class BookingController {
     async getBookings(@Headers() headers: any): Promise<ReturnType<typeof tsRestHandler>> {
         return tsRestHandler(contract.booking.getBookings, async ({ query }) => {
             const tenantId = headers['x-tenant-id'];
-            const bookings = await this.bookingService.getBookings(tenantId, query.assetId);
+            const page = query.page ? Number(query.page) : 1;
+            const pageSize = query.pageSize ? Number(query.pageSize) : 10;
+
+            const bookings = await this.bookingService.getBookings(tenantId, query.assetId, page, pageSize);
 
             return { status: 200, body: bookings };
         });

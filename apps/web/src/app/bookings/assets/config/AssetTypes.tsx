@@ -107,7 +107,7 @@ export default function AssetTypes() {
       const selectedProps = editingAssetType.body.properties.map(item => {
 
         const property = properties?.status === 200 &&
-          properties.body.find(p => p.id === item.id);
+          properties.body.data.find(p => p.id === item.id);
         return property ? property.name : '';
       }).filter(Boolean);
 
@@ -119,7 +119,7 @@ export default function AssetTypes() {
     // Convert selected property names to IDs and required status
     const propertyIds = selectedProperties.map(propName => {
       const property = properties?.status === 200 &&
-        properties.body.find(p => p.name === propName);
+        properties.body.data.find(p => p.name === propName);
       return property ? property.id
         : null;
     })
@@ -194,7 +194,7 @@ export default function AssetTypes() {
                       <MultiSelectorContent>
                         <MultiSelectorList>
                           {properties?.status === 200 &&
-                            properties.body.map((property) => (
+                            properties.body.data.map((property) => (
                               <MultiSelectorItem
                                 key={property.id}
                                 value={property.name}
@@ -240,7 +240,7 @@ export default function AssetTypes() {
             </TableHeader>
             <TableBody>
               {assetTypes?.status === 200 ? (
-                assetTypes.body.map((type) => (
+                assetTypes.body.data.map((type) => (
                   <TableRow key={type.id}>
                     <TableCell>{type.name}</TableCell>
                     <TableCell>

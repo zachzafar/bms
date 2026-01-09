@@ -2,6 +2,7 @@ import { initContract } from "@ts-rest/core";
 
 import { z } from "zod";
 import { Asset, InsertAssetPropertySchema, InsertAssetTypeSchema, SelectAssetPropertySchema, SelectAssetTypeSchema, UpdateAssetTypeSchema } from "../../database-schema";
+import { pagination } from "../utils";
 
 const c = initContract();
 
@@ -34,8 +35,15 @@ export const assetTypeContract = c.router({
         method: 'GET',
         path: '/asset-type',
         responses: {
-            200: z.array(SelectAssetTypeSchema)
+            200: z.object({
+                data: z.array(SelectAssetTypeSchema),
+                pagination
+            })
         },
+        query: z.object({
+            page: z.coerce.number().optional(),
+            pageSize: z.coerce.number().optional(),
+        }),
         summary: 'Get all asset types'
     },
     getAssetType: {
@@ -88,8 +96,15 @@ export const assetTypeContract = c.router({
         method: 'GET',
         path: '/properties',
         responses: {
-            200: z.array(SelectAssetPropertySchema)
+            200: z.object({
+                data: z.array(SelectAssetPropertySchema),
+                pagination
+            })
         },
+        query: z.object({
+            page: z.coerce.number().optional(),
+            pageSize: z.coerce.number().optional(),
+        }),
         summary: 'Get all asset properties'
     },
 

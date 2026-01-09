@@ -14,6 +14,8 @@ import { toast } from 'sonner';
 import { Label } from '@/components/ui/label';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import ApplyPaymentModal from '@/components/billing/ApplyPaymentModal';
+import { usePagination } from '@/hooks/usePagination';
+import { DataTablePagination } from '@/components/ui/data-table-pagination';
 
 
 interface Invoice {
@@ -21,12 +23,12 @@ interface Invoice {
   invoiceNumber: string;
   customerId: number;
   status: string;
-  issueDate: string;
+  issueDate: Date
   dueDate: string;
   subtotal: string;
   taxAmount: string;
   totalAmount: string;
-  notes?: string;
+  notes: string | null;
   items: Array<{
     id: number;
     description: string;
@@ -38,6 +40,7 @@ interface Invoice {
 
 export default function InvoicesPage() {
   const router = useRouter();
+  const { page, pageSize, queryParams, goToPage, changePageSize } = usePagination(1, 10);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [customerFilter, setCustomerFilter] = useState<string>('all');
@@ -52,7 +55,8 @@ export default function InvoicesPage() {
 
   // Fetch invoices and customers
   const { data: invoicesData, refetch: refetchInvoices } = authClient.billing.getInvoices.useQuery({
-    queryKey: ['invoices'],
+    queryKey: ['invoices', page, pageSize],
+    queryData: {query: queryParams},
   });
 
   const { data: customersData } = authClient.users.getCustomers.useQuery({
@@ -72,8 +76,9 @@ export default function InvoicesPage() {
   });
 
 
-  const invoices = invoicesData?.body || [];
-  const customers = customersData?.body || [];
+  const invoices = invoicesData?.status === 200 ? invoicesData.body.data : [];
+  const paginationMeta = invoicesData?.status === 200 ? invoicesData.body.pagination : undefined;
+  const customers = customersData?.body?.data || [];
 
   // Filter invoices safely
   const filteredInvoices = invoices.filter((invoice) => {
@@ -113,7 +118,7 @@ export default function InvoicesPage() {
     return due < new Date() && status?.toLowerCase() !== 'paid';
   };
 
-  const handleDeleteInvoice = (invoiceId: string) => {
+  const handleDeleteInvoice = (invoiceId: number) => {
     if (confirm('Are you sure you want to delete this invoice? This action cannot be undone.')) {
       deleteInvoice({ params: { id: invoiceId } });
     }
@@ -339,6 +344,14 @@ export default function InvoicesPage() {
           )}
         </CardContent>
       </Card>
+
+      {paginationMeta && (
+        <DataTablePagination
+          pagination={paginationMeta}
+          onPageChange={goToPage}
+          onPageSizeChange={changePageSize}
+        />
+      )}
     </div>
   );
 }

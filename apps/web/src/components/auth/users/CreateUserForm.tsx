@@ -19,7 +19,7 @@ const CreateUserSchema = InsertUserSchema.extend({
 type CreateUserFormData = z.infer<typeof CreateUserSchema>;
 
 interface CreateUserFormProps {
-  roles: { roleId: string; name: string }[];
+  roles: { roleId: number; name: string }[];
   onClose: () => void;
   onSuccess: () => void;
 }
@@ -134,7 +134,7 @@ export function CreateUserForm({ roles, onClose, onSuccess }: CreateUserFormProp
                     </SelectTrigger>
                     <SelectContent>
                       {roles.map((role) => (
-                        <SelectItem key={role.roleId} value={role.roleId}>
+                        <SelectItem key={role.roleId} value={role.roleId.toString()}>
                           {role.name}
                         </SelectItem>
                       ))}

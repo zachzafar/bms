@@ -6,19 +6,20 @@ import { z } from "zod";
 import {
   // Contact + profiles
   InsertContactSchema, SelectContactSchema, UpdateContactSchema,
-  InsertCustomerSchema, SelectCustomerSchema, 
-  InsertOwnerSchema, SelectOwnerSchema, 
+  InsertCustomerSchema, SelectCustomerSchema,
+  InsertOwnerSchema, SelectOwnerSchema,
   // CRM entities
   InsertInquirySchema, SelectInquirySchema, UpdateInquirySchema,
   InsertCommunicationLogSchema, SelectCommunicationLogSchema, UpdateCommunicationLogSchema,
   InsertFeedbackSchema, SelectFeedbackSchema, UpdateFeedbackSchema,
-  InsertBrochureSchema, SelectBrochureSchema, 
-  SelectBrochureAssetSchema, 
+  InsertBrochureSchema, SelectBrochureSchema,
+  SelectBrochureAssetSchema,
   InsertTaskSchema, SelectTaskSchema, UpdateTaskSchema,
-  InsertDocumentSchema, SelectDocumentSchema, 
+  InsertDocumentSchema, SelectDocumentSchema,
   // From your existing system
   SelectUserSchema, SelectAssetSchema,
 } from "../database-schema";
+import { pagination } from './utils';
 
 const c = initContract();
 
@@ -98,12 +99,17 @@ export const contactContract = c.router({
     path: "/contact",
     summary: "List contacts",
     query: z.object({
-      search: z.string().optional(),      // name/email/phone free-text
+      search: z.string().optional(),
       hasCustomer: z.coerce.boolean().optional(),
       hasOwner: z.coerce.boolean().optional(),
+      page: z.coerce.number().optional(),
+      pageSize: z.coerce.number().optional(),
     }),
     responses: {
-      200: z.array(ExtendedSelectContactSchema),
+      200: z.object({
+        data: z.array(ExtendedSelectContactSchema),
+        pagination
+      }),
     },
   },
   getContact: {
@@ -237,8 +243,15 @@ export const inquiryContract = c.router({
       status: z.enum(["New", "Follow-Up", "Closed"]).optional(),
       assignedTo: z.string().optional(),
       search: z.string().optional(),
+      page: z.coerce.number().optional(),
+      pageSize: z.coerce.number().optional(),
     }),
-    responses: { 200: z.array(ExtendedSelectInquirySchema) },
+    responses: {
+      200: z.object({
+        data: z.array(ExtendedSelectInquirySchema),
+        pagination
+      })
+    },
   },
   getInquiry: {
     method: "GET",
@@ -296,8 +309,15 @@ export const commsContract = c.router({
       type: z.enum(["Email", "Phone Call", "Meeting"]).optional(),
       from: DateString.optional(),
       to: DateString.optional(),
+      page: z.coerce.number().optional(),
+      pageSize: z.coerce.number().optional(),
     }),
-    responses: { 200: z.array(SelectCommunicationLogSchema) },
+    responses: {
+      200: z.object({
+        data: z.array(SelectCommunicationLogSchema),
+        pagination
+      })
+    },
   },
   getComm: {
     method: "GET",
@@ -342,8 +362,15 @@ export const feedbackContract = c.router({
       assetId: z.string().optional(),
       minRating: z.number().int().min(1).max(5).optional(),
       maxRating: z.number().int().min(1).max(5).optional(),
+      page: z.coerce.number().optional(),
+      pageSize: z.coerce.number().optional(),
     }),
-    responses: { 200: z.array(SelectFeedbackSchema) },
+    responses: {
+      200: z.object({
+        data: z.array(SelectFeedbackSchema),
+        pagination
+      })
+    },
   },
   getFeedback: {
     method: "GET",
@@ -383,8 +410,17 @@ export const brochureContract = c.router({
     method: "GET",
     path: "/brochure",
     summary: "List brochures",
-    query: z.object({ contactId: z.string().optional() }),
-    responses: { 200: z.array(ExtendedSelectBrochureSchema) },
+    query: z.object({
+      contactId: z.string().optional(),
+      page: z.coerce.number().optional(),
+      pageSize: z.coerce.number().optional(),
+    }),
+    responses: {
+      200: z.object({
+        data: z.array(ExtendedSelectBrochureSchema),
+        pagination
+      })
+    },
   },
   getBrochure: {
     method: "GET",
@@ -423,7 +459,16 @@ export const brochureContract = c.router({
     path: "/brochure/:id/assets",
     summary: "List brochure assets",
     pathParams: z.object({ id: z.coerce.number() }),
-    responses: { 200: z.array(ExtendedSelectBrochureAssetSchema) },
+    query: z.object({
+      page: z.coerce.number().optional(),
+      pageSize: z.coerce.number().optional(),
+    }),
+    responses: {
+      200: z.object({
+        data: z.array(ExtendedSelectBrochureAssetSchema),
+        pagination
+      })
+    },
   },
 });
 
@@ -448,8 +493,15 @@ export const taskContract = c.router({
       status: z.enum(["Pending", "Completed", "Overdue"]).optional(),
       from: DateString.optional(),
       to: DateString.optional(),
+      page: z.coerce.number().optional(),
+      pageSize: z.coerce.number().optional(),
     }),
-    responses: { 200: z.array(SelectTaskSchema) },
+    responses: {
+      200: z.object({
+        data: z.array(SelectTaskSchema),
+        pagination
+      })
+    },
   },
   getTask: {
     method: "GET",
@@ -505,8 +557,15 @@ export const documentContract = c.router({
       uploadedBy: z.string().optional(),
       from: DateString.optional(),
       to: DateString.optional(),
+      page: z.coerce.number().optional(),
+      pageSize: z.coerce.number().optional(),
     }),
-    responses: { 200: z.array(ExtendedSelectDocumentSchema) },
+    responses: {
+      200: z.object({
+        data: z.array(ExtendedSelectDocumentSchema),
+        pagination
+      })
+    },
   },
   getDocument: {
     method: "GET",

@@ -18,6 +18,8 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { InsertCustomerSchema, InsertUserSchema, SelectCustomer, SelectCustomerSchema } from '@repo/api-contract';
 import { date, z } from 'zod';
 import { EditCustomerForm } from '@/components/users/EditCustomerForm';
+import { usePagination } from '@/hooks/usePagination';
+import { DataTablePagination } from '@/components/ui/data-table-pagination';
 
 // Schema for creating customers
 // const CreateCustomerSchema = InsertUserSchema.merge(InsertCustomerSchema.omit({ id: true, dateOfBirth: true})).extend({
@@ -63,16 +65,21 @@ type ExtendedSelectCustomer = z.infer<typeof ExtendedSelectCustomerSchema>;
 
 export default function Component() {
   const router = useRouter();
+  const { page, pageSize, queryParams, goToPage, changePageSize } = usePagination(1, 10);
 
   const queryClient = authClient.useQueryClient();
-  const { data: customerData } = authClient.users.getCustomers.useQuery({ queryKey: CUSTOMERS_QUERY_KEY });
+  const { data: customerData } = authClient.users.getCustomers.useQuery({
+    queryKey: [...CUSTOMERS_QUERY_KEY, page, pageSize],
+    queryData: {query:queryParams},
+  });
   const { mutate: createUserMutation, isPending } = authClient.users.createUser.useMutation();
 
   const [open, setOpen] = useState(false);
   const [selectedCustomer, setSelectedCustomer] = useState<EditableCustomer | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
 
-  const customers = customerData?.body || []
+  const customers = customerData?.status === 200 ? customerData.body.data : [];
+  const paginationMeta = customerData?.status === 200 ? customerData.body.pagination : undefined;
 
   const createForm = useForm<CreateCustomerFormData>({
     resolver: zodResolver(CreateCustomerSchema),
@@ -352,29 +359,14 @@ export default function Component() {
                 )}
               </TableBody>
             </Table>
-            {/* <div className='flex justify-between items-center mt-4'>
-              <p>
-                Showing {filteredCustomers.length > 0 ? indexOfFirstCustomer + 1 : 0} to{' '}
-                {Math.min(indexOfLastCustomer, filteredCustomers.length)} of{' '}
-                {filteredCustomers.length} customers
-              </p>
-              <div className='flex space-x-2'>
-                <Button
-                  variant='outline'
-                  onClick={() => paginate(currentPage - 1)}
-                  disabled={currentPage === 1}
-                >
-                  <ChevronLeft className='h-4 w-4' />
-                </Button>
-                <Button
-                  variant='outline'
-                  onClick={() => paginate(currentPage + 1)}
-                  disabled={indexOfLastCustomer >= filteredCustomers.length}
-                >
-                  <ChevronRight className='h-4 w-4' />
-                </Button>
-              </div>
-            </div> */}
+
+            {paginationMeta && (
+              <DataTablePagination
+                pagination={paginationMeta}
+                onPageChange={goToPage}
+                onPageSizeChange={changePageSize}
+              />
+            )}
           </CardContent>
         </Card>
       </div>

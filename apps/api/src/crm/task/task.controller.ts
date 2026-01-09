@@ -48,7 +48,10 @@ export class TasksController {
   async list(@Headers() headers: any, @UserId() userId: string ): Promise<ReturnType<typeof tsRestHandler>> {
     return tsRestHandler(crmContract.tasks.listTasks, async ({ query }) => {
       const tenantId = headers['x-tenant-id'];
-      const rows = await this.tasks.list(tenantId, query);
+      const page = query.page ? Number(query.page) : 1;
+      const pageSize = query.pageSize ? Number(query.pageSize) : 10;
+
+      const rows = await this.tasks.list(tenantId, query, page, pageSize);
       return { status: 200, body: rows };
     });
   }

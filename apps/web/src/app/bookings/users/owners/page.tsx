@@ -16,6 +16,8 @@ import { authClient } from '@/lib/api/publicClient';
 import { OWNERS_QUERY_KEY } from '@/lib/api/queryKeys';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import { usePagination } from '@/hooks/usePagination';
+import { DataTablePagination } from '@/components/ui/data-table-pagination';
 
 // Schema for creating owners
 const CreateOwnerSchema = InsertUserSchema.extend({
@@ -35,13 +37,17 @@ type CreateOwnerFormData = z.infer<typeof CreateOwnerSchema>;
 
 export default function Component() {
   const router = useRouter();
+  const { page, pageSize, queryParams, goToPage, changePageSize } = usePagination(1, 10);
   const queryClient = authClient.useQueryClient();
-  const { data: owners } = authClient.users.getOwners.useQuery({ queryKey: OWNERS_QUERY_KEY });
+  const { data: owners } = authClient.users.getOwners.useQuery({
+    queryKey: [...OWNERS_QUERY_KEY, page, pageSize],
+    queryData: { query: queryParams },
+  });
   const { mutate: createUserMutation, isPending } = authClient.users.createUser.useMutation();
   const { mutate: updateUserMutation, isPending: updating } = authClient.users.updateUser.useMutation();
   const { data: usersData } = authClient.users.getUsers.useQuery({ queryKey: ['users'] });
 
-  const users = usersData?.body ?? [];
+  const users = usersData?.body?.data ?? usersData?.body.data ?? [];
   const rolesByUserId = useMemo(() => {
     const map = new Map<string, number[]>();
     users.forEach((u: any) => map.set(u.id, u.roles ?? []));
@@ -51,9 +57,7 @@ export default function Component() {
   const [open, setOpen] = useState(false);
   const [openEdit, setOpenEdit] = useState(false);
   const [editingOwner, setEditingOwner] = useState<{ id: string; name: string; email: string; companyName?: string } | null>(null);
-  const [currentPage, setCurrentPage] = useState(1);
   const [searchTerm, setSearchTerm] = useState('');
-  const ownersPerPage = 10;
 
   const createForm = useForm<CreateOwnerFormData>({
     resolver: zodResolver(CreateOwnerSchema),
@@ -137,25 +141,14 @@ export default function Component() {
     );
   };
 
-  const parsedOwners = owners?.body.map((item) => ({
+  const parsedOwners = owners?.status === 200 ? owners.body.data.map((item) => ({
     id: item.user.id,
     name: item.user.name,
     email: item.user.email,
     companyName: item.owner?.companyName,
-  })) || [];
+  })) : [];
 
-  const filteredOwners = parsedOwners.filter(
-    (owner) =>
-      owner.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      owner.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (owner.companyName && owner.companyName.toLowerCase().includes(searchTerm.toLowerCase()))
-  );
-
-  const indexOfLastOwner = currentPage * ownersPerPage;
-  const indexOfFirstOwner = indexOfLastOwner - ownersPerPage;
-  const currentOwners = filteredOwners.slice(indexOfFirstOwner, indexOfLastOwner);
-
-  const paginate = (pageNumber: SetStateAction<number>) => setCurrentPage(pageNumber);
+  const paginationMeta = owners?.status === 200 ? owners.body.pagination : undefined;
 
   return (
     <>
@@ -361,8 +354,8 @@ export default function Component() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {currentOwners.length > 0 ? (
-                  currentOwners.map((owner) => (
+                {parsedOwners.length > 0 ? (
+                  parsedOwners.map((owner) => (
                     <TableRow key={owner.id}>
                       <TableCell>{owner.name}</TableCell>
                       <TableCell>{owner.email}</TableCell>
@@ -407,29 +400,14 @@ export default function Component() {
                 )}
               </TableBody>
             </Table>
-            <div className='flex justify-between items-center mt-4'>
-              <p>
-                Showing {filteredOwners.length > 0 ? indexOfFirstOwner + 1 : 0} to{' '}
-                {Math.min(indexOfLastOwner, filteredOwners.length)} of{' '}
-                {filteredOwners.length} owners
-              </p>
-              <div className='flex space-x-2'>
-                <Button
-                  variant='outline'
-                  onClick={() => paginate(currentPage - 1)}
-                  disabled={currentPage === 1}
-                >
-                  <ChevronLeft className='h-4 w-4' />
-                </Button>
-                <Button
-                  variant='outline'
-                  onClick={() => paginate(currentPage + 1)}
-                  disabled={indexOfLastOwner >= filteredOwners.length}
-                >
-                  <ChevronRight className='h-4 w-4' />
-                </Button>
-              </div>
-            </div>
+
+            {paginationMeta && (
+              <DataTablePagination
+                pagination={paginationMeta}
+                onPageChange={goToPage}
+                onPageSizeChange={changePageSize}
+              />
+            )}
           </CardContent>
         </Card>
       </div>

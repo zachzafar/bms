@@ -53,23 +53,23 @@ export default function Billing({ userId }: { userId: string }) {
     queryKey: ['customers'],
     enabled: !!tenant,
   });
-  const customers = customersData?.body ?? [];
+  const customers = customersData?.body.data ?? [];
   const selected = useMemo(() => customers.find((c: any) => c.user.id === userId), [customers, userId]);
-  const customerIdStr = selected?.customer?.id ? String(selected.customer.id) : undefined;
+  const customerIdStr = selected?.customer?.id ? selected.customer.id : undefined;
 
   const { data: invoicesData, isLoading: invoicesLoading } = authClient.billing.getInvoices.useQuery({
     queryKey: ['invoices', customerIdStr ?? 'unknown'],
     queryData: customerIdStr ? { query: { customerId: customerIdStr } } : undefined,
     enabled: !!tenant && !!customerIdStr,
   });
-  const invoices = invoicesData?.body ?? [];
+  const invoices = invoicesData?.body.data ?? [];
 
   const { data: paymentsData, isLoading: paymentsLoading } = authClient.billing.getPayments.useQuery({
     queryKey: ['payments', customerIdStr ?? 'unknown'],
     queryData: customerIdStr ? { query: { customerId: customerIdStr } } : undefined,
     enabled: !!tenant && !!customerIdStr,
   });
-  const payments = paymentsData?.body ?? [];
+  const payments = paymentsData?.body.data ?? [];
 
   const { mutate: createInvoice, isPending: creatingInvoice } = authClient.billing.createInvoice.useMutation();
   const { mutate: deleteInvoice, isPending: deletingInvoice } = authClient.billing.deleteInvoice.useMutation();
@@ -176,7 +176,7 @@ export default function Billing({ userId }: { userId: string }) {
   const handleDeleteInvoice = (id: number) => {
     if (!window.confirm('Delete this invoice?')) return;
     deleteInvoice(
-      { params: { id: String(id) }, body: {} },
+      { params: { id: id }, body: {} },
       {
         onSuccess: () => {
           toast.success('Invoice deleted');

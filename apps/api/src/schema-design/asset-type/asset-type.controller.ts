@@ -12,9 +12,12 @@ export class AssetTypeController {
 
     @TsRestHandler(contract.settings.assetType.getAssetTypes)
     async getAssetTypes(@Headers() headers: any): Promise<ReturnType<typeof tsRestHandler>> {
-        return tsRestHandler(contract.settings.assetType.getAssetTypes, async () => {
+        return tsRestHandler(contract.settings.assetType.getAssetTypes, async ({ query }) => {
             const tenantId = headers['x-tenant-id']
-            const assetTypes = await this.assetTypeService.getAssetTypes(tenantId);
+            const page = query.page ? Number(query.page) : 1;
+            const pageSize = query.pageSize ? Number(query.pageSize) : 10;
+
+            const assetTypes = await this.assetTypeService.getAssetTypes(tenantId, page, pageSize);
             return { status: 200, body: assetTypes };
         });
     }

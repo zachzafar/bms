@@ -41,7 +41,7 @@ export default function TenantsPage() {
 
 
   const stats = statsData?.body;
-  const tenants = tenantData?.body;
+  const tenants = tenantData?.body.data;
 
   // const [tenants] = useState(mockTenants);
 

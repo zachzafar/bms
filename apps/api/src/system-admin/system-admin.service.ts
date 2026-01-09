@@ -48,20 +48,41 @@ export class SystemAdminService {
     }
   }
 
-  async getSystemAdmins() {
+  async getSystemAdmins(page: number = 1, pageSize: number = 10) {
     try {
+      const offset = (page - 1) * pageSize;
+
+      const totalCountResult = await this.db
+        .select({ count: count() })
+        .from(schema.User)
+        .where(eq(schema.User.userType, 'system'));
+      const totalCount = totalCountResult[0]?.count || 0;
+
       const users = await this.db.query.User.findMany({
         where: (user, { eq }) => eq(user.userType, 'system'),
         columns: {
           password: false,
-        }
+        },
+        limit: pageSize,
+        offset: offset,
       });
 
-      // Transform users to match the expected schema (add roles field)
-      return users.map(user => ({
-        ...user,
-        roles: [] // System admins don't have tenant-specific roles
-      }));
+      const paginationData = {
+        page,
+        pageSize,
+        totalCount,
+        totalPages: Math.ceil(totalCount / pageSize),
+        hasNextPage: page * pageSize < totalCount,
+        hasPreviousPage: page > 1,
+      };
+
+      return {
+        data: users.map(user => ({
+          ...user,
+          roles: [] // System admins don't have tenant-specific roles
+        })),
+        pagination: paginationData,
+      };
     } catch (error: any) {
       this.logger.error(`Failed to get system admins: ${error.message}`);
       throw error;
@@ -230,8 +251,32 @@ export class SystemAdminService {
     }
   }
 
-  async getTenants() {
-    return await this.db.query.Tenant.findMany();
+  async getTenants(page: number = 1, pageSize: number = 10) {
+    const offset = (page - 1) * pageSize;
+
+    const totalCountResult = await this.db
+      .select({ count: count() })
+      .from(schema.Tenant);
+    const totalCount = totalCountResult[0]?.count || 0;
+
+    const results = await this.db.query.Tenant.findMany({
+      limit: pageSize,
+      offset: offset,
+    });
+
+    const paginationData = {
+      page,
+      pageSize,
+      totalCount,
+      totalPages: Math.ceil(totalCount / pageSize),
+      hasNextPage: page * pageSize < totalCount,
+      hasPreviousPage: page > 1,
+    };
+
+    return {
+      data: results,
+      pagination: paginationData,
+    };
   }
 
   async getTenant(tenantId: string) {

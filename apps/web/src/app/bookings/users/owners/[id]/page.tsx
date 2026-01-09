@@ -20,7 +20,7 @@ export default function OwnerDetailsPage() {
     queryKey: ['owners'],
     enabled: !!tenant,
   });
-  const owners = ownersData?.body ?? [];
+  const owners = ownersData?.body.data ?? [];
   const selected = useMemo(() => owners.find((o: any) => o.user.id === userId), [owners, userId]);
 
   if (ownersLoading) return <Loading />;

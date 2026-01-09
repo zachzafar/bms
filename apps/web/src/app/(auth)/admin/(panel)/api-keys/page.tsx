@@ -10,17 +10,22 @@ import { toast } from "sonner"
 import { AlertCircle, Copy, Plus, Trash2 } from "lucide-react";
 import { format } from "date-fns";
 import { authClient } from '@/lib/api/publicClient';
+import { usePagination } from '@/hooks/usePagination';
+import { DataTablePagination } from '@/components/ui/data-table-pagination';
 
 export default function ApiKeysPage() {
+  const { page, pageSize, queryParams, goToPage, changePageSize } = usePagination(1, 10);
   const [newKeyName, setNewKeyName] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [newKey, setNewKey] = useState<string | null>(null);
-  
+
   const { data } = authClient.keys.getKeys.useQuery({
-    queryKey: ["keys"]
+    queryKey: ["keys", page, pageSize],
+    queryData: { query: queryParams },
   });
 
-  const apiKeys = data?.status === 200 ? data.body : [];
+  const apiKeys = data?.status === 200 ? (data.body.data ?? data.body) : [];
+  const paginationMeta = data?.status === 200 ? data.body.pagination : undefined;
   const queryClient = authClient.useQueryClient();
   const { mutate: create } = authClient.keys.createKey.useMutation({});
   const { mutate: deleteKey } = (authClient.keys.deleteKey as any).useMutation();
@@ -187,6 +192,14 @@ export default function ApiKeysPage() {
                 ))}
               </TableBody>
             </Table>
+          )}
+
+          {paginationMeta && (
+            <DataTablePagination
+              pagination={paginationMeta}
+              onPageChange={goToPage}
+              onPageSizeChange={changePageSize}
+            />
           )}
         </CardContent>
       </Card>

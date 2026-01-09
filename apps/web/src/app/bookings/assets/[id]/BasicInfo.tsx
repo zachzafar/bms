@@ -19,7 +19,7 @@ function BasicInfo({ asset, refetch }: { asset: SelectAsset; refetch: () => void
 });
 
 const assetTypeMap: Record<number, string | undefined> =
-  assetTypes?.body?.reduce((acc, type) => {
+  assetTypes?.body?.data.reduce((acc, type) => {
     acc[type.id] = type.name;
     return acc;
   }, {} as Record<number, string | undefined>) ?? {};

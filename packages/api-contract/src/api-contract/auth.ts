@@ -4,6 +4,7 @@ import { z } from "zod";
 import { InsertTenantSchema, SelectTenantSchema, InsertUserSchema, SelectUserSchema } from "../database-schema/schema"
 import { create } from 'domain';
 import { send } from 'process';
+import { pagination } from "./utils";
 
 
 const c = initContract();
@@ -189,7 +190,7 @@ export const authContract = c.router({
     path: '/roles',
     responses: {
       200: z.array(z.object({
-        roleId: z.string(),
+        roleId: z.coerce.number(),
         name: z.string(),
         permissions: z.array(z.string())
       }))

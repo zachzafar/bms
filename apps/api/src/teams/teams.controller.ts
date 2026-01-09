@@ -60,9 +60,12 @@ export class TeamsController {
     @TsRestHandler(c.teams.getTeams)
     @Roles(PermissionScope.TEAMS_READ)
     async getTeams(): Promise<ReturnType<typeof tsRestHandler>>{
-        return tsRestHandler(c.teams.getTeams, async({ params }) => {
+        return tsRestHandler(c.teams.getTeams, async({ params, query }) => {
             const { tenant } = params
-            const teams = await this.TeamsService.findAll(tenant)
+            const page = query.page ? Number(query.page) : 1;
+            const pageSize = query.pageSize ? Number(query.pageSize) : 10;
+
+            const teams = await this.TeamsService.findAll(tenant, page, pageSize)
             return {
                 status: 200,
                 body: teams

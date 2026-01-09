@@ -26,7 +26,10 @@ export class AssetsController {
             this.logger.log('Get assets for tenant: ', headers['x-tenant-id'] || 'no tenant');
             const tenantId = headers['x-tenant-id'];
 
-            const assets = await this.assetService.getAssets(query, tenantId);
+            const page = query.page ? Number(query.page) : 1;
+            const pageSize = query.pageSize ? Number(query.pageSize) : 10;
+
+            const assets = await this.assetService.getAssets(query, tenantId, page, pageSize);
 
             return { status: 200, body: assets };
         });
@@ -169,9 +172,9 @@ export class AssetsController {
     async getAssetsWithDetails(@Headers() headers: any): Promise<ReturnType<typeof tsRestHandler>> {
         return tsRestHandler(contract.assets.getAssetsWithDetails, async ({ query }) => {
             const tenantId = headers['x-tenant-id'];
-            const assets = await this.assetService.getAssetsWithDetails(tenantId, query.assetTypes);
+            const { data, pagination} = await this.assetService.getAssetsWithDetails(tenantId, query.assetTypes);
 
-            const assetsReshaped = assets.map((asset) => {
+            const assets = data.map((asset) => {
                 return {
                     id: asset.id,
                     name: asset.name,
@@ -189,7 +192,7 @@ export class AssetsController {
                 };
             });
 
-            return { status: 200, body: assetsReshaped };
+            return { status: 200, body: {data: assets, pagination} };
         });
     }
 

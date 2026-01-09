@@ -272,7 +272,7 @@ function BookingForms() {
             </TableHeader>
             <TableBody>
               {bookingForms?.status === 200 ? (
-                bookingForms.body.map((form) => (
+                bookingForms.body.data.map((form) => (
                   <TableRow key={form.id}>
                     <TableCell>{form.name}</TableCell>
                     <TableCell>{form.description}</TableCell>

@@ -3,6 +3,7 @@ import { initContract } from "@ts-rest/core";
 import { z } from "zod";
 
 import { InsertBlockedDateSchema, InsertBookingSchema, InsertCustomerSchema, SelectAssetSchema, SelectBookingSchema, SelectCustomerSchema, SelectUserSchema, UpdateBlockedDateSchema, UpdateBookingSchema } from "../database-schema";
+import { pagination } from './utils';
 
 
 const c = initContract();
@@ -39,11 +40,16 @@ export const bookingContract = c.router({
         method: 'GET',
         path: '/booking',
         responses: {
-            200: z.array(ExtendedSelectBookingSchema)
+            200: z.object({
+                data: z.array(ExtendedSelectBookingSchema),
+                pagination
+            })
         },
         query: z.object({
             search: z.string().optional(),
             assetId: z.string().optional(),
+            page: z.coerce.number().optional(),
+            pageSize: z.coerce.number().optional(),
         }),
         summary: 'Get all bookings'
     },

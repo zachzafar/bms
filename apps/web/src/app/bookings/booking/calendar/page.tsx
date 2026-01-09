@@ -14,8 +14,8 @@ import { StorageService } from "@/lib/api/storage";
 
 type Booking = {
   id: number;
-  startDate: string;
-  endDate: string;
+  startDate: Date;
+  endDate: Date;
   customerName: string;
 };
 
@@ -80,7 +80,7 @@ export default function BookingCalendar() {
   useEffect(() => {
     if (bookingsQuery.data) {
       const bookingsData =
-        bookingsQuery.data.body?.map((b) => ({
+        bookingsQuery.data.body.data?.map((b) => ({
           id: Number(b.id),
           startDate: b.startDate,
           endDate: b.endDate,
@@ -135,10 +135,10 @@ export default function BookingCalendar() {
     const tenantId = currentTenant?.id ?? "";
     const assetId = "null";
 
-    const startDate = formatLocalDate(selectedRange.start);
+    const startDate = selectedRange.start;
     const endCopy = new Date(selectedRange.end);
     endCopy.setDate(endCopy.getDate() - 1);
-    const endDate = formatLocalDate(endCopy);
+    const endDate = endCopy
 
     await createBlockedDateMutation.mutateAsync({
       body: { tenantId, assetId, startDate, endDate, title: blockTitle, reason: "Manual Block" },
@@ -151,7 +151,7 @@ export default function BookingCalendar() {
 
   const handleDelete = (id: number) => {
     if (confirm("Delete this blocked date?")) {
-      deleteBlockedDateMutation.mutate({ params: { id: String(id) }, body: undefined });
+      deleteBlockedDateMutation.mutate({ params: { id }, body: undefined });
     }
   };
 

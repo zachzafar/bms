@@ -2,7 +2,7 @@ import { ConflictException, Inject, Injectable, NotFoundException } from '@nestj
 import { MySql2Database } from 'drizzle-orm/mysql2';
 import * as schema from '@repo/api-contract';
 import { DrizzleAsyncProvider } from 'src/drizzle/drizzle.provider';
-import { and, eq, gte, inArray, lte, or } from 'drizzle-orm';
+import { and, eq, gte, inArray, lte, or, sql } from 'drizzle-orm';
 import { ExtendedSelectBooking, InsertBooking } from '@repo/api-contract';
 import { SlotService } from '../slot/slot.service';
 import { OnEvent, EventEmitter2 } from '@nestjs/event-emitter';
@@ -364,8 +364,30 @@ export class BookingService {
     };
   }
 
-  async getBookingsByAssetId(assetId: string, period?: { startDate: Date; endDate: Date }) {
-    return this.db.query.Booking.findMany({
+  async getBookingsByAssetId(assetId: string, period?: { startDate: Date; endDate: Date }, page: number = 1, pageSize: number = 10) {
+    const offset = (page - 1) * pageSize;
+
+    // Build where conditions
+    const conditions: any[] = [eq(schema.Booking.assetId, assetId)];
+    if (period) {
+      conditions.push(
+        or(
+          gte(schema.Booking.startDate, period.startDate),
+          lte(schema.Booking.endDate, period.endDate)
+        )
+      );
+    }
+
+    // Get total count
+    const totalCountResult = await this.db
+      .select({ count: sql<number>`COUNT(*)` })
+      .from(schema.Booking)
+      .where(and(...conditions))
+      .execute();
+    const totalCount = totalCountResult[0]?.count || 0;
+
+    // Get paginated bookings
+    const bookings = await this.db.query.Booking.findMany({
       where: (booking, { eq, and, gte, lte, or }) =>
         period
           ? and(
@@ -373,10 +395,28 @@ export class BookingService {
             or(gte(booking.startDate, period.startDate), lte(booking.endDate, period.endDate))
           )
           : eq(booking.assetId, assetId),
+      limit: pageSize,
+      offset: offset,
     });
+
+    // Calculate pagination metadata
+    const paginationData = {
+      page,
+      pageSize,
+      totalCount,
+      totalPages: Math.ceil(totalCount / pageSize),
+      hasNextPage: page * pageSize < totalCount,
+      hasPreviousPage: page > 1,
+    };
+
+    return {
+      data: bookings,
+      pagination: paginationData,
+    };
   }
 
-  async getBookings(tenantId?: string, assetId?: string) {
+  async getBookings(tenantId?: string, assetId?: string, page: number = 1, pageSize: number = 10) {
+    const offset = (page - 1) * pageSize;
     const filters: any[] = [];
 
     if (tenantId) {
@@ -387,6 +427,23 @@ export class BookingService {
       filters.push(eq(schema.Booking.assetId, assetId));
     }
 
+    // Get total count
+    const totalCountQuery = this.db
+      .select({ count: sql<number>`COUNT(*)` })
+      .from(schema.UserHasBookings)
+      .innerJoin(schema.User, eq(schema.UserHasBookings.userId, schema.User.id))
+      .innerJoin(schema.Booking, eq(schema.UserHasBookings.bookingId, schema.Booking.id))
+      .innerJoin(schema.Asset, eq(schema.Booking.assetId, schema.Asset.id))
+      .innerJoin(schema.Customer, eq(schema.Customer.userId, schema.User.id));
+
+    if (filters.length) {
+      totalCountQuery.where(and(...filters));
+    }
+
+    const totalCountResult = await totalCountQuery.execute();
+    const totalCount = totalCountResult[0]?.count || 0;
+
+    // Get paginated bookings
     const bookings = await this.db
       .select()
       .from(schema.UserHasBookings)
@@ -394,13 +451,25 @@ export class BookingService {
       .innerJoin(schema.Booking, eq(schema.UserHasBookings.bookingId, schema.Booking.id))
       .innerJoin(
         schema.Asset,
-        eq(schema.Booking.assetId, schema.Asset.id) // always required join
+        eq(schema.Booking.assetId, schema.Asset.id)
       )
-      .where(filters.length ? and(...filters) : undefined) // <-- optional filters moved to .where()
+      .where(filters.length ? and(...filters) : undefined)
       .innerJoin(schema.Customer, eq(schema.Customer.userId, schema.User.id))
+      .limit(pageSize)
+      .offset(offset)
       .execute();
 
-    return bookings.map((booking) => ({
+    // Calculate pagination metadata
+    const paginationData = {
+      page,
+      pageSize,
+      totalCount,
+      totalPages: Math.ceil(totalCount / pageSize),
+      hasNextPage: page * pageSize < totalCount,
+      hasPreviousPage: page > 1,
+    };
+
+    const bookingData = bookings.map((booking) => ({
       ...booking.booking,
       startDate: booking.booking.startDate,
       endDate: booking.booking.endDate,
@@ -408,6 +477,11 @@ export class BookingService {
       asset: booking.assets,
       user: booking.users,
     }));
+
+    return {
+      data: bookingData,
+      pagination: paginationData,
+    };
   }
 
 

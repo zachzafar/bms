@@ -27,7 +27,10 @@ export class FeedbackController {
   async list(@Headers() headers: any): Promise<ReturnType<typeof tsRestHandler>> {
     return tsRestHandler(crmContract.feedback.listFeedback, async ({ query }) => {
       const tenantId = headers['x-tenant-id'];
-      const rows = await this.feedback.list(tenantId, query);
+      const page = query.page ? Number(query.page) : 1;
+      const pageSize = query.pageSize ? Number(query.pageSize) : 10;
+
+      const rows = await this.feedback.list(tenantId, query, page, pageSize);
       return { status: 200, body: rows };
     });
   }

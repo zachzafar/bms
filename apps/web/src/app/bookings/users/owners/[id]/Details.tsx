@@ -28,10 +28,10 @@ export default function Details({ userId }: { userId: string }) {
     enabled: !!tenant,
   });
 
-  const owners = ownersData?.body ?? [];
+  const owners = ownersData?.body.data ?? [];
   const selected = useMemo(() => owners.find((o: any) => o.user.id === userId), [owners, userId]);
   const rolesForUser = useMemo(() => {
-    const users = usersData?.body ?? [];
+    const users = usersData?.body.data ?? [];
     const u = users.find((u: any) => u.id === userId);
     return u?.roles ?? [];
   }, [usersData, userId]);

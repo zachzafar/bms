@@ -44,8 +44,11 @@ export class SystemAdminController {
   @IsAdminRoute()
   @TsRestHandler(contract.systemAdmin.getSystemAdmins)
   async getSystemAdmins(): Promise<ReturnType<typeof tsRestHandler>> {
-    return tsRestHandler(contract.systemAdmin.getSystemAdmins, async () => {
-      const admins = await this.systemAdminService.getSystemAdmins();
+    return tsRestHandler(contract.systemAdmin.getSystemAdmins, async ({ query }) => {
+      const page = query.page ? Number(query.page) : 1;
+      const pageSize = query.pageSize ? Number(query.pageSize) : 10;
+
+      const admins = await this.systemAdminService.getSystemAdmins(page, pageSize);
       return { status: 200, body: admins };
     });
   }
@@ -80,8 +83,11 @@ export class SystemAdminController {
   @IsAdminRoute()
   @TsRestHandler(contract.systemAdmin.getTenants)
   async getTenants(): Promise<ReturnType<typeof tsRestHandler>> {
-    return tsRestHandler(contract.systemAdmin.getTenants, async () => {
-      const tenants = await this.systemAdminService.getTenants();
+    return tsRestHandler(contract.systemAdmin.getTenants, async ({ query }) => {
+      const page = query.page ? Number(query.page) : 1;
+      const pageSize = query.pageSize ? Number(query.pageSize) : 10;
+
+      const tenants = await this.systemAdminService.getTenants(page, pageSize);
       return { status: 200, body: tenants };
     });
   }

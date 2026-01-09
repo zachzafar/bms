@@ -2,7 +2,7 @@ import { Inject, Injectable, BadRequestException, NotFoundException } from '@nes
 import { MySql2Database } from 'drizzle-orm/mysql2';
 import * as schema from '@repo/api-contract';
 import { DrizzleAsyncProvider } from 'src/drizzle/drizzle.provider';
-import { and, eq, gte, inArray, lte } from 'drizzle-orm';
+import { and, eq, gte, inArray, lte, sql } from 'drizzle-orm';
 import { SlotService } from 'src/slot/slot.service';
 
 type CreateInvoiceInput = Omit<schema.InsertInvoice, 'id'>;
@@ -58,7 +58,22 @@ export class InvoicesService {
     return id;
   }
 
-  async list(tenantId: string, query: { customerId?: number; bookingId?: string; status?: string }) {
+  async list(tenantId: string, query: { customerId?: number; bookingId?: string; status?: string }, page: number = 1, pageSize: number = 10) {
+    const offset = (page - 1) * pageSize;
+
+    const conditions: any[] = [];
+    conditions.push(eq(schema.Invoice.tenantId, tenantId));
+    if (query.customerId) conditions.push(eq(schema.Invoice.customerId, query.customerId));
+    if (query.bookingId) conditions.push(eq(schema.Invoice.bookingId, query.bookingId));
+    if (query.status) conditions.push(eq(schema.Invoice.status, query.status));
+
+    const totalCountResult = await this.db
+      .select({ count: sql<number>`COUNT(*)` })
+      .from(schema.Invoice)
+      .where(and(...conditions))
+      .execute();
+    const totalCount = totalCountResult[0]?.count || 0;
+
     const invoices = await this.db.query.Invoice.findMany({
       where: (i, { eq, and }) =>
         and(
@@ -68,6 +83,8 @@ export class InvoicesService {
           query.status ? eq(i.status, query.status) : undefined
         ),
       orderBy: (i, { desc }) => [desc(i.createdAt)],
+      limit: pageSize,
+      offset: offset,
     });
 
     const ids = invoices.map((i) => i.id);
@@ -80,19 +97,31 @@ export class InvoicesService {
       itemsMap.set(it.invoiceId, [...(itemsMap.get(it.invoiceId) ?? []), it]);
     });
 
-    return invoices.map((inv) => ({
-      ...inv,
-      // Convert bigint values to numbers for API compatibility
-      id: inv.id,
-      customerId: inv.customerId,
-      items: (itemsMap.get(inv.id) ?? []).map((it) => ({
-        ...it,
-        id: it.id,
-        invoiceId: it.invoiceId,
-        unitPrice: String(it.unitPrice),
-        totalPrice: String(it.totalPrice),
+    const paginationData = {
+      page,
+      pageSize,
+      totalCount,
+      totalPages: Math.ceil(totalCount / pageSize),
+      hasNextPage: page * pageSize < totalCount,
+      hasPreviousPage: page > 1,
+    };
+
+    return {
+      data: invoices.map((inv) => ({
+        ...inv,
+        // Convert bigint values to numbers for API compatibility
+        id: inv.id,
+        customerId: inv.customerId,
+        items: (itemsMap.get(inv.id) ?? []).map((it) => ({
+          ...it,
+          id: it.id,
+          invoiceId: it.invoiceId,
+          unitPrice: String(it.unitPrice),
+          totalPrice: String(it.totalPrice),
+        })),
       })),
-    }));
+      pagination: paginationData,
+    };
   }
 
   async get(id: number) {

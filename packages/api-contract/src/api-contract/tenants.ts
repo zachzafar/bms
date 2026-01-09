@@ -2,6 +2,7 @@
 import { initContract } from "@ts-rest/core";
 import { InsertTenantSchema, InsertUserSchema, SelectTenantSchema, SelectUserSchema } from "../database-schema"
 import { z } from "zod";
+import { pagination } from "./utils";
 
 // export const TenantInsertSchema = z.object({
 //   id: z.string().max(36),
@@ -52,8 +53,15 @@ export const tenantsContract = c.router({
     method: 'GET',
     path: '/tenant',
     responses: {
-      200: z.array(SelectTenantSchema),
+      200: z.object({
+        data: z.array(SelectTenantSchema),
+        pagination
+      })
     },
+    query: z.object({
+      page: z.coerce.number().optional(),
+      pageSize: z.coerce.number().optional(),
+    }),
   },
   update: {
     method: 'PUT',

@@ -2,7 +2,7 @@ import { Inject, Injectable, InternalServerErrorException } from '@nestjs/common
 import { MySql2Database } from 'drizzle-orm/mysql2';
 import { DrizzleAsyncProvider } from 'src/drizzle/drizzle.provider';
 import * as schema from '@repo/api-contract';
-import { eq } from 'drizzle-orm';
+import { eq, sql } from 'drizzle-orm';
 
 @Injectable()
 export class FormsService {
@@ -10,8 +10,36 @@ export class FormsService {
         @Inject(DrizzleAsyncProvider) private db: MySql2Database<typeof schema>
     ) {}
 
-    async getForms(tenantId:string) {
-        return this.db.query.BookingForm.findMany({where: (form, { eq }) => eq(form.tenantId, tenantId), with: { fields: true }});
+    async getForms(tenantId:string, page: number = 1, pageSize: number = 10) {
+        const offset = (page - 1) * pageSize;
+
+        const totalCountResult = await this.db
+            .select({ count: sql<number>`COUNT(*)` })
+            .from(schema.BookingForm)
+            .where(eq(schema.BookingForm.tenantId, tenantId))
+            .execute();
+        const totalCount = totalCountResult[0]?.count || 0;
+
+        const results = await this.db.query.BookingForm.findMany({
+            where: (form, { eq }) => eq(form.tenantId, tenantId),
+            with: { fields: true },
+            limit: pageSize,
+            offset: offset,
+        });
+
+        const paginationData = {
+            page,
+            pageSize,
+            totalCount,
+            totalPages: Math.ceil(totalCount / pageSize),
+            hasNextPage: page * pageSize < totalCount,
+            hasPreviousPage: page > 1,
+        };
+
+        return {
+            data: results,
+            pagination: paginationData,
+        };
     }
 
     async createForm(form: schema.InsertBookingForm, fields: Omit<schema.InsertBookingFormField,"formId">[]) {

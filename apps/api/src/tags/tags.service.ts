@@ -2,7 +2,7 @@ import { Inject, Injectable, InternalServerErrorException, NotFoundException } f
 import { MySql2Database } from 'drizzle-orm/mysql2';
 import { DrizzleAsyncProvider } from 'src/drizzle/drizzle.provider';
 import * as schema from '@repo/api-contract';
-import { eq } from 'drizzle-orm';
+import { eq, sql } from 'drizzle-orm';
 import type { InsertTag } from '@repo/api-contract';
 
 @Injectable()
@@ -26,13 +26,37 @@ export class TagsService {
 }
 
 
-  // ✅ Accept tenantId to filter tags
-  async getTags(tenantId: string) {
-    return this.db
+  async getTags(tenantId: string, page: number = 1, pageSize: number = 10) {
+    const offset = (page - 1) * pageSize;
+
+    const totalCountResult = await this.db
+      .select({ count: sql<number>`COUNT(*)` })
+      .from(schema.Tags)
+      .where(eq(schema.Tags.tenantId, tenantId))
+      .execute();
+    const totalCount = totalCountResult[0]?.count || 0;
+
+    const results = await this.db
       .select()
       .from(schema.Tags)
-      .where(eq(schema.Tags.tenantId, tenantId)) // filter by tenantId
-      .execute(); // returns array of tags
+      .where(eq(schema.Tags.tenantId, tenantId))
+      .limit(pageSize)
+      .offset(offset)
+      .execute();
+
+    const paginationData = {
+      page,
+      pageSize,
+      totalCount,
+      totalPages: Math.ceil(totalCount / pageSize),
+      hasNextPage: page * pageSize < totalCount,
+      hasPreviousPage: page > 1,
+    };
+
+    return {
+      data: results,
+      pagination: paginationData,
+    };
   }
 
   async getTag(id: number) {

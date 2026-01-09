@@ -31,7 +31,10 @@ export class ContactsController {
   async listContacts(@Headers() headers: any): Promise<ReturnType<typeof tsRestHandler>> {
     return tsRestHandler(crmContract.contacts.listContacts, async ({ query }) => {
       const tenantId = headers['x-tenant-id'];
-      const rows = await this.contacts.listContacts(tenantId, query);
+      const page = query.page ? Number(query.page) : 1;
+      const pageSize = query.pageSize ? Number(query.pageSize) : 10;
+
+      const rows = await this.contacts.listContacts(tenantId, query, page, pageSize);
       return { status: 200, body: rows };
     });
   }

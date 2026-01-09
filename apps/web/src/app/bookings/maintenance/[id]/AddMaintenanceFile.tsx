@@ -64,7 +64,7 @@ export default function AddMaintenanceFile() {
         }
     }
 
-    const files = data?.status === 200 ? data.body : []
+    const files = data?.status === 200 ? data.body.data : []
 
   return (
     <Card>

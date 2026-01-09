@@ -21,7 +21,7 @@ export default function CustomerDetailsPage() {
     queryKey: ['customers'],
     enabled: !!tenant,
   });
-  const customers = customersData?.body ?? [];
+  const customers = customersData?.body.data ?? [];
   const selected = useMemo(() => customers.find((c: any) => c.user.id === userId), [customers, userId]);
 
   if (customersLoading) return <Loading />;

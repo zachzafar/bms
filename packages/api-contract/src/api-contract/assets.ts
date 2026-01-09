@@ -42,11 +42,16 @@ export const assetsContract = c.router({
     method: 'GET',
     path: '/asset',
     responses: {
-      200: z.array(SelectAssetWithTagsSchema),
+      200: z.object({
+        data: z.array(SelectAssetWithTagsSchema),
+        pagination
+      }),
     },
     query: z.object({
       search: z.string().optional(),
       userId: z.string().optional(),
+      page: z.coerce.number().optional(),
+      pageSize: z.coerce.number().optional(),
     }),
     summary: 'Get all assets',
   },
@@ -136,24 +141,29 @@ export const assetsContract = c.router({
     method: 'GET',
     path: '/asset-details',
     responses: {
-      200: z.array(z.object({
-        id: z.string(),
-        name: z.string(),
-        description: z.string().optional(),
-        images: z.array(z.string()),
-        properties: z.array(z.object({
-          id: z.number(),
+      200: z.object({
+        data: z.array(z.object({
+          id: z.string(),
           name: z.string(),
-          value: z.string()
+          description: z.string().optional(),
+          images: z.array(z.string()),
+          properties: z.array(z.object({
+            id: z.number(),
+            name: z.string(),
+            value: z.string()
+          })),
+          tags: z.array(z.object({
+            id: z.number(),
+            name: z.string()
+          }))
         })),
-        tags: z.array(z.object({
-          id: z.number(),
-          name: z.string()
-        }))
-      }))
+        pagination
+      })
     },
     query: z.object({
       assetTypes: z.array(z.coerce.number()).optional(),
+      page: z.coerce.number().optional(),
+      pageSize: z.coerce.number().optional(),
     })
   },
   getAssetImages: {
@@ -191,15 +201,20 @@ export const assetsContract = c.router({
     summary: 'Get all assets available between a date range',
     query: z.object({
       startDate: z.coerce.date(), // ISO date
-      endDate: z.coerce.date()
+      endDate: z.coerce.date(),
+      page: z.coerce.number().optional(),
+      pageSize: z.coerce.number().optional(),
     }),
     responses: {
-      200: z.array(
-        z.object({
-          id: z.string(),
-          name: z.string(),
-        })
-      )
+      200: z.object({
+        data: z.array(
+          z.object({
+            id: z.string(),
+            name: z.string(),
+          })
+        ),
+        pagination
+      })
     }
   },
 

@@ -63,9 +63,11 @@ export class RatesController {
         return tsRestHandler(contract.rates.getRates, async ({ query }) => {
             const tenantId = headers['x-tenant-id']; // Extract tenantId from request headers
             const { assetId } = query; // Optional assetId from query params
+            const page = query.page ? Number(query.page) : 1;
+            const pageSize = query.pageSize ? Number(query.pageSize) : 10;
 
             // Fetch the rates from the service
-            const rates = await this.rateService.getRates(assetId);
+            const result = await this.rateService.getRates(assetId, page, pageSize);
 
             const authorizedRates: {
                 rate: {
@@ -83,7 +85,8 @@ export class RatesController {
             }[] = [];
 
             // Validate tenant access for each rate's associated assets
-            for (const { rate, assetIds } of rates) {
+            for (const item of result.data) {
+                const { rate, assetIds } = item;
                 let isAuthorized = false;
 
                 for (const assetId of assetIds) {
@@ -109,7 +112,10 @@ export class RatesController {
 
             return {
                 status: 200,
-                body: authorizedRates, // Return authorized rates with assetIds
+                body: {
+                    data: authorizedRates,
+                    pagination: result.pagination
+                }
             };
         });
     }

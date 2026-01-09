@@ -2,7 +2,7 @@ import { BadRequestException, Inject, Injectable } from '@nestjs/common';
 import { MySql2Database } from 'drizzle-orm/mysql2';
 import * as schema from '@repo/api-contract';
 import { DrizzleAsyncProvider } from 'src/drizzle/drizzle.provider';
-import { and, between, eq, gte, lte } from 'drizzle-orm';
+import { and, between, eq, gte, lte, sql } from 'drizzle-orm';
 
 @Injectable()
 export class CommunicationsService {
@@ -26,25 +26,18 @@ export class CommunicationsService {
     };
   }
 
-  async list(tenantId: string, query: any) {
-    const rows = await this.db
-      .select()
+  async list(tenantId: string, query: any, page: number = 1, pageSize: number = 10) {
+    const offset = (page - 1) * pageSize;
+
+    // Get total count
+    const totalCountResult = await this.db
+      .select({ count: sql<number>`COUNT(*)` })
       .from(schema.CommunicationLog)
       .where(eq(schema.CommunicationLog.tenantId, tenantId))
-      .innerJoin(schema.Contact, eq(schema.CommunicationLog.contactId, schema.Contact.id))
-      .innerJoin(schema.User, eq(schema.CommunicationLog.userId, schema.User.id))
       .execute();
+    const totalCount = totalCountResult[0]?.count || 0;
 
-    const filtered = rows.filter((r) => {
-      if (query.contactId && String(r.contact.id) !== String(query.contactId)) return false;
-      if (query.userId && r.users.id !== query.userId) return false;
-      if (query.type && r.communication_log.type !== query.type) return false;
-      if (query.from && r.communication_log.date < new Date(query.from)) return false;
-      if (query.to && r.communication_log.date > new Date(query.to)) return false;
-      return true;
-    });
-
-    const comms = this.db.query.CommunicationLog.findMany({
+    const comms = await this.db.query.CommunicationLog.findMany({
       where: and(
         eq(schema.CommunicationLog.tenantId, tenantId),
         query.contactId ? eq(schema.CommunicationLog.contactId, (query.contactId)) : undefined,
@@ -53,8 +46,23 @@ export class CommunicationsService {
         query.from ? gte(schema.CommunicationLog.date, new Date(query.from)) : undefined,
         query.to ? lte(schema.CommunicationLog.date, new Date(query.to)) : undefined,
       ),
+      limit: pageSize,
+      offset: offset,
     });
-    return comms
+
+    const paginationData = {
+      page,
+      pageSize,
+      totalCount,
+      totalPages: Math.ceil(totalCount / pageSize),
+      hasNextPage: page * pageSize < totalCount,
+      hasPreviousPage: page > 1,
+    };
+
+    return {
+      data: comms,
+      pagination: paginationData,
+    };
   }
 
   async get(id: number) {

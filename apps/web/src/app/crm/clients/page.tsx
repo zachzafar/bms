@@ -23,12 +23,16 @@ import { CONTACTS_QUERY_KEY } from "@/lib/api/queryKeys"
 import { toast } from "sonner"
 import { ExtendedSelectContactSchema } from "@repo/api-contract"
 import { ContactFormInputs } from "@/lib/schemas"
+import { usePagination } from '@/hooks/usePagination'
+import { DataTablePagination } from '@/components/ui/data-table-pagination'
 
 type Contact = typeof ExtendedSelectContactSchema._type
 
 export default function ClientManagement() {
+  const { page, pageSize, queryParams, goToPage, changePageSize } = usePagination(1, 10)
   const { data: clientsData, refetch } = authClient.crm.contacts.listContacts.useQuery({
-    queryKey: CONTACTS_QUERY_KEY,
+    queryKey: [...CONTACTS_QUERY_KEY, page, pageSize],
+    queryData: {query: queryParams},
   })
   const { mutate: createClient } = authClient.crm.contacts.createContact.useMutation()
   const { mutate: updateClient } = authClient.crm.contacts.updateContact.useMutation()
@@ -40,7 +44,8 @@ export default function ClientManagement() {
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false)
   const [isDetailDialogOpen, setIsDetailDialogOpen] = useState(false)
 
-  const clients = clientsData?.body || []
+  const clients = clientsData?.status === 200 ? clientsData.body.data : []
+  const paginationMeta = clientsData?.status === 200 ? clientsData.body.pagination : undefined
 
   const filteredClients = clients.filter(
     (client: Contact) =>
@@ -272,6 +277,14 @@ export default function ClientManagement() {
           </Table>
         </CardContent>
       </Card>
+
+      {paginationMeta && (
+        <DataTablePagination
+          pagination={paginationMeta}
+          onPageChange={goToPage}
+          onPageSizeChange={changePageSize}
+        />
+      )}
 
       {/* Edit Dialog */}
       <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>

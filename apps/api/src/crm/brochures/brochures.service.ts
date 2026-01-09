@@ -2,7 +2,7 @@ import { Inject, Injectable } from '@nestjs/common';
 import { MySql2Database } from 'drizzle-orm/mysql2';
 import * as schema from '@repo/api-contract';
 import { DrizzleAsyncProvider } from 'src/drizzle/drizzle.provider';
-import { and, eq, inArray } from 'drizzle-orm';
+import { and, eq, inArray, sql } from 'drizzle-orm';
 
 export type BrochureWithAssets = schema.SelectBrochure & {
   assets: schema.SelectAsset[];
@@ -17,10 +17,23 @@ export class BrochuresService {
     return id;
   }
 
-  async list(tenantId: string) {
+  async list(tenantId: string, page: number = 1, pageSize: number = 10) {
+    const offset = (page - 1) * pageSize;
+
+    // Get total count
+    const totalCountResult = await this.db
+      .select({ count: sql<number>`COUNT(*)` })
+      .from(schema.Brochure)
+      .where(eq(schema.Brochure.tenantId, tenantId))
+      .execute();
+    const totalCount = totalCountResult[0]?.count || 0;
+
+    // Get paginated brochures
     const brochures = await this.db.query.Brochure.findMany({
-      where: (b, { eq }) => 
-        eq(b.tenantId, tenantId)
+      where: (b, { eq }) =>
+        eq(b.tenantId, tenantId),
+      limit: pageSize,
+      offset: offset
     });
 
     const ids = brochures.map((b) => b.id);
@@ -42,7 +55,21 @@ export class BrochuresService {
       // res.push({ ...b, contact, assets });
       res.push({ ...b, assets: assets.map(a => ({ ...a, assetTypeId: (a.assetTypeId) })) });
     }
-    return res;
+
+    // Calculate pagination metadata
+    const paginationData = {
+      page,
+      pageSize,
+      totalCount,
+      totalPages: Math.ceil(totalCount / pageSize),
+      hasNextPage: page * pageSize < totalCount,
+      hasPreviousPage: page > 1,
+    };
+
+    return {
+      data: res,
+      pagination: paginationData,
+    };
   }
 
   async get(id: number) {
@@ -79,11 +106,36 @@ export class BrochuresService {
     );
   }
 
-  async listAssets(brochureId: number) {
+  async listAssets(brochureId: number, page: number = 1, pageSize: number = 10) {
+    const offset = (page - 1) * pageSize;
+
+    // Get all links for this brochure
     const links = await this.db.query.BrochureAsset.findMany({ where: (bp, { eq }) => eq(bp.brochureId, (brochureId)) });
-    const assets = await this.db.query.Asset.findMany({
-      where: (a, { inArray }) => inArray(a.id, links.map((l) => l.assetId)),
-    });
-    return assets.map((a) => ({ ...a }));
+    const assetIds = links.map((l) => l.assetId);
+    const totalCount = assetIds.length;
+
+    // Get paginated assets
+    const assets = assetIds.length
+      ? await this.db.query.Asset.findMany({
+          where: (a, { inArray }) => inArray(a.id, assetIds),
+          limit: pageSize,
+          offset: offset,
+        })
+      : [];
+
+    // Calculate pagination metadata
+    const paginationData = {
+      page,
+      pageSize,
+      totalCount,
+      totalPages: Math.ceil(totalCount / pageSize),
+      hasNextPage: page * pageSize < totalCount,
+      hasPreviousPage: page > 1,
+    };
+
+    return {
+      data: assets.map((a) => ({ ...a })),
+      pagination: paginationData,
+    };
   }
 }

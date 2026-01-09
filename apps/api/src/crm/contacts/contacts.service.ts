@@ -13,7 +13,17 @@ export class ContactsService {
     return id;
   }
 
-  async listContacts(tenantId: string, query: { search?: string; hasCustomer?: boolean; hasOwner?: boolean; }) {
+  async listContacts(tenantId: string, query: { search?: string; hasCustomer?: boolean; hasOwner?: boolean; }, page: number = 1, pageSize: number = 10) {
+    const offset = (page - 1) * pageSize;
+
+    // Get total count
+    const totalCountResult = await this.db
+      .select({ count: sql<number>`COUNT(*)` })
+      .from(schema.Contact)
+      .where(eq(schema.Contact.tenantId, tenantId))
+      .execute();
+    const totalCount = totalCountResult[0]?.count || 0;
+
     // Base: contacts by tenant
     const contacts = await this.db.query.Contact.findMany({
       where: (c, { eq, and, or, like }) => and(
@@ -27,6 +37,8 @@ export class ContactsService {
             )
           : undefined
       ),
+      limit: pageSize,
+      offset: offset,
     });
 
     // Optional filters: hasCustomer / hasOwner
@@ -50,7 +62,19 @@ export class ContactsService {
     if (query.hasCustomer === true) result = result.filter((r) => !!r.customerProfile);
     if (query.hasOwner === true) result = result.filter((r) => !!r.ownerProfile);
 
-    return result;
+    const paginationData = {
+      page,
+      pageSize,
+      totalCount,
+      totalPages: Math.ceil(totalCount / pageSize),
+      hasNextPage: page * pageSize < totalCount,
+      hasPreviousPage: page > 1,
+    };
+
+    return {
+      data: result,
+      pagination: paginationData,
+    };
   }
 
   async getContact(id: number) {

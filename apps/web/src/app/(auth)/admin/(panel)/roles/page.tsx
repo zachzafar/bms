@@ -14,6 +14,8 @@ import { z } from 'zod';
 import { useForm, SubmitHandler } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
+import { usePagination } from '@/hooks/usePagination';
+import { DataTablePagination } from '@/components/ui/data-table-pagination';
 
 // Schema for role form
 const RoleFormSchema = z.object({
@@ -24,11 +26,12 @@ const RoleFormSchema = z.object({
 type RoleFormData = z.infer<typeof RoleFormSchema>;
 
 export default function RolesPage() {
+  const { page, pageSize, queryParams, goToPage, changePageSize } = usePagination(1, 10);
   const [open, setOpen] = useState(false);
   const queryClient = authClient.useQueryClient();
   const [availablePermissions, setAvailablePermissions] = useState<string[]>([]);
-  const [roles, setRoles] = useState<{ roleId: string; name: string; permissions: string[] }[]>([]);
-  const [selectedRole, setSelectedRole] = useState<{ roleId: string; name: string; permissions: string[] } | null>(null);
+  const [roles, setRoles] = useState<{ roleId: number; name: string; permissions: string[] }[]>([]);
+  const [selectedRole, setSelectedRole] = useState<{ roleId: number; name: string; permissions: string[] } | null>(null);
 
   const form = useForm<RoleFormData>({
     resolver: zodResolver(RoleFormSchema),
@@ -45,7 +48,8 @@ export default function RolesPage() {
 
   // Fetch roles
   const { data: rolesData, refetch: refetchRoles } = authClient.auth.getRoles.useQuery({
-    queryKey: ['roles'],
+    queryKey: ['roles', page, pageSize],
+    // queryData: { query: queryParams },
   });
 
   // Create role mutation
@@ -124,7 +128,7 @@ export default function RolesPage() {
     });
   };
 
-  const handleEditRole = (role: { roleId: string; name: string; permissions: string[] }) => {
+  const handleEditRole = (role: { roleId: number; name: string; permissions: string[] }) => {
     setSelectedRole(role);
     setOpen(true);
   };
@@ -308,6 +312,14 @@ export default function RolesPage() {
               )}
             </TableBody>
           </Table>
+
+          {/* {paginationMeta && (
+            <DataTablePagination
+              pagination={paginationMeta}
+              onPageChange={goToPage}
+              onPageSizeChange={changePageSize}
+            />
+          )} */}
         </CardContent>
       </Card>
     </div>

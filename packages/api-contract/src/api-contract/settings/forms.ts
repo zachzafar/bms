@@ -2,6 +2,7 @@ import { initContract } from "@ts-rest/core";
 
 import { z } from "zod";
 import { InsertBookingFormFieldSchema, InsertBookingFormSchema, SelectBookingFormSchema } from "../../database-schema";
+import { pagination } from "../utils";
 
 const c = initContract();
 
@@ -26,8 +27,15 @@ export const formsContract = c.router({
         method: 'GET',
         path: '/form',
         responses: {
-            200: z.array(SelectBookingFormSchema)
+            200: z.object({
+                data: z.array(SelectBookingFormSchema),
+                pagination
+            })
         },
+        query: z.object({
+            page: z.coerce.number().optional(),
+            pageSize: z.coerce.number().optional(),
+        }),
         summary: 'Get all forms'
     },
     getForm: {

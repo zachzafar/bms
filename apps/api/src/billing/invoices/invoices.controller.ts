@@ -52,11 +52,14 @@ export class InvoicesController {
   async list(@Headers() headers: any): Promise<ReturnType<typeof tsRestHandler>> {
     return tsRestHandler(billingContract.getInvoices, async ({ query }) => {
       const tenantId = headers['x-tenant-id'];
-      const rows = await this.invoices.list(tenantId, query);
-      return { status: 200, body: rows.map(row => ({
+      const page = query.page ? Number(query.page) : 1;
+      const pageSize = query.pageSize ? Number(query.pageSize) : 10;
+
+      const rows = await this.invoices.list(tenantId, query, page, pageSize);
+      return { status: 200, body: {data: rows.data.map(row => ({
         ...row,
         dueDate: row.dueDate.toISOString(),
-      })) };
+      })),pagination: rows.pagination} };
     });
   }
 

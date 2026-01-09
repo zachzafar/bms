@@ -161,7 +161,7 @@ export default function Properties() {
             </TableHeader>
             <TableBody>
               {properties?.status === 200 ? (
-                properties.body.map((property) => (
+                properties.body.data.map((property) => (
                   <TableRow key={property.id}>
                     <TableCell className="font-medium">{property.name}</TableCell>
                     <TableCell>{property.propertyType}</TableCell>

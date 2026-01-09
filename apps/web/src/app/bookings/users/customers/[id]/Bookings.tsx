@@ -45,9 +45,9 @@ export default function Bookings({ userId }: { userId: string }) {
     enabled: !!tenant,
   });
 
-  const bookings = bookingsData?.body ?? [];
-  const assets = assetsData?.body ?? [];
-  const customers = customersData?.body ?? [];
+  const bookings = bookingsData?.body.data ?? [];
+  const assets = assetsData?.body.data ?? [];
+  const customers = customersData?.body.data ?? [];
   const selectedCustomer = useMemo(() => customers.find((c: any) => c.user.id === userId), [customers, userId]);
   const customerIdNum = selectedCustomer?.customer?.id;
 
@@ -79,8 +79,8 @@ export default function Bookings({ userId }: { userId: string }) {
         body: {
           booking: {
             assetId: values.assetId,
-            startDate: new Date(values.startDate).toISOString(),
-            endDate: new Date(values.endDate).toISOString(),
+            startDate: new Date(values.startDate),
+            endDate: new Date(values.endDate),
             status: values.status || 'confirmed',
           },
           customers: [customerIdNum],

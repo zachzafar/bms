@@ -12,6 +12,8 @@ import { PlusIcon, Pencil  } from 'lucide-react';
 import { SubmitHandler, useForm } from 'react-hook-form';
 import { z } from 'zod';
 import Link from 'next/link';
+import { usePagination } from '@/hooks/usePagination';
+import { DataTablePagination } from '@/components/ui/data-table-pagination';
 
 
 import {
@@ -40,8 +42,12 @@ type MaintenanceFormData = z.infer<typeof MaintenanceFormSchema>;
 
 export default function Component() {
   const router = useRouter();
+  const { page, pageSize, queryParams, goToPage, changePageSize } = usePagination(1, 10);
   const { data: assetsResponse} = authClient.assets.getAssets.useQuery({ queryKey: ASSETS_QUERY_KEY });
-  const { data: maintenance } = authClient.maintenance.getMaintenances.useQuery({ queryKey: MAINTENANCE_QUERY_KEY });
+  const { data: maintenance } = authClient.maintenance.getMaintenances.useQuery({
+    queryKey: [...MAINTENANCE_QUERY_KEY, page, pageSize],
+    queryData: {query:queryParams},
+  });
   const { mutate, isPending } = authClient.maintenance.createMaintenance.useMutation();
 
   const form = useForm<MaintenanceFormData>({
@@ -54,7 +60,8 @@ export default function Component() {
       assetId: '',
     },
   });
-  const filteredTasks = maintenance?.status === 200? maintenance.body : [];
+  const filteredTasks = maintenance?.status === 200 ? maintenance.body.data : [];
+  const paginationMeta = maintenance?.status === 200 ? maintenance.body.pagination : undefined;
 
   // const filteredTasks = maintenance?.status === 200 ?
   //   maintenance.body.filter(
@@ -67,7 +74,7 @@ export default function Component() {
   //       (filterStatus === 'All' || task.status === filterStatus)
   //   ) : [];
 
-  const assets = assetsResponse?.status === 200? assetsResponse.body : [];
+  const assets = assetsResponse?.status === 200 ? assetsResponse.body?.data ?? assetsResponse.body : [];
 
   const processForm: SubmitHandler<MaintenanceFormData> = async (data) => {
     mutate({
@@ -300,6 +307,14 @@ export default function Component() {
           </TableBody>
         </Table>
       </div>
+
+      {paginationMeta && (
+        <DataTablePagination
+          pagination={paginationMeta}
+          onPageChange={goToPage}
+          onPageSizeChange={changePageSize}
+        />
+      )}
     </>
   );
 }

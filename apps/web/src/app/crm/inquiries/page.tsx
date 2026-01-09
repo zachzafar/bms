@@ -24,12 +24,16 @@ import { INQUIRIES_QUERY_KEY } from "@/lib/api/queryKeys"
 import { toast } from "sonner"
 import { ExtendedSelectInquirySchema } from "@repo/api-contract"
 import { InquiryFormInputs } from "@/lib/schemas"
+import { usePagination } from '@/hooks/usePagination'
+import { DataTablePagination } from '@/components/ui/data-table-pagination'
 
 type Inquiry = typeof ExtendedSelectInquirySchema._type
 
 export default function InquiryManagement() {
+  const { page, pageSize, queryParams, goToPage, changePageSize } = usePagination(1, 10)
   const { data: inquiriesData, refetch } = authClient.crm.inquiries.listInquiries.useQuery({
-    queryKey: INQUIRIES_QUERY_KEY,
+    queryKey: [...INQUIRIES_QUERY_KEY, page, pageSize],
+    queryData: { query: queryParams },
   })
   const { mutate: createInquiry } = authClient.crm.inquiries.createInquiry.useMutation()
   const { mutate: updateInquiry } = authClient.crm.inquiries.updateInquiry.useMutation()
@@ -42,7 +46,8 @@ export default function InquiryManagement() {
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false)
   const [isDetailDialogOpen, setIsDetailDialogOpen] = useState(false)
 
-  const inquiries = inquiriesData?.body || []
+  const inquiries = inquiriesData?.status === 200 ? inquiriesData.body.data : []
+  const paginationMeta = inquiriesData?.status === 200 ? inquiriesData.body.pagination : undefined
 
   const filteredInquiries = inquiries.filter((inquiry: Inquiry) => {
     const matchesSearch =
@@ -318,6 +323,14 @@ export default function InquiryManagement() {
           </Table>
         </CardContent>
       </Card>
+
+      {paginationMeta && (
+        <DataTablePagination
+          pagination={paginationMeta}
+          onPageChange={goToPage}
+          onPageSizeChange={changePageSize}
+        />
+      )}
 
       {/* Edit Dialog */}
       <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>

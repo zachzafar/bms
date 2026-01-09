@@ -33,10 +33,13 @@ async createTag(@Headers() headers: any): Promise<ReturnType<typeof tsRestHandle
 
   @TsRestHandler(contract.settings.tags.getTags)
   async getTags(@Headers() headers: any): Promise<ReturnType<typeof tsRestHandler>> {
-    return tsRestHandler(contract.settings.tags.getTags, async () => {
+    return tsRestHandler(contract.settings.tags.getTags, async ({ query }) => {
       const tenantId = headers['x-tenant-id'];
+      const page = query.page ? Number(query.page) : 1;
+      const pageSize = query.pageSize ? Number(query.pageSize) : 10;
+
       // Fetch only tags belonging to this tenant
-      const tags = await this.tagsService.getTags(tenantId);
+      const tags = await this.tagsService.getTags(tenantId, page, pageSize);
       return { status: 200, body: tags };
     });
   }

@@ -21,7 +21,7 @@ export default function Assets({ userId }: { userId: string }) {
 
   const { mutate: updateAsset } = authClient.assets.updateAsset.useMutation();
 
-  const assets = assetsData?.body ?? [];
+  const assets = assetsData?.body.data ?? [];
   const ownedAssets = useMemo(() => assets.filter((a: any) => a.userId === userId), [assets, userId]);
   const unassignedAssets = useMemo(() => assets.filter((a: any) => !a.userId), [assets]);
 

@@ -1,6 +1,5 @@
 'use client'
 
-import { useState } from 'react'
 import { Button } from '@/components/ui/button'
 import {
   Table,
@@ -27,11 +26,16 @@ import { SelectAsset } from '@repo/api-contract'
 import Link from 'next/link'
 import { StorageService } from '@/lib/api/storage'
 import { toast } from 'sonner'
+import { usePagination } from '@/hooks/usePagination'
+import { DataTablePagination } from '@/components/ui/data-table-pagination'
 
 export default function AssetsPage() {
   const currentTenant = StorageService.getTenant()
+  const { page, pageSize, queryParams, goToPage, changePageSize } = usePagination(1, 10)
+
   const { data: assets, refetch } = authClient.assets.getAssets.useQuery({
-    queryKey: ['assets'],
+    queryKey: ['assets', page, pageSize],
+    queryData: {query:queryParams},
     enabled: !!currentTenant,
   })
   const { mutate: deleteAsset } = (authClient.assets as any).deleteAsset.useMutation();
@@ -39,6 +43,9 @@ export default function AssetsPage() {
   const { data: assetType } = authClient.settings.assetType.getAssetTypes.useQuery({
     queryKey: ['assetType']
   })
+
+  const assetList = assets?.status === 200 ? assets.body.data : []
+  const paginationMeta = assets?.status === 200 ? assets.body.pagination : undefined
 
   return (
     <>
@@ -73,8 +80,8 @@ export default function AssetsPage() {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {assets?.status === 200 ? (
-              assets.body.map((asset) => (
+            {assetList.length > 0 ? (
+              assetList.map((asset) => (
                 <Row key={asset.id} asset={asset} refetch={refetch} />
               ))
             ) : (
@@ -84,6 +91,13 @@ export default function AssetsPage() {
             )}
           </TableBody>
         </Table>
+        {paginationMeta && (
+          <DataTablePagination
+            pagination={paginationMeta}
+            onPageChange={goToPage}
+            onPageSizeChange={changePageSize}
+          />
+        )}
       </div>
     </>
   )
@@ -118,7 +132,7 @@ export const Row = ({
   })
 
   const assetTypeMap: Record<number, string | undefined> =
-  assetType?.body?.reduce((acc, type) => {
+  assetType?.body?.data?.reduce((acc: Record<number, string | undefined>, type: any) => {
     acc[type.id] = type.name;
     return acc;
   }, {} as Record<number, string | undefined>) ?? {};

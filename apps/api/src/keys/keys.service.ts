@@ -2,7 +2,7 @@ import { Inject, Injectable, InternalServerErrorException, Logger, NotFoundExcep
 import { MySql2Database } from 'drizzle-orm/mysql2';
 import { DrizzleAsyncProvider } from 'src/drizzle/drizzle.provider';
 import * as schema from '@repo/api-contract';
-import { eq, and } from 'drizzle-orm';
+import { eq, and, sql } from 'drizzle-orm';
 import { randomBytes } from 'crypto';
 
 @Injectable()
@@ -28,10 +28,36 @@ export class KeysService {
 
     }
 
-    async getKeys(tenantId: string) {
+    async getKeys(tenantId: string, page: number = 1, pageSize: number = 10) {
         try {
-            const keys = await this.db.query.APIKeys.findMany({ where: (keys, { eq }) => eq(keys.tenantId, tenantId) })
-            return keys
+            const offset = (page - 1) * pageSize;
+
+            const totalCountResult = await this.db
+                .select({ count: sql<number>`COUNT(*)` })
+                .from(schema.APIKeys)
+                .where(eq(schema.APIKeys.tenantId, tenantId))
+                .execute();
+            const totalCount = totalCountResult[0]?.count || 0;
+
+            const results = await this.db.query.APIKeys.findMany({
+                where: (keys, { eq }) => eq(keys.tenantId, tenantId),
+                limit: pageSize,
+                offset: offset,
+            });
+
+            const paginationData = {
+                page,
+                pageSize,
+                totalCount,
+                totalPages: Math.ceil(totalCount / pageSize),
+                hasNextPage: page * pageSize < totalCount,
+                hasPreviousPage: page > 1,
+            };
+
+            return {
+                data: results,
+                pagination: paginationData,
+            };
         } catch (error) {
             throw new InternalServerErrorException(error)
         }

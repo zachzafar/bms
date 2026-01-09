@@ -12,9 +12,12 @@ export class FormsController {
 
     @TsRestHandler(contract.settings.form.getForms)
     async getForms(@Headers() headers:any): Promise<ReturnType<typeof tsRestHandler>> {
-        return tsRestHandler(contract.settings.form.getForms, async () => {
+        return tsRestHandler(contract.settings.form.getForms, async ({ query }) => {
             const tenantId = headers['x-tenant-id']
-            const forms = await this.formsService.getForms(tenantId);
+            const page = query.page ? Number(query.page) : 1;
+            const pageSize = query.pageSize ? Number(query.pageSize) : 10;
+
+            const forms = await this.formsService.getForms(tenantId, page, pageSize);
             return { status: 200, body: forms };
         });
     }

@@ -70,8 +70,8 @@ export default function UsersPage() {
   ];
 
   // Use API data if available, otherwise use mock data
-  const systemAdmins = systemAdminsData?.body || mockSystemAdmins;
-  const tenants = tenantsData?.body || mockTenants;
+  const systemAdmins = systemAdminsData?.body.data || mockSystemAdmins;
+  const tenants = tenantsData?.body.data || mockTenants;
 
   // Combine system admins with tenant users for display
   const allUsers = [...systemAdmins];

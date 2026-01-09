@@ -1,6 +1,6 @@
 import { ConflictException, Inject, Injectable, NotFoundException, UnauthorizedException } from '@nestjs/common';
 import { MySql2Database } from 'drizzle-orm/mysql2';
-import { and, eq, gte, lte } from 'drizzle-orm';
+import { and, eq, gte, lte, sql } from 'drizzle-orm';
 import * as schema from '@repo/api-contract';
 import { DrizzleAsyncProvider } from 'src/drizzle/drizzle.provider';
 import { InsertRate, UpdateRate } from '@repo/api-contract';
@@ -46,8 +46,19 @@ export class RatesService {
 
 
 
-  async getRates(assetId?: string) {
+  async getRates(assetId?: string, page: number = 1, pageSize: number = 10) {
+  const offset = (page - 1) * pageSize;
+
   if (assetId) {
+    // Get total count for asset-specific rates
+    const totalCountResult = await this.db
+      .select({ count: sql<number>`COUNT(DISTINCT ${schema.Rate.id})` })
+      .from(schema.Rate)
+      .innerJoin(schema.AssetHasRates, eq(schema.Rate.id, schema.AssetHasRates.rateId))
+      .where(eq(schema.AssetHasRates.assetId, assetId))
+      .execute();
+    const totalCount = totalCountResult[0]?.count || 0;
+
     // Join Rate with AssetHasRates and filter on assetId
     const rows = await this.db
       .select({
@@ -56,7 +67,9 @@ export class RatesService {
       })
       .from(schema.Rate)
       .innerJoin(schema.AssetHasRates, eq(schema.Rate.id, schema.AssetHasRates.rateId))
-      .where(eq(schema.AssetHasRates.assetId, assetId));
+      .where(eq(schema.AssetHasRates.assetId, assetId))
+      .limit(pageSize)
+      .offset(offset);
 
     const grouped = new Map<
       number,
@@ -70,17 +83,37 @@ export class RatesService {
       grouped.get(rate.id)!.assetIds.push(assetHasRate.assetId);
     }
 
-    return Array.from(grouped.values());
+    const paginationData = {
+      page,
+      pageSize,
+      totalCount,
+      totalPages: Math.ceil(totalCount / pageSize),
+      hasNextPage: page * pageSize < totalCount,
+      hasPreviousPage: page > 1,
+    };
+
+    return {
+      data: Array.from(grouped.values()),
+      pagination: paginationData,
+    };
   }
 
-  // No asset filter - fetch all rates 
+  // No asset filter - fetch all rates with pagination
+  const totalCountResult = await this.db
+    .select({ count: sql<number>`COUNT(*)` })
+    .from(schema.Rate)
+    .execute();
+  const totalCount = totalCountResult[0]?.count || 0;
+
   const rows = await this.db
     .select({
       rate: schema.Rate,
       assetHasRate: schema.AssetHasRates,
     })
     .from(schema.Rate)
-    .leftJoin(schema.AssetHasRates, eq(schema.Rate.id, schema.AssetHasRates.rateId));
+    .leftJoin(schema.AssetHasRates, eq(schema.Rate.id, schema.AssetHasRates.rateId))
+    .limit(pageSize)
+    .offset(offset);
 
   const grouped = new Map<
     number,
@@ -96,7 +129,19 @@ export class RatesService {
     }
   }
 
-  return Array.from(grouped.values());
+  const paginationData = {
+    page,
+    pageSize,
+    totalCount,
+    totalPages: Math.ceil(totalCount / pageSize),
+    hasNextPage: page * pageSize < totalCount,
+    hasPreviousPage: page > 1,
+  };
+
+  return {
+    data: Array.from(grouped.values()),
+    pagination: paginationData,
+  };
 }
 
 

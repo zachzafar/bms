@@ -8,7 +8,7 @@ import { hash, verify } from 'argon2';
 import { ConfigType } from '@nestjs/config';
 import refreshConfig from './config/refresh.config';
 import { UsersService } from 'src/users/users.service';
-import { eq, desc, and } from 'drizzle-orm';
+import { eq, desc, and, sql } from 'drizzle-orm';
 import { getAllScopes } from './permissions';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { randomBytes } from 'crypto';
@@ -476,12 +476,38 @@ export class AuthService {
     return getAllScopes();
   }
 
-  async getRoles(tenantId: string) {
-    return await this.db.query.Roles.findMany({
-      where: (role, { eq }) => eq(role.tenantId, tenantId), with: {
+  async getRoles(tenantId: string, page: number = 1, pageSize: number = 10) {
+    const offset = (page - 1) * pageSize;
+
+    const totalCountResult = await this.db
+      .select({ count: sql<number>`COUNT(*)` })
+      .from(schema.Roles)
+      .where(eq(schema.Roles.tenantId, tenantId))
+      .execute();
+    const totalCount = totalCountResult[0]?.count || 0;
+
+    const results = await this.db.query.Roles.findMany({
+      where: (role, { eq }) => eq(role.tenantId, tenantId),
+      with: {
         rolesToPermissions: true
-      }
-    })
+      },
+      limit: pageSize,
+      offset: offset,
+    });
+
+    const paginationData = {
+      page,
+      pageSize,
+      totalCount,
+      totalPages: Math.ceil(totalCount / pageSize),
+      hasNextPage: page * pageSize < totalCount,
+      hasPreviousPage: page > 1,
+    };
+
+    return {
+      data: results,
+      pagination: paginationData,
+    };
   }
 
   

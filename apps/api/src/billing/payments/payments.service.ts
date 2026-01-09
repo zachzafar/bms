@@ -2,7 +2,7 @@ import { Inject, Injectable, BadRequestException } from '@nestjs/common';
 import { MySql2Database } from 'drizzle-orm/mysql2';
 import * as schema from '@repo/api-contract';
 import { DrizzleAsyncProvider } from 'src/drizzle/drizzle.provider';
-import { and, eq, inArray } from 'drizzle-orm';
+import { and, eq, inArray, sql } from 'drizzle-orm';
 
 type CreatePaymentInput = Omit<schema.InsertPayment, 'id'>;
 
@@ -208,7 +208,20 @@ export class PaymentsService {
     return id;
   }
 
-  async list(tenantId: string, query: { customerId?: number }) {
+  async list(tenantId: string, query: { customerId?: number }, page: number = 1, pageSize: number = 10) {
+    const offset = (page - 1) * pageSize;
+
+    const conditions: any[] = [];
+    conditions.push(eq(schema.Payment.tenantId, tenantId));
+    if (query.customerId) conditions.push(eq(schema.Payment.customerId, query.customerId));
+
+    const totalCountResult = await this.db
+      .select({ count: sql<number>`COUNT(*)` })
+      .from(schema.Payment)
+      .where(and(...conditions))
+      .execute();
+    const totalCount = totalCountResult[0]?.count || 0;
+
     const payments = await this.db.query.Payment.findMany({
       where: (p, { eq, and }) =>
         and(
@@ -216,14 +229,27 @@ export class PaymentsService {
           query.customerId ? eq(p.customerId, (query.customerId)) : undefined,
         ),
       orderBy: (p, { desc }) => [desc(p.createdAt)],
+      limit: pageSize,
+      offset: offset,
     });
 
-    // Convert bigint values to numbers for API compatibility
-    return payments.map(payment => ({
-      ...payment,
-      id: (payment.id),
-      customerId: (payment.customerId),
-    }));
+    const paginationData = {
+      page,
+      pageSize,
+      totalCount,
+      totalPages: Math.ceil(totalCount / pageSize),
+      hasNextPage: page * pageSize < totalCount,
+      hasPreviousPage: page > 1,
+    };
+
+    return {
+      data: payments.map(payment => ({
+        ...payment,
+        id: (payment.id),
+        customerId: (payment.customerId),
+      })),
+      pagination: paginationData,
+    };
   }
 
   async get(id: number) {

@@ -21,8 +21,8 @@ export default function BillingPage() {
     queryKey: ['payments']
   });
 
-  const invoices = invoicesData?.body || [];
-  const payments = paymentsData?.body || [];
+  const invoices = invoicesData?.body.data || [];
+  const payments = paymentsData?.body.data || [];
 
   // Calculate statistics
   const totalOutstanding = invoices

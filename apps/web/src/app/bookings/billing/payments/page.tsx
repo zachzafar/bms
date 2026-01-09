@@ -18,6 +18,8 @@ import { Form,FormField, FormItem, FormLabel, FormControl, FormMessage } from '@
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
+import { usePagination } from '@/hooks/usePagination';
+import { DataTablePagination } from '@/components/ui/data-table-pagination';
 
 interface Payment {
   id: number;
@@ -37,6 +39,7 @@ interface Payment {
 
 export default function PaymentsPage() {
   const router = useRouter();
+  const { page, pageSize, queryParams, goToPage, changePageSize } = usePagination(1, 10);
   const [searchTerm, setSearchTerm] = useState('');
   const [customerFilter, setCustomerFilter] = useState<string>('all');
   const [methodFilter, setMethodFilter] = useState<string>('all');
@@ -77,7 +80,8 @@ export default function PaymentsPage() {
 
   // Fetch payments and customers
   const { data: paymentsData, refetch: refetchPayments } = authClient.billing.getPayments.useQuery({
-    queryKey: ['payments'],
+    queryKey: ['payments', page, pageSize],
+    queryData: {query:queryParams},
   });
 
   const { data: customersData } = authClient.users.getCustomers.useQuery({
@@ -89,9 +93,10 @@ export default function PaymentsPage() {
     queryKey: ['invoices'],
   });
 
-  const payments = paymentsData?.body || [];
-  const customers = customersData?.body || [];
-  const invoices = invoicesData?.body || [];
+  const payments = paymentsData?.status === 200 ? paymentsData.body.data : [];
+  const paginationMeta = paymentsData?.status === 200 ? paymentsData.body.pagination : undefined;
+  const customers = customersData?.body?.data || [];
+  const invoices = invoicesData?.body?.data || [];
   const entryType = form.watch('entryType');
 
   const eligibleInvoicesForSelectedCustomer = invoices.filter(
@@ -190,7 +195,7 @@ export default function PaymentsPage() {
         payment: {
           type: values.entryType,
           status: isRefund ? 'completed' : 'completed',
-          paymentDate: new Date().toISOString(),
+          paymentDate: new Date(),
           paymentMethod: values.paymentMethod,
           reference: values.reference,
           notes: values.notes,
@@ -361,6 +366,14 @@ export default function PaymentsPage() {
           )}
         </CardContent>
       </Card>
+
+      {paginationMeta && (
+        <DataTablePagination
+          pagination={paginationMeta}
+          onPageChange={goToPage}
+          onPageSizeChange={changePageSize}
+        />
+      )}
 
       {/* Record Payment Modal */}
       <Dialog open={isPaymentModalOpen} onOpenChange={(open) => {

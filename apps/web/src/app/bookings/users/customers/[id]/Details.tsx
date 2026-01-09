@@ -37,8 +37,8 @@ export default function Details({ userId }: { userId: string }) {
     enabled: !!tenant,
   });
 
-  const customers = customersData?.body ?? [];
-  const users = usersData?.body ?? [];
+  const customers = customersData?.body.data ?? [];
+  const users = usersData?.body.data ?? [];
 
   const selected = useMemo(() => customers.find((c: any) => c.user.id === userId), [customers, userId]);
   const selectedUserWithRoles = useMemo(() => users.find((u: any) => u.id === userId), [users, userId]);

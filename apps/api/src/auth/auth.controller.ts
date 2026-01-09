@@ -82,9 +82,10 @@ export class AuthController {
     async getRoles(@Headers() headers: any): Promise<ReturnType<typeof tsRestHandler>> {
         return tsRestHandler(contract.auth.getRoles, async () => {
             const tenantId = headers['x-tenant-id'];
-            const roles = (await this.authService.getRoles(tenantId)).map(role => {
+            const data = await this.authService.getRoles(tenantId);
+            const roles = data.data.map(role => {
                 return {
-                    roleId: String(role.id),
+                    roleId: role.id,
                     name: role.name,
                     permissions: role.rolesToPermissions.map(permission => permission.permission)
                 }

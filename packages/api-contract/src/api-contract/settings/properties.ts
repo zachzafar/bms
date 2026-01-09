@@ -2,6 +2,7 @@ import { initContract } from "@ts-rest/core";
 
 import { z } from "zod";
 import { InsertAssetPropertySchema, SelectAssetPropertySchema, UpdateAssetPropertySchema } from "../../database-schema";
+import { pagination } from "../utils";
 
 const c = initContract();
 
@@ -71,8 +72,15 @@ export const propertiesContract = c.router({
         method: 'GET',
         path: '/properties',
         responses: {
-            200: z.array(SelectAssetPropertySchema)
+            200: z.object({
+                data: z.array(SelectAssetPropertySchema),
+                pagination
+            })
         },
+        query: z.object({
+            page: z.coerce.number().optional(),
+            pageSize: z.coerce.number().optional(),
+        }),
         summary: 'Get all asset properties'
     },
 

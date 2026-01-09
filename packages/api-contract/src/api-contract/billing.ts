@@ -1,6 +1,7 @@
 import { initContract } from "@ts-rest/core";
 import { z } from "zod";
 import { SelectInvoiceSchema, InsertInvoiceSchema, UpdateInvoiceSchema, SelectPaymentSchema, InsertPaymentSchema } from "../database-schema";
+import { pagination } from "./utils";
 
 const c = initContract();
 
@@ -72,9 +73,14 @@ export const billingContract = c.router({
       customerId: z.coerce.number().optional(),
       bookingId: z.string().optional(),
       status: z.string().optional(),
+      page: z.coerce.number().optional(),
+      pageSize: z.coerce.number().optional(),
     }),
     responses: {
-      200: z.array(ExtendedInvoiceSchema),
+      200: z.object({
+        data: z.array(ExtendedInvoiceSchema),
+        pagination
+      })
     },
   },
 
@@ -169,9 +175,14 @@ export const billingContract = c.router({
     summary: "Get all payments, optionally filtered by customerId",
     query: z.object({
       customerId: z.coerce.number().optional(),
+      page: z.coerce.number().optional(),
+      pageSize: z.coerce.number().optional(),
     }),
     responses: {
-      200: z.array(ExtendedPaymentListSchema),
+      200: z.object({
+        data: z.array(ExtendedPaymentListSchema),
+        pagination
+      })
     },
   },
 

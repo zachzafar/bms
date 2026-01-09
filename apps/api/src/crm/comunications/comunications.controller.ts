@@ -27,8 +27,9 @@ export class CommunicationsController {
   async list(@Headers() headers: any): Promise<ReturnType<typeof tsRestHandler>> {
     return tsRestHandler(crmContract.communications.listComms, async ({ query }) => {
       const tenantId = headers['x-tenant-id'];
-      const rows = await this.comms.list(tenantId, query);
-      return { status: 200, body: rows.map(row => ({...row, contactId: (row.contactId)})) };
+      const {page, pageSize, ...rest} = query
+      const rows = await this.comms.list(tenantId, rest,page,pageSize);
+      return { status: 200, body: {data: rows.data.map(row => ({...row, contactId: (row.contactId)})), pagination: rows.pagination} };
     });
   }
 

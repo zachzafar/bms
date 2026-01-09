@@ -1,46 +1,50 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useEffect } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select';
-import { Label } from '@/components/ui/label';
+import { Form, FormField, FormItem, FormLabel, FormControl, FormMessage } from '@/components/ui/form';
+import { Textarea } from '@/components/ui/textarea';
 import { authClient } from '@/lib/api/publicClient';
 import { toast } from 'sonner';
 import { INVOICES_QUERY_KEY } from '@/lib/api/queryKeys';
-import { ArrowLeft, Save, Plus } from 'lucide-react';
+import { ArrowLeft, Save, Plus, Trash2 } from 'lucide-react';
+import { useForm, useFieldArray } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { z } from 'zod';
+
+const InvoiceItemSchema = z.object({
+  id: z.number().optional(),
+  description: z.string().min(1, 'Description is required'),
+  quantity: z.coerce.number().min(1, 'Quantity must be at least 1'),
+  unitPrice: z.string().min(1, 'Unit price is required'),
+  totalPrice: z.string().optional(),
+  invoiceId: z.number().optional(),
+});
+
+const InvoiceFormSchema = z.object({
+  invoiceNumber: z.string().min(1, 'Invoice number is required'),
+  status: z.string().min(1, 'Status is required'),
+  issueDate: z.date(),
+  dueDate: z.date(),
+  subtotal: z.string().min(1, 'Subtotal is required'),
+  taxAmount: z.string().default('0.00'),
+  totalAmount: z.string().min(1, 'Total amount is required'),
+  notes: z.string().optional(),
+  customerId: z.coerce.number().min(1, 'Customer is required'),
+  items: z.array(InvoiceItemSchema).min(1, 'At least one item is required'),
+});
+
+type InvoiceFormValues = z.infer<typeof InvoiceFormSchema>;
 
 export default function EditInvoicePage() {
   const router = useRouter();
   const params = useParams();
   const invoiceId = Array.isArray(params?.id) ? params.id[0] : params?.id ?? '';
-
-  const [saving, setSaving] = useState(false);
-
-  // Form state
-  const [invoiceNumber, setInvoiceNumber] = useState('');
-  const [status, setStatus] = useState('Unpaid');
-  const [issueDate, setIssueDate] = useState('');
-  const [dueDate, setDueDate] = useState('');
-  const [subtotal, setSubtotal] = useState('');
-  const [taxAmount, setTaxAmount] = useState('');
-  const [totalAmount, setTotalAmount] = useState('');
-  const [notes, setNotes] = useState('');
-  const [customerId, setCustomerId] = useState('');
-
-  // Invoice items
-  const [items, setItems] = useState<
-    {
-      id?: number;
-      description: string;
-      quantity: number;
-      unitPrice: string;
-      totalPrice: string;
-      invoiceId?: number;
-    }[]
-  >([]);
+  const queryClient = authClient.useQueryClient();
 
   // Fetch invoice
   const { data: invoiceData, isLoading } = authClient.billing.getInvoice.useQuery({
@@ -50,108 +54,115 @@ export default function EditInvoicePage() {
 
   // Fetch customers
   const { data: customersData } = authClient.users.getCustomers.useQuery({ queryKey: ['customers'] });
-  const customers = customersData?.body || [];
+  const customers = customersData?.body?.data || [];
 
-  // Populate form
+  // Initialize form
+  const form = useForm<InvoiceFormValues>({
+    resolver: zodResolver(InvoiceFormSchema),
+    defaultValues: {
+      invoiceNumber: '',
+      status: 'Unpaid',
+      issueDate: new Date(),
+      dueDate: new Date(),
+      subtotal: '0.00',
+      taxAmount: '0.00',
+      totalAmount: '0.00',
+      notes: '',
+      customerId: 0,
+      items: [{ description: '', quantity: 1, unitPrice: '0.00', totalPrice: '0.00' }],
+    },
+  });
+
+  const { fields, append, remove } = useFieldArray({
+    control: form.control,
+    name: 'items',
+  });
+
+  // Populate form when invoice data loads
   useEffect(() => {
     if (!invoiceData?.body) return;
     const invoice = invoiceData.body;
 
-    setInvoiceNumber(invoice.invoiceNumber);
-    setStatus(invoice.status);
-    setIssueDate(new Date(invoice.issueDate).toISOString().slice(0, 10));
-    setDueDate(new Date(invoice.dueDate).toISOString().slice(0, 10));
-    setSubtotal(invoice.subtotal);
-    setTaxAmount(invoice.taxAmount);
-    setTotalAmount(invoice.totalAmount);
-    setNotes(invoice.notes || '');
-    setCustomerId(String(invoice.customerId));
-    setItems(invoice.items || []);
-  }, [invoiceData]);
+    form.reset({
+      invoiceNumber: invoice.invoiceNumber,
+      status: invoice.status,
+      issueDate: new Date(invoice.issueDate),
+      dueDate: new Date(invoice.dueDate),
+      subtotal: invoice.subtotal,
+      taxAmount: invoice.taxAmount,
+      totalAmount: invoice.totalAmount,
+      notes: invoice.notes || '',
+      customerId: invoice.customerId,
+      items: invoice.items && invoice.items.length > 0
+        ? invoice.items.map((item: any) => ({
+            id: item.id,
+            description: item.description,
+            quantity: item.quantity,
+            unitPrice: item.unitPrice,
+            totalPrice: item.totalPrice,
+            invoiceId: item.invoiceId,
+          }))
+        : [{ description: '', quantity: 1, unitPrice: '0.00', totalPrice: '0.00' }],
+    });
+  }, [invoiceData, form]);
 
-  // Add new item
-  const addItem = () => {
-    setItems([
-      ...items,
-      { description: '', quantity: 1, unitPrice: '0.00', totalPrice: '0.00' },
-    ]);
-  };
-
-  // Remove item
-  const removeItem = (index: number) => {
-    const newItems = [...items];
-    newItems.splice(index, 1);
-    setItems(newItems);
-    recalcTotals(newItems);
-  };
-
-  // Handle changes to description, quantity, unitPrice
-  const handleItemChange = (index: number, field: 'description' | 'quantity' | 'unitPrice', value: string) => {
-    const newItems = [...items];
-    if (field === 'quantity') newItems[index].quantity = Number(value);
-    else if (field === 'unitPrice') newItems[index].unitPrice = value;
-    else newItems[index].description = value;
-
-    const qty = newItems[index].quantity || 0;
-    const unit = parseFloat(newItems[index].unitPrice) || 0;
-    newItems[index].totalPrice = (qty * unit).toFixed(2);
-
-    setItems(newItems);
-    recalcTotals(newItems);
+  // Calculate item total when quantity or unit price changes
+  const calculateItemTotal = (index: number) => {
+    const items = form.getValues('items');
+    const item = items[index];
+    const quantity = Number(item.quantity) || 0;
+    const unitPrice = parseFloat(item.unitPrice) || 0;
+    const total = (quantity * unitPrice).toFixed(2);
+    form.setValue(`items.${index}.totalPrice`, total);
+    recalculateTotals();
   };
 
   // Recalculate subtotal and total
-  const recalcTotals = (updatedItems: typeof items) => {
-    const newSubtotal = updatedItems.reduce((acc, i) => acc + parseFloat(i.totalPrice || '0'), 0);
-    setSubtotal(newSubtotal.toFixed(2));
-    const tax = parseFloat(taxAmount) || 0;
-    setTotalAmount((newSubtotal + tax).toFixed(2));
+  const recalculateTotals = () => {
+    const items = form.getValues('items');
+    const subtotal = items.reduce((acc, item) => {
+      return acc + (parseFloat(item.totalPrice || '0'));
+    }, 0);
+    const tax = parseFloat(form.getValues('taxAmount')) || 0;
+    const total = subtotal + tax;
+
+    form.setValue('subtotal', subtotal.toFixed(2));
+    form.setValue('totalAmount', total.toFixed(2));
   };
 
-  const { mutate: updateInvoice } = authClient.billing.updateInvoice.useMutation();
+  const { mutate: updateInvoice, isPending: isSaving } = authClient.billing.updateInvoice.useMutation();
 
-  const handleSave = (e: React.FormEvent) => {
-    e.preventDefault();
+  const onSubmit = (values: InvoiceFormValues) => {
     if (!invoiceId) return;
-    setSaving(true);
 
     updateInvoice(
       {
         params: { id: Number(invoiceId) },
         body: {
-          invoiceNumber,
-          status,
-          issueDate,
-          dueDate,
-          subtotal,
-          taxAmount,
-          totalAmount,
-          notes,
-          customerId,
-          items: items.map((i) => ({
-            id: i.id ?? 0,            // send 0 or remove depending on backend
-            invoiceId: i.invoiceId ?? 0,
-            description: i.description,
-            quantity: i.quantity,
-            unitPrice: i.unitPrice,
-            totalPrice: i.totalPrice,
+          ...values,
+          items: values.items.map((item) => ({
+            id: item.id ?? 0,
+            invoiceId: item.invoiceId ?? Number(invoiceId),
+            description: item.description,
+            quantity: item.quantity,
+            unitPrice: item.unitPrice,
+            totalPrice: item.totalPrice || '0.00',
           })),
         },
       },
       {
         onSuccess: () => {
           toast.success('Invoice updated successfully!');
-          router.push(`/billing/invoices/${invoiceId}/view`);
+          queryClient.invalidateQueries({ queryKey: INVOICES_QUERY_KEY });
+          router.push(`/bookings/billing/invoices/${invoiceId}/view`);
         },
         onError: (error) => {
           console.error(error);
           toast.error('Failed to update invoice');
         },
-        onSettled: () => setSaving(false),
       }
     );
   };
-
 
   if (isLoading) return <div className="container mx-auto py-10 text-center">Loading invoice...</div>;
 
@@ -164,138 +175,303 @@ export default function EditInvoicePage() {
         <h1 className="text-3xl font-bold">Edit Invoice</h1>
       </div>
 
-      <form onSubmit={handleSave} className="space-y-6">
-        <Card>
-          <CardHeader>
-            <CardTitle>Invoice Details</CardTitle>
-            <CardDescription>Basic invoice information</CardDescription>
-          </CardHeader>
-          <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label>Invoice Number</Label>
-              <Input value={invoiceNumber} onChange={(e) => setInvoiceNumber(e.target.value)} />
-            </div>
-            <div className="space-y-2">
-              <Label>Status</Label>
-              <Select value={status} onValueChange={setStatus}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select status" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="Paid">Paid</SelectItem>
-                  <SelectItem value="Unpaid">Unpaid</SelectItem>
-                  <SelectItem value="Partial">Partial</SelectItem>
-                  <SelectItem value="Overdue">Overdue</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-2">
-              <Label>Issue Date</Label>
-              <Input type="date" value={issueDate} onChange={(e) => setIssueDate(e.target.value)} />
-            </div>
-            <div className="space-y-2">
-              <Label>Due Date</Label>
-              <Input type="date" value={dueDate} onChange={(e) => setDueDate(e.target.value)} />
-            </div>
-            <div className="space-y-2">
-              <Label>Subtotal</Label>
-              <Input value={subtotal} onChange={(e) => setSubtotal(e.target.value)} />
-            </div>
-            <div className="space-y-2">
-              <Label>Tax Amount</Label>
-              <Input value={taxAmount} onChange={(e) => setTaxAmount(e.target.value)} />
-            </div>
-            <div className="space-y-2">
-              <Label>Total Amount</Label>
-              <Input value={totalAmount} onChange={(e) => setTotalAmount(e.target.value)} />
-            </div>
-            <div className="space-y-2">
-              <Label>Customer</Label>
-              <Select value={customerId} onValueChange={setCustomerId}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select customer" />
-                </SelectTrigger>
-                <SelectContent>
-                  {customers.map((customer) => (
-                    <SelectItem key={customer.customer.id} value={customer.customer.id.toString()}>
-                      {customer.user.name || customer.user.email}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-2 md:col-span-2">
-              <Label>Notes</Label>
-              <Input value={notes} onChange={(e) => setNotes(e.target.value)} />
-            </div>
+      <Form {...form}>
+        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>Invoice Details</CardTitle>
+              <CardDescription>Basic invoice information</CardDescription>
+            </CardHeader>
+            <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <FormField
+                control={form.control}
+                name="invoiceNumber"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Invoice Number</FormLabel>
+                    <FormControl>
+                      <Input {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
 
-            {/* Invoice Items */}
-            <div className="md:col-span-2">
-              <Label>Invoice Items</Label>
-              <table className="w-full border border-gray-300 mt-2">
-                <thead>
-                  <tr className="bg-gray-100">
-                    <th className="p-2 border">Description</th>
-                    <th className="p-2 border">Quantity</th>
-                    <th className="p-2 border">Unit Price</th>
-                    <th className="p-2 border">Total</th>
-                    <th className="p-2 border">Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {items.map((item, index) => (
-                    <tr key={item.id || index}>
-                      <td className="p-2 border">
-                        <Input
-                          value={item.description}
-                          onChange={(e) => handleItemChange(index, 'description', e.target.value)}
-                        />
-                      </td>
-                      <td className="p-2 border">
-                        <Input
-                          type="number"
-                          value={item.quantity}
-                          onChange={(e) => handleItemChange(index, 'quantity', e.target.value)}
-                        />
-                      </td>
-                      <td className="p-2 border">
-                        <Input
-                          type="number"
-                          value={item.unitPrice}
-                          onChange={(e) => handleItemChange(index, 'unitPrice', e.target.value)}
-                        />
-                      </td>
-                      <td className="p-2 border">{item.totalPrice}</td>
-                      <td className="p-2 border">
-                        <Button variant="destructive" size="sm" onClick={() => removeItem(index)}>
-                          Remove
-                        </Button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-              <Button
-                type="button"
-                variant="secondary"
-                size="sm"
-                className="mt-2"
-                onClick={addItem}
-              >
-                <Plus className="h-4 w-4 mr-2" />
-                Add Item
-              </Button>
-            </div>
+              <FormField
+                control={form.control}
+                name="status"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Status</FormLabel>
+                    <Select onValueChange={field.onChange} value={field.value}>
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select status" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        <SelectItem value="Paid">Paid</SelectItem>
+                        <SelectItem value="Unpaid">Unpaid</SelectItem>
+                        <SelectItem value="Partial">Partial</SelectItem>
+                        <SelectItem value="Overdue">Overdue</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
 
-            <div className="md:col-span-2 flex justify-end mt-4">
-              <Button type="submit" disabled={saving}>
-                <Save className="h-4 w-4 mr-2" />
-                {saving ? 'Saving...' : 'Save Changes'}
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
-      </form>
+              <FormField
+                control={form.control}
+                name="issueDate"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Issue Date</FormLabel>
+                    <FormControl>
+                      <Input
+                        type="date"
+                        value={field.value instanceof Date ? field.value.toISOString().split('T')[0] : ''}
+                        onChange={(e) => field.onChange(new Date(e.target.value))}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="dueDate"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Due Date</FormLabel>
+                    <FormControl>
+                      <Input
+                        type="date"
+                        value={field.value instanceof Date ? field.value.toISOString().split('T')[0] : ''}
+                        onChange={(e) => field.onChange(new Date(e.target.value))}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="customerId"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Customer</FormLabel>
+                    <Select onValueChange={(value) => field.onChange(Number(value))} value={String(field.value)}>
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select customer" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {customers.map((customer: any) => (
+                          <SelectItem key={customer.customer.id} value={String(customer.customer.id)}>
+                            {customer.user.name || customer.user.email}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="taxAmount"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Tax Amount</FormLabel>
+                    <FormControl>
+                      <Input
+                        type="number"
+                        step="0.01"
+                        {...field}
+                        onChange={(e) => {
+                          field.onChange(e);
+                          recalculateTotals();
+                        }}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="subtotal"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Subtotal</FormLabel>
+                    <FormControl>
+                      <Input {...field} readOnly className="bg-gray-100" />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="totalAmount"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Total Amount</FormLabel>
+                    <FormControl>
+                      <Input {...field} readOnly className="bg-gray-100" />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="notes"
+                render={({ field }) => (
+                  <FormItem className="md:col-span-2">
+                    <FormLabel>Notes</FormLabel>
+                    <FormControl>
+                      <Textarea {...field} rows={3} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              {/* Invoice Items */}
+              <div className="md:col-span-2 space-y-4">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-lg font-semibold">Invoice Items</h3>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => append({ description: '', quantity: 1, unitPrice: '0.00', totalPrice: '0.00' })}
+                  >
+                    <Plus className="h-4 w-4 mr-2" />
+                    Add Item
+                  </Button>
+                </div>
+
+                <div className="overflow-x-auto">
+                  <table className="w-full border border-gray-300">
+                    <thead>
+                      <tr className="bg-gray-100">
+                        <th className="p-2 border text-left">Description</th>
+                        <th className="p-2 border text-left w-24">Quantity</th>
+                        <th className="p-2 border text-left w-32">Unit Price</th>
+                        <th className="p-2 border text-left w-32">Total</th>
+                        <th className="p-2 border text-center w-20">Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {fields.map((field, index) => (
+                        <tr key={field.id}>
+                          <td className="p-2 border">
+                            <FormField
+                              control={form.control}
+                              name={`items.${index}.description`}
+                              render={({ field }) => (
+                                <FormItem>
+                                  <FormControl>
+                                    <Input {...field} placeholder="Item description" />
+                                  </FormControl>
+                                </FormItem>
+                              )}
+                            />
+                          </td>
+                          <td className="p-2 border">
+                            <FormField
+                              control={form.control}
+                              name={`items.${index}.quantity`}
+                              render={({ field }) => (
+                                <FormItem>
+                                  <FormControl>
+                                    <Input
+                                      type="number"
+                                      {...field}
+                                      onChange={(e) => {
+                                        field.onChange(e);
+                                        calculateItemTotal(index);
+                                      }}
+                                    />
+                                  </FormControl>
+                                </FormItem>
+                              )}
+                            />
+                          </td>
+                          <td className="p-2 border">
+                            <FormField
+                              control={form.control}
+                              name={`items.${index}.unitPrice`}
+                              render={({ field }) => (
+                                <FormItem>
+                                  <FormControl>
+                                    <Input
+                                      type="number"
+                                      step="0.01"
+                                      {...field}
+                                      onChange={(e) => {
+                                        field.onChange(e);
+                                        calculateItemTotal(index);
+                                      }}
+                                    />
+                                  </FormControl>
+                                </FormItem>
+                              )}
+                            />
+                          </td>
+                          <td className="p-2 border">
+                            <FormField
+                              control={form.control}
+                              name={`items.${index}.totalPrice`}
+                              render={({ field }) => (
+                                <Input {...field} readOnly className="bg-gray-100" />
+                              )}
+                            />
+                          </td>
+                          <td className="p-2 border text-center">
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => {
+                                remove(index);
+                                recalculateTotals();
+                              }}
+                              disabled={fields.length === 1}
+                            >
+                              <Trash2 className="h-4 w-4 text-red-500" />
+                            </Button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+              <div className="md:col-span-2 flex justify-end gap-2 mt-4">
+                <Button type="button" variant="outline" onClick={() => router.back()}>
+                  Cancel
+                </Button>
+                <Button type="submit" disabled={isSaving}>
+                  <Save className="h-4 w-4 mr-2" />
+                  {isSaving ? 'Saving...' : 'Save Changes'}
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        </form>
+      </Form>
     </div>
   );
 }

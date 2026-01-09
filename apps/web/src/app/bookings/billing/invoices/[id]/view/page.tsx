@@ -21,7 +21,7 @@ export default function ViewInvoicePage() {
   // Fetch invoice using useQuery hook (same as EditInvoicePage)
   const { data: invoiceData, isLoading } = authClient.billing.getInvoice.useQuery({
     queryKey: [...INVOICES_QUERY_KEY, invoiceId],
-    queryData: { params: { id: invoiceId } },
+    queryData: { params: { id: Number(invoiceId) } },
   });
 
   useEffect(() => {

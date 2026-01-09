@@ -17,7 +17,22 @@ export class AssetsService {
     private objectStorageService: ObjectStorageService
   ) { }
 
-  async getAssets(query: any, tenantId: string, page: number = 1,pageSize: number = 10) {
+  async getAssets(query: any, tenantId: string, page: number = 1, pageSize: number = 10) {
+    const offset = (page - 1) * pageSize;
+
+    // Build where conditions
+    const conditions: any[] = [eq(schema.Asset.tenantId, tenantId)];
+    if (query?.userId) conditions.push(eq(schema.Asset.userId, query.userId));
+
+    // Get total count
+    const totalCountResult = await this.db
+      .select({ count: sql<number>`COUNT(*)` })
+      .from(schema.Asset)
+      .where(and(...conditions))
+      .execute();
+    const totalCount = totalCountResult[0]?.count || 0;
+
+    // Get paginated assets
     const assets = await this.db.query.Asset.findMany({
       where: (asset, { eq, and, like }) =>
         and(
@@ -25,9 +40,21 @@ export class AssetsService {
           query?.userId ? eq(asset.userId, query.userId) : undefined,
           query?.search ? like(asset.name, `%${query.search}%`) : undefined
         ),
+      limit: pageSize,
+      offset: offset,
     });
 
-    return Promise.all(
+    // Calculate pagination metadata
+    const paginationData = {
+      page,
+      pageSize,
+      totalCount,
+      totalPages: Math.ceil(totalCount / pageSize),
+      hasNextPage: page * pageSize < totalCount,
+      hasPreviousPage: page > 1,
+    };
+
+    const assetsWithTags = await Promise.all(
       assets.map(async (asset) => {
         const assetTags = await this.getTagsForAsset(asset.id);
         return {
@@ -38,6 +65,11 @@ export class AssetsService {
         };
       })
     );
+
+    return {
+      data: assetsWithTags,
+      pagination: paginationData,
+    };
   }
 
   async getAssetById(id: string) {
@@ -219,7 +251,24 @@ export class AssetsService {
     return unsuccessfulDeletes
   }
 
-  async getAssetsWithDetails(tenant: string, assetTypes?: number[]) {
+  async getAssetsWithDetails(tenant: string, assetTypes?: number[], page: number = 1, pageSize: number = 10) {
+    const offset = (page - 1) * pageSize;
+
+    // Build where conditions
+    const conditions: any[] = [eq(schema.Asset.tenantId, tenant)];
+    if (assetTypes && assetTypes.length > 0) {
+      conditions.push(inArray(schema.Asset.assetTypeId, assetTypes.map((id) => (id))));
+    }
+
+    // Get total count
+    const totalCountResult = await this.db
+      .select({ count: sql<number>`COUNT(*)` })
+      .from(schema.Asset)
+      .where(and(...conditions))
+      .execute();
+    const totalCount = totalCountResult[0]?.count || 0;
+
+    // Get paginated assets
     const assets = await this.db.query.Asset.findMany({
       where: (asset, { eq, and, inArray }) =>
         and(
@@ -230,7 +279,19 @@ export class AssetsService {
         assetType: true,
         assetImages: true,
       },
+      limit: pageSize,
+      offset: offset,
     });
+
+    // Calculate pagination metadata
+    const paginationData = {
+      page,
+      pageSize,
+      totalCount,
+      totalPages: Math.ceil(totalCount / pageSize),
+      hasNextPage: page * pageSize < totalCount,
+      hasPreviousPage: page > 1,
+    };
 
     const assetsWithDetails = await Promise.all(
       assets.map(async (asset) => {
@@ -251,12 +312,24 @@ export class AssetsService {
       })
     );
 
-    return assetsWithDetails;
+    return {
+      data: assetsWithDetails,
+      pagination: paginationData,
+    };
   }
 
-  async getAvailableAssets(startDate: Date, endDate: Date, tenantId: string) {
+  async getAvailableAssets(startDate: Date, endDate: Date, tenantId: string, page: number = 1, pageSize: number = 10) {
+    const offset = (page - 1) * pageSize;
 
-    // 1. Get all assets for the current tenant
+    // 1. Get total count of all assets for the current tenant
+    const totalCountResult = await this.db
+      .select({ count: sql<number>`COUNT(*)` })
+      .from(schema.Asset)
+      .where(eq(schema.Asset.tenantId, tenantId))
+      .execute();
+    const totalAssetCount = totalCountResult[0]?.count || 0;
+
+    // 2. Get all assets for the current tenant (needed for filtering)
     const allAssets = await this.db
       .select({
         id: schema.Asset.id,
@@ -264,13 +337,13 @@ export class AssetsService {
         tenantId: schema.Asset.tenantId,
       })
       .from(schema.Asset)
-      .where(eq(schema.Asset.tenantId, tenantId)); // Filter by tenant
+      .where(eq(schema.Asset.tenantId, tenantId));
 
-    console.log('Fetched Assets for Tenant:', allAssets); // Debugging log
+    console.log('Fetched Assets for Tenant:', allAssets);
 
     const allAssetIds = allAssets.map((a) => a.id);
 
-    // 2. Get bookings that overlap with the range for the current tenant's assets
+    // 3. Get bookings that overlap with the range for the current tenant's assets
     const bookings = await this.db
       .select({ assetId: schema.Booking.assetId })
       .from(schema.Booking)
@@ -282,18 +355,35 @@ export class AssetsService {
         )
       );
 
-    console.log('Bookings Found:', bookings); // Debugging log
+    console.log('Bookings Found:', bookings);
 
     const bookedAssetIds = new Set(bookings.map((b) => b.assetId));
 
-    // 3. Filter available assets for the tenant
+    // 4. Filter available assets for the tenant
     const availableAssets = allAssets.filter(
       (asset) => !bookedAssetIds.has(asset.id)
     );
 
-    console.log('Filtered Available Assets:', availableAssets); // Debugging log
+    console.log('Filtered Available Assets:', availableAssets);
 
-    return availableAssets;
+    // 5. Apply pagination
+    const totalCount = availableAssets.length;
+    const paginatedAssets = availableAssets.slice(offset, offset + pageSize);
+
+    // Calculate pagination metadata
+    const paginationData = {
+      page,
+      pageSize,
+      totalCount,
+      totalPages: Math.ceil(totalCount / pageSize),
+      hasNextPage: page * pageSize < totalCount,
+      hasPreviousPage: page > 1,
+    };
+
+    return {
+      data: paginatedAssets,
+      pagination: paginationData,
+    };
   }
 
   async getAssetsBySubdomain(

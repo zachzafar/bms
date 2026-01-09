@@ -42,9 +42,11 @@ export default function FeedbackManagement() {
 
 
   const feedback = useMemo(() => {
-    if (!feedbackResp) return []
-    if (feedbackResp.status === 200) return feedbackResp.body
-    return Array.isArray(feedbackResp) ? feedbackResp : []
+    
+    if (feedbackResp?.status === 200) 
+    return Array.isArray(feedbackResp.body.data) ? feedbackResp.body.data : []
+
+    return []
   }, [feedbackResp])
 
   const stats =  { totalFeedback: 0, averageRating: 0, thisMonth: 0, positiveRating: 0 }

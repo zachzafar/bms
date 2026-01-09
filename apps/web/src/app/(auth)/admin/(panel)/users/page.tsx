@@ -13,6 +13,8 @@ import { CreateUserForm } from '@/components/auth/users/CreateUserForm';
 import { EditUserForm } from '@/components/auth/users/EditUserForm';
 import { Pencil } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { usePagination } from '@/hooks/usePagination';
+import { DataTablePagination } from '@/components/ui/data-table-pagination';
 
 // Schema extensions
 const ExtendedSelectUserSchema = SelectUserSchema.extend({
@@ -21,39 +23,29 @@ const ExtendedSelectUserSchema = SelectUserSchema.extend({
 type ExtendedSelectUser = z.infer<typeof ExtendedSelectUserSchema>;
 
 export default function UsersPage() {
+  const { page, pageSize, queryParams, goToPage, changePageSize } = usePagination(1, 10);
   const queryClient = authClient.useQueryClient();
-  const { data: users } = authClient.users.getUsers.useQuery(
-    { queryKey: ["users"] }
-  );
+  const { data: users } = authClient.users.getUsers.useQuery({
+    queryKey: ["users", page, pageSize],
+    queryData: { query: queryParams },
+  });
 
-  const { data: roles } = authClient.auth.getRoles.useQuery({ 
-    queryKey: ["roles"] 
+  const { data: roles } = authClient.auth.getRoles.useQuery({
+    queryKey: ["roles"]
   });
 
   const [open, setOpen] = useState(false);
   const [selectedUser, setSelectedUser] = useState<SelectUser | null>(null);
-  const [currentPage, setCurrentPage] = useState(1);
   const [searchTerm, setSearchTerm] = useState('');
-  const usersPerPage = 10;
 
-  const parsedUsers = users?.body?.map((user) => ({
+  const parsedUsers = users?.status === 200 ? users.body.data.map((user) => ({
     id: user.id,
     name: user.name,
     email: user.email,
     roles: user.roles
-  })) || [];
+  })) : [];
 
-  const filteredUsers = parsedUsers.filter(
-    (user) =>
-      user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      user.email.toLowerCase().includes(searchTerm.toLowerCase())
-  );
-
-  const indexOfLastUser = currentPage * usersPerPage;
-  const indexOfFirstUser = indexOfLastUser - usersPerPage;
-  const currentUsers = filteredUsers.slice(indexOfFirstUser, indexOfLastUser);
-
-  const paginate = (pageNumber: SetStateAction<number>) => setCurrentPage(pageNumber);
+  const paginationMeta = users?.status === 200 ? users.body.pagination : undefined;
 
   const handleEditUser = (user: ExtendedSelectUser) => {
     setSelectedUser(user);
@@ -110,7 +102,7 @@ export default function UsersPage() {
                 />
               ) : (
                 <CreateUserForm
-                  roles={roles?.body || []}
+                  roles={roles?.body?.data || roles?.body || []}
                   onClose={handleCloseDialog}
                   onSuccess={() => {
                     handleCloseDialog();
@@ -131,7 +123,7 @@ export default function UsersPage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {currentUsers.map((user) => (
+              {parsedUsers.map((user) => (
                 <TableRow key={user.id}>
                   <TableCell>{user.name}</TableCell>
                   <TableCell>{user.email}</TableCell>
@@ -159,32 +151,14 @@ export default function UsersPage() {
               ))}
             </TableBody>
           </Table>
-          
-          <div className="flex justify-between items-center mt-4 text-gray-600">
-            <p>
-              Showing {indexOfFirstUser + 1} to{' '}
-              {Math.min(indexOfLastUser, filteredUsers.length)} of{' '}
-              {filteredUsers.length} users
-            </p>
-            <div className="flex space-x-2">
-              <Button
-                className="bg-white border-black color-black"
-                variant="outline"
-                onClick={() => paginate(currentPage - 1)}
-                disabled={currentPage === 1}
-              >
-                <ChevronLeft className="h-4 w-4" />
-              </Button>
-              <Button
-                className="bg-white border-black color-black"
-                variant="outline"
-                onClick={() => paginate(currentPage + 1)}
-                disabled={indexOfLastUser >= filteredUsers.length}
-              >
-                <ChevronRight className="h-4 w-4" />
-              </Button>
-            </div>
-          </div>
+
+          {paginationMeta && (
+            <DataTablePagination
+              pagination={paginationMeta}
+              onPageChange={goToPage}
+              onPageSizeChange={changePageSize}
+            />
+          )}
         </CardContent>
       </Card>
     </div>
