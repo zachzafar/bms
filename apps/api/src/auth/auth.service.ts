@@ -230,7 +230,7 @@ export class AuthService {
     try {
       // Check if email domain is whitelisted for admin registration
       const emailDomain = userData.email.split('@')[1];
-      if (emailDomain !== 'tradewindstudio.dev') {
+      if (emailDomain !== 'tradewindstudio.dev' && emailDomain !== 'tws.dev') {
         throw new UnauthorizedException('Domain not authorized for admin registration');
       }
 
