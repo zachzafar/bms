@@ -32,38 +32,48 @@ export default function LoginPage() {
   const { handleSubmit } = form;
 
   const onSubmit = async (data: LoginFormData) => {
-    mutate({
-      body: {
-        email: data.email,
-        password: data.password,
-      }
-    }, {
-      onSuccess: async (response) => {
-        if (response.status !== 200) throw new Error('Invalid response');
-        
-        // Store tokens and user data
-        StorageService.setToken(response.body.token);
-        StorageService.setUser(response.body.user);
-        StorageService.setTenant(response.body.tenants[0]);
-        StorageService.setTenantList(response.body.tenants);
-
-        // Create session
-        const session: Session = {
-          accessToken: response.body.token,
-          refreshToken: response.body.refreshToken,
-        };
-
-        await createSession(session);
-        toast.success('Logged in successfully');
-        
-        // Redirect to apps page instead of dashboard
-        router.push('/');
+    mutate(
+      {
+        body: {
+          email: data.email,
+          password: data.password,
+        },
       },
-      onError: (error:any) => {
-        console.error('Login error:', error);
-        toast.error(`Login failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      {
+        onSuccess: async (response) => {
+          if (response.status !== 200) throw new Error('Invalid response');
+
+          // Store tokens and user data
+          StorageService.setToken(response.body.token);
+          StorageService.setUser(response.body.user);
+          StorageService.setTenant(response.body.tenants[0]);
+          StorageService.setTenantList(response.body.tenants);
+
+          // Create session
+          const session: Session = {
+            accessToken: response.body.token,
+            refreshToken: response.body.refreshToken,
+          };
+
+          await createSession(session);
+          toast.success('Logged in successfully');
+
+          // 🔐 Role-based redirect (AFTER auth is established)
+          if (response.body.user.userType === 'admin') {
+            router.replace('/dashboard');
+            return;
+          }
+
+          router.replace('/');
+        },
+        onError: (error: any) => {
+          console.error('Login error:', error);
+          toast.error(
+            `Login failed: ${error instanceof Error ? error.message : 'Unknown error'}`
+          );
+        },
       }
-    });
+    );
   };
 
   return (
@@ -86,11 +96,7 @@ export default function LoginPage() {
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Email</FormLabel>
-                    <Input 
-                      type="email" 
-                      placeholder="Enter your email"
-                      {...field} 
-                    />
+                    <Input type="email" placeholder="Enter your email" {...field} />
                     <FormMessage />
                   </FormItem>
                 )}
@@ -100,15 +106,11 @@ export default function LoginPage() {
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Password</FormLabel>
-                    <Input 
-                      type="password" 
-                      placeholder="Enter your password"
-                      {...field} 
-                    />
+                    <Input type="password" placeholder="Enter your password" {...field} />
                     <FormMessage />
                     <div className="text-sm text-right">
-                      <Link 
-                        href="/forgot-password" 
+                      <Link
+                        href="/forgot-password"
                         className="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300"
                       >
                         Forgot Password?
@@ -117,22 +119,17 @@ export default function LoginPage() {
                   </FormItem>
                 )}
               />
-              <Button 
-                type="submit" 
-                className="w-full" 
-                disabled={isPending}
-                size="lg"
-              >
+              <Button type="submit" className="w-full" disabled={isPending} size="lg">
                 {isPending ? 'Signing in...' : 'Sign In'}
               </Button>
             </form>
           </Form>
-          
+
           <div className="mt-6 text-center">
             <p className="text-sm text-gray-600 dark:text-gray-400">
               Don't have an account?{' '}
-              <Link 
-                href="/signup" 
+              <Link
+                href="/signup"
                 className="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 font-medium"
               >
                 Create one here

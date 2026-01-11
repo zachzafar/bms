@@ -9,10 +9,8 @@ import {
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
-  SidebarMenuSub,
-  SidebarMenuSubItem,
 } from "@/components/ui/sidebar"
-import { Collapsible, CollapsibleTrigger, CollapsibleContent } from "@radix-ui/react-collapsible"
+
 import {
   Home,
   Box,
@@ -29,7 +27,7 @@ import {
 
 import { FEATURE_PERMISSIONS } from "@/lib/feature-permissions"
 import { canAccessFeature } from "@/lib/permissions"
-import { usePermissions } from "@/lib/auth/use-permissions" // ✅ ADD
+import { usePermissions } from "@/lib/auth/use-permissions"
 
 type FeatureKey = keyof typeof FEATURE_PERMISSIONS
 
@@ -146,15 +144,16 @@ const items: SidebarItem[] = [
 ]
 
 export function AppSidebar() {
-  const { permissions: userPermissions, loading } = usePermissions() // ✅ CHANGE
+  const { permissions: userPermissions, loading } = usePermissions()
 
-  if (loading) return null // ✅ ADD
+  if (loading) return null
 
   return (
     <Sidebar>
       <SidebarContent>
         <SidebarGroup>
           <SidebarGroupLabel>Application</SidebarGroupLabel>
+
           <SidebarGroupContent>
             <SidebarMenu>
               {items.map((item) => {
@@ -177,40 +176,42 @@ export function AppSidebar() {
 
                 if (!canShowParent) return null
 
-                return (
-                  <SidebarMenuItem key={item.title}>
-                    {visibleChildren ? (
-                      <Collapsible defaultOpen className="group/collapsible">
-                        <CollapsibleTrigger asChild>
-                          <SidebarMenuButton>
-                            <item.icon />
-                            <span>{item.title}</span>
-                          </SidebarMenuButton>
-                        </CollapsibleTrigger>
-                        <CollapsibleContent>
-                          <SidebarMenuSub>
-                            {visibleChildren.map((child) => (
-                              <SidebarMenuSubItem key={child.title}>
-                                <a
-                                  href={child.url}
-                                  className="flex items-center gap-2"
-                                >
+                // ✅ Parent WITH children → new nested group
+                if (visibleChildren?.length) {
+                  return (
+                    <SidebarGroup key={item.title}>
+                      <SidebarGroupLabel className="flex items-center gap-2">
+                        <item.icon className="h-4 w-4" />
+                        {item.title}
+                      </SidebarGroupLabel>
+
+                      <SidebarGroupContent>
+                        <SidebarMenu>
+                          {visibleChildren.map((child) => (
+                            <SidebarMenuItem key={child.title}>
+                              <SidebarMenuButton asChild>
+                                <a href={child.url}>
                                   <child.icon className="h-4 w-4" />
                                   <span>{child.title}</span>
                                 </a>
-                              </SidebarMenuSubItem>
-                            ))}
-                          </SidebarMenuSub>
-                        </CollapsibleContent>
-                      </Collapsible>
-                    ) : (
-                      <SidebarMenuButton asChild>
-                        <a href={item.url!}>
-                          <item.icon />
-                          <span>{item.title}</span>
-                        </a>
-                      </SidebarMenuButton>
-                    )}
+                              </SidebarMenuButton>
+                            </SidebarMenuItem>
+                          ))}
+                        </SidebarMenu>
+                      </SidebarGroupContent>
+                    </SidebarGroup>
+                  )
+                }
+
+                // ✅ Parent WITHOUT children
+                return (
+                  <SidebarMenuItem key={item.title}>
+                    <SidebarMenuButton asChild>
+                      <a href={item.url!}>
+                        <item.icon className="h-4 w-4" />
+                        <span>{item.title}</span>
+                      </a>
+                    </SidebarMenuButton>
                   </SidebarMenuItem>
                 )
               })}

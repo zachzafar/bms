@@ -92,7 +92,7 @@ export default function UsersPage() {
 
               {selectedUser ? (
                 <EditUserForm
-                  user={selectedUser}
+                  user={{ ...selectedUser, roles: selectedUser?.roles as number[] }}
                   roles={roles?.body || []}
                   onClose={handleCloseDialog}
                   onSuccess={() => {

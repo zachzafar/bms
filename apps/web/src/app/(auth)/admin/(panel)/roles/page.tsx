@@ -69,7 +69,10 @@ export default function RolesPage() {
 
   useEffect(() => {
     if (rolesData?.status === 200) {
-      setRoles(rolesData.body);
+      setRoles(rolesData.body.map((role: { roleId: string; name: string; permissions: string[] }) => ({
+        ...role,
+        roleId: Number(role.roleId),
+      })));
     }
   }, [rolesData]);
 
@@ -111,7 +114,7 @@ export default function RolesPage() {
       updateRole(
         {
           ...payload,
-          params: { roleId: selectedRole.roleId },
+          params: { roleId: Number(selectedRole.roleId) },
         },
         { onSuccess, onError }
       );
@@ -137,8 +140,8 @@ export default function RolesPage() {
     <div className="space-y-8">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold">Role Management</h1>
-          <p className="text-muted-foreground mt-2">
+          <h1 className="text-3xl font-bold text-gray-900">Role Management</h1>
+          <p className=" mt-2 text-gray-600">
             Create, edit, and manage user roles and their permissions.
           </p>
         </div>
@@ -230,28 +233,28 @@ export default function RolesPage() {
         </Dialog>
       </div>
 
-      <Card>
+      <Card className= "bg-white border-white">
         <CardHeader>
-          <CardTitle>Roles</CardTitle>
-          <CardDescription>Manage user roles and their permissions</CardDescription>
+          <CardTitle className="font-bold text-gray-900">Roles</CardTitle>
+          <CardDescription className=" mt-2 text-gray-600">Manage user roles and their permissions</CardDescription>
         </CardHeader>
         <CardContent>
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>ID</TableHead>
-                <TableHead>Name</TableHead>
-                <TableHead>Permissions</TableHead>
-                <TableHead className="text-right">Actions</TableHead>
+                <TableHead className="text-black">ID</TableHead>
+                <TableHead className=" mt-2 text-black">Name</TableHead>
+                <TableHead className=" mt-2 text-black">Permissions</TableHead>
+                <TableHead className="text-right mt-2 text-black">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {roles.length > 0 ? (
                 roles.map((role) => (
                   <TableRow key={role.roleId}>
-                    <TableCell>{role.roleId}</TableCell>
-                    <TableCell>{role.name}</TableCell>
-                    <TableCell>
+                    <TableCell className='text-gray-600'>{role.roleId}</TableCell>
+                    <TableCell className='text-gray-600'>{role.name}</TableCell>
+                    <TableCell className='text-gray-600'>
                       <div className="flex flex-wrap gap-1">
                         {role.permissions.slice(0, 3).map((permission) => (
                           <span
@@ -268,7 +271,7 @@ export default function RolesPage() {
                         )}
                       </div>
                     </TableCell>
-                    <TableCell className="text-right">
+                    <TableCell className="text-right text-black">
                       <Button variant="ghost" size="sm" onClick={() => handleEditRole(role)}>
                         <Pencil className="mr-2 h-4 w-4" />
                         Edit
@@ -282,7 +285,7 @@ export default function RolesPage() {
                           if (confirmed) {
                             deleteRole(
                               { 
-                                params: { roleId: role.roleId },
+                                params: { roleId: Number(role.roleId) },
                                 body: {}
                               },
                               {

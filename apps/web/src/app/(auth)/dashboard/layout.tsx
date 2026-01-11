@@ -21,9 +21,9 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
   const pathname = usePathname();
 
   const navigation = [
-    { name: 'Dashboard', href: '/admin', icon: Home },
-    { name: 'Users', href: '/admin/users', icon: Users },
-    { name: 'Tenants', href: '/admin/tenants', icon: Building },
+    { name: 'Dashboard', href: '/dashboard', icon: Home },
+    { name: 'Users', href: '/dashboard/users', icon: Users },
+    { name: 'Tenants', href: '/dashboard/tenants', icon: Building },
   ];
 
   const handleLogout = () => {
