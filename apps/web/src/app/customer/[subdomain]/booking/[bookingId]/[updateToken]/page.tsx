@@ -12,8 +12,19 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
-import { ArrowLeft, Calendar, CheckCircle2, Loader2 } from 'lucide-react';
+import { ArrowLeft, Calendar, CheckCircle2, Loader2, XCircle } from 'lucide-react';
 import { useEffect, useState } from 'react';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 
 const UpdateBookingSchema = z.object({
   startDate: z.string().min(1, 'Start date is required'),
@@ -38,6 +49,7 @@ export default function EditBookingPage() {
   const updateToken = params.updateToken as string;
 
   const [success, setSuccess] = useState(false);
+  const [cancelled, setCancelled] = useState(false);
 
   const { data: bookingResponse, isLoading, error: queryError } = client.booking.getBooking.useQuery({
     queryKey: ['booking', bookingId],
@@ -70,6 +82,35 @@ export default function EditBookingPage() {
   }, [booking, form]);
 
   const { mutate: updateBookingMutation, isPending } = client.booking.updateBookingByToken.useMutation();
+  const { mutate: cancelBookingMutation, isPending: isCancelling } = client.booking.cancelBookingByToken.useMutation();
+
+  const handleCancelBooking = () => {
+    cancelBookingMutation(
+      {
+        params: {
+          token: updateToken,
+          bookingId: bookingId,
+        },
+        body: {},
+      },
+      {
+        onSuccess: (response) => {
+          if (response.status === 200) {
+            setCancelled(true);
+            toast.success('Booking cancelled successfully! Check your email for confirmation.');
+          } else if (response.status === 403) {
+            toast.error('This cancellation link has expired or is invalid. Please contact support.');
+          } else {
+            toast.error('Failed to cancel booking. Please try again.');
+          }
+        },
+        onError: (err: any) => {
+          toast.error(err.message || 'Failed to cancel booking. Please try again.');
+          console.error(err);
+        },
+      }
+    );
+  };
 
   const onSubmit = (data: UpdateBookingFormData) => {
     if (!booking) return;
@@ -134,6 +175,31 @@ export default function EditBookingPage() {
               <p className="text-slate-600 mb-6">
                 We couldn't find the booking you're trying to update. The link may be invalid or expired.
               </p>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  if (cancelled) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-slate-50">
+        <Card className="max-w-md">
+          <CardContent className="pt-6">
+            <div className="text-center">
+              <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                <XCircle className="w-8 h-8 text-red-600" />
+              </div>
+              <h2 className="text-2xl font-bold text-slate-900 mb-2">Booking Cancelled</h2>
+              <p className="text-slate-600 mb-6">
+                Your booking has been successfully cancelled. You'll receive a confirmation email shortly.
+              </p>
+              <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+                <p className="text-sm text-red-800">
+                  If you cancelled by mistake, please contact us directly to rebook.
+                </p>
+              </div>
             </div>
           </CardContent>
         </Card>
@@ -280,11 +346,11 @@ export default function EditBookingPage() {
                   </div>
                 </div>
 
-                {/* Submit Button */}
+                {/* Submit Buttons */}
                 <div className="flex gap-4 pt-4">
                   <Button
                     type="submit"
-                    disabled={isPending}
+                    disabled={isPending || isCancelling}
                     className="flex-1"
                   >
                     {isPending ? (
@@ -299,6 +365,46 @@ export default function EditBookingPage() {
                       </>
                     )}
                   </Button>
+
+                  <AlertDialog>
+                    <AlertDialogTrigger asChild>
+                      <Button
+                        type="button"
+                        variant="destructive"
+                        disabled={isPending || isCancelling}
+                      >
+                        {isCancelling ? (
+                          <>
+                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                            Cancelling...
+                          </>
+                        ) : (
+                          <>
+                            <XCircle className="mr-2 h-4 w-4" />
+                            Cancel Booking
+                          </>
+                        )}
+                      </Button>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent>
+                      <AlertDialogHeader>
+                        <AlertDialogTitle>Are you sure you want to cancel?</AlertDialogTitle>
+                        <AlertDialogDescription>
+                          This will cancel your booking for <strong>{booking.asset.name}</strong>.
+                          This action cannot be undone. You'll need to create a new booking if you change your mind.
+                        </AlertDialogDescription>
+                      </AlertDialogHeader>
+                      <AlertDialogFooter>
+                        <AlertDialogCancel>Keep Booking</AlertDialogCancel>
+                        <AlertDialogAction
+                          onClick={handleCancelBooking}
+                          className="bg-red-600 hover:bg-red-700"
+                        >
+                          Yes, Cancel Booking
+                        </AlertDialogAction>
+                      </AlertDialogFooter>
+                    </AlertDialogContent>
+                  </AlertDialog>
                 </div>
 
                 <p className="text-sm text-slate-500 text-center">

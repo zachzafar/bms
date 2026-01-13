@@ -243,5 +243,22 @@ export const bookingContract = c.router({
       404: z.undefined()
     },
     summary: 'Update booking status'
+  },
+
+  // Cancel booking by token (customer-facing)
+  cancelBookingByToken: {
+    method: 'POST',
+    path: '/cancel-booking-by-token/:token/:bookingId',
+    pathParams: z.object({
+      token: z.string(),
+      bookingId: z.string()
+    }),
+    body: z.object({}),
+    responses: {
+      200: z.object({ message: z.string() }),
+      403: z.undefined(),
+      404: z.undefined()
+    },
+    summary: 'Cancel booking using update token (customer-facing)'
   }
 });

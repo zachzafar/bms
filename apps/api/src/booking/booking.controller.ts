@@ -198,4 +198,20 @@ export class BookingController {
             return { status: 200, body: result };
         });
     }
+
+    @Public()
+    @TsRestHandler(contract.booking.cancelBookingByToken)
+    async cancelBookingByToken(): Promise<ReturnType<typeof tsRestHandler>> {
+        return tsRestHandler(contract.booking.cancelBookingByToken, async ({ params }) => {
+            const { bookingId, token } = params;
+
+            // Validate the update token
+            if (await this.bookingService.validateUpdateToken(token, bookingId)) {
+                await this.bookingService.updateBookingStatus(bookingId, 'Cancelled');
+                return { status: 200, body: { message: "Booking successfully cancelled" } };
+            }
+
+            return { status: 403 };
+        });
+    }
 }
