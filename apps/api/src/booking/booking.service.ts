@@ -8,6 +8,7 @@ import { SlotService } from '../slot/slot.service';
 import { OnEvent, EventEmitter2 } from '@nestjs/event-emitter';
 import { EmailEvent } from 'src/email/events';
 import { randomBytes } from 'crypto';
+import { Cron } from '@nestjs/schedule';
 
 // --- top of file or bottom (outside the class) ---
 function toUTCDateTime(input: string | Date): Date {
@@ -856,6 +857,257 @@ export class BookingService {
     await this.db.delete(schema.BlockedDate)
       .where(eq(schema.BlockedDate.id, id))
       .execute();
+  }
+
+  // Booking reminder methods
+  @Cron('0 8 * * *') // Runs at 8 AM every day
+  async sendBookingReminders() {
+    // Calculate time window: 24 hours from now (±1 hour for flexibility)
+    const now = new Date();
+    const tomorrow = new Date(now);
+    tomorrow.setHours(now.getHours() + 24);
+
+    const windowStart = new Date(tomorrow);
+    windowStart.setHours(tomorrow.getHours() - 1);
+
+    const windowEnd = new Date(tomorrow);
+    windowEnd.setHours(tomorrow.getHours() + 1);
+
+    try {
+      // Query bookings starting in ~24 hours using raw SQL joins
+      const upcomingBookings = await this.db
+        .select({
+          booking: schema.Booking,
+          asset: schema.Asset,
+          user: schema.User,
+          customer: schema.Customer,
+        })
+        .from(schema.Booking)
+        .innerJoin(schema.Asset, eq(schema.Booking.assetId, schema.Asset.id))
+        .innerJoin(schema.UserHasBookings, eq(schema.UserHasBookings.bookingId, schema.Booking.id))
+        .innerJoin(schema.User, eq(schema.UserHasBookings.userId, schema.User.id))
+        .innerJoin(schema.Customer, eq(schema.Customer.userId, schema.User.id))
+        .where(
+          and(
+            gte(schema.Booking.startDate, windowStart),
+            lte(schema.Booking.startDate, windowEnd),
+            eq(schema.Booking.status, 'Confirmed')
+          )
+        )
+        .execute();
+
+      console.log(`Found ${upcomingBookings.length} bookings starting in 24 hours`);
+
+      // Send emails for each booking
+      for (const row of upcomingBookings) {
+        const { booking, asset, user } = row;
+
+        // Get tenant admin users
+        const tenantAdmins = await this.db
+          .select({
+            email: schema.User.email,
+            name: schema.User.name,
+          })
+          .from(schema.TenantHasUsers)
+          .innerJoin(schema.User, eq(schema.TenantHasUsers.userId, schema.User.id))
+          .where(
+            and(
+              eq(schema.TenantHasUsers.tenantId, asset.tenantId),
+              eq(schema.TenantHasUsers.isAdmin, true)
+            )
+          )
+          .execute();
+
+        // Format dates
+        const formattedStartDate = booking.startDate.toLocaleDateString('en-US', {
+          weekday: 'long',
+          year: 'numeric',
+          month: 'long',
+          day: 'numeric'
+        });
+
+        const formattedEndDate = booking.endDate.toLocaleDateString('en-US', {
+          weekday: 'long',
+          year: 'numeric',
+          month: 'long',
+          day: 'numeric'
+        });
+
+        // Send email to each tenant admin
+        for (const admin of tenantAdmins) {
+          const tenantEmailContent = this.generateTenantReminderEmail({
+            tenantName: admin.name,
+            bookingId: booking.id,
+            assetName: asset.name,
+            customerName: user.name,
+            formattedStartDate,
+            formattedEndDate
+          });
+
+          this.eventEmitter.emit(
+            'send-email',
+            new EmailEvent(
+              admin.email,
+              `Booking Reminder: ${asset.name} - Starting Tomorrow`,
+              tenantEmailContent
+            )
+          );
+        }
+
+        // Send email to customer
+        const customerEmailContent = this.generateCustomerReminderEmail({
+          customerName: user.name,
+          bookingId: booking.id,
+          assetName: asset.name,
+          formattedStartDate,
+          formattedEndDate
+        });
+
+        this.eventEmitter.emit(
+          'send-email',
+          new EmailEvent(
+            user.email,
+            `Reminder: Your ${asset.name} Booking Starts Tomorrow`,
+            customerEmailContent
+          )
+        );
+
+        console.log(`Sent reminders for booking ${booking.id}`);
+      }
+
+      console.log('Booking reminder job completed successfully');
+    } catch (error) {
+      console.error('Error in booking reminder job:', error);
+    }
+  }
+
+  private generateTenantReminderEmail(data: {
+    tenantName: string;
+    bookingId: string;
+    assetName: string;
+    customerName: string;
+    formattedStartDate: string;
+    formattedEndDate: string;
+  }): string {
+    return `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <style>
+          body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+          .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+          .header { background-color: #2563eb; color: white; padding: 20px; border-radius: 8px 8px 0 0; }
+          .content { background-color: #f8fafc; padding: 30px; border-radius: 0 0 8px 8px; }
+          .booking-details { background-color: white; padding: 20px; border-radius: 8px; margin: 20px 0; }
+          .detail-row { margin: 10px 0; padding: 10px 0; border-bottom: 1px solid #e2e8f0; }
+          .detail-label { font-weight: bold; color: #64748b; }
+          .footer { text-align: center; margin-top: 20px; color: #64748b; font-size: 14px; }
+        </style>
+      </head>
+      <body>
+        <div class="container">
+          <div class="header">
+            <h1>Booking Reminder</h1>
+          </div>
+          <div class="content">
+            <p>Hello ${data.tenantName},</p>
+            <p>This is a reminder that you have an upcoming booking starting tomorrow.</p>
+
+            <div class="booking-details">
+              <h2 style="color: #2563eb; margin-top: 0;">Booking Details</h2>
+              <div class="detail-row">
+                <span class="detail-label">Booking ID:</span> ${data.bookingId}
+              </div>
+              <div class="detail-row">
+                <span class="detail-label">Asset:</span> ${data.assetName}
+              </div>
+              <div class="detail-row">
+                <span class="detail-label">Customer:</span> ${data.customerName}
+              </div>
+              <div class="detail-row">
+                <span class="detail-label">Start Date:</span> ${data.formattedStartDate}
+              </div>
+              <div class="detail-row">
+                <span class="detail-label">End Date:</span> ${data.formattedEndDate}
+              </div>
+            </div>
+
+            <p>Please ensure that <strong>${data.assetName}</strong> is ready for the customer.</p>
+
+            <div class="footer">
+              <p>This is an automated reminder from your booking management system.</p>
+            </div>
+          </div>
+        </div>
+      </body>
+      </html>
+    `;
+  }
+
+  private generateCustomerReminderEmail(data: {
+    customerName: string;
+    bookingId: string;
+    assetName: string;
+    formattedStartDate: string;
+    formattedEndDate: string;
+  }): string {
+    return `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <style>
+          body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+          .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+          .header { background-color: #2563eb; color: white; padding: 20px; border-radius: 8px 8px 0 0; }
+          .content { background-color: #f8fafc; padding: 30px; border-radius: 0 0 8px 8px; }
+          .booking-details { background-color: white; padding: 20px; border-radius: 8px; margin: 20px 0; }
+          .detail-row { margin: 10px 0; padding: 10px 0; border-bottom: 1px solid #e2e8f0; }
+          .detail-label { font-weight: bold; color: #64748b; }
+          .footer { text-align: center; margin-top: 20px; color: #64748b; font-size: 14px; }
+          .highlight { background-color: #fef3c7; padding: 15px; border-radius: 8px; margin: 20px 0; }
+        </style>
+      </head>
+      <body>
+        <div class="container">
+          <div class="header">
+            <h1>Your Booking is Tomorrow!</h1>
+          </div>
+          <div class="content">
+            <p>Hello ${data.customerName},</p>
+            <p>This is a friendly reminder that your booking starts tomorrow.</p>
+
+            <div class="booking-details">
+              <h2 style="color: #2563eb; margin-top: 0;">Booking Details</h2>
+              <div class="detail-row">
+                <span class="detail-label">Booking ID:</span> ${data.bookingId}
+              </div>
+              <div class="detail-row">
+                <span class="detail-label">Asset:</span> ${data.assetName}
+              </div>
+              <div class="detail-row">
+                <span class="detail-label">Start Date:</span> ${data.formattedStartDate}
+              </div>
+              <div class="detail-row">
+                <span class="detail-label">End Date:</span> ${data.formattedEndDate}
+              </div>
+            </div>
+
+            <div class="highlight">
+              <strong>Important:</strong> Please be prepared to pick up <strong>${data.assetName}</strong> on ${data.formattedStartDate}.
+            </div>
+
+            <p>If you have any questions or need to make changes to your booking, please contact us as soon as possible.</p>
+
+            <p>We look forward to serving you!</p>
+
+            <div class="footer">
+              <p>This is an automated reminder from your booking management system.</p>
+            </div>
+          </div>
+        </div>
+      </body>
+      </html>
+    `;
   }
 
 }
