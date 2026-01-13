@@ -156,8 +156,8 @@ export default function Component() {
                     <TableCell className='font-medium'>{booking.id}</TableCell>
                     <TableCell>{booking.user?.name || booking.customer?.userId || 'Unknown'}</TableCell>
                     <TableCell>{booking.asset?.name || 'Unknown Asset'}</TableCell>
-                    <TableCell >{booking.startDate.toLocaleDateString()}</TableCell>
-                    <TableCell >{booking.endDate.toLocaleDateString()}</TableCell>
+                    <TableCell >{new Date(booking.startDate).toISOString().split('T')[0]}</TableCell>
+                    <TableCell >{new Date(booking.endDate).toISOString().split('T')[0]}</TableCell>
                     <TableCell>{booking.status}</TableCell>
                   </TableRow>
                 ))

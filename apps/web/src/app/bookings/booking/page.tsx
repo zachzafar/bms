@@ -66,8 +66,8 @@ function getStatusBadge(status: string) {
 type BlockedDate = {
   id: number;
   asset_id: string;
-  startDate: string; // ISO string
-  endDate: string;   // ISO string
+  startDate: Date; // ISO string
+  endDate: Date;   // ISO string
   title: string;
   reason?: string;
 };
@@ -449,28 +449,31 @@ export default function Component() {
                   control={form.control}
                   name="startDate"
                   render={({ field }) => {
-                    // Split current value into date/time parts or defaults
-                    const [datePart, timePart] = (field.value || '').toISOString().split('T');
+                    // Convert Date to YYYY-MM-DD and HH:mm for inputs
+                    const dateValue = field.value ? new Date(field.value) : null;
+                    const datePart = dateValue ? dateValue.toISOString().split('T')[0] : '';
+                    const timePart = dateValue ? dateValue.toTimeString().slice(0, 5) : '00:00';
+
                     return (
                       <FormItem>
                         <FormLabel>Start Date & Time</FormLabel>
                         <div className="flex gap-2">
                           <Input
                             type="date"
-                            value={datePart || ''}
+                            value={datePart}
                             onChange={(e) => {
                               const newDate = e.target.value;
-                              const time = timePart || '00:00';
-                              field.onChange(`${newDate}T${time}`);
+                              const time = timePart;
+                              field.onChange(new Date(`${newDate}T${time}`));
                             }}
                           />
                           <Input
                             type="time"
-                            value={timePart || '00:00'}
+                            value={timePart}
                             onChange={(e) => {
                               const newTime = e.target.value;
-                              const date = datePart || '';
-                              field.onChange(`${date}T${newTime}`);
+                              const date = datePart || new Date().toISOString().split('T')[0];
+                              field.onChange(new Date(`${date}T${newTime}`));
                             }}
                           />
                         </div>
@@ -503,28 +506,31 @@ export default function Component() {
                   control={form.control}
                   name="endDate"
                   render={({ field }) => {
-                    // Split current value into date/time parts or defaults
-                    const [datePart, timePart] = (field.value || '').toISOString().split('T');
+                    // Convert Date to YYYY-MM-DD and HH:mm for inputs
+                    const dateValue = field.value ? new Date(field.value) : null;
+                    const datePart = dateValue ? dateValue.toISOString().split('T')[0] : '';
+                    const timePart = dateValue ? dateValue.toTimeString().slice(0, 5) : '00:00';
+
                     return (
                       <FormItem>
                         <FormLabel>End Date & Time</FormLabel>
                         <div className="flex gap-2">
                           <Input
                             type="date"
-                            value={datePart || ''}
+                            value={datePart}
                             onChange={(e) => {
                               const newDate = e.target.value;
-                              const time = timePart || '00:00';
-                              field.onChange(`${newDate}T${time}`);
+                              const time = timePart;
+                              field.onChange(new Date(`${newDate}T${time}`));
                             }}
                           />
                           <Input
                             type="time"
-                            value={timePart || '00:00'}
+                            value={timePart}
                             onChange={(e) => {
                               const newTime = e.target.value;
-                              const date = datePart || '';
-                              field.onChange(`${date}T${newTime}`);
+                              const date = datePart || new Date().toISOString().split('T')[0];
+                              field.onChange(new Date(`${date}T${newTime}`));
                             }}
                           />
                         </div>
@@ -711,8 +717,8 @@ export default function Component() {
                     <TableCell>{booking.asset.name}</TableCell>
                     <TableCell>{booking.asset.assetTypeId}</TableCell>
                     <TableCell>{booking.customer.id}</TableCell>
-                    <TableCell>{new Date(booking.startDate).toLocaleDateString()}</TableCell>
-                    <TableCell>{new Date(booking.endDate).toLocaleDateString()}</TableCell>
+                    <TableCell>{new Date(booking.startDate).toISOString().split('T')[0]}</TableCell>
+                    <TableCell>{new Date(booking.endDate).toISOString().split('T')[0]}</TableCell>
                     <TableCell>
                       <Badge className={statusBadge.color}>
                         <StatusIcon className="h-3 w-3 mr-1" />
@@ -753,12 +759,12 @@ export default function Component() {
 
                                   <Label className="text-right font-semibold">Start Date:</Label>
                                   <div className="col-span-3">
-                                    {new Date(selectedBooking.startDate).toLocaleString()}
+                                    {new Date(selectedBooking.startDate).toISOString().replace('T', ' ').slice(0, 16)}
                                   </div>
 
                                   <Label className="text-right font-semibold">End Date:</Label>
                                   <div className="col-span-3">
-                                    {new Date(selectedBooking.endDate).toLocaleString()}
+                                    {new Date(selectedBooking.endDate).toISOString().replace('T', ' ').slice(0, 16)}
                                   </div>
 
                                   <Label className="text-right font-semibold">Status:</Label>
