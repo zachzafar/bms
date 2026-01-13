@@ -600,10 +600,155 @@ export class BookingService {
       throw new NotFoundException('Booking not found');
     }
 
+    // Update the booking status
     await this.db.update(schema.Booking)
       .set({ status })
       .where(eq(schema.Booking.id, bookingId))
       .execute();
+
+    // Send email notifications for Confirmed or Cancelled status
+    if (status === 'Confirmed' || status === 'Cancelled') {
+      try {
+        // Get full booking details with relations
+        const bookingDetails = await this.db
+          .select({
+            booking: schema.Booking,
+            asset: schema.Asset,
+            user: schema.User,
+            customer: schema.Customer,
+          })
+          .from(schema.Booking)
+          .innerJoin(schema.Asset, eq(schema.Booking.assetId, schema.Asset.id))
+          .innerJoin(schema.UserHasBookings, eq(schema.UserHasBookings.bookingId, schema.Booking.id))
+          .innerJoin(schema.User, eq(schema.UserHasBookings.userId, schema.User.id))
+          .innerJoin(schema.Customer, eq(schema.Customer.userId, schema.User.id))
+          .where(eq(schema.Booking.id, bookingId))
+          .execute()
+          .then((rows) => rows[0]);
+
+        if (bookingDetails) {
+          const { booking, asset, user } = bookingDetails;
+
+          // Get tenant admin users
+          const tenantAdmins = await this.db
+            .select({
+              email: schema.User.email,
+              name: schema.User.name,
+            })
+            .from(schema.TenantHasUsers)
+            .innerJoin(schema.User, eq(schema.TenantHasUsers.userId, schema.User.id))
+            .where(
+              and(
+                eq(schema.TenantHasUsers.tenantId, asset.tenantId),
+                eq(schema.TenantHasUsers.isAdmin, true)
+              )
+            )
+            .execute();
+
+          // Format dates
+          const formattedStartDate = booking.startDate.toLocaleDateString('en-US', {
+            weekday: 'long',
+            year: 'numeric',
+            month: 'long',
+            day: 'numeric'
+          });
+
+          const formattedEndDate = booking.endDate.toLocaleDateString('en-US', {
+            weekday: 'long',
+            year: 'numeric',
+            month: 'long',
+            day: 'numeric'
+          });
+
+          if (status === 'Confirmed') {
+            // Send confirmation emails
+            for (const admin of tenantAdmins) {
+              const tenantEmailContent = this.generateStatusUpdateEmailForTenant({
+                tenantName: admin.name,
+                bookingId: booking.id,
+                assetName: asset.name,
+                customerName: user.name,
+                formattedStartDate,
+                formattedEndDate,
+                status: 'Confirmed'
+              });
+
+              this.eventEmitter.emit(
+                'send-email',
+                new EmailEvent(
+                  admin.email,
+                  `Booking Confirmed: ${asset.name} - ${user.name}`,
+                  tenantEmailContent
+                )
+              );
+            }
+
+            // Send email to customer
+            const customerEmailContent = this.generateStatusUpdateEmailForCustomer({
+              customerName: user.name,
+              bookingId: booking.id,
+              assetName: asset.name,
+              formattedStartDate,
+              formattedEndDate,
+              status: 'Confirmed'
+            });
+
+            this.eventEmitter.emit(
+              'send-email',
+              new EmailEvent(
+                user.email,
+                `Booking Confirmed: ${asset.name}`,
+                customerEmailContent
+              )
+            );
+          } else if (status === 'Cancelled') {
+            // Send cancellation emails
+            for (const admin of tenantAdmins) {
+              const tenantEmailContent = this.generateStatusUpdateEmailForTenant({
+                tenantName: admin.name,
+                bookingId: booking.id,
+                assetName: asset.name,
+                customerName: user.name,
+                formattedStartDate,
+                formattedEndDate,
+                status: 'Cancelled'
+              });
+
+              this.eventEmitter.emit(
+                'send-email',
+                new EmailEvent(
+                  admin.email,
+                  `Booking Cancelled: ${asset.name} - ${user.name}`,
+                  tenantEmailContent
+                )
+              );
+            }
+
+            // Send email to customer
+            const customerEmailContent = this.generateStatusUpdateEmailForCustomer({
+              customerName: user.name,
+              bookingId: booking.id,
+              assetName: asset.name,
+              formattedStartDate,
+              formattedEndDate,
+              status: 'Cancelled'
+            });
+
+            this.eventEmitter.emit(
+              'send-email',
+              new EmailEvent(
+                user.email,
+                `Booking Cancelled: ${asset.name}`,
+                customerEmailContent
+              )
+            );
+          }
+        }
+      } catch (error) {
+        console.error('Error sending booking status update emails:', error);
+        // Don't throw - we don't want to fail the status update if email fails
+      }
+    }
 
     return { message: `Booking status updated to ${status}` };
   }
@@ -1102,6 +1247,171 @@ export class BookingService {
 
             <div class="footer">
               <p>This is an automated reminder from your booking management system.</p>
+            </div>
+          </div>
+        </div>
+      </body>
+      </html>
+    `;
+  }
+
+  private generateStatusUpdateEmailForTenant(data: {
+    tenantName: string;
+    bookingId: string;
+    assetName: string;
+    customerName: string;
+    formattedStartDate: string;
+    formattedEndDate: string;
+    status: 'Confirmed' | 'Cancelled';
+  }): string {
+    const isConfirmed = data.status === 'Confirmed';
+    const headerColor = isConfirmed ? '#2563eb' : '#dc2626';
+    const headerText = isConfirmed ? 'Booking Confirmed' : 'Booking Cancelled';
+    const statusBgColor = isConfirmed ? '#dbeafe' : '#fee2e2';
+    const statusTextColor = isConfirmed ? '#1e40af' : '#991b1b';
+
+    return `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <style>
+          body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+          .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+          .header { background-color: ${headerColor}; color: white; padding: 20px; border-radius: 8px 8px 0 0; }
+          .content { background-color: #f8fafc; padding: 30px; border-radius: 0 0 8px 8px; }
+          .booking-details { background-color: white; padding: 20px; border-radius: 8px; margin: 20px 0; }
+          .detail-row { margin: 10px 0; padding: 10px 0; border-bottom: 1px solid #e2e8f0; }
+          .detail-label { font-weight: bold; color: #64748b; }
+          .status-badge { background-color: ${statusBgColor}; color: ${statusTextColor}; padding: 8px 16px; border-radius: 6px; display: inline-block; font-weight: bold; }
+          .footer { text-align: center; margin-top: 20px; color: #64748b; font-size: 14px; }
+        </style>
+      </head>
+      <body>
+        <div class="container">
+          <div class="header">
+            <h1>${headerText}</h1>
+          </div>
+          <div class="content">
+            <p>Hello ${data.tenantName},</p>
+            <p>A booking has been <strong>${data.status.toLowerCase()}</strong>.</p>
+
+            <div style="text-align: center; margin: 20px 0;">
+              <span class="status-badge">${data.status.toUpperCase()}</span>
+            </div>
+
+            <div class="booking-details">
+              <h2 style="color: ${headerColor}; margin-top: 0;">Booking Details</h2>
+              <div class="detail-row">
+                <span class="detail-label">Booking ID:</span> ${data.bookingId}
+              </div>
+              <div class="detail-row">
+                <span class="detail-label">Asset:</span> ${data.assetName}
+              </div>
+              <div class="detail-row">
+                <span class="detail-label">Customer:</span> ${data.customerName}
+              </div>
+              <div class="detail-row">
+                <span class="detail-label">Start Date:</span> ${data.formattedStartDate}
+              </div>
+              <div class="detail-row">
+                <span class="detail-label">End Date:</span> ${data.formattedEndDate}
+              </div>
+            </div>
+
+            ${isConfirmed
+              ? `<p>Please ensure that <strong>${data.assetName}</strong> is ready for the customer on ${data.formattedStartDate}.</p>`
+              : `<p>The booking for <strong>${data.assetName}</strong> has been cancelled and the asset is now available for other bookings.</p>`
+            }
+
+            <div class="footer">
+              <p>This is an automated notification from your booking management system.</p>
+            </div>
+          </div>
+        </div>
+      </body>
+      </html>
+    `;
+  }
+
+  private generateStatusUpdateEmailForCustomer(data: {
+    customerName: string;
+    bookingId: string;
+    assetName: string;
+    formattedStartDate: string;
+    formattedEndDate: string;
+    status: 'Confirmed' | 'Cancelled';
+  }): string {
+    const isConfirmed = data.status === 'Confirmed';
+    const headerColor = isConfirmed ? '#2563eb' : '#dc2626';
+    const headerText = isConfirmed ? 'Your Booking is Confirmed!' : 'Your Booking Has Been Cancelled';
+    const statusBgColor = isConfirmed ? '#dbeafe' : '#fee2e2';
+    const statusTextColor = isConfirmed ? '#1e40af' : '#991b1b';
+
+    return `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <style>
+          body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+          .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+          .header { background-color: ${headerColor}; color: white; padding: 20px; border-radius: 8px 8px 0 0; }
+          .content { background-color: #f8fafc; padding: 30px; border-radius: 0 0 8px 8px; }
+          .booking-details { background-color: white; padding: 20px; border-radius: 8px; margin: 20px 0; }
+          .detail-row { margin: 10px 0; padding: 10px 0; border-bottom: 1px solid #e2e8f0; }
+          .detail-label { font-weight: bold; color: #64748b; }
+          .status-badge { background-color: ${statusBgColor}; color: ${statusTextColor}; padding: 8px 16px; border-radius: 6px; display: inline-block; font-weight: bold; }
+          .highlight { background-color: ${isConfirmed ? '#fef3c7' : '#fee2e2'}; padding: 15px; border-radius: 8px; margin: 20px 0; }
+          .footer { text-align: center; margin-top: 20px; color: #64748b; font-size: 14px; }
+        </style>
+      </head>
+      <body>
+        <div class="container">
+          <div class="header">
+            <h1>${headerText}</h1>
+          </div>
+          <div class="content">
+            <p>Hello ${data.customerName},</p>
+            <p>${isConfirmed
+              ? 'Great news! Your booking has been confirmed.'
+              : 'This email confirms that your booking has been cancelled.'
+            }</p>
+
+            <div style="text-align: center; margin: 20px 0;">
+              <span class="status-badge">${data.status.toUpperCase()}</span>
+            </div>
+
+            <div class="booking-details">
+              <h2 style="color: ${headerColor}; margin-top: 0;">Booking Details</h2>
+              <div class="detail-row">
+                <span class="detail-label">Booking ID:</span> ${data.bookingId}
+              </div>
+              <div class="detail-row">
+                <span class="detail-label">Asset:</span> ${data.assetName}
+              </div>
+              <div class="detail-row">
+                <span class="detail-label">Start Date:</span> ${data.formattedStartDate}
+              </div>
+              <div class="detail-row">
+                <span class="detail-label">End Date:</span> ${data.formattedEndDate}
+              </div>
+            </div>
+
+            <div class="highlight">
+              <strong>${isConfirmed ? 'Important:' : 'Note:'}</strong> ${isConfirmed
+                ? `Please be prepared to pick up <strong>${data.assetName}</strong> on ${data.formattedStartDate}.`
+                : 'If you cancelled by mistake or would like to create a new booking, please contact us.'
+              }
+            </div>
+
+            ${isConfirmed
+              ? '<p>If you have any questions or need to make changes, please contact us as soon as possible.</p>'
+              : '<p>Thank you for letting us know. We hope to serve you again in the future.</p>'
+            }
+
+            <p>We ${isConfirmed ? 'look forward to serving you' : 'appreciate your understanding'}!</p>
+
+            <div class="footer">
+              <p>This is an automated notification from your booking management system.</p>
             </div>
           </div>
         </div>
