@@ -13,8 +13,11 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 import { ArrowLeft, Calendar, CheckCircle2, Loader2 } from 'lucide-react';
+import { DynamicFormField } from '@/components/forms/DynamicFormField';
+import { useEffect, useMemo } from 'react';
 
-const CustomerBookingSchema = z.object({
+// Base schema for customer booking
+const BaseCustomerBookingSchema = z.object({
   startDate: z.string().min(1, 'Start date is required'),
   endDate: z.string().min(1, 'End date is required'),
   customerName: z.string().min(2, 'Name must be at least 2 characters'),
@@ -30,7 +33,7 @@ const CustomerBookingSchema = z.object({
   path: ['endDate'],
 });
 
-type CustomerBookingFormData = z.infer<typeof CustomerBookingSchema>;
+type CustomerBookingFormData = z.infer<typeof BaseCustomerBookingSchema> & Record<string, any>;
 
 export default function CustomerBookingPage() {
   const params = useParams();
@@ -52,8 +55,84 @@ export default function CustomerBookingPage() {
     tenantId: response.body.tenantId,
   } : null;
 
+  // Fetch forms for this asset
+  const { data: formsResponse, isLoading: isLoadingForms } = client.settings.form.getFormsForAsset.useQuery({
+    queryKey: ['forms-for-asset', assetId],
+    queryData: {
+      params: { assetId },
+    },
+    enabled: !!assetId,
+  });
+
+  const forms = formsResponse?.status === 200 ? formsResponse.body.forms : [];
+
+  // Build dynamic schema based on forms
+  const dynamicSchema = useMemo(() => {
+    let schema = BaseCustomerBookingSchema.shape;
+    const dynamicFields: Record<string, z.ZodTypeAny> = {};
+
+    forms.forEach((formData) => {
+      formData.fields.forEach((field) => {
+        const fieldKey = `form_${formData.form.id}_${field.id}`;
+
+        // Create appropriate zod validator based on field type
+        let fieldSchema: z.ZodTypeAny;
+
+        switch (field.type) {
+          case 'number':
+            fieldSchema = z.coerce.number();
+            break;
+          case 'text':
+          case 'textarea':
+          case 'time':
+            fieldSchema = z.string();
+            break;
+          case 'date':
+            fieldSchema = z.string();
+            break;
+          case 'date_range':
+            fieldSchema = z.object({
+              start: z.string().optional(),
+              end: z.string().optional(),
+            });
+            break;
+          case 'range':
+            fieldSchema = z.number();
+            break;
+          case 'boolean':
+            fieldSchema = z.boolean();
+            break;
+          default:
+            fieldSchema = z.string();
+        }
+
+        // Make field required if specified
+        if (field.required) {
+          if (field.type === 'boolean') {
+            fieldSchema = fieldSchema;
+          } else if (field.type === 'date_range') {
+            fieldSchema = z.object({
+              start: z.string().min(1, `${field.name} start date is required`),
+              end: z.string().min(1, `${field.name} end date is required`),
+            });
+          } else if (field.type === 'number') {
+            fieldSchema = z.coerce.number({ required_error: `${field.name} is required` });
+          } else {
+            fieldSchema = z.string().min(1, `${field.name} is required`);
+          }
+        } else {
+          fieldSchema = fieldSchema.optional();
+        }
+
+        dynamicFields[fieldKey] = fieldSchema;
+      });
+    });
+
+    return BaseCustomerBookingSchema.extend(dynamicFields);
+  }, [forms]);
+
   const form = useForm<CustomerBookingFormData>({
-    resolver: zodResolver(CustomerBookingSchema),
+    resolver: zodResolver(dynamicSchema),
     defaultValues: {
       startDate: '',
       endDate: '',
@@ -103,7 +182,7 @@ export default function CustomerBookingPage() {
     );
   };
 
-  if (isLoading) {
+  if (isLoading || isLoadingForms) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-slate-50">
         <div className="text-center">
@@ -255,6 +334,47 @@ export default function CustomerBookingPage() {
                     )}
                   />
                 </div>
+
+                {/* Dynamic Forms Section */}
+                {forms.length > 0 && (
+                  <>
+                    <Separator />
+                    {forms.map((formData) => (
+                      <div key={formData.form.id} className="space-y-4">
+                        <div>
+                          <h3 className="text-lg font-semibold text-slate-900">{formData.form.name}</h3>
+                          {formData.form.description && (
+                            <p className="text-sm text-slate-600 mt-1">{formData.form.description}</p>
+                          )}
+                          <div className="flex items-center gap-2 mt-2">
+                            <span className="text-xs px-2 py-1 rounded-full bg-blue-100 text-blue-700 font-medium">
+                              {formData.assignmentType === 'direct' && 'Asset Specific'}
+                              {formData.assignmentType === 'assetType' && 'Asset Type'}
+                              {formData.assignmentType === 'tag' && 'Tag Based'}
+                            </span>
+                          </div>
+                        </div>
+
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          {formData.fields.map((field) => {
+                            const fieldKey = `form_${formData.form.id}_${field.id}` as any;
+                            return (
+                              <div key={field.id} className={field.type === 'textarea' ? 'md:col-span-2' : ''}>
+                                <DynamicFormField
+                                  control={form.control}
+                                  name={fieldKey}
+                                  label={field.name}
+                                  type={field.type as any}
+                                  required={field.required}
+                                />
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    ))}
+                  </>
+                )}
 
                 {/* Important Notice */}
                 <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">

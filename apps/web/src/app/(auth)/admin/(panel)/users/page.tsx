@@ -102,7 +102,7 @@ export default function UsersPage() {
                 />
               ) : (
                 <CreateUserForm
-                  roles={roles?.body?.data || roles?.body || []}
+                  roles={roles?.body || []}
                   onClose={handleCloseDialog}
                   onSuccess={() => {
                     handleCloseDialog();

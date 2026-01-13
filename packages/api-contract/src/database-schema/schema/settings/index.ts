@@ -36,6 +36,7 @@ export type SelectTag = z.infer<typeof SelectTagSchema>;
 
 export const TagsRelations = relations(Tags, ({ many, one }) => ({
   asset: many(AssetHasTags),
+  bookingForms: many(TagHasBookingForms),
   tenant: one(Tenant, {
     fields: [Tags.tenantId],
     references: [Tenant.id],
@@ -65,6 +66,7 @@ export type UpdateAssetType = z.infer<typeof UpdateAssetTypeSchema>;
 
 export const AssetTypeRelations = relations(AssetType, ({ one, many }) => ({
     assetTypeHasProperties: many(AssetTypeHasProperties),
+    bookingForms: many(AssetTypeHasBookingForms),
     tenant: one(Tenant,{
         fields: [AssetType.tenantId],
         references: [Tenant.id]
@@ -149,7 +151,9 @@ export const BookingFormRelations = relations(BookingForm, ({ one,many }) => ({
         fields:[BookingForm.tenantId],
         references: [Tenant.id]
     }),
-    assetsToForms: many(AssetHasBookingForms)
+    assetsToForms: many(AssetHasBookingForms),
+    assetTypesToForms: many(AssetTypeHasBookingForms),
+    tagsToForms: many(TagHasBookingForms)
 }));
 
 export const BookingFormField = mysqlTable("booking_form_fields", {
@@ -177,6 +181,59 @@ export const BookingFormFieldRelations = relations(BookingFormField, ({ one }) =
     }),
 }))
 
+
+// AssetType has booking forms junction table
+export const AssetTypeHasBookingForms = mysqlTable("asset_type_has_booking_forms", {
+    id: bigint("id", { mode: "number", unsigned: true }).autoincrement().primaryKey(),
+    assetTypeId: bigint("asset_type_id", { mode: 'number', unsigned: true}).notNull().references(() => AssetType.id, { onDelete: 'cascade' }),
+    bookingFormId: bigint("booking_form_id", { mode: 'number', unsigned: true}).notNull().references(() => BookingForm.id, { onDelete: 'cascade' }),
+}, (table) => ({
+    assetTypeFormUniqueIdx: uniqueIndex("asset_type_form_unique").on(table.assetTypeId, table.bookingFormId),
+}));
+
+export const InsertAssetTypeHasBookingFormsSchema = createInsertSchema(AssetTypeHasBookingForms);
+export const SelectAssetTypeHasBookingFormsSchema = createSelectSchema(AssetTypeHasBookingForms);
+
+export type InsertAssetTypeHasBookingForms = z.infer<typeof InsertAssetTypeHasBookingFormsSchema>;
+export type SelectAssetTypeHasBookingForms = z.infer<typeof SelectAssetTypeHasBookingFormsSchema>;
+
+export const AssetTypeHasBookingFormsRelations = relations(AssetTypeHasBookingForms, ({ one }) => ({
+    assetType: one(AssetType, {
+        fields: [AssetTypeHasBookingForms.assetTypeId],
+        references: [AssetType.id],
+    }),
+    bookingForm: one(BookingForm, {
+        fields: [AssetTypeHasBookingForms.bookingFormId],
+        references: [BookingForm.id],
+    }),
+}));
+
+
+// Tag has booking forms junction table
+export const TagHasBookingForms = mysqlTable("tag_has_booking_forms", {
+    id: bigint("id", { mode: "number", unsigned: true }).autoincrement().primaryKey(),
+    tagId: bigint("tag_id", { mode: 'number', unsigned: true}).notNull().references(() => Tags.id, { onDelete: 'cascade' }),
+    bookingFormId: bigint("booking_form_id", { mode: 'number', unsigned: true}).notNull().references(() => BookingForm.id, { onDelete: 'cascade' }),
+}, (table) => ({
+    tagFormUniqueIdx: uniqueIndex("tag_form_unique").on(table.tagId, table.bookingFormId),
+}));
+
+export const InsertTagHasBookingFormsSchema = createInsertSchema(TagHasBookingForms);
+export const SelectTagHasBookingFormsSchema = createSelectSchema(TagHasBookingForms);
+
+export type InsertTagHasBookingForms = z.infer<typeof InsertTagHasBookingFormsSchema>;
+export type SelectTagHasBookingForms = z.infer<typeof SelectTagHasBookingFormsSchema>;
+
+export const TagHasBookingFormsRelations = relations(TagHasBookingForms, ({ one }) => ({
+    tag: one(Tags, {
+        fields: [TagHasBookingForms.tagId],
+        references: [Tags.id],
+    }),
+    bookingForm: one(BookingForm, {
+        fields: [TagHasBookingForms.bookingFormId],
+        references: [BookingForm.id],
+    }),
+}));
 
 
 

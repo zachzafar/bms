@@ -124,9 +124,11 @@ export const AssetHasTagsRelations = relations(AssetHasTags, ({ one }) => ({
 
 export const AssetHasBookingForms = mysqlTable("asset_has_booking_forms", {
     id: bigint("id", { mode: "number", unsigned: true }).autoincrement().primaryKey(),
-    assetId: varchar("tenant_id", { length: 255 }).notNull().references(() => Asset.id),
-    bookingFormId: bigint("booking_form_id",{mode: 'number', unsigned: true}).references(() => BookingForm.id)
-})
+    assetId: varchar("asset_id", { length: 255 }).notNull().references(() => Asset.id, { onDelete: 'cascade' }),
+    bookingFormId: bigint("booking_form_id",{mode: 'number', unsigned: true}).notNull().references(() => BookingForm.id, { onDelete: 'cascade' })
+}, (table) => ({
+    assetFormUniqueIdx: uniqueIndex("asset_form_unique").on(table.assetId, table.bookingFormId),
+}))
 
 export const AssetHasBookingFormsRelations = relations(AssetHasBookingForms, ({ one }) => ({
     asset: one(Asset, {
