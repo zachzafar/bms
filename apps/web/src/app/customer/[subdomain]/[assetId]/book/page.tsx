@@ -16,24 +16,24 @@ import { ArrowLeft, Calendar, CheckCircle2, Loader2 } from 'lucide-react';
 import { DynamicFormField } from '@/components/forms/DynamicFormField';
 import { useEffect, useMemo } from 'react';
 
-// Base schema for customer booking
-const BaseCustomerBookingSchema = z.object({
+// Base schema for customer booking (without refinement)
+const BaseCustomerBookingObjectSchema = z.object({
   startDate: z.string().min(1, 'Start date is required'),
   endDate: z.string().min(1, 'End date is required'),
   customerName: z.string().min(2, 'Name must be at least 2 characters'),
   customerEmail: z.string().email('Invalid email address'),
   customerPhone: z.string().min(10, 'Phone number must be at least 10 characters'),
-}).refine((data) => {
+});
+
+// Date validation refinement function
+const dateRefinement = (data: any) => {
   if (data.startDate && data.endDate) {
     return new Date(data.endDate) >= new Date(data.startDate);
   }
   return true;
-}, {
-  message: 'End date must be after or equal to start date',
-  path: ['endDate'],
-});
+};
 
-type CustomerBookingFormData = z.infer<typeof BaseCustomerBookingSchema> & Record<string, any>;
+type CustomerBookingFormData = z.infer<typeof BaseCustomerBookingObjectSchema> & Record<string, any>;
 
 export default function CustomerBookingPage() {
   const params = useParams();
@@ -68,67 +68,90 @@ export default function CustomerBookingPage() {
 
   // Build dynamic schema based on forms
   const dynamicSchema = useMemo(() => {
-    let schema = BaseCustomerBookingSchema.shape;
     const dynamicFields: Record<string, z.ZodTypeAny> = {};
 
     forms.forEach((formData) => {
       formData.fields.forEach((field) => {
         const fieldKey = `form_${formData.form.id}_${field.id}`;
 
-        // Create appropriate zod validator based on field type
+        // Create appropriate zod validator based on field type and required status
         let fieldSchema: z.ZodTypeAny;
 
         switch (field.type) {
           case 'number':
-            fieldSchema = z.coerce.number();
+            if (field.required) {
+              fieldSchema = z.coerce.number({
+                required_error: `${field.name} is required`,
+                invalid_type_error: `${field.name} must be a number`
+              });
+            } else {
+              fieldSchema = z.coerce.number().optional();
+            }
             break;
+
           case 'text':
           case 'textarea':
           case 'time':
-            fieldSchema = z.string();
-            break;
           case 'date':
-            fieldSchema = z.string();
+            if (field.required) {
+              fieldSchema = z.string().min(1, `${field.name} is required`);
+            } else {
+              fieldSchema = z.string().optional();
+            }
             break;
-          case 'date_range':
-            fieldSchema = z.object({
-              start: z.string().optional(),
-              end: z.string().optional(),
-            });
-            break;
-          case 'range':
-            fieldSchema = z.number();
-            break;
-          case 'boolean':
-            fieldSchema = z.boolean();
-            break;
-          default:
-            fieldSchema = z.string();
-        }
 
-        // Make field required if specified
-        if (field.required) {
-          if (field.type === 'boolean') {
-            fieldSchema = fieldSchema;
-          } else if (field.type === 'date_range') {
-            fieldSchema = z.object({
-              start: z.string().min(1, `${field.name} start date is required`),
-              end: z.string().min(1, `${field.name} end date is required`),
-            });
-          } else if (field.type === 'number') {
-            fieldSchema = z.coerce.number({ required_error: `${field.name} is required` });
-          } else {
-            fieldSchema = z.string().min(1, `${field.name} is required`);
-          }
-        } else {
-          fieldSchema = fieldSchema.optional();
+          case 'date_range':
+            if (field.required) {
+              fieldSchema = z.object({
+                start: z.string().min(1, `${field.name} start date is required`),
+                end: z.string().min(1, `${field.name} end date is required`),
+              });
+            } else {
+              fieldSchema = z.object({
+                start: z.string().optional(),
+                end: z.string().optional(),
+              }).optional();
+            }
+            break;
+
+          case 'range':
+            if (field.required) {
+              fieldSchema = z.number({
+                required_error: `${field.name} is required`,
+                invalid_type_error: `${field.name} must be a number`
+              });
+            } else {
+              fieldSchema = z.number().optional();
+            }
+            break;
+
+          case 'boolean':
+            if (field.required) {
+              fieldSchema = z.boolean().refine((val) => val === true, {
+                message: `${field.name} must be checked`,
+              });
+            } else {
+              fieldSchema = z.boolean().optional();
+            }
+            break;
+
+          default:
+            if (field.required) {
+              fieldSchema = z.string().min(1, `${field.name} is required`);
+            } else {
+              fieldSchema = z.string().optional();
+            }
         }
 
         dynamicFields[fieldKey] = fieldSchema;
       });
     });
 
-    return BaseCustomerBookingSchema.extend(dynamicFields);
+    // Extend base schema with dynamic fields, then apply date validation
+    return BaseCustomerBookingObjectSchema.extend(dynamicFields).refine(dateRefinement, {
+      message: 'End date must be after or equal to start date',
+      path: ['endDate'],
+    });
   }, [forms]);
 
   const form = useForm<CustomerBookingFormData>({
