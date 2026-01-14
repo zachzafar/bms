@@ -178,7 +178,10 @@ export default function RolesPage() {
                 />
 
                 <div className="space-y-2">
-                  <FormLabel>Permissions</FormLabel>
+                  <label className="text-sm font-medium leading-none">
+                    Permissions
+                  </label>
+
                   <div className="grid grid-cols-2 gap-4 max-h-[300px] overflow-y-auto p-2 border rounded-md">
                     {availablePermissions.map((permission) => (
                       <FormField
@@ -195,7 +198,7 @@ export default function RolesPage() {
                                     field.onChange([...field.value, permission]);
                                   } else {
                                     field.onChange(
-                                      field.value?.filter((value) => value !== permission)
+                                      field.value.filter((value) => value !== permission)
                                     );
                                   }
                                 }}
@@ -210,6 +213,7 @@ export default function RolesPage() {
                     ))}
                   </div>
                 </div>
+
 
                 <div className="flex justify-end space-x-2">
                   <Button
@@ -233,7 +237,7 @@ export default function RolesPage() {
         </Dialog>
       </div>
 
-      <Card className= "bg-white border-white">
+      <Card className="bg-white border-white">
         <CardHeader>
           <CardTitle className="font-bold text-gray-900">Roles</CardTitle>
           <CardDescription className=" mt-2 text-gray-600">Manage user roles and their permissions</CardDescription>
@@ -284,7 +288,7 @@ export default function RolesPage() {
                           const confirmed = confirm(`Are you sure you want to delete the role "${role.name}"?`)
                           if (confirmed) {
                             deleteRole(
-                              { 
+                              {
                                 params: { roleId: Number(role.roleId) },
                                 body: {}
                               },
