@@ -72,7 +72,6 @@ export default function AssetsPage() {
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead className="w-[100px]">ID</TableHead>
               <TableHead>Name</TableHead>
               <TableHead>Type</TableHead>
               <TableHead>Requires Approval</TableHead>
@@ -86,7 +85,7 @@ export default function AssetsPage() {
               ))
             ) : (
               <TableRow>
-                <TableCell colSpan={6}>No assets found</TableCell>
+                <TableCell colSpan={4}>No assets found</TableCell>
               </TableRow>
             )}
           </TableBody>
@@ -138,32 +137,33 @@ export const Row = ({
   }, {} as Record<number, string | undefined>) ?? {};
 
   return (
-    <tr>
-  <td>{asset.id}</td>
-  <td>{asset.name}</td>
-  <td>
-    {asset.assetTypeId != null
-      ? assetTypeMap?.[asset.assetTypeId] ?? "Unknown"
-      : "Unknown"}
-  </td>
-  <td>{asset.requiresApproval ? "Yes" : "No"}</td>
-  <td className="flex justify-end gap-2">
-    <Link href={`/assets/${asset.id}`}>
-      <Button variant="ghost" size="sm">
-        <Pencil className="mr-2 h-4 w-4" />
-        Edit
-      </Button>
-    </Link>
-    <Button
-      variant="ghost"
-      size="sm"
-      onClick={handleDelete}
-      disabled={isPending}
-    >
-      <TrashIcon className="h-4 w-4 text-red-500" />
-    </Button>
-  </td>
-</tr>
+    <TableRow>
+      <TableCell>{asset.name}</TableCell>
+      <TableCell>
+        {asset.assetTypeId != null
+          ? assetTypeMap?.[asset.assetTypeId] ?? "Unknown"
+          : "Unknown"}
+      </TableCell>
+      <TableCell>{asset.requiresApproval ? "Yes" : "No"}</TableCell>
+      <TableCell className="text-right">
+        <div className="flex justify-end gap-2">
+          <Link href={`assets/${asset.id}`}>
+            <Button variant="ghost" size="sm">
+              <Pencil className="mr-2 h-4 w-4" />
+              Edit
+            </Button>
+          </Link>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={handleDelete}
+            disabled={isPending}
+          >
+            <TrashIcon className="h-4 w-4 text-red-500" />
+          </Button>
+        </div>
+      </TableCell>
+    </TableRow>
   );
 };
 
