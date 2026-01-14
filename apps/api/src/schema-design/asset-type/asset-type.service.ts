@@ -45,7 +45,13 @@ export class AssetTypeService {
     }
 
     async getAssetType(id: number) {
-        const assetType = await this.db.query.AssetType.findFirst({ where: (assetType, { eq }) => eq(assetType.id, id), with: { assetTypeHasProperties: { with: { assetProperty: true}}, } });
+        const assetType = await this.db.query.AssetType.findFirst({
+            where: (assetType, { eq }) => eq(assetType.id, id),
+            with: {
+                assetTypeHasProperties: { with: { assetProperty: true}},
+                bookingForms: { with: { bookingForm: true }}
+            }
+        });
 
         if (!assetType) {
             throw new NotFoundException('Asset type not found');
@@ -57,8 +63,9 @@ export class AssetTypeService {
             createdAt,
             updatedAt,
             assetTypeHasProperties,
+            bookingForms,
           } = assetType || {};
-       
+
         return {
             description,
             tenantId,
@@ -66,11 +73,12 @@ export class AssetTypeService {
             name,
             createdAt,
             updatedAt,
-            properties: assetTypeHasProperties?.map((relation) => relation.assetProperty) ?? []
+            properties: assetTypeHasProperties?.map((relation) => relation.assetProperty) ?? [],
+            forms: bookingForms?.map((relation) => relation.bookingForm) ?? []
         }
     }
 
-    async createAssetType(data: InsertAssetType, properties: number[]) {
+    async createAssetType(data: InsertAssetType, properties: number[], forms: number[]) {
         try {
             const result = await this.db.transaction(async (tx) => {
                 const [{ id }] = await tx
@@ -85,6 +93,17 @@ export class AssetTypeService {
                             properties.map(property => ({
                                 assetTypeId: id,
                                 assetPropertyId: property
+                            }))
+                        );
+                }
+
+                if (forms.length > 0) {
+                    await tx
+                        .insert(schema.AssetTypeHasBookingForms)
+                        .values(
+                            forms.map(formId => ({
+                                assetTypeId: id,
+                                bookingFormId: formId
                             }))
                         );
                 }
@@ -119,6 +138,20 @@ export class AssetTypeService {
                     properties.map(property => ({
                         assetTypeId: id,
                         assetPropertyId: property
+                    }))
+                );
+        }
+    }
+
+    async updateAssetTypeForms(id: number, forms: number[]) {
+        await this.db.delete(schema.AssetTypeHasBookingForms).where(eq(schema.AssetTypeHasBookingForms.assetTypeId, id)).execute()
+        if (forms.length > 0) {
+            await this.db
+                .insert(schema.AssetTypeHasBookingForms)
+                .values(
+                    forms.map(formId => ({
+                        assetTypeId: id,
+                        bookingFormId: formId
                     }))
                 );
         }

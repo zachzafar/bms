@@ -109,20 +109,29 @@ export default function AssetTypes() {
     if (editingAssetType?.status === 200) {
       reset({
         name: editingAssetType.body.assetType.name,
-        properties: editingAssetType.body.properties.map(item => item.id)
+        properties: editingAssetType.body.properties.map(item => item.id),
+        forms: editingAssetType.body.forms?.map(item => item.id) || []
       });
 
       // Set selected properties for MultiSelect
       const selectedProps = editingAssetType.body.properties.map(item => {
-
         const property = properties?.status === 200 &&
           properties.body.data.find(p => p.id === item.id);
         return property ? property.name : '';
       }).filter(Boolean);
 
       setSelectedProperties(selectedProps);
+
+      // Set selected forms for MultiSelect
+      const selectedFormNames = (editingAssetType.body.forms || []).map(item => {
+        const form = bookingForms?.status === 200 &&
+          bookingForms.body.data.find(f => f.id === item.id);
+        return form ? form.name : '';
+      }).filter(Boolean);
+
+      setSelectedForms(selectedFormNames);
     }
-  }, [editingAssetType, properties, reset]);
+  }, [editingAssetType, properties, bookingForms, reset]);
 
   const processForm = (data: AssetTypeWithProperties) => {
     // Convert selected property names to IDs

@@ -160,13 +160,30 @@ export const BookingFormField = mysqlTable("booking_form_fields", {
     id: bigint("id", { mode: "number", unsigned: true }).autoincrement().primaryKey(),
     formId: bigint("form_id",{ mode: 'number', unsigned: true}).notNull().references(() => BookingForm.id),
     name: varchar("name", { length: 255 }).notNull(),
-    type: mysqlEnum(['number','text','textarea','date','time',"date_range","range","boolean"]).notNull(),
+    type: mysqlEnum(['number','text','textarea','date','time',"date_range","range","boolean","select"]).notNull(),
     required: boolean("required").notNull(),
+    placeholder: varchar("placeholder", { length: 255 }),
+    helpText: text("help_text"),
+    minValue: varchar("min_value", { length: 100 }),
+    maxValue: varchar("max_value", { length: 100 }),
+    options: text("options"), // JSON array of options for select type
+    allowMultiple: boolean("allow_multiple").default(false), // true for checkbox (multi-select), false for radio (single-select)
+    displayOrder: bigint("display_order", { mode: 'number', unsigned: true }).default(0).notNull(),
 }, (table) => ({
     formIdx: index("form_idx").on(table.formId),
 }));
 
-export const InsertBookingFormFieldSchema = createInsertSchema(BookingFormField);
+export const InsertBookingFormFieldSchema = createInsertSchema(BookingFormField).extend({
+    options: z.string().optional().refine((val) => {
+        if (!val) return true;
+        try {
+            const parsed = JSON.parse(val);
+            return Array.isArray(parsed) && parsed.every(item => typeof item === 'string');
+        } catch {
+            return false;
+        }
+    }, { message: "Options must be a valid JSON array of strings" }),
+});
 export const SelectBookingFormFieldSchema = createSelectSchema(BookingFormField);
 export const UpdateBookingFormFieldSchema = InsertBookingFormFieldSchema.partial();
 

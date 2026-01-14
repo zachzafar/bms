@@ -1,14 +1,15 @@
 import { initContract } from "@ts-rest/core";
 
 import { z } from "zod";
-import { Asset, InsertAssetPropertySchema, InsertAssetTypeSchema, SelectAssetPropertySchema, SelectAssetTypeSchema, UpdateAssetTypeSchema } from "../../database-schema";
+import { Asset, InsertAssetPropertySchema, InsertAssetTypeSchema, SelectAssetPropertySchema, SelectAssetTypeSchema, UpdateAssetTypeSchema, SelectBookingFormSchema } from "../../database-schema";
 import { pagination } from "../utils";
 
 const c = initContract();
 
 export const AssetTypeWithPropertiesSchema = z.object({
     assetType: InsertAssetTypeSchema,
-    properties: z.array(z.number())
+    properties: z.array(z.number()),
+    forms: z.array(z.number())
 })
 
 export const SelectAssetTypeWithPropertiesSchema = z.object({
@@ -52,7 +53,8 @@ export const assetTypeContract = c.router({
         responses: {
             200: z.object({
                 assetType: SelectAssetTypeSchema,
-                properties: z.array(SelectAssetPropertySchema)
+                properties: z.array(SelectAssetPropertySchema),
+                forms: z.array(SelectBookingFormSchema)
             }),
             404: z.object({
                 message: z.string()
@@ -68,7 +70,8 @@ export const assetTypeContract = c.router({
         path: '/asset-type/:id',
         body: z.object({
             assetType: UpdateAssetTypeSchema,
-            properties: z.array(z.number())
+            properties: z.array(z.number()),
+            forms: z.array(z.number())
     }),
         responses: {
             200: z.null()
