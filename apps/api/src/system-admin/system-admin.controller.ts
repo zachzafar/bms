@@ -320,7 +320,7 @@ export class SystemAdminController {
   async createAssetType(): Promise<ReturnType<typeof tsRestHandler>> {
     return tsRestHandler(contract.systemAdmin.createAssetType, async ({ body }) => {
 
-      const id = await this.assetTypeService.createAssetType({ ...body.assetType }, body.properties);
+      const id = await this.assetTypeService.createAssetType({ ...body.assetType }, body.properties,[]);
       this.logger.log(`Created asset type with id ${id}`);
       return { status: 201, body: { id } };
     });
