@@ -1,3 +1,6 @@
+'use client'
+
+import { useEffect, useState } from 'react'
 import {
   SidebarProvider,
   SidebarTrigger,
@@ -11,6 +14,16 @@ export default function BookingsLayout({
 }: {
   children: React.ReactNode
 }) {
+  const [mounted, setMounted] = useState(false)
+
+  useEffect(() => {
+    setMounted(true)
+  }, [])
+
+  if (!mounted) {
+    return null
+  }
+
   return (
     <SidebarProvider
       style={{ '--sidebar-width': '14rem' } as React.CSSProperties}
@@ -26,9 +39,9 @@ export default function BookingsLayout({
           <AppHeader />
         </nav>
 
-        <main className="flex-1 p-4 md:p-6 flex flex-col gap-4 md:gap-8 overflow-auto">
+        <div className="flex-1 p-4 md:p-6 flex flex-col gap-4 md:gap-8 overflow-auto">
           {children}
-        </main>
+        </div>
       </SidebarInset>
     </SidebarProvider>
   )
