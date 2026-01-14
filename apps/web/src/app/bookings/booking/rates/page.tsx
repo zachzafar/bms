@@ -1,10 +1,9 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { authClient } from "@/lib/api/publicClient";
-import { rateContract } from "@repo/api-contract";
 
 import { z } from "zod";
 import { Button } from '@/components/ui/button';
@@ -32,8 +31,8 @@ import { ASSETS_QUERY_KEY, RATES_QUERY_KEY } from "@/lib/api/queryKeys";
 const rateSchema = z.object({
   name: z.string().min(1),
   description: z.string().optional(),
-  startDate: z.string(),
-  endDate: z.string(),
+  startDate: z.date(),
+  endDate: z.date(),
   minNights: z.coerce.number().optional(),
   maxNights: z.coerce.number().optional(),
   pricePerNight: z.coerce.number().optional(),
@@ -43,11 +42,11 @@ const rateSchema = z.object({
 
 type RateFormValues = z.infer<typeof rateSchema>;
 
-const defaultFormValues: RateFormValues = {
+const defaultFormValues: Partial<RateFormValues> = {
   name: '',
   description: '',
-  startDate: '',
-  endDate: '',
+  startDate: undefined,
+  endDate: undefined,
   minNights: undefined,
   maxNights: undefined,
   pricePerNight: undefined,
@@ -56,12 +55,14 @@ const defaultFormValues: RateFormValues = {
 };
 
 export default function RatesPage() {
-  const queryClient = authClient.useQueryClient();
   const { data: rateData, refetch } = authClient.rates.getRates.useQuery({ queryKey: RATES_QUERY_KEY });
   const { mutate: createRate } = authClient.rates.createRate.useMutation();
   const { mutate: updateRate } = authClient.rates.updateRate.useMutation();
   const { mutate: deleteRate } = authClient.rates.deleteRate.useMutation();
   const { data: assetsResponse } = authClient.assets.getAssets.useQuery({ queryKey: ASSETS_QUERY_KEY });
+
+  const rates = rateData?.body.data ?? []
+  const assets = assetsResponse?.body.data ?? []
 
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingRateId, setEditingRateId] = useState<number | null>(null);
@@ -79,8 +80,8 @@ export default function RatesPage() {
 
     const payload = {
       ...values,
-      startDate: new Date(values.startDate).toISOString(),
-      endDate: new Date(values.endDate).toISOString(),
+      startDate: new Date(values.startDate),
+      endDate: new Date(values.endDate),
       pricePerNight: values.pricePerNight !== undefined ? String(values.pricePerNight) : undefined,
     };
 
@@ -93,7 +94,7 @@ export default function RatesPage() {
     if (editingRateId) {
       updateRate(
         {
-          params: { id: String(editingRateId) },
+          params: { id: editingRateId },
           body: { ...payload, id: editingRateId },
         },
         {
@@ -132,8 +133,8 @@ export default function RatesPage() {
     form.reset({
       name: rate.name,
       description: rate.description ?? "",
-      startDate: toDateInputFormat(rate.startDate),
-      endDate: toDateInputFormat(rate.endDate),
+      startDate: new Date(rate.startDate),
+      endDate: new Date(rate.endDate),
       minNights: rate.minNights ?? undefined,
       maxNights: rate.maxNights ?? undefined,
       pricePerNight: rate.pricePerNight ?? undefined,
@@ -148,7 +149,7 @@ export default function RatesPage() {
     if (confirm('Are you sure you want to delete this rate?')) {
       deleteRate(
         {
-          params: { id: String(id) },
+          params: { id },
           body: undefined,
         },
         {
@@ -196,7 +197,7 @@ export default function RatesPage() {
                       <FormLabel>Assets</FormLabel>
                       <FormControl>
                         <div className="flex flex-col gap-1 border rounded p-2 max-h-40 overflow-y-auto">
-                          {assetsResponse?.body.map((asset: any) => (
+                          {assets.map((asset: any) => (
                             <label key={asset.id} className="flex items-center gap-2">
                               <input
                                 type="checkbox"
@@ -224,15 +225,33 @@ export default function RatesPage() {
                     key={fieldName}
                     control={form.control}
                     name={fieldName as keyof RateFormValues}
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>{fieldName}</FormLabel>
-                        <FormControl>
-                          <Input {...field} type={['startDate', 'endDate'].includes(fieldName) ? 'date' : 'text'} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
+                    render={({ field }) => {
+                      const isDateField = ['startDate', 'endDate'].includes(fieldName);
+                      const value = isDateField && field.value instanceof Date
+                        ? field.value.toISOString().split('T')[0]
+                        : field.value;
+
+                      return (
+                        <FormItem>
+                          <FormLabel>{fieldName}</FormLabel>
+                          <FormControl>
+                            <Input
+                              {...field}
+                              value={value as string}
+                              type={isDateField ? 'date' : 'text'}
+                              onChange={(e) => {
+                                if (isDateField) {
+                                  field.onChange(new Date(e.target.value));
+                                } else {
+                                  field.onChange(e.target.value);
+                                }
+                              }}
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      );
+                    }}
                   />
                 ))}
                 <Button type="submit" className="w-full md:col-span-2">
@@ -258,8 +277,8 @@ export default function RatesPage() {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {rateData?.body?.length ? (
-              rateData.body.map((item: any) => {
+            {rates?.length ? (
+              rates.map((item: any) => {
                 const rate = item.rate;
                 const assetIds = item.assetIds || [];
 
@@ -267,7 +286,7 @@ export default function RatesPage() {
                   <TableRow key={rate.id}>
                     <TableCell>{rate.name}</TableCell>
                     <TableCell>
-                      {(assetsResponse?.body || [])
+                      {assets
                         .filter((a) => assetIds.includes(String(a.id)))
                         .map((a) => a.name)
                         .join(", ")}
