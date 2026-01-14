@@ -35,6 +35,7 @@ export const assetsContract = c.router({
       tenant: z.string(),
       asset: InsertAssetSchema.omit({ tenantId: true }),
       tagIds: z.array(z.number()).optional(),
+      formIds: z.array(z.number()).optional(),
     }),
     summary: 'Create a new asset',
   },
@@ -76,7 +77,10 @@ export const assetsContract = c.router({
     pathParams: z.object({
       id: z.string(),
     }),
-    body: InsertAssetSchema.partial(),
+    body: InsertAssetSchema.partial().extend({
+      tagIds: z.array(z.number()).optional(),
+      formIds: z.array(z.number()).optional(),
+    }),
     summary: 'Update an asset by id',
   },
   deleteAsset: {

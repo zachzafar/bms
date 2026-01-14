@@ -26,6 +26,7 @@ import { StorageService } from '@/lib/api/storage';
 const AssetTypeWithPropertiesSchema = z.object({
   name: z.string(),
   properties: z.array(z.number()),
+  forms: z.array(z.number()),
 })
 
 type AssetTypeWithProperties = z.infer<typeof AssetTypeWithPropertiesSchema>;
@@ -34,6 +35,7 @@ export default function AssetTypes() {
   const tenant = StorageService.getTenant();
   const [editingAssetTypeId, setEditingAssetType] = useState<number>();
   const [selectedProperties, setSelectedProperties] = useState<string[]>([]);
+  const [selectedForms, setSelectedForms] = useState<string[]>([]);
   const queryClient = authClient.useQueryClient();
 
   const { data: assetTypes, isLoading: isLoadingAssetTypes } = authClient.settings.assetType.getAssetTypes.useQuery({
@@ -42,6 +44,10 @@ export default function AssetTypes() {
 
   const { data: properties, isLoading: isLoadingProperties } = authClient.settings.assetType.getProperties.useQuery({
     queryKey: [PROPERTIES_QUERY_KEY]
+  });
+
+  const { data: bookingForms, isLoading: isLoadingForms } = authClient.settings.form.getForms.useQuery({
+    queryKey: ['bookingForms']
   });
 
   const { data: editingAssetType } = authClient.settings.assetType.getAssetType.useQuery({
@@ -58,6 +64,7 @@ export default function AssetTypes() {
       queryClient.invalidateQueries({ queryKey: [ASSET_TYPE_QUERY_KEY] });
       reset();
       setSelectedProperties([]);
+      setSelectedForms([]);
     },
     onError: (error) => {
       toast.error(`Error occurred: ${error instanceof Error ? error.message : 'Unknown error'}`);
@@ -70,6 +77,7 @@ export default function AssetTypes() {
       setEditingAssetType(undefined);
       queryClient.invalidateQueries({ queryKey: [ASSET_TYPE_QUERY_KEY] });
       reset();
+      setSelectedForms([]);
     },
     onError: (error) => {
       toast.error(`Error occurred: ${error instanceof Error ? error.message : 'Unknown error'}`);
@@ -90,7 +98,8 @@ export default function AssetTypes() {
     resolver: zodResolver(AssetTypeWithPropertiesSchema),
     defaultValues: {
       name: '',
-      properties: []
+      properties: [],
+      forms: []
     }
   });
 
@@ -116,19 +125,28 @@ export default function AssetTypes() {
   }, [editingAssetType, properties, reset]);
 
   const processForm = (data: AssetTypeWithProperties) => {
-    // Convert selected property names to IDs and required status
+    // Convert selected property names to IDs
     const propertyIds = selectedProperties.map(propName => {
       const property = properties?.status === 200 &&
         properties.body.data.find(p => p.name === propName);
-      return property ? property.id
-        : null;
+      return property ? property.id : null;
     })
 
     const nonNullPropertyIds = propertyIds.filter(prop => prop !== null);
 
+    // Convert selected form names to IDs
+    const formIds = selectedForms.map(formName => {
+      const form = bookingForms?.status === 200 &&
+        bookingForms.body.data.find(f => f.name === formName);
+      return form ? form.id : null;
+    })
+
+    const nonNullFormIds = formIds.filter(formId => formId !== null);
+
     const formData = {
       ...data,
-      properties: nonNullPropertyIds
+      properties: nonNullPropertyIds,
+      forms: nonNullFormIds
     };
 
     if (editingAssetType?.status === 200) {
@@ -137,7 +155,13 @@ export default function AssetTypes() {
         body: { ...formData, assetType: { name: formData.name } }
       });
     } else {
-      addAssetTypeMutation({ body: { assetType: { name: formData.name, tenantId: tenant?.id as string }, properties: formData.properties as number[] } });
+      addAssetTypeMutation({
+        body: {
+          assetType: { name: formData.name, tenantId: tenant?.id as string },
+          properties: formData.properties as number[],
+          forms: formData.forms as number[]
+        }
+      });
     }
   };
 
@@ -148,6 +172,8 @@ export default function AssetTypes() {
   const cancelEdit = () => {
     setEditingAssetType(undefined);
     reset();
+    setSelectedForms([]);
+    setSelectedProperties([]);
   };
 
   if (isLoadingAssetTypes || isLoadingProperties) {
@@ -200,6 +226,39 @@ export default function AssetTypes() {
                                 value={property.name}
                               >
                                 {property.name}
+                              </MultiSelectorItem>
+                            ))}
+                        </MultiSelectorList>
+                      </MultiSelectorContent>
+                    </MultiSelector>
+
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="forms"
+                render={() => (
+                  <FormItem>
+                    <FormLabel>Booking Forms</FormLabel>
+
+                    <MultiSelector
+                      values={selectedForms}
+                      onValuesChange={setSelectedForms}
+                    >
+                      <MultiSelectorTrigger>
+                        <MultiSelectorInput placeholder="Select Booking Forms..." />
+                      </MultiSelectorTrigger>
+                      <MultiSelectorContent>
+                        <MultiSelectorList>
+                          {bookingForms?.status === 200 &&
+                            bookingForms.body.data.map((form) => (
+                              <MultiSelectorItem
+                                key={form.id}
+                                value={form.name}
+                              >
+                                {form.name}
                               </MultiSelectorItem>
                             ))}
                         </MultiSelectorList>

@@ -24,16 +24,30 @@ import { SubmitHandler, useForm } from 'react-hook-form';
 import { Plus, Trash2 } from 'lucide-react';
 import { authClient } from '@/lib/api/publicClient';
 import { toast } from 'sonner';
-import { InsertTag, InsertTagSchema } from '@repo/api-contract';
+import { InsertTagSchema } from '@repo/api-contract';
 import { Textarea } from '@/components/ui/textarea';
 import { useQueryClient } from '@tanstack/react-query';
-import { StorageService } from '@/lib/api/storage';
+import {
+  MultiSelector,
+  MultiSelectorTrigger,
+  MultiSelectorInput,
+  MultiSelectorContent,
+  MultiSelectorList,
+  MultiSelectorItem,
+} from '@/components/extension/multi-select';
+import { z } from 'zod';
+import { useState } from 'react';
+
+const TagWithFormsSchema = InsertTagSchema.extend({
+  forms: z.array(z.number()).optional(),
+});
+
+type TagWithForms = z.infer<typeof TagWithFormsSchema>;
 
 
 
 export default function Tags() {
-  const tenantId = StorageService.getTenant()?.id;
-  console.log('tenantId:', tenantId);
+  const [selectedForms, setSelectedForms] = useState<string[]>([]);
 
   const queryClient = useQueryClient();
 
@@ -42,6 +56,7 @@ export default function Tags() {
       toast('Tag created successfully');
       queryClient.invalidateQueries({ queryKey: ['tags'] });
       form.reset();
+      setSelectedForms([]);
     },
     onError: (error) => {
       toast(`Error creating tag: ${error}`);
@@ -51,6 +66,10 @@ export default function Tags() {
   const { data: tags, isLoading } = authClient.settings.tags.getTags.useQuery({
     queryKey: ['tags']
   })
+
+  const { data: bookingForms, isLoading: isLoadingForms } = authClient.settings.form.getForms.useQuery({
+    queryKey: ['bookingForms']
+  });
 
   const { mutate: deleteTag } = authClient.settings.tags.deleteTag.useMutation({
     onSuccess: () => {
@@ -62,22 +81,29 @@ export default function Tags() {
     }
   });
 
-  const form = useForm<InsertTag>({
-    resolver: zodResolver(InsertTagSchema),
+  const form = useForm<TagWithForms>({
+    resolver: zodResolver(TagWithFormsSchema),
+    defaultValues: {
+      forms: []
+    }
   });
 
-  console.log(form.formState.errors); // Log the errors in the form
-
-  const processForm: SubmitHandler<InsertTag> = (data) => {
-    console.log("Form Data inside processForm:", data);
-    
-    const body = { ...data}; // Create the payload
-
-    console.log('Creating tag with data:', { body });
-
-    createTag({
-      body
+  const processForm: SubmitHandler<TagWithForms> = (data) => {
+    // Convert selected form names to IDs
+    const formIds = selectedForms.map(formName => {
+      const form = bookingForms?.status === 200 &&
+        bookingForms.body.data.find(f => f.name === formName);
+      return form ? form.id : null;
     });
+
+    const nonNullFormIds = formIds.filter(formId => formId !== null);
+
+    const body = {
+      ...data,
+      forms: nonNullFormIds as number[]
+    };
+
+    createTag({ body });
   };
 
   if (isLoading) {
@@ -116,6 +142,38 @@ export default function Tags() {
                     <FormControl>
                       <Textarea {...field} value={field.value ?? ''} />
                     </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="forms"
+                render={() => (
+                  <FormItem>
+                    <FormLabel>Booking Forms</FormLabel>
+                    <MultiSelector
+                      values={selectedForms}
+                      onValuesChange={setSelectedForms}
+                    >
+                      <MultiSelectorTrigger>
+                        <MultiSelectorInput placeholder="Select Booking Forms..." />
+                      </MultiSelectorTrigger>
+                      <MultiSelectorContent>
+                        <MultiSelectorList>
+                          {bookingForms?.status === 200 &&
+                            bookingForms.body.data.map((form) => (
+                              <MultiSelectorItem
+                                key={form.id}
+                                value={form.name}
+                              >
+                                {form.name}
+                              </MultiSelectorItem>
+                            ))}
+                        </MultiSelectorList>
+                      </MultiSelectorContent>
+                    </MultiSelector>
                     <FormMessage />
                   </FormItem>
                 )}

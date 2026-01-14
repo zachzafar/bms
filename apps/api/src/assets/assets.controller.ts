@@ -60,7 +60,8 @@ export class AssetsController {
 
             const id = await this.assetService.createAsset(
                 { ...body.asset, tenantId },
-                body.tagIds // pass tags here
+                body.tagIds, // pass tags here
+                body.formIds // pass forms here
             );
 
             this.logger.log(`Created asset with id: ${id}`);

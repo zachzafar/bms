@@ -98,7 +98,7 @@ export class AssetsService {
   }
 
 
-  async createAsset(data: InsertAsset, tagIds?: number[]) {
+  async createAsset(data: InsertAsset, tagIds?: number[], formIds?: number[]) {
 
     try {
       const result = await this.db
@@ -117,6 +117,15 @@ export class AssetsService {
         }
       }
 
+      if (formIds && formIds.length > 0) {
+        for (const formId of formIds) {
+          await this.db.insert(schema.AssetHasBookingForms).values({
+            assetId,
+            bookingFormId: formId,
+          });
+        }
+      }
+
       return assetId;
     } catch (e) {
       throw new InternalServerErrorException(
@@ -125,13 +134,48 @@ export class AssetsService {
     }
   }
 
-  async updateAsset(id: string, data: UpdateAsset) {
-    let assetTypeId = data.assetTypeId ? (data.assetTypeId) : undefined;
+  async updateAsset(id: string, data: UpdateAsset & { tagIds?: number[], formIds?: number[] }) {
+    const { tagIds, formIds, ...assetData } = data;
+    let assetTypeId = assetData.assetTypeId ? (assetData.assetTypeId) : undefined;
+
     await this.db
       .update(schema.Asset)
-      .set({ ...data, assetTypeId })
+      .set({ ...assetData, assetTypeId })
       .where(eq(schema.Asset.id, id))
       .execute();
+
+    // Update tags if provided
+    if (tagIds !== undefined) {
+      // Delete existing tags
+      await this.db.delete(schema.AssetHasTags).where(eq(schema.AssetHasTags.assetId, id));
+
+      // Insert new tags
+      if (tagIds.length > 0) {
+        for (const tagId of tagIds) {
+          await this.db.insert(schema.AssetHasTags).values({
+            assetId: id,
+            tagId: tagId,
+          });
+        }
+      }
+    }
+
+    // Update forms if provided
+    if (formIds !== undefined) {
+      // Delete existing forms
+      await this.db.delete(schema.AssetHasBookingForms).where(eq(schema.AssetHasBookingForms.assetId, id));
+
+      // Insert new forms
+      if (formIds.length > 0) {
+        for (const formId of formIds) {
+          await this.db.insert(schema.AssetHasBookingForms).values({
+            assetId: id,
+            bookingFormId: formId,
+          });
+        }
+      }
+    }
+
     return this.getAssetById(id);
   }
 
@@ -165,7 +209,12 @@ export class AssetsService {
         .delete(schema.AssetHasProperties)
         .where(eq(schema.AssetHasProperties.assetId, id));
 
-      // Step 6: Finally delete the asset
+      // Step 6: Delete from asset_has_booking_forms
+      await tx
+        .delete(schema.AssetHasBookingForms)
+        .where(eq(schema.AssetHasBookingForms.assetId, id));
+
+      // Step 7: Finally delete the asset
       await tx.delete(schema.Asset).where(eq(schema.Asset.id, id));
     });
   }

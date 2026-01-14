@@ -5,55 +5,109 @@ import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/com
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import {
+  MultiSelector,
+  MultiSelectorTrigger,
+  MultiSelectorInput,
+  MultiSelectorContent,
+  MultiSelectorList,
+  MultiSelectorItem,
+} from '@/components/extension/multi-select';
 import { authClient } from '@/lib/api/publicClient';
 import { toast } from 'sonner';
 import { SelectAsset } from '@repo/api-contract';
 
 function BasicInfo({ asset, refetch }: { asset: SelectAsset; refetch: () => void }) {
   const [name, setName] = useState(asset.name ?? '');
-  const [initialName, setInitialName] = useState(asset.name ?? '');
+  const [assetTypeId, setAssetTypeId] = useState<number | undefined>(asset.assetTypeId ?? undefined);
+  const [tagId, setTagId] = useState<number | undefined>(undefined);
+  const [selectedForms, setSelectedForms] = useState<string[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  // Initial values for comparison
+  const [initialValues, setInitialValues] = useState({
+    name: asset.name ?? '',
+    assetTypeId: asset.assetTypeId ?? undefined,
+    tagId: undefined as number | undefined,
+    forms: [] as string[]
+  });
+
   const { data: assetTypes } = authClient.settings.assetType.getAssetTypes.useQuery({
-  queryKey: ['assetType'],
-});
+    queryKey: ['assetType'],
+  });
 
-const assetTypeMap: Record<number, string | undefined> =
-  assetTypes?.body?.data.reduce((acc, type) => {
-    acc[type.id] = type.name;
-    return acc;
-  }, {} as Record<number, string | undefined>) ?? {};
+  const { data: assetTags } = authClient.settings.tags.getTags.useQuery({
+    queryKey: ['tags']
+  });
 
+  const { data: bookingForms } = authClient.settings.form.getForms.useQuery({
+    queryKey: ['bookingForms']
+  });
 
-  const { mutate: updateAssetName } = authClient.assets.updateAsset.useMutation({
+  const { mutate: updateAsset } = authClient.assets.updateAsset.useMutation({
     onSuccess: async () => {
-      toast.success('Asset name updated');
+      toast.success('Asset updated successfully');
       await refetch();
-      setInitialName(name); // update initial name so we know it's saved
-      setIsSubmitting(false)
+      // Update initial values
+      const formNames = selectedForms;
+      setInitialValues({
+        name,
+        assetTypeId,
+        tagId,
+        forms: formNames
+      });
+      setIsSubmitting(false);
     },
     onError: () => {
-      toast.error('Failed to update asset name');
+      toast.error('Failed to update asset');
       setIsSubmitting(false);
     },
   });
 
   useEffect(() => {
     setName(asset.name ?? '');
-    setInitialName(asset.name ?? '');
-  }, [asset.name]);
+    setAssetTypeId(asset.assetTypeId ?? undefined);
+
+    setInitialValues({
+      name: asset.name ?? '',
+      assetTypeId: asset.assetTypeId ?? undefined,
+      tagId: undefined,
+      forms: []
+    });
+  }, [asset]);
+
+  const hasChanges = () => {
+    return (
+      name !== initialValues.name ||
+      assetTypeId !== initialValues.assetTypeId ||
+      tagId !== initialValues.tagId ||
+      JSON.stringify(selectedForms) !== JSON.stringify(initialValues.forms)
+    );
+  };
 
   const handleSave = () => {
-    if (name !== initialName) {
+    if (hasChanges()) {
       setIsSubmitting(true);
-      updateAssetName({
+
+      // Convert selected form names to IDs
+      const formIds = selectedForms.map(formName => {
+        const form = bookingForms?.status === 200 &&
+          bookingForms.body.data.find(f => f.name === formName);
+        return form ? form.id : null;
+      }).filter(id => id !== null) as number[];
+
+      updateAsset({
         params: { id: asset.id },
-        body: { name },
+        body: {
+          name,
+          assetTypeId: assetTypeId ? Number(assetTypeId) : undefined,
+          tagIds: tagId ? [tagId] : undefined,
+          formIds: formIds.length > 0 ? formIds : undefined
+        },
       });
     }
   };
-
-
 
   return (
     <Card>
@@ -72,18 +126,84 @@ const assetTypeMap: Record<number, string | undefined> =
             disabled={isSubmitting}
           />
         </div>
+
         <div className="space-y-2">
-          <Label htmlFor="type">Asset Type</Label>
-          <Input
-            id="type"
-            name="type"
-            value={assetTypeMap[asset.assetTypeId!] ?? "Unknown"}
-            readOnly
-          />
+          <Label htmlFor="assetType">Asset Type</Label>
+          <Select
+            value={assetTypeId?.toString()}
+            onValueChange={(value) => setAssetTypeId(Number(value))}
+            disabled={isSubmitting}
+          >
+            <SelectTrigger id="assetType">
+              <SelectValue placeholder="Select asset type" />
+            </SelectTrigger>
+            <SelectContent>
+              {assetTypes?.status === 200 ? (
+                assetTypes.body.data.map((type) => (
+                  <SelectItem key={type.id} value={type.id.toString()}>
+                    {type.name}
+                  </SelectItem>
+                ))
+              ) : (
+                <SelectItem value="no-types">No Asset Types Found</SelectItem>
+              )}
+            </SelectContent>
+          </Select>
         </div>
-        {name !== initialName && (
+
+        <div className="space-y-2">
+          <Label htmlFor="tag">Tag</Label>
+          <Select
+            value={tagId?.toString()}
+            onValueChange={(value) => setTagId(Number(value))}
+            disabled={isSubmitting}
+          >
+            <SelectTrigger id="tag">
+              <SelectValue placeholder="Select tag" />
+            </SelectTrigger>
+            <SelectContent>
+              {assetTags?.status === 200 ? (
+                assetTags.body.data.map((tag) => (
+                  <SelectItem key={tag.id} value={tag.id.toString()}>
+                    {tag.name}
+                  </SelectItem>
+                ))
+              ) : (
+                <SelectItem value="no-tags">No Tags Found</SelectItem>
+              )}
+            </SelectContent>
+          </Select>
+        </div>
+
+        <div className="space-y-2">
+          <Label>Booking Forms</Label>
+          <MultiSelector
+            values={selectedForms}
+            onValuesChange={setSelectedForms}
+            disabled={isSubmitting}
+          >
+            <MultiSelectorTrigger>
+              <MultiSelectorInput placeholder="Select Booking Forms..." />
+            </MultiSelectorTrigger>
+            <MultiSelectorContent>
+              <MultiSelectorList>
+                {bookingForms?.status === 200 &&
+                  bookingForms.body.data.map((form) => (
+                    <MultiSelectorItem
+                      key={form.id}
+                      value={form.name}
+                    >
+                      {form.name}
+                    </MultiSelectorItem>
+                  ))}
+              </MultiSelectorList>
+            </MultiSelectorContent>
+          </MultiSelector>
+        </div>
+
+        {hasChanges() && (
           <Button onClick={handleSave} disabled={isSubmitting}>
-            Save Changes
+            {isSubmitting ? 'Saving...' : 'Save Changes'}
           </Button>
         )}
       </CardContent>
