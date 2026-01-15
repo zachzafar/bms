@@ -28,6 +28,8 @@ import { SystemAdminModule } from './system-admin/system-admin.module';
 import { InvoicesModule } from './billing/invoices/invoices.module';
 import { PaymentsModule } from './billing/payments/payments.module';
 import { ScheduleModule } from '@nestjs/schedule';
+import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
+import { APP_GUARD } from '@nestjs/core';
 var cors = require('cors');
 
 const allowAllCorsEndpoints = [
@@ -47,6 +49,10 @@ const allowAllCorsEndpoints = [
       envFilePath: '.env', // Path to your environment file
     }),
     ScheduleModule.forRoot(),
+    ThrottlerModule.forRoot([{
+      ttl: 60000, // Time window in milliseconds (60 seconds)
+      limit: 100, // Maximum number of requests per ttl
+    }]),
     AssetsModule,
     BookingModule,
     MaintenanceModule,
@@ -67,7 +73,15 @@ const allowAllCorsEndpoints = [
     PaymentsModule
   ],
   controllers: [AppController, SlotController],
-  providers: [AppService, ObjectStorageService, SlotService],
+  providers: [
+    AppService,
+    ObjectStorageService,
+    SlotService,
+    {
+      provide: APP_GUARD,
+      useClass: ThrottlerGuard,
+    },
+  ],
 })
 export class AppModule {
   configure(consumer: MiddlewareConsumer) {
