@@ -214,4 +214,20 @@ export class BookingController {
             return { status: 403 };
         });
     }
+
+    @Public()
+    @TsRestHandler(contract.booking.customerViewBooking)
+    async customerViewBooking(): Promise<ReturnType<typeof tsRestHandler>> {
+        return tsRestHandler(contract.booking.customerViewBooking, async ({ params }) => {
+            const { bookingId, token } = params;
+
+            // Validate the update token
+            if (await this.bookingService.validateUpdateToken(token, bookingId)) {
+                const booking = await this.bookingService.getBooking(bookingId);
+                return { status: 200, body: booking };
+            }
+
+            return { status: 403 };
+        });
+    }
 }

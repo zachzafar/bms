@@ -61,24 +61,58 @@ export class BookingService {
       await this.db.transaction(async (tx) => {
         let customerIdsToUse = [...customerIds];
 
-        // Create new customer if provided
+        // Create new customer if provided or find existing customer by email
         if (newCustomer) {
-          // Create user first
-          const [{ id: userId }] = await tx.insert(schema.User).values({
-            name: newCustomer.name,
-            email: newCustomer.email,
-            password: randomBytes(32).toString('hex'), // Random password for public customers
-            userType: 'customer',
-          }).$returningId();
+          // Check if user with this email already exists
+          const existingUser = await tx.query.User.findFirst({
+            where: (user, { eq }) => eq(user.email, newCustomer.email),
+          });
 
-          // Create customer details
-          const [{ id: customerId }] = await tx.insert(schema.Customer).values({
-            userId,
-            phone: newCustomer.phone,
-            tenantId: newCustomer.tenantId,
-          }).$returningId();
+          let userId: string;
 
-          customerIdsToUse.push(customerId);
+          if (existingUser) {
+            // User exists, check if they have a customer profile for this tenant
+            const existingCustomer = await tx.query.Customer.findFirst({
+              where: (customer, { eq, and }) =>
+                and(
+                  eq(customer.userId, existingUser.id),
+                  eq(customer.tenantId, newCustomer.tenantId)
+                ),
+            });
+
+            if (existingCustomer) {
+              // Customer profile exists for this tenant, use it
+              customerIdsToUse.push(existingCustomer.id);
+            } else {
+              // User exists but no customer profile for this tenant, create one
+              const [{ id: customerId }] = await tx.insert(schema.Customer).values({
+                userId: existingUser.id,
+                phone: newCustomer.phone,
+                tenantId: newCustomer.tenantId,
+              }).$returningId();
+
+              customerIdsToUse.push(customerId);
+            }
+          } else {
+            // User doesn't exist, create new user and customer
+            const [{ id: newUserId }] = await tx.insert(schema.User).values({
+              name: newCustomer.name,
+              email: newCustomer.email,
+              password: randomBytes(32).toString('hex'), // Random password for public customers
+              userType: 'customer',
+            }).$returningId();
+
+            userId = newUserId;
+
+            // Create customer details
+            const [{ id: customerId }] = await tx.insert(schema.Customer).values({
+              userId,
+              phone: newCustomer.phone,
+              tenantId: newCustomer.tenantId,
+            }).$returningId();
+
+            customerIdsToUse.push(customerId);
+          }
         }
 
         // Fetch existing customers
@@ -191,6 +225,15 @@ export class BookingService {
 
       const { booking, assets: asset, users: customer, customer_details, booking_upate_token } = bookingData;
 
+      // Get tenant details including subdomain
+      const tenant = await this.db.query.Tenant.findFirst({
+        where: (t, { eq }) => eq(t.id, asset.tenantId),
+      });
+
+      if (!tenant) {
+        throw new NotFoundException('Tenant not found');
+      }
+
       // Get tenant admins
       const tenantAdmins = await this.db
         .select({
@@ -221,10 +264,7 @@ export class BookingService {
         day: 'numeric',
       });
 
-      // Create email HTML template for customer
-      const updateUrl = `${process.env.FRONTEND_URL}/booking/update-booking-by-token/${booking_upate_token.token}`;
-      // const cancelUrl = `${process.env.FRONTEND_URL}/booking/cancel-booking-by-token/${booking_upate_token.token}`;
-
+      const updateUrl = `${process.env.FRONTEND_URL}/customer/${tenant.subdomain}/booking/${booking.id}/${booking_upate_token.token}`;
       const isPending = booking.status === 'Pending';
       const headerColor = isPending ? '#FF9800' : '#4CAF50';
       const title = isPending ? 'Booking Received - Awaiting Confirmation' : 'Booking Confirmation';
@@ -286,7 +326,7 @@ export class BookingService {
               </div>
 
               <div class="actions">
-                <a href="${updateUrl}" class="btn btn-primary">Update Booking</a>
+                <a href="${updateUrl}" class="btn btn-primary">View & Update Booking</a>
               </div>
 
               ${isPending ? '<p><strong>Note:</strong> Your booking is pending and will be confirmed by our team shortly. You will receive another email once it has been confirmed.</p>' : ''}

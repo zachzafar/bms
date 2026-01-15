@@ -228,7 +228,8 @@ export const bookingContract = c.router({
       token:z.string(),
     }),
     responses: {
-      200: ExtendedSelectBookingSchema
+      200: ExtendedSelectBookingSchema,
+      403: z.undefined()
     }
   },
 

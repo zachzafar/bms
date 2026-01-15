@@ -51,10 +51,10 @@ export default function EditBookingPage() {
   const [success, setSuccess] = useState(false);
   const [cancelled, setCancelled] = useState(false);
 
-  const { data: bookingResponse, isLoading, error: queryError } = client.booking.getBooking.useQuery({
+  const { data: bookingResponse, isLoading, error: queryError } = client.booking.customerViewBooking.useQuery({
     queryKey: ['booking', bookingId],
     queryData: {
-      params: { id: bookingId },
+      params: {  bookingId, token: updateToken },
     },
   });
 
