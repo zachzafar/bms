@@ -36,12 +36,29 @@ export type UpdateBooking = z.infer<typeof UpdateBookingSchema>;
 
 export const BookingFormFieldValue = mysqlTable("booking_form_field_value", {
     id: bigint("id", { mode: "number", unsigned: true }).autoincrement().primaryKey(),
-    bookingId: varchar("tenant_id", { length: 255 }).notNull().references(() => Booking.id),
+    bookingId: varchar("booking_id", { length: 255 }).notNull().references(() => Booking.id),
     formFieldId: bigint("form_field_id", { mode: 'number', unsigned: true}).notNull().references(() => BookingFormField.id),
     value: text("value").notNull(),
 }, (table) => ({
     bookingIdx: index("booking_idx").on(table.bookingId),
     formFieldIdx: index("form_field_idx").on(table.formFieldId),
+}));
+
+export const InsertBookingFormFieldValueSchema = createInsertSchema(BookingFormFieldValue);
+export const SelectBookingFormFieldValueSchema = createSelectSchema(BookingFormFieldValue);
+
+export type InsertBookingFormFieldValue = z.infer<typeof InsertBookingFormFieldValueSchema>;
+export type SelectBookingFormFieldValue = z.infer<typeof SelectBookingFormFieldValueSchema>;
+
+export const BookingFormFieldValueRelations = relations(BookingFormFieldValue, ({ one }) => ({
+    booking: one(Booking, {
+        fields: [BookingFormFieldValue.bookingId],
+        references: [Booking.id],
+    }),
+    formField: one(BookingFormField, {
+        fields: [BookingFormFieldValue.formFieldId],
+        references: [BookingFormField.id],
+    }),
 }));
 
 export const BookingRelations = relations(Booking, ({ one,many }) => ({
@@ -50,6 +67,7 @@ export const BookingRelations = relations(Booking, ({ one,many }) => ({
             fields: [Booking.assetId],
             references: [Asset.id],
     }),
+    formFieldValues: many(BookingFormFieldValue),
 }))
 
 

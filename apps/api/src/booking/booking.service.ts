@@ -459,6 +459,23 @@ export class BookingService {
       throw new NotFoundException('Booking not found');
     }
 
+    // Fetch form field values for this booking
+    const formFieldValues = await this.db
+      .select({
+        id: schema.BookingFormFieldValue.id,
+        formFieldId: schema.BookingFormFieldValue.formFieldId,
+        value: schema.BookingFormFieldValue.value,
+        fieldName: schema.BookingFormField.name,
+        fieldType: schema.BookingFormField.type,
+      })
+      .from(schema.BookingFormFieldValue)
+      .innerJoin(
+        schema.BookingFormField,
+        eq(schema.BookingFormFieldValue.formFieldId, schema.BookingFormField.id)
+      )
+      .where(eq(schema.BookingFormFieldValue.bookingId, bookingId))
+      .execute();
+
     return {
       ...booking.booking,
       startDate: booking.booking.startDate,
@@ -466,6 +483,7 @@ export class BookingService {
       user: booking.users,
       customer: booking.customer_details,
       asset: booking.assets,
+      formResponses: formFieldValues,
     };
   }
 

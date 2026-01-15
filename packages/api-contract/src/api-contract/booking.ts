@@ -8,12 +8,21 @@ import { pagination } from './utils';
 
 const c = initContract();
 
+export const BookingFormResponseSchema = z.object({
+    id: z.number(),
+    formFieldId: z.number(),
+    value: z.string(),
+    fieldName: z.string(),
+    fieldType: z.string(),
+});
+
 export const ExtendedSelectBookingSchema = SelectBookingSchema.omit({ startDate: true, endDate: true }).extend({
     customer: SelectCustomerSchema,
     asset: SelectAssetSchema,
     user: SelectUserSchema.omit({ roles: true }),
     startDate: z.coerce.date(),
     endDate: z.coerce.date(),
+    formResponses: z.array(BookingFormResponseSchema).optional(),
 })
 
 export type ExtendedSelectBooking = z.infer<typeof ExtendedSelectBookingSchema>

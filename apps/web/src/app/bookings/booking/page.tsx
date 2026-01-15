@@ -7,7 +7,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue, } from '
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow, } from '@/components/ui/table';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { SearchIcon } from 'lucide-react';
-import { Label } from '@/components/ui/label';
 import { authClient } from '@/lib/api/publicClient';
 import { BOOKINGS_QUERY_KEY, RATES_QUERY_KEY } from '@/lib/api/queryKeys';
 import { ExtendedSelectBooking } from '@repo/api-contract'
@@ -30,6 +29,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { MoreHorizontal, CheckCircle, Clock, XCircle } from 'lucide-react';
+import { useRouter } from 'next/navigation';
 
 import { isSameDay } from "date-fns";
 
@@ -101,6 +101,7 @@ function getApplicableRate(
 }
 
 export default function Component() {
+  const router = useRouter();
   const currentTenant = StorageService.getTenant();
   const { page, pageSize, queryParams, goToPage, changePageSize } = usePagination(1, 10);
 
@@ -150,7 +151,6 @@ export default function Component() {
   const [filterStatus, setFilterStatus] = useState('All');
   const [sortBy, setSortBy] = useState('startDate');
   const [sortOrder, setSortOrder] = useState('asc');
-  const [selectedBooking, setSelectedBooking] = useState<ExtendedSelectBooking>();
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
 
   // Fetch raw rates response
@@ -734,87 +734,13 @@ export default function Component() {
 
                     <TableCell>
                       <div className="flex items-center gap-2">
-                        <Dialog>
-                          <DialogTrigger asChild>
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => setSelectedBooking(booking)}
-                            >
-                              View
-                            </Button>
-                          </DialogTrigger>
-                          <DialogContent>
-                            <DialogHeader>
-                              <DialogTitle>Booking Details</DialogTitle>
-                              <DialogDescription>
-                                Booking ID: {selectedBooking?.id}
-                              </DialogDescription>
-                            </DialogHeader>
-                            {selectedBooking && (
-                              <div className="grid gap-4 py-4">
-                                <div className="grid grid-cols-4 items-center gap-4">
-                                  <Label className="text-right font-semibold">Asset:</Label>
-                                  <div className="col-span-3">{selectedBooking.asset.name}</div>
-
-                                  <Label className="text-right font-semibold">Customer:</Label>
-                                  <div className="col-span-3">{selectedBooking.customer.id}</div>
-
-                                  <Label className="text-right font-semibold">Start Date:</Label>
-                                  <div className="col-span-3">
-                                    {new Date(selectedBooking.startDate).toISOString().replace('T', ' ').slice(0, 16)}
-                                  </div>
-
-                                  <Label className="text-right font-semibold">End Date:</Label>
-                                  <div className="col-span-3">
-                                    {new Date(selectedBooking.endDate).toISOString().replace('T', ' ').slice(0, 16)}
-                                  </div>
-
-                                  <Label className="text-right font-semibold">Status:</Label>
-                                  <div className="col-span-3">
-                                    <Badge className={getStatusBadge(selectedBooking.status || '').color}>
-                                      {selectedBooking.status}
-                                    </Badge>
-                                  </div>
-
-                                  <Label className="text-right font-semibold">Rate / Night:</Label>
-                                  <div className="col-span-3">
-                                    $
-                                    {(() => {
-                                      const nights = calculateNights(
-                                        selectedBooking.startDate,
-                                        selectedBooking.endDate
-                                      );
-                                      const rate = getApplicableRate(
-                                        selectedBooking.asset.id,
-                                        nights,
-                                        rates
-                                      );
-                                      return rate?.pricePerNight?.toFixed(2) ?? 'N/A';
-                                    })()}
-                                  </div>
-
-                                  <Label className="text-right font-semibold">Total Price:</Label>
-                                  <div className="col-span-3">
-                                    {(() => {
-                                      const nights = calculateNights(
-                                        selectedBooking.startDate,
-                                        selectedBooking.endDate
-                                      );
-                                      const rate = getApplicableRate(
-                                        selectedBooking.asset.id,
-                                        nights,
-                                        rates
-                                      );
-                                      const pricePerNight = rate?.pricePerNight ?? 0;
-                                      return `$${(pricePerNight * nights).toFixed(2)}`;
-                                    })()}
-                                  </div>
-                                </div>
-                              </div>
-                            )}
-                          </DialogContent>
-                        </Dialog>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => router.push(`/bookings/booking/${booking.id}`)}
+                        >
+                          View
+                        </Button>
 
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>

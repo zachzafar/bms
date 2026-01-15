@@ -248,11 +248,32 @@ export default function BookingDetailsPage() {
         </Card>
       </div>
 
-      {/* Booking Forms */}
+      {/* Form Responses */}
+      {booking.formResponses && booking.formResponses.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Form Responses</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {booking.formResponses.map((response) => (
+              <div key={response.id} className="border-b last:border-0 pb-3 last:pb-0">
+                <div className="text-sm font-medium text-muted-foreground mb-1">
+                  {response.fieldName}
+                </div>
+                <div className="font-medium">
+                  {response.value || '-'}
+                </div>
+              </div>
+            ))}
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Booking Forms (Available Forms) */}
       {forms.length > 0 && (
         <Card>
           <CardHeader>
-            <CardTitle>Booking Forms</CardTitle>
+            <CardTitle>Available Booking Forms</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
             {forms.map((formData: BookingFormData) => (
