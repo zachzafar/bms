@@ -4,6 +4,7 @@ import { tsRestHandler, TsRestHandler } from '@ts-rest/nest';
 import { contract } from '@repo/api-contract';
 import { TenantService } from 'src/tenant/tenant.service';
 import * as schema from "@repo/api-contract"
+import { Public } from 'src/auth/decorators/public.decorator';
 
 @Controller()
 export class FormsController {
@@ -35,6 +36,7 @@ export class FormsController {
 
         
     }
+
 
     @TsRestHandler(contract.settings.form.getForm)
     async getForm(@Headers() headers:any): Promise<ReturnType<typeof tsRestHandler>> {
@@ -155,6 +157,16 @@ export class FormsController {
             const tenantId = headers['x-tenant-id']
             await this.TenantService.validateTenantAccess(tenantId, schema.Asset, params.assetId)
 
+            const result = await this.formsService.getFormsForAsset(params.assetId);
+            return { status: 200, body: result };
+        });
+    }
+
+    // Public endpoint - Get forms for an asset (unauthenticated)
+    @Public()
+    @TsRestHandler(contract.settings.form.getFormsForAssetPublic)
+    async getFormsForAssetPublic(): Promise<ReturnType<typeof tsRestHandler>> {
+        return tsRestHandler(contract.settings.form.getFormsForAssetPublic, async ({ params }) => {
             const result = await this.formsService.getFormsForAsset(params.assetId);
             return { status: 200, body: result };
         });

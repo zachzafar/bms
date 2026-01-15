@@ -25,7 +25,8 @@ import { z } from 'zod';
 const AssetTypeWithPropertiesSchema = z.object({
   name: z.string(),
   properties: z.array(z.number()),
-}) 
+  forms: z.array(z.number()),
+})
 
 type AssetTypeWithProperties = z.infer<typeof AssetTypeWithPropertiesSchema>;
 
@@ -33,6 +34,7 @@ export default function AssetTypes({ tenantId }: { tenantId: string }) {
   
   const [editingAssetTypeId, setEditingAssetType] = useState<number>();
   const [selectedProperties, setSelectedProperties] = useState<string[]>([]);
+  const [selectedForms, setSelectedForms] = useState<string[]>([]);
   const queryClient = authClient.useQueryClient();
 
   const { data: assetTypes, isLoading: isLoadingAssetTypes } = authClient.systemAdmin.getAssetTypes.useQuery({ 
@@ -46,6 +48,13 @@ export default function AssetTypes({ tenantId }: { tenantId: string }) {
     queryKey: ['properties'],
     queryData: {
       params: { tenantId }
+    }
+  });
+
+  const { data: forms, isLoading: isLoadingForms } = authClient.systemAdmin.getForms.useQuery({
+    queryKey: ['forms'],
+    queryData: {
+      query: {}
     }
   });
 
@@ -63,6 +72,7 @@ export default function AssetTypes({ tenantId }: { tenantId: string }) {
       queryClient.invalidateQueries({ queryKey: ['assetTypes']});
       reset();
       setSelectedProperties([]);
+      setSelectedForms([]);
     },
     onError: (error) => {
       toast.error(`Error occurred: ${error instanceof Error ? error.message : 'Unknown error'}`);
@@ -95,7 +105,8 @@ export default function AssetTypes({ tenantId }: { tenantId: string }) {
     resolver: zodResolver(AssetTypeWithPropertiesSchema),
     defaultValues: {
        name: '' ,
-      properties: []
+      properties: [],
+      forms: []
     }
   });
 
@@ -105,25 +116,35 @@ export default function AssetTypes({ tenantId }: { tenantId: string }) {
     if (editingAssetType?.status === 200) {
       reset({
         name: editingAssetType.body.assetType.name,
-        properties: editingAssetType.body.properties.map(item => item.id)
+        properties: editingAssetType.body.properties.map(item => item.id),
+        forms: editingAssetType.body.forms.map(item => item.id)
       });
-      
+
       // Set selected properties for MultiSelect
       const selectedProps = editingAssetType.body.properties.map(item => {
 
-        const property = properties?.status === 200 && 
+        const property = properties?.status === 200 &&
           properties.body.data.find(p => p.id === item.id);
         return property ? property.name : '';
       }).filter(Boolean);
-      
+
       setSelectedProperties(selectedProps);
+
+      // Set selected forms for MultiSelect
+      const selectedFormItems = editingAssetType.body.forms.map(item => {
+        const form = forms?.status === 200 &&
+          forms.body.data.find(f => f.id === item.id);
+        return form ? form.name : '';
+      }).filter(Boolean);
+
+      setSelectedForms(selectedFormItems);
     }
-  }, [editingAssetType, properties, reset]);
+  }, [editingAssetType, properties, forms, reset]);
 
   const processForm = (data: AssetTypeWithProperties) => {
-    // Convert selected property names to IDs and required status
+    // Convert selected property names to IDs
     const propertyIds = selectedProperties.map(propName => {
-      const property = properties?.status === 200 && 
+      const property = properties?.status === 200 &&
         properties.body.data.find(p => p.name === propName);
       return property ?  property.id
          : null;
@@ -131,9 +152,19 @@ export default function AssetTypes({ tenantId }: { tenantId: string }) {
 
     const nonNullPropertyIds = propertyIds.filter(prop => prop !== null);
 
+    // Convert selected form names to IDs
+    const formIds = selectedForms.map(formName => {
+      const form = forms?.status === 200 &&
+        forms.body.data.find(f => f.name === formName);
+      return form ? form.id : null;
+    })
+
+    const nonNullFormIds = formIds.filter(formId => formId !== null);
+
     const formData = {
       ...data,
-      properties: nonNullPropertyIds
+      properties: nonNullPropertyIds,
+      forms: nonNullFormIds
     };
 
     if (editingAssetType?.status === 200) {
@@ -142,7 +173,7 @@ export default function AssetTypes({ tenantId }: { tenantId: string }) {
         body: {...formData, assetType: { name: formData.name}}
       });
     } else {
-      addAssetTypeMutation({ body: { assetType: { name:formData.name, tenantId }, properties: formData.properties as number[] }});
+      addAssetTypeMutation({ body: { assetType: { name:formData.name, tenantId }, properties: formData.properties as number[], forms: formData.forms as number[] }});
     }
   };
 
@@ -153,9 +184,11 @@ export default function AssetTypes({ tenantId }: { tenantId: string }) {
   const cancelEdit = () => {
     setEditingAssetType(undefined);
     reset();
+    setSelectedProperties([]);
+    setSelectedForms([]);
   };
 
-  if (isLoadingAssetTypes || isLoadingProperties) {
+  if (isLoadingAssetTypes || isLoadingProperties || isLoadingForms) {
     return <div>Loading...</div>;
   }
 
@@ -201,6 +234,29 @@ export default function AssetTypes({ tenantId }: { tenantId: string }) {
                           value={property.name}
                         >
                           {property.name}
+                        </MultiSelectorItem>
+                      ))}
+                    </MultiSelectorList>
+                  </MultiSelectorContent>
+                </MultiSelector>
+              </div>
+              <div className="space-y-2">
+                <Label>Forms</Label>
+                <MultiSelector
+                  values={selectedForms}
+                  onValuesChange={setSelectedForms}
+                >
+                  <MultiSelectorTrigger>
+                    <MultiSelectorInput placeholder="Select Forms..." />
+                  </MultiSelectorTrigger>
+                  <MultiSelectorContent>
+                    <MultiSelectorList>
+                      {forms?.status === 200 && forms.body.data.map((form) => (
+                        <MultiSelectorItem
+                          key={form.id}
+                          value={form.name}
+                        >
+                          {form.name}
                         </MultiSelectorItem>
                       ))}
                     </MultiSelectorList>

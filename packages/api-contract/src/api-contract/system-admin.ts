@@ -7,7 +7,8 @@ const c = initContract();
 
  const AssetTypeWithPropertiesSchema = z.object({
     assetType: InsertAssetTypeSchema,
-    properties: z.array(z.number())
+    properties: z.array(z.number()),
+    forms: z.array(z.number())
 })
 
  const SelectAssetTypeWithPropertiesSchema = z.object({
@@ -454,7 +455,8 @@ export const systemAdminContract = c.router({
         responses: {
             200: z.object({
                 assetType: SelectAssetTypeSchema,
-                properties: z.array(SelectAssetPropertySchema)
+                properties: z.array(SelectAssetPropertySchema),
+                forms: z.array(SelectBookingFormSchema)
             }),
             404: z.object({
                 message: z.string()
@@ -470,7 +472,8 @@ export const systemAdminContract = c.router({
         path: '/system-admin/asset-type/:id',
         body: z.object({
             assetType: UpdateAssetTypeSchema,
-            properties: z.array(z.coerce.number())
+            properties: z.array(z.coerce.number()),
+            forms: z.array(z.coerce.number())
     }),
         responses: {
             200: z.null()

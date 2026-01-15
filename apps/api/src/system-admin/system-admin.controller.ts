@@ -331,19 +331,18 @@ export class SystemAdminController {
   async getAssetType(): Promise<ReturnType<typeof tsRestHandler>> {
     return tsRestHandler(contract.systemAdmin.getAssetType, async ({ params }) => {
       console.log(`Asset type id: ${params.id}`);
-      const assetType = await this.assetTypeService.getAssetType((params.id));
-      console.log(`Asset type: ${assetType}`);
-      if (!assetType) {
+      const assetTypeData = await this.assetTypeService.getAssetType((params.id));
+      console.log(`Asset type: ${assetTypeData}`);
+      if (!assetTypeData) {
         return {
           status: 404 as const,
           body: { message: 'Asset type not found' }
         };
       }
-      console.log(assetType);
-      const { properties, ...assetTypeData } = assetType;
+      const { properties, forms ,...assetType } = assetTypeData;
       return {
         status: 200 as const,
-        body: { assetType: assetTypeData, properties }
+        body: { assetType , properties, forms }
       };
     });
   }

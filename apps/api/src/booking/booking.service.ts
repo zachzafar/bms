@@ -37,7 +37,8 @@ export class BookingService {
   async createBooking(
     booking: schema.InsertBooking,
     customerIds: number[],
-    newCustomer?: { name: string; email: string; phone?: string; tenantId: string }
+    newCustomer?: { name: string; email: string; phone?: string; tenantId: string },
+    formResponses?: Array<{ formFieldId: number; value: string }>
   ): Promise<string | void> {
     const startDate = booking.startDate;
     const endDate = booking.endDate;
@@ -146,6 +147,17 @@ export class BookingService {
           token: updateBookingToken,
           expiresAt: startDate
         })
+
+        // Save form responses if provided
+        if (formResponses && formResponses.length > 0) {
+          await tx.insert(schema.BookingFormFieldValue).values(
+            formResponses.map((response) => ({
+              bookingId: bookingId,
+              formFieldId: response.formFieldId,
+              value: response.value
+            }))
+          );
+        }
 
       });
 

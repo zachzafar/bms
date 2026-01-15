@@ -208,7 +208,11 @@ export const bookingContract = c.router({
         name: z.string(),
         email: z.string(),
         phone: z.string().optional(),
-      })
+      }),
+      formResponses: z.array(z.object({
+        formFieldId: z.number(),
+        value: z.string()
+      })).optional()
     }),
     responses: {
       201: z.object({ message: z.string()})

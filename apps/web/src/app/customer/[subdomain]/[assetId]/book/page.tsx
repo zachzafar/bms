@@ -56,7 +56,7 @@ export default function CustomerBookingPage() {
   } : null;
 
   // Fetch forms for this asset
-  const { data: formsResponse, isLoading: isLoadingForms } = client.settings.form.getFormsForAsset.useQuery({
+  const { data: formsResponse, isLoading: isLoadingForms } = client.settings.form.getFormsForAssetPublic.useQuery({
     queryKey: ['forms-for-asset', assetId],
     queryData: {
       params: { assetId },
@@ -170,6 +170,39 @@ export default function CustomerBookingPage() {
   const onSubmit = (data: CustomerBookingFormData) => {
     if (!asset) return;
 
+    // Collect form responses from the submitted data
+    const formResponses: Array<{ formFieldId: number; value: string }> = [];
+
+    forms.forEach((formData) => {
+      formData.fields.forEach((field) => {
+        const fieldKey = `form_${formData.form.id}_${field.id}`;
+        const fieldValue = data[fieldKey];
+
+        if (fieldValue !== undefined && fieldValue !== null && fieldValue !== '') {
+          // Handle different field types
+          let stringValue: string;
+
+          if (typeof fieldValue === 'object' && fieldValue !== null) {
+            // Handle date_range type
+            if ('start' in fieldValue && 'end' in fieldValue) {
+              stringValue = JSON.stringify(fieldValue);
+            } else {
+              stringValue = JSON.stringify(fieldValue);
+            }
+          } else if (typeof fieldValue === 'boolean') {
+            stringValue = fieldValue.toString();
+          } else {
+            stringValue = String(fieldValue);
+          }
+
+          formResponses.push({
+            formFieldId: field.id,
+            value: stringValue
+          });
+        }
+      });
+    });
+
     createBooking(
       {
         params: {
@@ -186,6 +219,7 @@ export default function CustomerBookingPage() {
             email: data.customerEmail,
             phone: data.customerPhone,
           },
+          formResponses: formResponses.length > 0 ? formResponses : undefined,
         },
       },
       {
@@ -369,13 +403,13 @@ export default function CustomerBookingPage() {
                           {formData.form.description && (
                             <p className="text-sm text-slate-600 mt-1">{formData.form.description}</p>
                           )}
-                          <div className="flex items-center gap-2 mt-2">
+                          {/* <div className="flex items-center gap-2 mt-2">
                             <span className="text-xs px-2 py-1 rounded-full bg-blue-100 text-blue-700 font-medium">
                               {formData.assignmentType === 'direct' && 'Asset Specific'}
                               {formData.assignmentType === 'assetType' && 'Asset Type'}
                               {formData.assignmentType === 'tag' && 'Tag Based'}
                             </span>
-                          </div>
+                          </div> */}
                         </div>
 
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
