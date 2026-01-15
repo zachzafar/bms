@@ -53,7 +53,7 @@ export default function AssetTypes({ tenantId }: { tenantId: string }) {
     queryKey: ['assetType', editingAssetTypeId],
     enabled: !!editingAssetTypeId,
     queryData: {
-      params: { id: editingAssetTypeId?.toString() as string}
+      params: { id: editingAssetTypeId as number}
     }
   });
 
@@ -112,7 +112,7 @@ export default function AssetTypes({ tenantId }: { tenantId: string }) {
       const selectedProps = editingAssetType.body.properties.map(item => {
 
         const property = properties?.status === 200 && 
-          properties.body.find(p => p.id === item.id);
+          properties.body.data.find(p => p.id === item.id);
         return property ? property.name : '';
       }).filter(Boolean);
       
@@ -124,7 +124,7 @@ export default function AssetTypes({ tenantId }: { tenantId: string }) {
     // Convert selected property names to IDs and required status
     const propertyIds = selectedProperties.map(propName => {
       const property = properties?.status === 200 && 
-        properties.body.find(p => p.name === propName);
+        properties.body.data.find(p => p.name === propName);
       return property ?  property.id
          : null;
     })
@@ -138,7 +138,7 @@ export default function AssetTypes({ tenantId }: { tenantId: string }) {
 
     if (editingAssetType?.status === 200) {
       updateAssetTypeMutation({
-        params: { id: editingAssetType.body.assetType.id.toString() },
+        params: { id: editingAssetType.body.assetType.id },
         body: {...formData, assetType: { name: formData.name}}
       });
     } else {
@@ -147,7 +147,7 @@ export default function AssetTypes({ tenantId }: { tenantId: string }) {
   };
 
   const handleDeleteAssetType = (id: number) => {
-    deleteAssetTypeMutation({ params: { id: id.toString() } });
+    deleteAssetTypeMutation({ params: { id } });
   };
 
   const cancelEdit = () => {
@@ -195,7 +195,7 @@ export default function AssetTypes({ tenantId }: { tenantId: string }) {
                   </MultiSelectorTrigger>
                   <MultiSelectorContent>
                     <MultiSelectorList>
-                      {properties?.status === 200 && properties.body.map((property) => (
+                      {properties?.status === 200 && properties.body.data.map((property) => (
                         <MultiSelectorItem
                           key={property.id}
                           value={property.name}
@@ -237,7 +237,7 @@ export default function AssetTypes({ tenantId }: { tenantId: string }) {
             </TableHeader>
             <TableBody>
               {assetTypes?.status === 200 ? (
-                assetTypes.body.map((type) => (
+                assetTypes.body.data.map((type) => (
                   <TableRow key={type.id}>
                     <TableCell>{type.name}</TableCell>
                     <TableCell>

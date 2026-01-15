@@ -145,7 +145,7 @@ export default function Tags({ tenantId }: { tenantId: string }) {
             </TableHeader>
             <TableBody>
               {tags?.status === 200 ? (
-                tags.body.map((tag) => (
+                tags.body.data.map((tag) => (
                   <TableRow key={tag.id}>
                     <TableCell className="font-medium">{tag.name}</TableCell>
                     <TableCell>{tag.description}</TableCell>
@@ -153,7 +153,7 @@ export default function Tags({ tenantId }: { tenantId: string }) {
                       <Button
                         variant="ghost"
                         size="sm"
-                        onClick={() => deleteTag({ params: { id: String(tag.id) }, body: {} })}
+                        onClick={() => deleteTag({ params: { id: tag.id }, body: {} })}
                       >
                         <Trash2 className="h-4 w-4" />
                       </Button>

@@ -165,7 +165,7 @@ export default function Properties({ tenantId }: { tenantId: string }) {
             </TableHeader>
             <TableBody>
               {properties?.status === 200 ? (
-                properties.body.map((property) => (
+                properties.body.data.map((property) => (
                   <TableRow key={property.id}>
                     <TableCell className="font-medium">{property.name}</TableCell>
                     <TableCell>{property.propertyType}</TableCell>
@@ -173,7 +173,7 @@ export default function Properties({ tenantId }: { tenantId: string }) {
                       <Button
                         variant="ghost"
                         size="sm"
-                        onClick={() => deleteProperty({ params: { id: String(property.id) }, body: {} })}
+                        onClick={() => deleteProperty({ params: { id: property.id }, body: {} })}
                       >
                         <Trash2 className="h-4 w-4" />
                       </Button>
