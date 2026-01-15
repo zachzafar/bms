@@ -41,6 +41,11 @@ export default function RolesPage() {
     },
   });
 
+  // Select all
+  const allSelected =
+    availablePermissions.length > 0 &&
+    form.watch('permissions').length === availablePermissions.length;
+
   // Fetch permissions
   const { data: permissionsData } = authClient.auth.getPermissions.useQuery({
     queryKey: ['permissions'],
@@ -49,7 +54,6 @@ export default function RolesPage() {
   // Fetch roles
   const { data: rolesData, refetch: refetchRoles } = authClient.auth.getRoles.useQuery({
     queryKey: ['roles', page, pageSize],
-    // queryData: { query: queryParams },
   });
 
   // Create role mutation
@@ -69,10 +73,12 @@ export default function RolesPage() {
 
   useEffect(() => {
     if (rolesData?.status === 200) {
-      setRoles(rolesData.body.map((role: { roleId: string; name: string; permissions: string[] }) => ({
-        ...role,
-        roleId: Number(role.roleId),
-      })));
+      setRoles(
+        rolesData.body.map((role: { roleId: string; name: string; permissions: string[] }) => ({
+          ...role,
+          roleId: Number(role.roleId),
+        }))
+      );
     }
   }, [rolesData]);
 
@@ -178,9 +184,27 @@ export default function RolesPage() {
                 />
 
                 <div className="space-y-2">
-                  <label className="text-sm font-medium leading-none">
-                    Permissions
-                  </label>
+                  <div className="flex items-center justify-between">
+                    <label className="text-sm font-medium leading-none">
+                      Permissions
+                    </label>
+
+                    {/* ✅ ADDED (no removals) */}
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        form.setValue(
+                          'permissions',
+                          allSelected ? [] : availablePermissions,
+                          { shouldValidate: true }
+                        );
+                      }}
+                    >
+                      {allSelected ? 'Deselect All' : 'Select All'}
+                    </Button>
+                  </div>
 
                   <div className="grid grid-cols-2 gap-4 max-h-[300px] overflow-y-auto p-2 border rounded-md">
                     {availablePermissions.map((permission) => (
@@ -214,7 +238,6 @@ export default function RolesPage() {
                   </div>
                 </div>
 
-
                 <div className="flex justify-end space-x-2">
                   <Button
                     type="button"
@@ -240,7 +263,9 @@ export default function RolesPage() {
       <Card className="bg-white border-white">
         <CardHeader>
           <CardTitle className="font-bold text-gray-900">Roles</CardTitle>
-          <CardDescription className=" mt-2 text-gray-600">Manage user roles and their permissions</CardDescription>
+          <CardDescription className=" mt-2 text-gray-600">
+            Manage user roles and their permissions
+          </CardDescription>
         </CardHeader>
         <CardContent>
           <Table>
@@ -256,9 +281,9 @@ export default function RolesPage() {
               {roles.length > 0 ? (
                 roles.map((role) => (
                   <TableRow key={role.roleId}>
-                    <TableCell className='text-gray-600'>{role.roleId}</TableCell>
-                    <TableCell className='text-gray-600'>{role.name}</TableCell>
-                    <TableCell className='text-gray-600'>
+                    <TableCell className="text-gray-600">{role.roleId}</TableCell>
+                    <TableCell className="text-gray-600">{role.name}</TableCell>
+                    <TableCell className="text-gray-600">
                       <div className="flex flex-wrap gap-1">
                         {role.permissions.slice(0, 3).map((permission) => (
                           <span
@@ -285,12 +310,14 @@ export default function RolesPage() {
                         size="sm"
                         className="text-red-600 hover:text-red-800"
                         onClick={() => {
-                          const confirmed = confirm(`Are you sure you want to delete the role "${role.name}"?`)
+                          const confirmed = confirm(
+                            `Are you sure you want to delete the role "${role.name}"?`
+                          );
                           if (confirmed) {
                             deleteRole(
                               {
                                 params: { roleId: Number(role.roleId) },
-                                body: {}
+                                body: {},
                               },
                               {
                                 onSuccess: () => {
