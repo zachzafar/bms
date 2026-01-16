@@ -9,7 +9,16 @@ import {
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
+  SidebarMenuSub,
+  SidebarMenuSubItem,
+  SidebarMenuSubButton,
 } from "@/components/ui/sidebar"
+
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible"
 
 import {
   Home,
@@ -23,6 +32,7 @@ import {
   DollarSign,
   FileText,
   CircleDollarSign,
+  ChevronDown,
 } from "lucide-react"
 
 import { FEATURE_PERMISSIONS } from "@/lib/feature-permissions"
@@ -141,6 +151,24 @@ const items: SidebarItem[] = [
       },
     ],
   },
+  {
+    title: "Settings",
+    icon: Settings,
+    children: [
+      {
+        title: "General",
+        url: "/bookings/settings",
+        icon: Settings,
+        feature: "settings",
+      },
+      {
+        title: "Booking Forms",
+        url: "/bookings/settings/forms",
+        icon: FileText,
+        feature: "settings",
+      },
+    ],
+  },
 ]
 
 export function AppSidebar() {
@@ -176,37 +204,45 @@ export function AppSidebar() {
 
                 if (!canShowParent) return null
 
-                // ✅ Parent WITH children → new nested group
+                // Parent WITH children → collapsible menu
                 if (visibleChildren?.length) {
                   return (
-                    <SidebarGroup key={item.title}>
-                      <SidebarGroupLabel className="flex items-center gap-2">
-                        <item.icon className="h-4 w-4" />
-                        {item.title}
-                      </SidebarGroupLabel>
-
-                      <SidebarGroupContent>
-                        <SidebarMenu>
-                          {visibleChildren.map((child) => (
-                            <SidebarMenuItem key={child.title}>
-                              <SidebarMenuButton asChild>
-                                <a href={child.url}>
-                                  <child.icon className="h-4 w-4" />
-                                  <span>{child.title}</span>
-                                </a>
-                              </SidebarMenuButton>
-                            </SidebarMenuItem>
-                          ))}
-                        </SidebarMenu>
-                      </SidebarGroupContent>
-                    </SidebarGroup>
+                    <Collapsible
+                      key={item.title}
+                      defaultOpen
+                      className="group/collapsible"
+                    >
+                      <SidebarMenuItem>
+                        <CollapsibleTrigger asChild>
+                          <SidebarMenuButton tooltip={item.title}>
+                            <item.icon className="h-4 w-4" />
+                            <span>{item.title}</span>
+                            <ChevronDown className="ml-auto h-4 w-4 transition-transform duration-200 group-data-[state=open]/collapsible:rotate-180" />
+                          </SidebarMenuButton>
+                        </CollapsibleTrigger>
+                        <CollapsibleContent>
+                          <SidebarMenuSub>
+                            {visibleChildren.map((child) => (
+                              <SidebarMenuSubItem key={child.title}>
+                                <SidebarMenuSubButton asChild>
+                                  <a href={child.url}>
+                                    <child.icon className="h-4 w-4" />
+                                    <span>{child.title}</span>
+                                  </a>
+                                </SidebarMenuSubButton>
+                              </SidebarMenuSubItem>
+                            ))}
+                          </SidebarMenuSub>
+                        </CollapsibleContent>
+                      </SidebarMenuItem>
+                    </Collapsible>
                   )
                 }
 
-                // ✅ Parent WITHOUT children
+                // Parent WITHOUT children → simple link
                 return (
                   <SidebarMenuItem key={item.title}>
-                    <SidebarMenuButton asChild>
+                    <SidebarMenuButton asChild tooltip={item.title}>
                       <a href={item.url!}>
                         <item.icon className="h-4 w-4" />
                         <span>{item.title}</span>
