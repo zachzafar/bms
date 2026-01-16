@@ -676,6 +676,14 @@ export class BookingService {
           .where(eq(schema.Booking.id, updateData.id))
           .execute();
 
+        // Update the booking update token expiration date
+        await tx.update(schema.BookingUpdateToken)
+          .set({
+            expiresAt: startDate
+          })
+          .where(eq(schema.BookingUpdateToken.bookingId, updateData.id))
+          .execute();
+
         // Delete existing blocked date entry for this booking
         await tx.delete(schema.BlockedDate)
           .where(eq(schema.BlockedDate.bookingId, updateData.id))
