@@ -2,7 +2,7 @@ import { ConflictException, Inject, Injectable, NotFoundException } from '@nestj
 import { MySql2Database } from 'drizzle-orm/mysql2';
 import * as schema from '@repo/api-contract';
 import { DrizzleAsyncProvider } from 'src/drizzle/drizzle.provider';
-import { and, eq, gte, inArray, lte, or, sql } from 'drizzle-orm';
+import { and, eq, gte, inArray, isNull, lte, or, sql } from 'drizzle-orm';
 import { ExtendedSelectBooking, InsertBooking } from '@repo/api-contract';
 import { SlotService } from '../slot/slot.service';
 import { OnEvent, EventEmitter2 } from '@nestjs/event-emitter';
@@ -50,9 +50,21 @@ export class BookingService {
       throw new ConflictException('No customers selected or provided');
     }
 
-    const available = await this.slotService.checkSlotsAvailability(booking.assetId, startDate, endDate);
-    if (!available) {
-      throw new ConflictException('One or more slots are unavailable or already booked');
+    // Check if dates are blocked (either by booking or admin block)
+    const blockedDates = await this.db.query.BlockedDate.findMany({
+      where: (bd, { and, eq, gte, lte, or }) =>
+        and(
+          eq(bd.assetId, booking.assetId),
+          or(
+            and(gte(bd.startDate, startDate), lte(bd.startDate, endDate)),
+            and(gte(bd.endDate, startDate), lte(bd.endDate, endDate)),
+            and(lte(bd.startDate, startDate), gte(bd.endDate, endDate))
+          )
+        ),
+    });
+
+    if (blockedDates.length > 0) {
+      throw new ConflictException('One or more dates are unavailable or already booked');
     }
 
     try {
@@ -141,12 +153,13 @@ export class BookingService {
         // Determine booking status based on tenant settings
         const bookingStatus = tenant?.enableAutomaticConfirmation ? 'Confirmed' : 'Pending';
 
-        // Calculate total price for the slot range
-        const totalPrice = await this.slotService.getTotalPriceForSlots(booking.assetId, startDate, endDate);
+        // Use provided total price or default to 0
+        const totalPrice = booking.totalPrice ? parseFloat(booking.totalPrice.toString()) : 0;
 
         // Insert booking with Date objects
         const [{ id }] = await tx.insert(schema.Booking).values({
           ...booking,
+          userId: customers[0].userId, // Set userId directly on booking
           startDate: utcStart, // ✅ real Date object, UTC normalized
           endDate: utcEnd,
           status: bookingStatus,
@@ -155,23 +168,16 @@ export class BookingService {
 
         bookingId = id;
 
-        // Book slots by date (status and bookingId)
-        await tx.update(schema.Slot)
-          .set({ status: 'booked', bookingId })
-          .where(
-            and(
-              eq(schema.Slot.assetId, booking.assetId),
-              eq(schema.Slot.status, 'available'),
-              gte(schema.Slot.date, startDate),
-              lte(schema.Slot.date, endDate),
-            )
-          )
-          .execute();
-
-        // Associate customers with booking
-        await tx.insert(schema.UserHasBookings).values(
-          customers.map((customer) => ({ bookingId, userId: customer.userId }))
-        );
+        // Create blocked date entry for this booking
+        await tx.insert(schema.BlockedDate).values({
+          tenantId: asset.tenantId,
+          assetId: booking.assetId,
+          startDate: utcStart,
+          endDate: utcEnd,
+          title: `Booking ${bookingId.slice(0, 8)}`,
+          reason: 'Customer booking',
+          bookingId: bookingId,
+        });
 
         const updateBookingToken = `uptk_${randomBytes(32).toString('hex')}`
 
@@ -211,9 +217,13 @@ export class BookingService {
         .select()
         .from(schema.Booking)
         .innerJoin(schema.Asset, eq(schema.Booking.assetId, schema.Asset.id))
-        .innerJoin(schema.UserHasBookings, eq(schema.UserHasBookings.bookingId, schema.Booking.id))
-        .innerJoin(schema.User, eq(schema.UserHasBookings.userId, schema.User.id))
-        .innerJoin(schema.Customer, eq(schema.Customer.userId, schema.User.id))
+        .innerJoin(schema.User, eq(schema.Booking.userId, schema.User.id))
+        .innerJoin(schema.Customer,
+          and(
+            eq(schema.Customer.userId, schema.User.id),
+            eq(schema.Customer.tenantId, schema.Asset.tenantId)
+          )
+        )
         .innerJoin(schema.BookingUpdateToken, eq(schema.Booking.id, schema.BookingUpdateToken.bookingId))
         .where(eq(schema.Booking.id, bookingId))
         .execute()
@@ -446,12 +456,21 @@ export class BookingService {
   async getBooking(bookingId: string): Promise<ExtendedSelectBooking> {
     const booking = await this.db
       .select()
-      .from(schema.UserHasBookings)
-      .innerJoin(schema.User, eq(schema.UserHasBookings.userId, schema.User.id))
-      .innerJoin(schema.Booking, eq(schema.UserHasBookings.bookingId, schema.Booking.id))
+      .from(schema.Booking)
+      .innerJoin(schema.User, eq(schema.Booking.userId, schema.User.id))
       .innerJoin(schema.Asset, eq(schema.Booking.assetId, schema.Asset.id))
-      .innerJoin(schema.Customer, eq(schema.Customer.userId, schema.User.id))
-      .where(eq(schema.Booking.id, bookingId))
+      .innerJoin(schema.Customer,
+        and(
+          eq(schema.Customer.userId, schema.User.id),
+          eq(schema.Customer.tenantId, schema.Asset.tenantId)
+        )
+      )
+      .where(
+        and(
+          eq(schema.Booking.id, bookingId),
+          isNull(schema.Booking.deletedAt)
+        )
+      )
       .execute()
       .then((rows) => rows[0]);
 
@@ -542,42 +561,45 @@ export class BookingService {
     const offset = (page - 1) * pageSize;
     const filters: any[] = [];
 
-    if (tenantId) {
-      filters.push(eq(schema.Asset.tenantId, tenantId));
-    }
-
     if (assetId) {
       filters.push(eq(schema.Booking.assetId, assetId));
     }
 
-    // Get total count
-    const totalCountQuery = this.db
-      .select({ count: sql<number>`COUNT(*)` })
-      .from(schema.UserHasBookings)
-      .innerJoin(schema.User, eq(schema.UserHasBookings.userId, schema.User.id))
-      .innerJoin(schema.Booking, eq(schema.UserHasBookings.bookingId, schema.Booking.id))
-      .innerJoin(schema.Asset, eq(schema.Booking.assetId, schema.Asset.id))
-      .innerJoin(schema.Customer, eq(schema.Customer.userId, schema.User.id));
-
-    if (filters.length) {
-      totalCountQuery.where(and(...filters));
+    if (tenantId) {
+      filters.push(eq(schema.Asset.tenantId, tenantId));
     }
 
-    const totalCountResult = await totalCountQuery.execute();
+    // Get total count (exclude soft-deleted)
+    const totalCountResult = await this.db
+      .select({ count: sql<number>`COUNT(*)` })
+      .from(schema.Booking)
+      .innerJoin(schema.Asset, eq(schema.Booking.assetId, schema.Asset.id))
+      .where(
+        filters.length
+          ? and(...filters, isNull(schema.Booking.deletedAt))
+          : isNull(schema.Booking.deletedAt)
+      )
+      .execute();
+
     const totalCount = totalCountResult[0]?.count || 0;
 
-    // Get paginated bookings
+    // Get paginated bookings with all related data (exclude soft-deleted)
     const bookings = await this.db
       .select()
-      .from(schema.UserHasBookings)
-      .innerJoin(schema.User, eq(schema.UserHasBookings.userId, schema.User.id))
-      .innerJoin(schema.Booking, eq(schema.UserHasBookings.bookingId, schema.Booking.id))
-      .innerJoin(
-        schema.Asset,
-        eq(schema.Booking.assetId, schema.Asset.id)
+      .from(schema.Booking)
+      .innerJoin(schema.Asset, eq(schema.Booking.assetId, schema.Asset.id))
+      .innerJoin(schema.User, eq(schema.Booking.userId, schema.User.id))
+      .innerJoin(schema.Customer,
+        and(
+          eq(schema.Customer.userId, schema.User.id),
+          eq(schema.Customer.tenantId, schema.Asset.tenantId)
+        )
       )
-      .where(filters.length ? and(...filters) : undefined)
-      .innerJoin(schema.Customer, eq(schema.Customer.userId, schema.User.id))
+      .where(
+        filters.length
+          ? and(...filters, isNull(schema.Booking.deletedAt))
+          : isNull(schema.Booking.deletedAt)
+      )
       .limit(pageSize)
       .offset(offset)
       .execute();
@@ -592,13 +614,11 @@ export class BookingService {
       hasPreviousPage: page > 1,
     };
 
-    const bookingData = bookings.map((booking) => ({
-      ...booking.booking,
-      startDate: booking.booking.startDate,
-      endDate: booking.booking.endDate,
-      customer: booking.customer_details,
-      asset: booking.assets,
-      user: booking.users,
+    const bookingData = bookings.map((row) => ({
+      ...row.booking,
+      asset: row.assets,
+      user: row.users,
+      customer: row.customer_details,
     }));
 
     return {
@@ -613,51 +633,64 @@ export class BookingService {
     const startDate = new Date(updateData.startDate);
     const endDate = new Date(updateData.endDate);
 
-    const availabilityStatus = await this.slotService.checkSlotsAvailabilityExcludingBooking(
-      updateData.assetId,
-      { startDate, endDate },
-      updateData.id
-    );
+    // Check if dates are blocked (excluding the current booking's block)
+    const blockedDates = await this.db.query.BlockedDate.findMany({
+      where: (bd, { and, eq, gte, lte, or, ne, isNull }) =>
+        and(
+          eq(bd.assetId, updateData.assetId),
+          or(
+            and(gte(bd.startDate, startDate), lte(bd.startDate, endDate)),
+            and(gte(bd.endDate, startDate), lte(bd.endDate, endDate)),
+            and(lte(bd.startDate, startDate), gte(bd.endDate, endDate))
+          ),
+          // Exclude the current booking's blocked date entry
+          or(
+            isNull(bd.bookingId),
+            ne(bd.bookingId, updateData.id)
+          )
+        ),
+    });
 
-    if (availabilityStatus !== 'Available') {
-      throw new ConflictException('One or more slots are unavailable or already booked');
+    if (blockedDates.length > 0) {
+      throw new ConflictException('One or more dates are unavailable or already booked');
     }
-
-    const totalPrice = await this.slotService.getTotalPriceForSlots(updateData.assetId, startDate, endDate);
 
     try {
       await this.db.transaction(async (tx) => {
+        // Get asset to find tenantId
+        const asset = await tx.query.Asset.findFirst({
+          where: (a, { eq }) => eq(a.id, updateData.assetId),
+        });
+
+        if (!asset) {
+          throw new ConflictException('Asset not found');
+        }
+
         // Update booking dates and price
         await tx.update(schema.Booking)
           .set({
             startDate,
             endDate,
-            totalPrice: totalPrice.toString(),
+            totalPrice: updateData.totalPrice,
           })
           .where(eq(schema.Booking.id, updateData.id))
           .execute();
 
-        // Release existing slots
-        await tx.update(schema.Slot)
-          .set({
-            status: 'available',
-            bookingId: null,
-          })
-          .where(eq(schema.Slot.bookingId, updateData.id))
+        // Delete existing blocked date entry for this booking
+        await tx.delete(schema.BlockedDate)
+          .where(eq(schema.BlockedDate.bookingId, updateData.id))
           .execute();
 
-        // Book new slots
-        await tx.update(schema.Slot)
-          .set({ status: 'booked', bookingId: updateData.id })
-          .where(
-            and(
-              eq(schema.Slot.assetId, updateData.assetId),
-              eq(schema.Slot.status, 'available'),
-              gte(schema.Slot.date, startDate),
-              lte(schema.Slot.date, endDate)
-            )
-          )
-          .execute();
+        // Create new blocked date entry with updated dates
+        await tx.insert(schema.BlockedDate).values({
+          tenantId: asset.tenantId,
+          assetId: updateData.assetId,
+          startDate,
+          endDate,
+          title: `Booking ${updateData.id.slice(0, 8)}`,
+          reason: 'Customer booking',
+          bookingId: updateData.id,
+        });
       });
     } catch (e) {
       throw new ConflictException('Error occurred while updating booking:' + e);
@@ -689,9 +722,13 @@ export class BookingService {
           })
           .from(schema.Booking)
           .innerJoin(schema.Asset, eq(schema.Booking.assetId, schema.Asset.id))
-          .innerJoin(schema.UserHasBookings, eq(schema.UserHasBookings.bookingId, schema.Booking.id))
-          .innerJoin(schema.User, eq(schema.UserHasBookings.userId, schema.User.id))
-          .innerJoin(schema.Customer, eq(schema.Customer.userId, schema.User.id))
+          .innerJoin(schema.User, eq(schema.Booking.userId, schema.User.id))
+          .innerJoin(schema.Customer,
+            and(
+              eq(schema.Customer.userId, schema.User.id),
+              eq(schema.Customer.tenantId, schema.Asset.tenantId)
+            )
+          )
           .where(eq(schema.Booking.id, bookingId))
           .execute()
           .then((rows) => rows[0]);
@@ -824,22 +861,28 @@ export class BookingService {
   }
 
   async deleteBooking(bookingId: string) {
-    const existingBooking = await this.getBooking(bookingId);
+    const existingBooking = await this.db.query.Booking.findFirst({
+      where: (b, { eq, and, isNull }) => and(
+        eq(b.id, bookingId),
+        isNull(b.deletedAt)
+      ),
+    });
+
     if (!existingBooking) {
-      throw new NotFoundException('Booking not found');
+      throw new NotFoundException('Booking not found or already deleted');
     }
 
-    // Delete dependent user_has_bookings rows first
-    await this.db.delete(schema.UserHasBookings).where(eq(schema.UserHasBookings.bookingId, bookingId)).execute();
-
-    // Release slots associated with this booking
-    await this.db.update(schema.Slot)
-      .set({ status: 'available', bookingId: null })
-      .where(eq(schema.Slot.bookingId, bookingId))
+    // Soft delete: set deletedAt timestamp
+    await this.db.update(schema.Booking)
+      .set({ deletedAt: new Date() })
+      .where(eq(schema.Booking.id, bookingId))
       .execute();
 
-    // Delete the booking
-    await this.db.delete(schema.Booking).where(eq(schema.Booking.id, bookingId)).execute();
+    // Also soft delete the blocked date entry if it exists
+    await this.db.update(schema.BlockedDate)
+      .set({ updatedAt: new Date() })
+      .where(eq(schema.BlockedDate.bookingId, bookingId))
+      .execute();
   }
 
   async validateUpdateToken(token: string, bookingId: string) {
@@ -890,7 +933,16 @@ export class BookingService {
       );
 
       if (available) {
-        // Step 3: Use existing booking logic
+        // Step 3: Get userId from first customer
+        const firstCustomer = await this.db.query.Customer.findFirst({
+          where: (c, { eq }) => eq(c.id, customerIds[0]),
+        });
+
+        if (!firstCustomer) {
+          throw new ConflictException('Customer not found');
+        }
+
+        // Step 4: Use existing booking logic
         const bookingId = await this.createBooking(
           {
             assetId: asset.id,
@@ -1099,9 +1151,13 @@ export class BookingService {
         })
         .from(schema.Booking)
         .innerJoin(schema.Asset, eq(schema.Booking.assetId, schema.Asset.id))
-        .innerJoin(schema.UserHasBookings, eq(schema.UserHasBookings.bookingId, schema.Booking.id))
-        .innerJoin(schema.User, eq(schema.UserHasBookings.userId, schema.User.id))
-        .innerJoin(schema.Customer, eq(schema.Customer.userId, schema.User.id))
+        .innerJoin(schema.User, eq(schema.Booking.userId, schema.User.id))
+        .innerJoin(schema.Customer,
+          and(
+            eq(schema.Customer.userId, schema.User.id),
+            eq(schema.Customer.tenantId, schema.Asset.tenantId)
+          )
+        )
         .where(
           and(
             gte(schema.Booking.startDate, windowStart),

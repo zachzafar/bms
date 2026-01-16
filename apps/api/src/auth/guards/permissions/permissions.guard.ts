@@ -66,22 +66,22 @@ export class PermissionsGuard implements CanActivate {
   ): Promise<boolean> {
     const permissions = await this.authService.getUserPermissionsForTenant(userId, tenantId);
 
-    this.logger.debug(
-      `User ${userId} has permissions in tenant ${tenantId}: ${permissions.join(', ')}`
-    );
+    // this.logger.debug(
+    //   `User ${userId} has permissions in tenant ${tenantId}: ${permissions.join(', ')}`
+    // );
 
     const hasPermission = requiredPermissions.every((p) => permissions.includes(p));
 
     if (!hasPermission) {
-      this.logger.warn(
-        `User ${userId} lacks required permissions. Required: ${requiredPermissions.join(', ')}. User has: ${permissions.join(', ')}`
-      );
+      // this.logger.warn(
+      //   `User ${userId} lacks required permissions. Required: ${requiredPermissions.join(', ')}. User has: ${permissions.join(', ')}`
+      // );
       throw new ForbiddenException(
         `Insufficient permissions. Required: ${requiredPermissions.join(', ')}`
       );
     }
 
-    this.logger.log(`User ${userId} authorized with permissions: ${permissions.join(', ')}`);
+    // this.logger.log(`User ${userId} authorized with permissions: ${permissions.join(', ')}`);
     return true;
   }
 }

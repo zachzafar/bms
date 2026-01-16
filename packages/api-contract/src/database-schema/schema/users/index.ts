@@ -18,6 +18,7 @@ export const User = mysqlTable("users", {
     userType: mysqlEnum("user_type", ["customer", "owner", "system","admin"]).notNull(),
     createdAt: timestamp('createdAt', { mode: 'date' }).defaultNow(),
     updatedAt: timestamp('updated_at', { mode: 'date', }).$onUpdate(() => new Date()),
+    deletedAt: timestamp('deleted_at'),
 }, (table) => ({
     emailUniqueIdx: uniqueIndex("email_unique").on(table.email),
 }));
@@ -46,29 +47,6 @@ export const UpdateUserSchema = InsertUserSchema.partial();
 export type InsertUser = z.infer<typeof InsertUserSchema>
 export type SelectUser = z.infer<typeof SelectUserSchema>
 export type UpdateUser = z.infer<typeof UpdateUserSchema>
-
-export const UserHasBookings = mysqlTable("user_has_bookings", {
-    id: bigint("id", { mode: "number", unsigned: true }).autoincrement().primaryKey(),
-    userId: varchar("user_id", { length: 255 }).notNull().references(() => User.id, { onDelete: 'cascade' }),
-    bookingId: varchar("booking_id", { length: 255 }).notNull().references(() => Booking.id)
-})
-
-export const InsertUserHasBookingsSchema = createInsertSchema(UserHasBookings);
-export const SelectUserHasBookingsSchema = createSelectSchema(UserHasBookings);
-
-export type InsertUserHasBookings = z.infer<typeof InsertUserHasBookingsSchema>
-export type SelectUserHasBookings = z.infer<typeof SelectUserHasBookingsSchema>
-
-export const UserHasBookingsRelations = relations(UserHasBookings, ({ one }) => ({
-    one: one(User, {
-        fields: [UserHasBookings.userId],
-        references: [User.id]
-    }),
-    booking: one(Booking, {
-        fields: [UserHasBookings.bookingId],
-        references: [Booking.id]
-    })
-}))
 
 export const UserHasAssets = mysqlTable("user_has_assets", {
     id: bigint("id", { mode: "number", unsigned: true }).autoincrement().primaryKey(),
@@ -104,6 +82,7 @@ export const Customer = mysqlTable("customer_details", {
     dateOfBirth: datetime("date_of_birth"),
     createdAt: timestamp('createdAt').notNull().defaultNow(),
     updatedAt: timestamp('updated_at', { mode: 'date', }).$onUpdate(() => new Date()),
+    deletedAt: timestamp('deleted_at'),
     tenantId: varchar("tenant_id", { length: 255 }).notNull().references(() => Tenant.id),
     userId: varchar("user_id", { length: 255 }).notNull().references(() => User.id, { onDelete: 'cascade' }),
 }, (table) => ({

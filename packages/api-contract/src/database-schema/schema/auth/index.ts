@@ -5,10 +5,10 @@ import { v4 as uuid } from "uuid";
 
 
 export const refreshTokens = mysqlTable('refresh_tokens', {
-    id: bigint("id", { mode: "number", unsigned: true }).autoincrement().primaryKey(), 
-    userId: varchar("user_id", { length: 36 }).references(() => User.id).notNull(), 
-    refreshToken: varchar('hashed_token', {length: 255}).notNull(), 
-    deviceInfo: varchar('device_info', { length: 255}), 
+    id: bigint("id", { mode: "number", unsigned: true }).autoincrement().primaryKey(),
+    userId: varchar("user_id", { length: 36 }).references(() => User.id, { onDelete: 'cascade' }).notNull(),
+    refreshToken: varchar('hashed_token', {length: 255}).notNull(),
+    deviceInfo: varchar('device_info', { length: 255}),
     ipAddress: varchar('ip_address', {length: 45}),
     createdAt: timestamp('createdAt', {mode: 'string'}).notNull().defaultNow(),
     updatedAt: timestamp('updated_at', { mode: 'date', }).$onUpdate(() => new Date()),
@@ -22,8 +22,8 @@ export const refreshTokenRelations = relations(refreshTokens, ({ one }) => ({
 }));
 
 export const PasswordReset = mysqlTable('password_reset', {
-    id: varchar("id", { length: 36 }).primaryKey().$default(uuid),    
-    userId: varchar('user_id', { length: 128 }).notNull().references(() => User.id),
+    id: varchar("id", { length: 36 }).primaryKey().$default(uuid),
+    userId: varchar('user_id', { length: 128 }).notNull().references(() => User.id, { onDelete: 'cascade' }),
     token: varchar('token', { length: 255 }).notNull(),
     expiresAt: timestamp('expires_at').notNull(),
     createdAt: timestamp('created_at').defaultNow().notNull(),

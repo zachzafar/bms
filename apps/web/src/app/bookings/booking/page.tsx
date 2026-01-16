@@ -28,10 +28,47 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { MoreHorizontal, CheckCircle, Clock, XCircle } from 'lucide-react';
+import { MoreHorizontal, CheckCircle, Clock, XCircle, Eye, Trash2, Copy, Check } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 
 import { isSameDay } from "date-fns";
+
+// Copyable ID Component
+function CopyableId({ id }: { id: string }) {
+  const [copied, setCopied] = useState(false);
+
+  const handleCopy = async () => {
+    await navigator.clipboard.writeText(id);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
+  const truncatedId = id.length > 8 ? `${id.slice(0, 8)}...` : id;
+
+  return (
+    <div className="flex items-center gap-2 group">
+      <span
+        className="font-mono text-sm cursor-help"
+        title={id}
+      >
+        {truncatedId}
+      </span>
+      <Button
+        variant="ghost"
+        size="icon"
+        className="h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity"
+        onClick={handleCopy}
+        title="Copy full ID"
+      >
+        {copied ? (
+          <Check className="h-3 w-3 text-green-600" />
+        ) : (
+          <Copy className="h-3 w-3" />
+        )}
+      </Button>
+    </div>
+  );
+}
 
 // Booking form schema
 const bookingFormSchema = z.object({
@@ -716,7 +753,9 @@ export default function Component() {
 
                 return (
                   <TableRow key={booking.id}>
-                    <TableCell className="font-medium">{booking.id}</TableCell>
+                    <TableCell className="font-medium">
+                      <CopyableId id={booking.id} />
+                    </TableCell>
                     <TableCell>{booking.asset.name}</TableCell>
                     <TableCell>{booking.asset.assetTypeId}</TableCell>
                     <TableCell>{booking.customer.id}</TableCell>
@@ -733,18 +772,19 @@ export default function Component() {
                     <TableCell>${totalPrice.toFixed(2)}</TableCell>
 
                     <TableCell>
-                      <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-1">
                         <Button
-                          variant="outline"
-                          size="sm"
+                          variant="ghost"
+                          size="icon"
                           onClick={() => router.push(`/bookings/booking/${booking.id}`)}
+                          title="View booking"
                         >
-                          View
+                          <Eye className="h-4 w-4" />
                         </Button>
 
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="sm">
+                            <Button variant="ghost" size="icon" title="Change status">
                               <MoreHorizontal className="h-4 w-4" />
                             </Button>
                           </DropdownMenuTrigger>
@@ -776,11 +816,13 @@ export default function Component() {
                         </DropdownMenu>
 
                         <Button
-                          variant="destructive"
-                          size="sm"
+                          variant="ghost"
+                          size="icon"
                           onClick={() => handleCancel(booking)}
+                          className="text-destructive hover:text-destructive"
+                          title="Delete booking"
                         >
-                          Delete
+                          <Trash2 className="h-4 w-4" />
                         </Button>
                       </div>
                     </TableCell>

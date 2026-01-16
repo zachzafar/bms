@@ -25,20 +25,6 @@ export type InsertUser = z.infer<typeof InsertUserSchema>
 export type SelectUser = z.infer<typeof SelectUserSchema>
 export type UpdateUser = z.infer<typeof UpdateUserSchema>
 
-export const InsertUserHasBookingsSchema = z.object({
-    id: z.number().optional(),
-    userId: z.string(),
-    bookingId: z.string(),
-});
-export const SelectUserHasBookingsSchema = z.object({
-    id: z.number(),
-    userId: z.string(),
-    bookingId: z.string(),
-});
-
-export type InsertUserHasBookings = z.infer<typeof InsertUserHasBookingsSchema>
-export type SelectUserHasBookings = z.infer<typeof SelectUserHasBookingsSchema>
-
 export const InsertUserHasAssetsSchema = z.object({
     id: z.number().optional(),
     userId: z.string(),

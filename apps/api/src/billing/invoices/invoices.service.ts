@@ -231,15 +231,12 @@ export class InvoicesService {
   });
   if (!booking) throw new NotFoundException('Booking not found');
 
-  // 2) Pull first customer linked to booking
-  const userLinks = await this.db.query.UserHasBookings.findMany({
-    where: (ub, { eq }) => eq(ub.bookingId, bookingId),
-  });
-  if (!userLinks.length) throw new BadRequestException('No users linked to booking');
-
-  const firstUserId = userLinks[0].userId;
+  // 2) Pull customer linked to booking via userId and tenantId
   const customer = await this.db.query.Customer.findFirst({
-    where: (c, { eq }) => eq(c.userId, firstUserId),
+    where: (c, { eq, and }) => and(
+      eq(c.userId, booking.userId),
+      eq(c.tenantId, booking.asset.tenantId)
+    ),
   });
   if (!customer) throw new BadRequestException('No customer found for booking user');
 

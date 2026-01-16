@@ -190,12 +190,7 @@ export class AssetsService {
       const bookingIds = bookings.map((b) => b.id);
 
       if (bookingIds.length > 0) {
-        // Step 2: Delete from user_has_bookings where booking_id IN (...)
-        await tx.delete(schema.UserHasBookings).where(
-          inArray(schema.UserHasBookings.bookingId, bookingIds)
-        );
-
-        // Step 3: Delete from booking
+        // Step 2: Delete from booking
         await tx.delete(schema.Booking).where(
           inArray(schema.Booking.id, bookingIds)
         );
