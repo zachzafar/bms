@@ -6,19 +6,20 @@ import { z } from "zod";
 import {
   // Contact + profiles
   InsertContactSchema, SelectContactSchema, UpdateContactSchema,
-  InsertCustomerSchema, SelectCustomerSchema, 
-  InsertOwnerSchema, SelectOwnerSchema, 
+  InsertCustomerSchema, SelectCustomerSchema,
+  InsertOwnerSchema, SelectOwnerSchema,
   // CRM entities
   InsertInquirySchema, SelectInquirySchema, UpdateInquirySchema,
   InsertCommunicationLogSchema, SelectCommunicationLogSchema, UpdateCommunicationLogSchema,
   InsertFeedbackSchema, SelectFeedbackSchema, UpdateFeedbackSchema,
-  InsertBrochureSchema, SelectBrochureSchema, 
-  SelectBrochureAssetSchema, 
+  InsertBrochureSchema, SelectBrochureSchema,
+  SelectBrochureAssetSchema,
   InsertTaskSchema, SelectTaskSchema, UpdateTaskSchema,
-  InsertDocumentSchema, SelectDocumentSchema, 
+  InsertDocumentSchema, SelectDocumentSchema,
   // From your existing system
   SelectUserSchema, SelectAssetSchema,
 } from "../database-schema";
+import { pagination } from './utils';
 
 const c = initContract();
 
@@ -98,19 +99,24 @@ export const contactContract = c.router({
     path: "/contact",
     summary: "List contacts",
     query: z.object({
-      search: z.string().optional(),      // name/email/phone free-text
-      hasCustomer: z.boolean().optional(),
-      hasOwner: z.boolean().optional(),
+      search: z.string().optional(),
+      hasCustomer: z.coerce.boolean().optional(),
+      hasOwner: z.coerce.boolean().optional(),
+      page: z.coerce.number().optional(),
+      pageSize: z.coerce.number().optional(),
     }),
     responses: {
-      200: z.array(ExtendedSelectContactSchema),
+      200: z.object({
+        data: z.array(ExtendedSelectContactSchema),
+        pagination
+      }),
     },
   },
   getContact: {
     method: "GET",
     path: "/contact/:id",
     summary: "Get a contact by id",
-    pathParams: z.object({ id: z.string() }),
+    pathParams: z.object({ id: z.coerce.number()}),
     responses: {
       200: ExtendedSelectContactSchema,
       404: z.undefined(),
@@ -120,7 +126,7 @@ export const contactContract = c.router({
     method: "PUT",
     path: "/contact/:id",
     summary: "Update a contact by id",
-    pathParams: z.object({ id: z.string() }),
+    pathParams: z.object({ id: z.coerce.number() }),
     body: UpdateContactSchema.omit({ tenantId: true,id: true }),
     responses: {
       200: z.object({ message: z.string() }),
@@ -130,7 +136,7 @@ export const contactContract = c.router({
     method: "DELETE",
     path: "/contact/:id",
     summary: "Delete a contact by id",
-    pathParams: z.object({ id: z.string() }),
+    pathParams: z.object({ id: z.coerce.number() }),
     body: z.object({}).optional(),
     responses: { 204: z.undefined() },
   },
@@ -139,7 +145,7 @@ export const contactContract = c.router({
     path: "/contact/:id/merge",
     summary: "Merge another contact into this one",
     pathParams: z.object({ id: z.string() }), // target
-    body: z.object({ sourceContactId: z.number() }), // moves data then deletes source
+    body: z.object({ sourceContactId: z.coerce.number() }), // moves data then deletes source
     responses: {
       200: z.object({ message: z.string(), mergedFrom: z.number(), mergedInto: z.number() }),
       400: z.object({ message: z.string() }),
@@ -237,21 +243,28 @@ export const inquiryContract = c.router({
       status: z.enum(["New", "Follow-Up", "Closed"]).optional(),
       assignedTo: z.string().optional(),
       search: z.string().optional(),
+      page: z.coerce.number().optional(),
+      pageSize: z.coerce.number().optional(),
     }),
-    responses: { 200: z.array(ExtendedSelectInquirySchema) },
+    responses: {
+      200: z.object({
+        data: z.array(ExtendedSelectInquirySchema),
+        pagination
+      })
+    },
   },
   getInquiry: {
     method: "GET",
     path: "/inquiry/:id",
     summary: "Get an inquiry by id",
-    pathParams: z.object({ id: z.string() }),
+    pathParams: z.object({ id: z.coerce.number() }),
     responses: { 200: ExtendedSelectInquirySchema, 404: z.undefined() },
   },
   updateInquiry: {
     method: "PUT",
     path: "/inquiry/:id",
     summary: "Update an inquiry by id",
-    pathParams: z.object({ id: z.string() }),
+    pathParams: z.object({ id: z.coerce.number() }),
     body: UpdateInquirySchema.omit({ tenantId: true, id: true, inquiryDate: true, followUpDate: true }).extend({
       contactId: z.number(),
       inquiryDate: z.string().optional(),
@@ -263,7 +276,7 @@ export const inquiryContract = c.router({
     method: "DELETE",
     path: "/inquiry/:id",
     summary: "Delete an inquiry by id",
-    pathParams: z.object({ id: z.string() }),
+    pathParams: z.object({ id: z.coerce.number() }),
     body: z.object({}).optional(),
     responses: { 204: z.undefined() },
   },
@@ -271,7 +284,7 @@ export const inquiryContract = c.router({
     method: "POST",
     path: "/inquiry/:id/assign",
     summary: "Assign an inquiry to a user",
-    pathParams: z.object({ id: z.string() }),
+    pathParams: z.object({ id: z.coerce.number() }),
     body: z.object({ assignedTo: z.string() }),
     responses: { 200: z.object({ message: z.string() }) },
   },
@@ -296,21 +309,28 @@ export const commsContract = c.router({
       type: z.enum(["Email", "Phone Call", "Meeting"]).optional(),
       from: DateString.optional(),
       to: DateString.optional(),
+      page: z.coerce.number().optional(),
+      pageSize: z.coerce.number().optional(),
     }),
-    responses: { 200: z.array(SelectCommunicationLogSchema) },
+    responses: {
+      200: z.object({
+        data: z.array(SelectCommunicationLogSchema),
+        pagination
+      })
+    },
   },
   getComm: {
     method: "GET",
     path: "/communication/:id",
     summary: "Get a communication by id",
-    pathParams: z.object({ id: z.string() }),
+    pathParams: z.object({ id: z.coerce.number() }),
     responses: { 200: ExtendedSelectCommunicationSchema, 404: z.undefined() },
   },
   updateComm: {
     method: "PUT",
     path: "/communication/:id",
     summary: "Update a communication by id",
-    pathParams: z.object({ id: z.string() }),
+    pathParams: z.object({ id: z.coerce.number() }),
     body: UpdateCommunicationLogSchema,
     responses: { 200: z.object({ message: z.string() }) },
   },
@@ -318,7 +338,7 @@ export const commsContract = c.router({
     method: "DELETE",
     path: "/communication/:id",
     summary: "Delete a communication by id",
-    pathParams: z.object({ id: z.string() }),
+    pathParams: z.object({ id: z.coerce.number() }),
     body: z.object({}).optional(),
     responses: { 204: z.undefined() },
   },
@@ -342,21 +362,28 @@ export const feedbackContract = c.router({
       assetId: z.string().optional(),
       minRating: z.number().int().min(1).max(5).optional(),
       maxRating: z.number().int().min(1).max(5).optional(),
+      page: z.coerce.number().optional(),
+      pageSize: z.coerce.number().optional(),
     }),
-    responses: { 200: z.array(SelectFeedbackSchema) },
+    responses: {
+      200: z.object({
+        data: z.array(SelectFeedbackSchema),
+        pagination
+      })
+    },
   },
   getFeedback: {
     method: "GET",
     path: "/feedback/:id",
     summary: "Get feedback by id",
-    pathParams: z.object({ id: z.string() }),
+    pathParams: z.object({ id: z.coerce.number() }),
     responses: { 200: ExtendedSelectFeedbackSchema, 404: z.undefined() },
   },
   updateFeedback: {
     method: "PUT",
     path: "/feedback/:id",
     summary: "Update feedback by id",
-    pathParams: z.object({ id: z.string() }),
+    pathParams: z.object({ id: z.coerce.number() }),
     body: UpdateFeedbackSchema,
     responses: { 200: z.object({ message: z.string() }) },
   },
@@ -364,7 +391,7 @@ export const feedbackContract = c.router({
     method: "DELETE",
     path: "/feedback/:id",
     summary: "Delete feedback by id",
-    pathParams: z.object({ id: z.string() }),
+    pathParams: z.object({ id: z.coerce.number() }),
     body: z.object({}).optional(),
     responses: { 204: z.undefined() },
   },
@@ -383,21 +410,30 @@ export const brochureContract = c.router({
     method: "GET",
     path: "/brochure",
     summary: "List brochures",
-    query: z.object({ contactId: z.string().optional() }),
-    responses: { 200: z.array(ExtendedSelectBrochureSchema) },
+    query: z.object({
+      contactId: z.string().optional(),
+      page: z.coerce.number().optional(),
+      pageSize: z.coerce.number().optional(),
+    }),
+    responses: {
+      200: z.object({
+        data: z.array(ExtendedSelectBrochureSchema),
+        pagination
+      })
+    },
   },
   getBrochure: {
     method: "GET",
     path: "/brochure/:id",
     summary: "Get a brochure by id",
-    pathParams: z.object({ id: z.string() }),
+    pathParams: z.object({ id: z.coerce.number() }),
     responses: { 200: ExtendedSelectBrochureSchema, 404: z.undefined() },
   },
   deleteBrochure: {
     method: "DELETE",
     path: "/brochure/:id",
     summary: "Delete a brochure by id",
-    pathParams: z.object({ id: z.string() }),
+    pathParams: z.object({ id: z.coerce.number() }),
     body: z.object({}).optional(),
     responses: { 204: z.undefined() },
   },
@@ -406,7 +442,7 @@ export const brochureContract = c.router({
     method: "POST",
     path: "/brochure/:id/assets",
     summary: "Add assets to a brochure",
-    pathParams: z.object({ id: z.string() }),
+    pathParams: z.object({ id: z.coerce.number() }),
     body: z.object({ assetIds: z.array(z.string()).min(1) }),
     responses: { 200: z.object({ message: z.string(), added: z.number() }) },
   },
@@ -414,7 +450,7 @@ export const brochureContract = c.router({
     method: "DELETE",
     path: "/brochure/:id/assets/:assetId",
     summary: "Remove asset from a brochure",
-    pathParams: z.object({ id: z.string(), assetId: z.string() }),
+    pathParams: z.object({ id: z.coerce.number(), assetId: z.string() }),
     body: z.object({}).optional(),
     responses: { 204: z.undefined() },
   },
@@ -422,8 +458,17 @@ export const brochureContract = c.router({
     method: "GET",
     path: "/brochure/:id/assets",
     summary: "List brochure assets",
-    pathParams: z.object({ id: z.string() }),
-    responses: { 200: z.array(ExtendedSelectBrochureAssetSchema) },
+    pathParams: z.object({ id: z.coerce.number() }),
+    query: z.object({
+      page: z.coerce.number().optional(),
+      pageSize: z.coerce.number().optional(),
+    }),
+    responses: {
+      200: z.object({
+        data: z.array(ExtendedSelectBrochureAssetSchema),
+        pagination
+      })
+    },
   },
 });
 
@@ -436,7 +481,7 @@ export const taskContract = c.router({
     body: InsertTaskSchema.omit({  dueDate: true }).extend({
       dueDate: z.string(),
     }),
-    responses: { 201: z.object({ message: z.string(), taskId: z.number() }) },
+    responses: { 201: z.object({ message: z.string(), taskId: z.coerce.number() }) },
   },
   listTasks: {
     method: "GET",
@@ -448,21 +493,28 @@ export const taskContract = c.router({
       status: z.enum(["Pending", "Completed", "Overdue"]).optional(),
       from: DateString.optional(),
       to: DateString.optional(),
+      page: z.coerce.number().optional(),
+      pageSize: z.coerce.number().optional(),
     }),
-    responses: { 200: z.array(SelectTaskSchema) },
+    responses: {
+      200: z.object({
+        data: z.array(SelectTaskSchema),
+        pagination
+      })
+    },
   },
   getTask: {
     method: "GET",
     path: "/task/:id",
     summary: "Get a task by id",
-    pathParams: z.object({ id: z.string() }),
+    pathParams: z.object({ id: z.coerce.number() }),
     responses: { 200: ExtendedSelectTaskSchema, 404: z.undefined() },
   },
   updateTask: {
     method: "PUT",
     path: "/task/:id",
     summary: "Update a task by id",
-    pathParams: z.object({ id: z.string() }),
+    pathParams: z.object({ id: z.coerce.number() }),
     body: UpdateTaskSchema.omit({ dueDate: true, id: true }).extend({
       dueDate: z.string().optional(),
     }),
@@ -472,7 +524,7 @@ export const taskContract = c.router({
     method: "DELETE",
     path: "/task/:id",
     summary: "Delete a task by id",
-    pathParams: z.object({ id: z.string() }),
+    pathParams: z.object({ id: z.coerce.number() }),
     body: z.object({}).optional(),
     responses: { 204: z.undefined() },
   },
@@ -480,7 +532,7 @@ export const taskContract = c.router({
     method: "POST",
     path: "/task/:id/complete",
     summary: "Mark task as completed",
-    pathParams: z.object({ id: z.string() }),
+    pathParams: z.object({ id: z.coerce.number() }),
     body: z.object({}).optional(),
     responses: { 200: z.object({ message: z.string() }) },
   },
@@ -505,21 +557,28 @@ export const documentContract = c.router({
       uploadedBy: z.string().optional(),
       from: DateString.optional(),
       to: DateString.optional(),
+      page: z.coerce.number().optional(),
+      pageSize: z.coerce.number().optional(),
     }),
-    responses: { 200: z.array(ExtendedSelectDocumentSchema) },
+    responses: {
+      200: z.object({
+        data: z.array(ExtendedSelectDocumentSchema),
+        pagination
+      })
+    },
   },
   getDocument: {
     method: "GET",
     path: "/document/:id",
     summary: "Get a document by id",
-    pathParams: z.object({ id: z.string() }),
+    pathParams: z.object({ id: z.coerce.number() }),
     responses: { 200: ExtendedSelectDocumentSchema, 404: z.undefined() },
   },
   deleteDocument: {
     method: "DELETE",
     path: "/document/:id",
     summary: "Delete a document by id",
-    pathParams: z.object({ id: z.string() }),
+    pathParams: z.object({ id: z.coerce.number() }),
     body: z.object({}).optional(),
     responses: { 204: z.undefined() },
   },

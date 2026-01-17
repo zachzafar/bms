@@ -1,4 +1,4 @@
-import { BadRequestException, Controller, Headers, Logger, MaxFileSizeValidator, ParseFilePipe, ParseFilePipeBuilder, Query, UploadedFiles, UseGuards, UseInterceptors } from '@nestjs/common';
+import { BadRequestException, Controller, Headers, Logger, UploadedFiles, UseGuards, UseInterceptors } from '@nestjs/common';
 import { AssetsService } from './assets.service';
 import { TsRestHandler, tsRestHandler } from '@ts-rest/nest';
 import { contract } from '@repo/api-contract';
@@ -26,15 +26,12 @@ export class AssetsController {
             this.logger.log('Get assets for tenant: ', headers['x-tenant-id'] || 'no tenant');
             const tenantId = headers['x-tenant-id'];
 
-            const assets = await this.assetService.getAssets(query, tenantId);
+            const page = query.page ? Number(query.page) : 1;
+            const pageSize = query.pageSize ? Number(query.pageSize) : 10;
 
-            // Convert assetTypeId to number
-            const assetsWithTypeId = assets.map((asset) => {
-                let assetTypeId = asset.assetTypeId ? Number(asset.assetTypeId) : undefined;
-                return { ...asset, assetTypeId };
-            });
+            const assets = await this.assetService.getAssets(query, tenantId, page, pageSize);
 
-            return { status: 200, body: assetsWithTypeId };
+            return { status: 200, body: assets };
         });
     }
 
@@ -49,9 +46,8 @@ export class AssetsController {
             if (!asset) {
                 return { status: 404, message: 'Asset not found' };
             }
-            let assetTypeId = asset.assetTypeId ? Number(asset.assetTypeId) : undefined;
 
-            return { status: 200, body: { ...asset, assetTypeId } };
+            return { status: 200, body: asset };
         });
     }
 
@@ -64,7 +60,8 @@ export class AssetsController {
 
             const id = await this.assetService.createAsset(
                 { ...body.asset, tenantId },
-                body.tagIds // pass tags here
+                body.tagIds, // pass tags here
+                body.formIds // pass forms here
             );
 
             this.logger.log(`Created asset with id: ${id}`);
@@ -84,7 +81,7 @@ export class AssetsController {
                 return { status: 500, body: { message: 'Error updating asset' } };
             }
 
-            return { status: 200, body: { ...asset, assetTypeId: Number(asset.assetTypeId) } };
+            return { status: 200, body: asset };
         });
     }
 
@@ -137,7 +134,7 @@ export class AssetsController {
                 status: 200,
                 body: properties.map((property) => ({
                     ...property,
-                    assetPropertyId: Number(property.assetPropertyId),
+                    assetPropertyId: property.assetPropertyId,
                     assetId: property.assetId.toString() // Convert assetId to string to match expected type
                 }))
             };
@@ -176,9 +173,9 @@ export class AssetsController {
     async getAssetsWithDetails(@Headers() headers: any): Promise<ReturnType<typeof tsRestHandler>> {
         return tsRestHandler(contract.assets.getAssetsWithDetails, async ({ query }) => {
             const tenantId = headers['x-tenant-id'];
-            const assets = await this.assetService.getAssetsWithDetails(tenantId, query.assetTypes);
+            const { data, pagination} = await this.assetService.getAssetsWithDetails(tenantId, query.assetTypes);
 
-            const assetsReshaped = assets.map((asset) => {
+            const assets = data.map((asset) => {
                 return {
                     id: asset.id,
                     name: asset.name,
@@ -196,7 +193,7 @@ export class AssetsController {
                 };
             });
 
-            return { status: 200, body: assetsReshaped };
+            return { status: 200, body: {data: assets, pagination} };
         });
     }
 
@@ -246,6 +243,43 @@ export class AssetsController {
         });
     }
 
+    @Public()
+    @TsRestHandler(contract.assets.getAssetsBySubdomain)
+    async getAssetsBySubdomain(@Headers() headers: any): Promise<ReturnType<typeof tsRestHandler>> {
+        return tsRestHandler(contract.assets.getAssetsBySubdomain, async ({ params, query }) => {
+            const { subdomain } = params;
+            const { page = 1, pageSize = 10 } = query;
+            const assets = await this.assetService.getAssetsBySubdomain(subdomain, page, pageSize);
 
+            return { status: 200, body: assets };
+        });
+    }
+
+    @Public()
+    @TsRestHandler(contract.assets.getAssetDetailsBySubdomain)
+    async getAssetDetailsBySubdomain(): Promise<ReturnType<typeof tsRestHandler>> {
+        return tsRestHandler(contract.assets.getAssetDetailsBySubdomain, async ({ params }) => {
+            const { subdomain, assetId } = params;
+            const asset = await this.assetService.getAssetDetailsBySubdomain(subdomain, assetId);
+
+            if (!asset) {
+                return { status: 404, body: undefined };
+            }
+
+            return { status: 200, body: asset };
+        });
+    }
+
+    @TsRestHandler(contract.assets.updateAssetIsAvailable)
+    async updateAssetIsAvailable(): Promise<ReturnType<typeof tsRestHandler>> {
+        return tsRestHandler(contract.assets.updateAssetIsAvailable, async ({ params, body }) => {
+            const { id } = params
+            const { available } = body
+            const message = await this.assetService.updateAssetIsAvailable(available,id)
+            return { status: 200, body: message }
+        });
+    }
+
+    
 
 }

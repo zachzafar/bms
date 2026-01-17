@@ -1,12 +1,12 @@
 import { Injectable, Logger, NotFoundException, ConflictException, Inject } from '@nestjs/common';
 import { MySql2Database } from 'drizzle-orm/mysql2';
 import { DrizzleAsyncProvider } from 'src/drizzle/drizzle.provider';
-import * as schema from '@repo/api-contract';
 import { eq, and, count, countDistinct, desc, sql } from 'drizzle-orm';
 import { hash } from 'argon2';
 import { randomBytes } from 'crypto';
 import { UsersService } from 'src/users/users.service';
 import { promises as fs} from "fs";
+import * as schema from '@repo/api-contract';
 
 @Injectable()
 export class SystemAdminService {
@@ -48,20 +48,41 @@ export class SystemAdminService {
     }
   }
 
-  async getSystemAdmins() {
+  async getSystemAdmins(page: number = 1, pageSize: number = 10) {
     try {
+      const offset = (page - 1) * pageSize;
+
+      const totalCountResult = await this.db
+        .select({ count: count() })
+        .from(schema.User)
+        .where(eq(schema.User.userType, 'system'));
+      const totalCount = totalCountResult[0]?.count || 0;
+
       const users = await this.db.query.User.findMany({
         where: (user, { eq }) => eq(user.userType, 'system'),
         columns: {
           password: false,
-        }
+        },
+        limit: pageSize,
+        offset: offset,
       });
 
-      // Transform users to match the expected schema (add roles field)
-      return users.map(user => ({
-        ...user,
-        roles: [] // System admins don't have tenant-specific roles
-      }));
+      const paginationData = {
+        page,
+        pageSize,
+        totalCount,
+        totalPages: Math.ceil(totalCount / pageSize),
+        hasNextPage: page * pageSize < totalCount,
+        hasPreviousPage: page > 1,
+      };
+
+      return {
+        data: users.map(user => ({
+          ...user,
+          roles: [] // System admins don't have tenant-specific roles
+        })),
+        pagination: paginationData,
+      };
     } catch (error: any) {
       this.logger.error(`Failed to get system admins: ${error.message}`);
       throw error;
@@ -122,7 +143,7 @@ export class SystemAdminService {
 
         // Assign admin role to admin user
         await tx.insert(schema.UserHasRoles).values({
-          roleId: BigInt(adminRole.id),
+          roleId: adminRole.id,
           userId: adminUser.id,
           tenantId: tenant.id,
         });
@@ -136,7 +157,7 @@ export class SystemAdminService {
 
         await tx.insert(schema.RoleHasPermissions).values(
           basicPermissions.map(permission => ({
-            roleId: BigInt(adminRole.id),
+            roleId: adminRole.id,
             permission,
           }))
         );
@@ -206,7 +227,7 @@ export class SystemAdminService {
         });
         
         for (const role of roles) {
-          await tx.delete(schema.RoleHasPermissions).where(eq(schema.RoleHasPermissions.roleId, BigInt(role.id)));
+          await tx.delete(schema.RoleHasPermissions).where(eq(schema.RoleHasPermissions.roleId, role.id));
         }
         
         // Delete user roles
@@ -230,8 +251,32 @@ export class SystemAdminService {
     }
   }
 
-  async getTenants() {
-    return await this.db.query.Tenant.findMany();
+  async getTenants(page: number = 1, pageSize: number = 10) {
+    const offset = (page - 1) * pageSize;
+
+    const totalCountResult = await this.db
+      .select({ count: count() })
+      .from(schema.Tenant);
+    const totalCount = totalCountResult[0]?.count || 0;
+
+    const results = await this.db.query.Tenant.findMany({
+      limit: pageSize,
+      offset: offset,
+    });
+
+    const paginationData = {
+      page,
+      pageSize,
+      totalCount,
+      totalPages: Math.ceil(totalCount / pageSize),
+      hasNextPage: page * pageSize < totalCount,
+      hasPreviousPage: page > 1,
+    };
+
+    return {
+      data: results,
+      pagination: paginationData,
+    };
   }
 
   async getTenant(tenantId: string) {
@@ -308,13 +353,13 @@ export class SystemAdminService {
         if (permissions.length > 0) {
           await tx.insert(schema.RoleHasPermissions).values(
             permissions.map(permission => ({
-              roleId: BigInt(role.id),
+              roleId: role.id,
               permission,
             }))
           );
         }
 
-        return { roleId: Number(role.id) }; // Convert to number as expected by contract
+        return { roleId: (role.id) }; // Convert to number as expected by contract
       });
 
       this.logger.log(`Created role: ${result.roleId} for tenant: ${tenantId}`);
@@ -325,12 +370,12 @@ export class SystemAdminService {
     }
   }
 
-  async updateTenantRole(tenantId: string, roleId: string, name: string, description: string | undefined, permissions: string[]) {
+  async updateTenantRole(tenantId: string, roleId: number, name: string, description: string | undefined, permissions: string[]) {
     try {
       // Verify role exists and belongs to tenant
       const role = await this.db.query.Roles.findFirst({
         where: (r, { and, eq }) => and(
-          eq(r.id, Number(roleId)),
+          eq(r.id, (roleId)),
           eq(r.tenantId, tenantId)
         )
       });
@@ -359,17 +404,17 @@ export class SystemAdminService {
         // Update role
         await tx.update(schema.Roles)
           .set({ name, description })
-          .where(eq(schema.Roles.id, Number(roleId)));
+          .where(eq(schema.Roles.id, (roleId)));
 
         // Delete existing permissions
         await tx.delete(schema.RoleHasPermissions)
-          .where(eq(schema.RoleHasPermissions.roleId, BigInt(Number(roleId))));
+          .where(eq(schema.RoleHasPermissions.roleId, (roleId)));
 
         // Add new permissions
         if (permissions.length > 0) {
           await tx.insert(schema.RoleHasPermissions).values(
             permissions.map(permission => ({
-              roleId: BigInt(Number(roleId)),
+              roleId: (roleId),
               permission,
             }))
           );
@@ -384,12 +429,12 @@ export class SystemAdminService {
     }
   }
 
-  async deleteTenantRole(tenantId: string, roleId: string) {
+  async deleteTenantRole(tenantId: string, roleId: number) {
     try {
       // Verify role exists and belongs to tenant
       const role = await this.db.query.Roles.findFirst({
         where: (r, { and, eq }) => and(
-          eq(r.id, Number(roleId)),
+          eq(r.id, (roleId)),
           eq(r.tenantId, tenantId)
         )
       });
@@ -401,7 +446,7 @@ export class SystemAdminService {
       // Check if role is assigned to any users
       const userRoles = await this.db.query.UserHasRoles.findMany({
         where: (uhr, { and, eq }) => and(
-          eq(uhr.roleId, BigInt(Number(roleId))),
+          eq(uhr.roleId, (roleId)),
           eq(uhr.tenantId, tenantId)
         )
       });
@@ -414,11 +459,11 @@ export class SystemAdminService {
       await this.db.transaction(async (tx) => {
         // Delete permissions
         await tx.delete(schema.RoleHasPermissions)
-          .where(eq(schema.RoleHasPermissions.roleId, BigInt(Number(roleId))));
+          .where(eq(schema.RoleHasPermissions.roleId, (roleId)));
 
         // Delete role
         await tx.delete(schema.Roles)
-          .where(eq(schema.Roles.id, Number(roleId)));
+          .where(eq(schema.Roles.id, (roleId)));
       });
 
       this.logger.log(`Deleted role: ${roleId} for tenant: ${tenantId}`);
@@ -445,12 +490,12 @@ export class SystemAdminService {
             .select({ count: count() })
             .from(schema.UserHasRoles)
             .where(and(
-              eq(schema.UserHasRoles.roleId, BigInt(role.id)),
+              eq(schema.UserHasRoles.roleId, (role.id)),
               eq(schema.UserHasRoles.tenantId, tenantId)
             ));
 
           return {
-            id: Number(role.id), // Convert to number as expected by contract
+            id: (role.id), // Convert to number as expected by contract
             name: role.name,
             description: role.description,
             permissions: role.rolesToPermissions.map(rp => rp.permission),
@@ -525,7 +570,7 @@ export class SystemAdminService {
         // Assign roles
         for (const roleId of roleIds) {
           await tx.insert(schema.UserHasRoles).values({
-            roleId: BigInt(roleId),
+            roleId: (roleId),
             userId,
             tenantId,
           });
@@ -608,7 +653,7 @@ export class SystemAdminService {
               roles: [] // The user schema expects roles as number[], not role objects
             },
             roles: userRoles.map(ur => ({
-              id: Number(ur.role.id), // Convert BigInt to number
+              id: (ur.role.id), // Convert  to number
               name: ur.role.name,
             })),
             isAdmin: tu.isAdmin || false, // Ensure boolean, not null
@@ -750,7 +795,7 @@ export class SystemAdminService {
     }
   }
 
-  async getSystemLogs(level?: string, startDate?: string, endDate?: string, limit: number = 50, offset: number = 0) {
+  async getSystemLogs(level?: string, startDate?: Date, endDate?: Date, limit: number = 50, offset: number = 0) {
     try {
       // This would typically query a logging table or external logging service
       // For now, return mock data structure

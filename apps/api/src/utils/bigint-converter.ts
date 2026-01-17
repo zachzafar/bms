@@ -8,7 +8,7 @@
  * @param options - Configuration options
  * @returns A new object with bigint values converted to numbers
  */
-export function convertBigIntToNumber<T extends Record<string, any>>(
+export function convertToNumber<T extends Record<string, any>>(
   obj: T,
   options: {
     /** Fields to exclude from conversion */
@@ -27,7 +27,7 @@ export function convertBigIntToNumber<T extends Record<string, any>>(
 
   if (Array.isArray(obj)) {
     return obj.map(item => typeof item === 'object' && item !== null && recursive
-        ? convertBigIntToNumber(item, options)
+        ? convertToNumber(item, options)
         : typeof item === 'bigint' ? Number(item) : item
     ) as unknown as T;
   }
@@ -54,7 +54,7 @@ export function convertBigIntToNumber<T extends Record<string, any>>(
       (result as any)[key] = Number(value);
     } else if (value !== null && typeof value === 'object' && recursive) {
       // Recursively convert nested objects
-      (result as any)[key] = convertBigIntToNumber(value, options);
+      (result as any)[key] = convertToNumber(value, options);
     }
   }
 
@@ -67,11 +67,11 @@ export function convertBigIntToNumber<T extends Record<string, any>>(
  * @param fields - Array of field names to convert
  * @returns A new object with specified bigint fields converted to numbers
  */
-export function convertSpecificBigIntFields<T extends Record<string, any>>(
+export function convertSpecificFields<T extends Record<string, any>>(
   obj: T,
   fields: string[]
 ): T {
-  return convertBigIntToNumber(obj, { include: fields, recursive: false });
+  return convertToNumber(obj, { include: fields, recursive: false });
 }
 
 /**
@@ -80,23 +80,23 @@ export function convertSpecificBigIntFields<T extends Record<string, any>>(
  * @param excludeFields - Array of field names to exclude from conversion
  * @returns A new object with bigint values converted to numbers (except excluded fields)
  */
-export function convertBigIntExcept<T extends Record<string, any>>(
+export function convertExcept<T extends Record<string, any>>(
   obj: T,
   excludeFields: string[]
 ): T {
-  return convertBigIntToNumber(obj, { exclude: excludeFields });
+  return convertToNumber(obj, { exclude: excludeFields });
 }
 
 /**
  * Type-safe converter for common database entity patterns
  * Converts id fields and foreign key fields from bigint to number
  */
-export function convertEntityBigInts<T extends Record<string, any>>(obj: T): T {
+export function convertEntitys<T extends Record<string, any>>(obj: T): T {
   const commonIdFields = [
     'id', 'contactId', 'userId', 'tenantId', 'assetId', 'bookingId',
     'customerId', 'invoiceId', 'paymentId', 'taskId', 'documentId',
     'brochureId', 'feedbackId', 'communicationId', 'teamId', 'roleId'
   ];
   
-  return convertBigIntToNumber(obj, { include: commonIdFields });
+  return convertToNumber(obj, { include: commonIdFields });
 }

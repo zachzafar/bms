@@ -48,12 +48,21 @@ export class MaintenanceController {
     @TsRestHandler(contract.maintenance.getMaintenances)
     @Roles(PermissionScope.MAINTENANCE_READ)
     async getMaintenances(@Headers() headers: any): Promise<ReturnType<typeof tsRestHandler>> {
-        return tsRestHandler(contract.maintenance.getMaintenances, async () => {
+        return tsRestHandler(contract.maintenance.getMaintenances, async ({ query }) => {
             const tenantId = headers['x-tenant-id']
             this.logger.log(`Get maintenances for tenant: ${tenantId}`)
-            const maintenances = await this.maintenanceService.getMaintenances(tenantId);
-            
-            return { status: 200, body:  maintenances.map(m => ({...m, asset: {...m.asset, assetTypeId: Number(m.asset.assetTypeId)}}))  };
+            const page = query.page ? Number(query.page) : 1;
+            const pageSize = query.pageSize ? Number(query.pageSize) : 10;
+
+            const result = await this.maintenanceService.getMaintenances(tenantId, page, pageSize);
+
+            return {
+                status: 200,
+                body: {
+                    data: result.data.map((m: any) => ({...m, asset: {...m.asset, assetTypeId: m.asset.assetTypeId}})),
+                    pagination: result.pagination
+                }
+            };
         });
     }
 

@@ -27,16 +27,19 @@ async createTag(@Headers() headers: any): Promise<ReturnType<typeof tsRestHandle
     // Call the service with the complete data
     const tag = await this.tagsService.createTag(tagData);
     
-    return { status: 201, body: { id: String(tag.id) } };
+    return { status: 201, body: { id: tag.id } };
   });
 }
 
   @TsRestHandler(contract.settings.tags.getTags)
   async getTags(@Headers() headers: any): Promise<ReturnType<typeof tsRestHandler>> {
-    return tsRestHandler(contract.settings.tags.getTags, async () => {
+    return tsRestHandler(contract.settings.tags.getTags, async ({ query }) => {
       const tenantId = headers['x-tenant-id'];
+      const page = query.page ? Number(query.page) : 1;
+      const pageSize = query.pageSize ? Number(query.pageSize) : 10;
+
       // Fetch only tags belonging to this tenant
-      const tags = await this.tagsService.getTags(tenantId);
+      const tags = await this.tagsService.getTags(tenantId, page, pageSize);
       return { status: 200, body: tags };
     });
   }
@@ -45,7 +48,7 @@ async createTag(@Headers() headers: any): Promise<ReturnType<typeof tsRestHandle
   async getTag(@Headers() headers: any): Promise<ReturnType<typeof tsRestHandler>> {
     return tsRestHandler(contract.settings.tags.getTag, async ({ params }) => {
       const tenantId = headers['x-tenant-id'];
-      const tag = await this.tagsService.getTag(Number(params.id));
+      const tag = await this.tagsService.getTag((params.id));
 
       // Validate tenant access
       await this.tenantService.validateTenantAccess(tenantId, schema.Tags, tag.id);
@@ -58,12 +61,12 @@ async createTag(@Headers() headers: any): Promise<ReturnType<typeof tsRestHandle
   async deleteTag(@Headers() headers: any): Promise<ReturnType<typeof tsRestHandler>> {
     return tsRestHandler(contract.settings.tags.deleteTag, async ({ params }) => {
       const tenantId = headers['x-tenant-id'];
-      const tag = await this.tagsService.getTag(Number(params.id));
+      const tag = await this.tagsService.getTag((params.id));
 
       // Validate tenant access before deleting
       await this.tenantService.validateTenantAccess(tenantId, schema.Tags, tag.id);
 
-      const result = await this.tagsService.deleteTag(Number(params.id));
+      const result = await this.tagsService.deleteTag((params.id));
       return { status: 200, body: result };
     });
   }

@@ -1,12 +1,14 @@
 import { initContract } from "@ts-rest/core";
 import { z } from "zod";
 import { InsertTenantSchema, SelectTenantSchema, InsertUserSchema, SelectUserSchema,InsertAssetTypeSchema, SelectAssetPropertySchema, SelectAssetTypeSchema, UpdateAssetTypeSchema,InsertAssetPropertySchema, UpdateAssetPropertySchema, InsertTagSchema, SelectTagSchema, InsertBookingFormSchema, SelectBookingFormSchema, InsertBookingFormFieldSchema, SelectBookingFormFieldSchema } from "../database-schema/schema";
+import { pagination } from "./utils";
 
 const c = initContract();
 
  const AssetTypeWithPropertiesSchema = z.object({
     assetType: InsertAssetTypeSchema,
-    properties: z.array(z.number())
+    properties: z.array(z.number()),
+    forms: z.array(z.number())
 })
 
  const SelectAssetTypeWithPropertiesSchema = z.object({
@@ -38,8 +40,15 @@ export const systemAdminContract = c.router({
     method: 'GET',
     path: '/system-admin/users',
     responses: {
-      200: z.array(SelectUserSchema.omit({ password: true })),
+      200: z.object({
+        data: z.array(SelectUserSchema.omit({ password: true })),
+        pagination
+      })
     },
+    query: z.object({
+      page: z.coerce.number().optional(),
+      pageSize: z.coerce.number().optional(),
+    }),
     summary: 'Get all system admin users',
   },
 
@@ -65,8 +74,15 @@ export const systemAdminContract = c.router({
     method: 'GET',
     path: '/system-admin/tenants',
     responses: {
-      200: z.array(SelectTenantSchema),
+      200: z.object({
+        data: z.array(SelectTenantSchema),
+        pagination
+      })
     },
+    query: z.object({
+      page: z.coerce.number().optional(),
+      pageSize: z.coerce.number().optional(),
+    }),
     summary: 'Get all tenants',
   },
 
@@ -161,7 +177,7 @@ export const systemAdminContract = c.router({
     path: '/system-admin/tenants/:tenantId/roles/:roleId',
     pathParams: z.object({
       tenantId: z.string(),
-      roleId: z.string(),
+      roleId: z.coerce.number(),
     }),
     body: z.object({
       name: z.string().min(1),
@@ -181,7 +197,7 @@ export const systemAdminContract = c.router({
     path: '/system-admin/tenants/:tenantId/roles/:roleId',
     pathParams: z.object({
       tenantId: z.string(),
-      roleId: z.string(),
+      roleId: z.coerce.number(),
     }),
     responses: {
       204: z.object({
@@ -367,8 +383,8 @@ export const systemAdminContract = c.router({
     path: '/system-admin/logs',
     query: z.object({
       level: z.enum(['info', 'warn', 'error']).optional(),
-      startDate: z.string().optional(),
-      endDate: z.string().optional(),
+      startDate: z.coerce.date().optional(),
+      endDate: z.coerce.date().optional(),
       limit: z.number().min(1).max(100).default(50),
       offset: z.number().min(0).default(0),
     }),
@@ -419,10 +435,17 @@ export const systemAdminContract = c.router({
         method: 'GET',
         path: '/system-admin/asset-type/:tenantId',
         responses: {
-            200: z.array(SelectAssetTypeSchema)
+            200: z.object({
+              data: z.array(SelectAssetTypeSchema),
+              pagination
+            })
         },
         pathParams: z.object({
             tenantId: z.string()
+        }),
+        query: z.object({
+          page: z.coerce.number().optional(),
+          pageSize: z.coerce.number().optional(),
         }),
         summary: 'Get all asset types'
     },
@@ -432,14 +455,15 @@ export const systemAdminContract = c.router({
         responses: {
             200: z.object({
                 assetType: SelectAssetTypeSchema,
-                properties: z.array(SelectAssetPropertySchema)
+                properties: z.array(SelectAssetPropertySchema),
+                forms: z.array(SelectBookingFormSchema)
             }),
             404: z.object({
                 message: z.string()
             })
         },
         pathParams: z.object({
-            id: z.string()
+            id: z.coerce.number()
         }),
         summary: 'Get asset type by id'
     },
@@ -448,13 +472,14 @@ export const systemAdminContract = c.router({
         path: '/system-admin/asset-type/:id',
         body: z.object({
             assetType: UpdateAssetTypeSchema,
-            properties: z.array(z.number())
+            properties: z.array(z.coerce.number()),
+            forms: z.array(z.coerce.number())
     }),
         responses: {
             200: z.null()
         },
         pathParams: z.object({
-            id: z.string()
+            id: z.coerce.number()
         }),
         summary: 'Update asset type by id'
     },
@@ -468,7 +493,7 @@ export const systemAdminContract = c.router({
             })
         },
         pathParams: z.object({
-            id: z.string()
+            id: z.coerce.number()
         }),
         summary: 'Delete asset type by id'
     },
@@ -476,10 +501,17 @@ export const systemAdminContract = c.router({
         method: 'GET',
         path: '/system-admin/properties/:tenantId',
         responses: {
-            200: z.array(SelectAssetPropertySchema)
+            200: z.object({
+              data: z.array(SelectAssetPropertySchema),
+              pagination
+            })
         },
         pathParams: z.object({
             tenantId: z.string()
+        }),
+        query: z.object({
+          page: z.coerce.number().optional(),
+          pageSize: z.coerce.number().optional(),
         }),
         summary: 'Get all asset properties'
     },
@@ -504,7 +536,7 @@ export const systemAdminContract = c.router({
             })
         },
         pathParams: z.object({
-            id: z.number()
+            id: z.coerce.number()
         }),
         summary: 'Get a asset property'
     },
@@ -515,14 +547,14 @@ export const systemAdminContract = c.router({
         body: UpdateAssetPropertySchema,
         responses: {
             200: z.object({
-                id: z.number(),
+                id: z.coerce.number(),
             }),
             404: z.object({
                 message: z.string()
             })
         },
         pathParams: z.object({
-            id: z.number()
+            id: z.coerce.number()
         }),
         summary: 'Update a asset property'
     },
@@ -539,7 +571,7 @@ export const systemAdminContract = c.router({
             })
         },
         pathParams: z.object({
-            id: z.string()
+            id: z.coerce.number()
         }),
         summary: 'Delete a asset property'
     },
@@ -549,7 +581,7 @@ export const systemAdminContract = c.router({
         body: InsertTagSchema,
         responses: {
             201: z.object({
-                id: z.string(),
+                id: z.coerce.number(),
             })
         },
         summary: 'Create a new tag'
@@ -564,7 +596,7 @@ export const systemAdminContract = c.router({
             })
         },
         pathParams: z.object({
-            id: z.string()
+            id: z.coerce.number()
         }),
         summary: 'Get a tag'
     },
@@ -581,7 +613,7 @@ export const systemAdminContract = c.router({
             })
         },
         pathParams: z.object({
-            id: z.string()
+            id: z.coerce.number()
         }),
         summary: 'Delete a tag'
     },
@@ -589,10 +621,17 @@ export const systemAdminContract = c.router({
         method: 'GET',
         path: '/system-admin/tags/:tenantId',
         responses: {
-            200: z.array(SelectTagSchema)
+            200: z.object({
+              data: z.array(SelectTagSchema),
+              pagination
+            })
         },
         pathParams: z.object({
             tenantId: z.string()
+        }),
+        query: z.object({
+          page: z.coerce.number().optional(),
+          pageSize: z.coerce.number().optional(),
         }),
         summary: 'Get all tags'
     },
@@ -607,7 +646,7 @@ export const systemAdminContract = c.router({
         }),
         responses: {
             201: z.object({
-                id: z.number()
+                id: z.coerce.number(),
             })
         },
         summary: 'Create a new form'
@@ -616,8 +655,15 @@ export const systemAdminContract = c.router({
         method: 'GET',
         path: '/system-admin/form',
         responses: {
-            200: z.array(SelectBookingFormSchema)
+            200: z.object({
+              data: z.array(SelectBookingFormSchema),
+              pagination
+            })
         },
+        query: z.object({
+          page: z.coerce.number().optional(),
+          pageSize: z.coerce.number().optional(),
+        }),
         summary: 'Get all forms'
     },
     getForm: {
@@ -630,7 +676,7 @@ export const systemAdminContract = c.router({
             }),
         },
         pathParams: z.object({
-            id: z.number()
+            id: z.coerce.number()
         }),
         summary: 'Get a form by id'
     },
@@ -639,7 +685,7 @@ export const systemAdminContract = c.router({
         path: '/system-admin/bulk-upload',
         body: z.object({
             file: z.any(),
-            assetTypeId: z.number(),
+            assetTypeId: z.coerce.number(),
             tenantId: z.string() ,
         }),
         responses: {

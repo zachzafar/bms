@@ -14,8 +14,9 @@ export const Asset = mysqlTable("assets", {
     id: varchar("id", { length: 36 }).primaryKey().$default(() => uuid()),
     name: varchar("name", { length: 255 }).notNull(),
     description: text("description"),
+    available: boolean("available").default(true).notNull(),
     requiresApproval: boolean("requires_approval").default(false).notNull(),
-    assetTypeId: bigint("asset_type_id", { mode: 'bigint', unsigned: true}).references(() => AssetType.id),
+    assetTypeId: bigint("asset_type_id", { mode: 'number', unsigned: true}).references(() => AssetType.id).notNull(),
     userId: varchar("user_id",{length: 255}).references(() => User.id),
     tenantId: varchar("tenant_id", { length: 255 }).notNull().references(() => Tenant.id),
     createdAt: timestamp('createdAt').notNull().defaultNow(),
@@ -26,16 +27,9 @@ export const Asset = mysqlTable("assets", {
 }));
 
 export const SelectAssetSchema = createSelectSchema(Asset)
-  .omit({ assetTypeId: true })
-  .extend({ 
-    assetTypeId: z.coerce.number().optional()
-  });
 
 export const InsertAssetSchema = createInsertSchema(Asset)
-  .omit({ assetTypeId: true })
-  .extend({ 
-    assetTypeId: z.coerce.number().optional()
-  });
+
 export const UpdateAssetSchema = InsertAssetSchema.partial();
 
 export type SelectAsset = z.infer<typeof SelectAssetSchema>;
@@ -64,7 +58,7 @@ export const AssetRelations = relations(Asset, ({ one, many }) => ({
 
 
 export const AssetImages = mysqlTable("asset_images",{
-    id: serial("id").primaryKey(),
+    id: bigint("id", { mode: "number", unsigned: true }).autoincrement().primaryKey(),
     assetId: varchar("asset_id", { length: 255 }).notNull().references(() => Asset.id),
     filePath: varchar("file_path", { length: 255 }).notNull(),
     imageType: mysqlEnum("image_type", ["primary", "secondary","gallery"]).notNull().default("gallery"),
@@ -82,9 +76,9 @@ export const AssetImagesRelations = relations(AssetImages, ({ one }) => ({
 
 // AssetHasProperties Model
 export const AssetHasProperties = mysqlTable("asset_has_properties", {
-    id: serial("id").primaryKey(),
+    id: bigint("id", { mode: "number", unsigned: true }).autoincrement().primaryKey(),
     assetId: varchar("tenant_id", { length: 255 }).notNull().references(() => Asset.id),
-    assetPropertyId: bigint("asset_property_id", { mode: 'bigint', unsigned: true}).notNull().references(() => assetProperty.id),
+    assetPropertyId: bigint("asset_property_id", { mode: 'number', unsigned: true}).notNull().references(() => assetProperty.id),
     value: text("value").notNull(),
 }, (table) => ({
     assetPropertyUniqueIdx: uniqueIndex("asset_property_unique").on(table.assetId, table.assetPropertyId),
@@ -106,8 +100,8 @@ export const AssetHasPropertiesRelations = relations(AssetHasProperties, ({ one 
 }))
 
 export const AssetHasTags = mysqlTable("asset_has_tags", {
-    id: serial("id").primaryKey(),
-    tagId: bigint("tag_id", { mode: 'bigint', unsigned: true })
+    id: bigint("id", { mode: "number", unsigned: true }).autoincrement().primaryKey(),
+    tagId: bigint("tag_id", { mode: 'number', unsigned: true })
         .notNull()
         .references(() => Tags.id, { onDelete: 'cascade' }), // lowercase 'cascade'
     assetId: varchar("asset_id", { length: 255 })
@@ -129,10 +123,12 @@ export const AssetHasTagsRelations = relations(AssetHasTags, ({ one }) => ({
 }))
 
 export const AssetHasBookingForms = mysqlTable("asset_has_booking_forms", {
-    id: serial("id").primaryKey(),
-    assetId: varchar("tenant_id", { length: 255 }).notNull().references(() => Asset.id),
-    bookingFormId: bigint("booking_form_id",{mode: 'bigint', unsigned: true}).references(() => BookingForm.id)
-})
+    id: bigint("id", { mode: "number", unsigned: true }).autoincrement().primaryKey(),
+    assetId: varchar("asset_id", { length: 255 }).notNull().references(() => Asset.id, { onDelete: 'cascade' }),
+    bookingFormId: bigint("booking_form_id",{mode: 'number', unsigned: true}).notNull().references(() => BookingForm.id, { onDelete: 'cascade' })
+}, (table) => ({
+    assetFormUniqueIdx: uniqueIndex("asset_form_unique").on(table.assetId, table.bookingFormId),
+}))
 
 export const AssetHasBookingFormsRelations = relations(AssetHasBookingForms, ({ one }) => ({
     asset: one(Asset, {
@@ -146,8 +142,8 @@ export const AssetHasBookingFormsRelations = relations(AssetHasBookingForms, ({ 
 }))
 
 export const AssetHasRates = mysqlTable("asset_has_rates", {
-  id: serial("id").primaryKey(),
-  rateId: bigint("rate_id", { mode: "bigint", unsigned: true })
+  id: bigint("id", { mode: "number", unsigned: true }).autoincrement().primaryKey(),
+  rateId: bigint("rate_id", { mode: "number", unsigned: true })
     .notNull()
     .references(() => Rate.id),
   assetId: varchar("asset_id", { length: 255 })

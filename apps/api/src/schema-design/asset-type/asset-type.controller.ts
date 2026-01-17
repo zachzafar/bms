@@ -12,9 +12,12 @@ export class AssetTypeController {
 
     @TsRestHandler(contract.settings.assetType.getAssetTypes)
     async getAssetTypes(@Headers() headers: any): Promise<ReturnType<typeof tsRestHandler>> {
-        return tsRestHandler(contract.settings.assetType.getAssetTypes, async () => {
+        return tsRestHandler(contract.settings.assetType.getAssetTypes, async ({ query }) => {
             const tenantId = headers['x-tenant-id']
-            const assetTypes = await this.assetTypeService.getAssetTypes(tenantId);
+            const page = query.page ? Number(query.page) : 1;
+            const pageSize = query.pageSize ? Number(query.pageSize) : 10;
+
+            const assetTypes = await this.assetTypeService.getAssetTypes(tenantId, page, pageSize);
             return { status: 200, body: assetTypes };
         });
     }
@@ -23,7 +26,7 @@ export class AssetTypeController {
     async createAssetType(@Headers() headers: any): Promise<ReturnType<typeof tsRestHandler>> {
         return tsRestHandler(contract.settings.assetType.createAssetType, async ({ body }) => {
             const tenantId = headers['x-tenant-id']
-            const id = await this.assetTypeService.createAssetType({...body.assetType, tenantId},body.properties);
+            const id = await this.assetTypeService.createAssetType({...body.assetType, tenantId}, body.properties, body.forms);
             this.logger.log(`Created asset type with id ${id}`);
             return { status: 201, body: { id } };
         });
@@ -34,19 +37,19 @@ export class AssetTypeController {
         return tsRestHandler(contract.settings.assetType.getAssetType, async ({ params }) => {
             const tenantId = headers['x-tenant-id']
             await this.TenantService.validateTenantAccess(tenantId, schema.AssetType, params.id)
-            const assetType = await this.assetTypeService.getAssetType(Number(params.id));
-            
+            const assetType = await this.assetTypeService.getAssetType((params.id));
+
             if (!assetType) {
                 return {
                     status: 404 as const,
                     body: { message: 'Asset type not found' }
                 };
             }
-            
-            const { properties, ...assetTypeData } = assetType;
+
+            const { properties, forms, ...assetTypeData } = assetType;
             return {
                 status: 200 as const,
-                body: { assetType: assetTypeData, properties }
+                body: { assetType: assetTypeData, properties, forms }
             };
         });
     }
@@ -56,18 +59,19 @@ export class AssetTypeController {
         return tsRestHandler(contract.settings.assetType.updateAssetType, async ({ params, body }) => {
             const tenantId = headers['x-tenant-id']
             await this.TenantService.validateTenantAccess(tenantId, schema.AssetType, params.id)
-            const assetType = await this.assetTypeService.updateAssetType(Number(params.id), body.assetType);
-             await this.assetTypeService.updateAssetTypeProperties(Number(params.id), body.properties);
+            const assetType = await this.assetTypeService.updateAssetType((params.id), body.assetType);
+            await this.assetTypeService.updateAssetTypeProperties((params.id), body.properties);
+            await this.assetTypeService.updateAssetTypeForms((params.id), body.forms);
             if (!assetType) {
-                return { 
-                    status: 500 as const, 
+                return {
+                    status: 500 as const,
                     body: { assetType: null, properties: [], message: 'Error updating asset type' }
                 };
             }
-            
+
             const { properties, ...assetTypeData } = assetType;
-            return { 
-                status: 200 as const, 
+            return {
+                status: 200 as const,
                 body: null
             };
         });
@@ -78,7 +82,7 @@ export class AssetTypeController {
         return tsRestHandler(contract.settings.assetType.deleteAssetType, async ({ params }) => {
             const tenantId = headers['x-tenant-id']
             await this.TenantService.validateTenantAccess(tenantId, schema.AssetType, params.id)
-            await this.assetTypeService.deleteAssetType(Number(params.id));
+            await this.assetTypeService.deleteAssetType(params.id);
             return { 
                 status: 204 as const, 
                 body: undefined 

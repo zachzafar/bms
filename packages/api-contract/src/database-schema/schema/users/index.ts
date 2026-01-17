@@ -18,6 +18,7 @@ export const User = mysqlTable("users", {
     userType: mysqlEnum("user_type", ["customer", "owner", "system","admin"]).notNull(),
     createdAt: timestamp('createdAt', { mode: 'date' }).defaultNow(),
     updatedAt: timestamp('updated_at', { mode: 'date', }).$onUpdate(() => new Date()),
+    deletedAt: timestamp('deleted_at'),
 }, (table) => ({
     emailUniqueIdx: uniqueIndex("email_unique").on(table.email),
 }));
@@ -47,31 +48,8 @@ export type InsertUser = z.infer<typeof InsertUserSchema>
 export type SelectUser = z.infer<typeof SelectUserSchema>
 export type UpdateUser = z.infer<typeof UpdateUserSchema>
 
-export const UserHasBookings = mysqlTable("user_has_bookings", {
-    id: serial("id").primaryKey(),
-    userId: varchar("user_id", { length: 255 }).notNull().references(() => User.id, { onDelete: 'cascade' }),
-    bookingId: varchar("booking_id", { length: 255 }).notNull().references(() => Booking.id)
-})
-
-export const InsertUserHasBookingsSchema = createInsertSchema(UserHasBookings);
-export const SelectUserHasBookingsSchema = createSelectSchema(UserHasBookings);
-
-export type InsertUserHasBookings = z.infer<typeof InsertUserHasBookingsSchema>
-export type SelectUserHasBookings = z.infer<typeof SelectUserHasBookingsSchema>
-
-export const UserHasBookingsRelations = relations(UserHasBookings, ({ one }) => ({
-    one: one(User, {
-        fields: [UserHasBookings.userId],
-        references: [User.id]
-    }),
-    booking: one(Booking, {
-        fields: [UserHasBookings.bookingId],
-        references: [Booking.id]
-    })
-}))
-
 export const UserHasAssets = mysqlTable("user_has_assets", {
-    id: serial("id").primaryKey(),
+    id: bigint("id", { mode: "number", unsigned: true }).autoincrement().primaryKey(),
     userId: varchar("user_id", { length: 255 }).notNull().references(() => User.id, { onDelete: 'cascade' }).notNull(),
     assetId: varchar("asset_id", { length: 255 }).notNull().references(() => Asset.id),
     type: mysqlEnum("type", ["owner", "manager"]).notNull().default("manager")
@@ -96,14 +74,15 @@ export const UserHasAssetsRelations = relations(UserHasAssets, ({ one }) => ({
 
 // Customer Model
 export const Customer = mysqlTable("customer_details", {
-    id: serial("id").primaryKey(),
+    id: bigint("id", { mode: "number", unsigned: true }).autoincrement().primaryKey(),
     phone: varchar("phone", { length: 255 }),
     address: varchar("address", { length: 255 }),
-    contactId: bigint("contact_id", { mode: 'bigint', unsigned: true })
+    contactId: bigint("contact_id", { mode: 'number', unsigned: true })
       .references(() => Contact.id),
     dateOfBirth: datetime("date_of_birth"),
     createdAt: timestamp('createdAt').notNull().defaultNow(),
     updatedAt: timestamp('updated_at', { mode: 'date', }).$onUpdate(() => new Date()),
+    deletedAt: timestamp('deleted_at'),
     tenantId: varchar("tenant_id", { length: 255 }).notNull().references(() => Tenant.id),
     userId: varchar("user_id", { length: 255 }).notNull().references(() => User.id, { onDelete: 'cascade' }),
 }, (table) => ({
@@ -133,11 +112,11 @@ export const customerRelations = relations(Customer, ({ one }) => ({
 
 // Owner Model
 export const Owner = mysqlTable("owner_details", {
-    id: serial("id").primaryKey(),
+    id: bigint("id", { mode: "number", unsigned: true }).autoincrement().primaryKey(),
     phone: varchar("phone", { length: 255 }),
     address: varchar("address", { length: 255 }),
     companyName: varchar("company_name", { length: 255 }),
-    contactId: bigint("contact_id", { mode: 'bigint', unsigned: true })
+    contactId: bigint("contact_id", { mode: 'number', unsigned: true })
       .references(() => Contact.id),
     taxId: varchar("tax_id", { length: 255 }),
     createdAt: timestamp('createdAt').notNull().defaultNow(),
@@ -168,7 +147,7 @@ export const ownerRelations = relations(Owner, ({ one, many }) => ({
 
 
 export const Roles = mysqlTable("roles", {
-    id: serial("id").primaryKey(),
+    id: bigint("id", { mode: "number", unsigned: true }).autoincrement().primaryKey(),
     name: varchar("name", { length: 255 }).notNull(),
     description: text("description"),
     createdAt: timestamp('createdAt').notNull().defaultNow(),
@@ -189,8 +168,8 @@ export const RoleRelations = relations(Roles, ({ many }) => ({
 
 
 export const UserHasRoles = mysqlTable("user_has_roles", {
-    id: serial("id").primaryKey(),
-    roleId: bigint("roles_id", { mode: 'bigint', unsigned: true }).notNull().references(() => Roles.id),
+    id: bigint("id", { mode: "number", unsigned: true }).autoincrement().primaryKey(),
+    roleId: bigint("roles_id", { mode: 'number', unsigned: true }).notNull().references(() => Roles.id),
     userId: varchar("user_id", { length: 255 }).references(() => User.id, { onDelete: 'cascade' }).notNull(),
     tenantId: varchar("tenant_id", { length: 255 }).notNull().references(() => Tenant.id), // Add tenantId here als
     createdAt: timestamp('createdAt').notNull().defaultNow(),
@@ -216,8 +195,8 @@ export const UserHasRolesRelations = relations(UserHasRoles, ({ one }) => ({
 
 
 export const RoleHasPermissions = mysqlTable("role_has_permissions", {
-    id: serial("id").primaryKey(),
-    roleId: bigint("role_id", { mode: 'bigint', unsigned: true }).references(() => Roles.id).notNull(),
+    id: bigint("id", { mode: "number", unsigned: true }).autoincrement().primaryKey(),
+    roleId: bigint("role_id", { mode: 'number', unsigned: true }).references(() => Roles.id).notNull(),
     permission: varchar("permission", { length: 255 }).notNull(),
     createdAt: timestamp('createdAt').notNull().defaultNow(),
     updatedAt: timestamp('updated_at', { mode: 'date', }).$onUpdate(() => new Date()),

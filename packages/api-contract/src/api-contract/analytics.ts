@@ -35,7 +35,7 @@ export const analyticsContract = c.router({
             }))
         },
         query: z.object({
-            period: z.string()
+            period: z.coerce.number()
         }),
         summary: 'Get asset utilization rates'
     },
@@ -62,10 +62,10 @@ export const analyticsContract = c.router({
                 month: z.string(),
                 bookings: z.number()
                 }))
-            })
+            }),
         },
         query: z.object({
-            year: z.string()
+            year: z.coerce.number()
         }),
     },
     
@@ -79,10 +79,10 @@ export const analyticsContract = c.router({
             }))
         },
         query: z.object({
-            startDate: z.string().optional(),
-            endDate: z.string().optional(),
+            startDate: z.coerce.date().optional(),
+            endDate: z.coerce.date().optional(),
             groupBy: z.enum(['day', 'week', 'month', 'year']).default('month'),
-            assetTypeId: z.string().optional()
+            assetTypeId: z.coerce.number().optional()
         }),
         summary: 'Get booking trend analytics'
     },
@@ -124,7 +124,7 @@ export const analyticsContract = c.router({
             }))
         },
         query: z.object({
-            period: z.string()
+            period: z.coerce.number()
         }),
         summary: 'Get revenue analytics'
     },
@@ -140,7 +140,7 @@ export const analyticsContract = c.router({
             }))
         },
         query: z.object({
-            period: z.string()
+            period: z.coerce.number()
         })
     }
 })

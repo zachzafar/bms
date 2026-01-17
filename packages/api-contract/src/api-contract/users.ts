@@ -2,6 +2,7 @@
 import { initContract } from "@ts-rest/core";
 import { z } from "zod";
 import { InsertCustomerSchema, InsertOwnerSchema, InsertUserSchema, SelectCustomerSchema, SelectOwnerSchema, SelectUserSchema, UpdateCustomerSchema, UpdateOwnerSchema } from "../database-schema";
+import { pagination } from './utils';
 
 
 const c = initContract();
@@ -11,7 +12,7 @@ export const userContract = c.router({
         method: "POST",
         path: "/users/",
         body:   InsertUserSchema.extend({
-             roles: z.array(z.number()),
+             roles: z.array(z.coerce.number()),
              ownerDetails: InsertOwnerSchema.omit({tenantId: true, userId: true, }).optional(),
              customerDetails: InsertCustomerSchema.omit({ tenantId: true, userId: true, dateOfBirth: true}).extend({ dateOfBirth: z.string().optional()}).optional(),
             }),
@@ -39,8 +40,15 @@ export const userContract = c.router({
         method: "GET",
         path: "/users/",
         responses: {
-            200: z.array(SelectUserSchema.extend({ roles: z.array(z.number())})),
+            200: z.object({
+                data: z.array(SelectUserSchema.extend({ roles: z.array(z.number())})),
+                pagination
+            }),
         },
+        query: z.object({
+            page: z.coerce.number().optional(),
+            pageSize: z.coerce.number().optional(),
+        }),
         summary: "Get all users"
     },
     updateUser: {
@@ -50,7 +58,7 @@ export const userContract = c.router({
             user: InsertUserSchema.partial(),
             customer : UpdateCustomerSchema.partial().optional(),
             owner: UpdateOwnerSchema.partial().optional(),
-            roles: z.array(z.number()),
+            roles: z.array(z.coerce.number()),
            }),
         responses: {
             200: z.object({
@@ -80,16 +88,30 @@ export const userContract = c.router({
         method: "GET",
         path: "/customers",
         responses: {
-            200: z.array(z.object({customer:SelectCustomerSchema,user: SelectUserSchema.omit({roles: true})})),
+            200: z.object({
+                data: z.array(z.object({customer:SelectCustomerSchema,user: SelectUserSchema.omit({roles: true})})),
+                pagination
+            }),
         },
+        query: z.object({
+            page: z.coerce.number().optional(),
+            pageSize: z.coerce.number().optional(),
+        }),
         summary: "Get all customers"
     },
     getOwners: {
         method: "GET",
         path: "/owners",
         responses: {
-            200: z.array(z.object({owner:SelectOwnerSchema,user: SelectUserSchema.omit({roles: true})})),
+            200: z.object({
+                data: z.array(z.object({owner:SelectOwnerSchema,user: SelectUserSchema.omit({roles: true})})),
+                pagination
+            }),
         },
+        query: z.object({
+            page: z.coerce.number().optional(),
+            pageSize: z.coerce.number().optional(),
+        }),
         summary: "Get all owners"
     }
 })

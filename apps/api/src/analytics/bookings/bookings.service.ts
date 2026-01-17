@@ -1,7 +1,7 @@
 import { Inject, Injectable, InternalServerErrorException, Logger } from '@nestjs/common';
 import { MySql2Database } from 'drizzle-orm/mysql2';
 import { DrizzleAsyncProvider } from 'src/drizzle/drizzle.provider';
-import * as schema from '@repo/api-contract'
+import * as schema from '@repo/api-contract';
 import { count, eq, lte ,gte, and, sql } from 'drizzle-orm';
 
 @Injectable()
@@ -50,7 +50,7 @@ export class BookingAnalyticsService {
             
             // Use SQL function to extract month from startDate
             const results = await this.db.select({
-                month: sql`MONTH(${schema.Booking.startDate})`,
+                month: sql<number>`MONTH(${schema.Booking.startDate})`,
                 bookingCount: count()
             }).from(schema.Booking)
               .leftJoin(schema.Asset, eq(schema.Asset.id, schema.Booking.assetId))
@@ -67,9 +67,9 @@ export class BookingAnalyticsService {
             
             // Fill in the actual counts from the query results
             results.forEach(result => {
-                const monthIndex = Number(result.month) - 1;
+                const monthIndex = (result.month) - 1;
                 if (monthIndex >= 0 && monthIndex < 12) {
-                    monthlyData[monthIndex].bookingCount = Number(result.bookingCount);
+                    monthlyData[monthIndex].bookingCount = (result.bookingCount);
                 }
             });
             

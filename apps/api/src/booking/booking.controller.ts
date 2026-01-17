@@ -7,6 +7,7 @@ import { TenantService } from 'src/tenant/tenant.service';
 // import { RequireRead, RequireWrite, RequireDelete, RequirePermissionsDecorator } from 'src/auth/decorators/permissions.decorator';
 import { Roles } from 'src/auth/decorators/permissions.decorator';
 import { PermissionScope } from 'src/auth/permissions';
+import { Public } from 'src/auth/decorators/public.decorator';
 
 @Controller()
 export class BookingController {
@@ -50,14 +51,11 @@ export class BookingController {
     async getBookings(@Headers() headers: any): Promise<ReturnType<typeof tsRestHandler>> {
         return tsRestHandler(contract.booking.getBookings, async ({ query }) => {
             const tenantId = headers['x-tenant-id'];
-            const bookings = (await this.bookingService.getBookings(tenantId, query.assetId)).map(booking => ({
-                ...booking,
-                asset: {
-                    ...booking.asset,
-                    assetTypeId: booking.asset.assetTypeId ? Number(booking.asset.assetTypeId) : undefined,
-                },
-            }));
+            const page = query.page ? Number(query.page) : 1;
+            const pageSize = query.pageSize ? Number(query.pageSize) : 10;
 
+            const bookings = await this.bookingService.getBookings(tenantId, query.assetId, page, pageSize);
+            console.log(`bookings ${JSON.stringify(bookings)}`)
             return { status: 200, body: bookings };
         });
     }
@@ -96,7 +94,7 @@ export class BookingController {
         return tsRestHandler(contract.booking.checkTagAvailability, async ({ query }) => {
             const tenantId = headers['x-tenant-id'];
 
-            const tagId = Number(query.tagId);
+            const tagId = (query.tagId);
             if (isNaN(tagId)) {
                 return { status: 400, body: { message: "Invalid tagId" } };
             }
@@ -158,11 +156,78 @@ export class BookingController {
     @Roles(PermissionScope.BOOKINGS_DELETE)
     async deleteBlockedDate(): Promise<ReturnType<typeof tsRestHandler>> {
         return tsRestHandler(contract.booking.deleteBlockedDate, async ({ params }) => {
-            const id = String(params.id);
+            const id = params.id;
             // if (isNaN(id)) throw new BadRequestException("Invalid blocked date ID");
-
             await this.bookingService.deleteBlockedDate(id);
             return { status: 204, body: undefined };
+        });
+    }
+
+    @Public()
+    @TsRestHandler(contract.booking.updateBookingByToken)
+    async updateBookingWithToken(): Promise<ReturnType<typeof tsRestHandler>> {
+        return tsRestHandler(contract.booking.updateBookingByToken,async ({params, body}) => {
+            const { bookingId, token} = params
+            if(await this.bookingService.validateUpdateToken(token,bookingId)){
+                await this.bookingService.updateBooking(body);
+                return { status: 200, body: { message: "succesffully updated booking" } };
+            }
+
+            return { status: 403}
+            
+        })
+    }
+
+    @Public()
+    @TsRestHandler(contract.booking.customerCreateBooking)
+    async customerCreateBooking(): Promise<ReturnType<typeof tsRestHandler>> {
+        return tsRestHandler(contract.booking.customerCreateBooking,async ({params, body}) => {
+            const { booking, customer, formResponses } = body
+            const { tenantId } = params
+            const booking_result = await this.bookingService.createBooking(booking,[],{...customer, tenantId}, formResponses)
+
+            return { status: 201, body: { message: "successfully created new booking"}}
+        })
+    }
+
+    @TsRestHandler(contract.booking.updateBookingStatus)
+    @Roles(PermissionScope.BOOKINGS_WRITE)
+    async updateBookingStatus(): Promise<ReturnType<typeof tsRestHandler>> {
+        return tsRestHandler(contract.booking.updateBookingStatus, async ({ params, body }) => {
+            const result = await this.bookingService.updateBookingStatus(params.id, body.status);
+            return { status: 200, body: result };
+        });
+    }
+
+    @Public()
+    @TsRestHandler(contract.booking.cancelBookingByToken)
+    async cancelBookingByToken(): Promise<ReturnType<typeof tsRestHandler>> {
+        return tsRestHandler(contract.booking.cancelBookingByToken, async ({ params }) => {
+            const { bookingId, token } = params;
+
+            // Validate the update token
+            if (await this.bookingService.validateUpdateToken(token, bookingId)) {
+                await this.bookingService.updateBookingStatus(bookingId, 'Cancelled');
+                return { status: 200, body: { message: "Booking successfully cancelled" } };
+            }
+
+            return { status: 403 };
+        });
+    }
+
+    @Public()
+    @TsRestHandler(contract.booking.customerViewBooking)
+    async customerViewBooking(): Promise<ReturnType<typeof tsRestHandler>> {
+        return tsRestHandler(contract.booking.customerViewBooking, async ({ params }) => {
+            const { bookingId, token } = params;
+
+            // Validate the update token
+            if (await this.bookingService.validateUpdateToken(token, bookingId)) {
+                const booking = await this.bookingService.getBooking(bookingId);
+                return { status: 200, body: booking };
+            }
+
+            return { status: 403 };
         });
     }
 }

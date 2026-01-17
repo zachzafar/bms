@@ -66,8 +66,8 @@ const TaskCompletionSchema = z.object({
 });
 
 const DateRangeQuery = z.object({
-  startDate: z.string().optional(),
-  endDate: z.string().optional(),
+  startDate: z.coerce.date().optional(),
+  endDate: z.coerce.date().optional(),
   period: z.enum(['7d', '30d', '90d', '1y', 'custom']).default('30d')
 });
 
@@ -114,7 +114,7 @@ export const reportsContract = c.router({
     summary: 'Get feedback ratings analysis',
     query: DateRangeQuery.extend({
       assetId: z.string().optional(),
-      minRating: z.number().min(1).max(5).optional()
+      minRating: z.coerce.number().min(1).max(5).optional()
     }),
     responses: {
       200: FeedbackRatingsSchema

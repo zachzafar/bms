@@ -2,6 +2,7 @@ import { initContract } from "@ts-rest/core";
 
 import { z } from "zod";
 import { InsertTagSchema, SelectTagSchema } from "../../database-schema";
+import { pagination } from "../utils";
 
 const c = initContract();
 
@@ -12,7 +13,7 @@ export const tagsContract = c.router({
         body: InsertTagSchema,
         responses: {
             201: z.object({
-                id: z.string(),
+                id: z.coerce.number(),
             })
         },
         summary: 'Create a new tag'
@@ -27,7 +28,7 @@ export const tagsContract = c.router({
             })
         },
         pathParams: z.object({
-            id: z.string()
+            id: z.coerce.number(),
         }),
         summary: 'Get a tag'
     },
@@ -44,7 +45,7 @@ export const tagsContract = c.router({
             })
         },
         pathParams: z.object({
-            id: z.string()
+            id: z.coerce.number(),
         }),
         summary: 'Delete a tag'
     },
@@ -52,8 +53,15 @@ export const tagsContract = c.router({
         method: 'GET',
         path: '/tags',
         responses: {
-            200: z.array(SelectTagSchema)
+            200: z.object({
+                data: z.array(SelectTagSchema),
+                pagination
+            })
         },
+        query: z.object({
+            page: z.coerce.number().optional(),
+            pageSize: z.coerce.number().optional(),
+        }),
         summary: 'Get all tags'
     },
 });

@@ -22,10 +22,13 @@ export class PropertyController {
   
     @TsRestHandler(c.settings.properties.getProperties)
     async getPosts(@Headers() headers:any): Promise<ReturnType<typeof tsRestHandler>>  {
-      return tsRestHandler(c.settings.properties.getProperties, async () => {
+      return tsRestHandler(c.settings.properties.getProperties, async ({ query }) => {
         const tenantId = headers['x-tenant-id']
-        const properties = await this.PropertyService.getProperties(tenantId);
-  
+        const page = query.page ? Number(query.page) : 1;
+        const pageSize = query.pageSize ? Number(query.pageSize) : 10;
+
+        const properties = await this.PropertyService.getProperties(tenantId, page, pageSize);
+
         return { status: 200, body: properties};
       });
     }
@@ -67,7 +70,7 @@ export class PropertyController {
     @TsRestHandler(c.settings.properties.deleteProperty)
     async deleteProperty(@Headers() headers: any): Promise<ReturnType<typeof tsRestHandler>>  {
       return tsRestHandler(c.settings.properties.deleteProperty, async ({ params }) => {
-        const property = await this.PropertyService.deleteProperty(Number(params.id));
+        const property = await this.PropertyService.deleteProperty((params.id));
         // if (!property) {
         //   return { status: 404, body: { message: 'Property not found' } };
         // }

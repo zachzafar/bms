@@ -2,14 +2,14 @@ import { Inject, Injectable } from '@nestjs/common';
 import { MySql2Database } from 'drizzle-orm/mysql2';
 import * as schema from '@repo/api-contract';
 import { DrizzleAsyncProvider } from 'src/drizzle/drizzle.provider';
-import { and, eq, ilike, or } from 'drizzle-orm';
+import { and, eq, ilike, or, sql } from 'drizzle-orm';
 
 @Injectable()
 export class InquiriesService {
   constructor(@Inject(DrizzleAsyncProvider) private db: MySql2Database<typeof schema>) {}
 
   async createInquiry(data: Omit<schema.InsertInquiry, 'id'>) {
-    const [{ id }] = await this.db.insert(schema.Inquiry).values({...data, contactId: BigInt(data.contactId)}).$returningId();
+    const [{ id }] = await this.db.insert(schema.Inquiry).values(data).$returningId();
     return id;
   }
 
@@ -24,7 +24,17 @@ export class InquiriesService {
     };
   }
 
-  async listInquiries(tenantId: string, query: any) {
+  async listInquiries(tenantId: string, query: any, page: number = 1, pageSize: number = 10) {
+    const offset = (page - 1) * pageSize;
+
+    // Get total count
+    const totalCountResult = await this.db
+      .select({ count: sql<number>`COUNT(*)` })
+      .from(schema.Inquiry)
+      .where(eq(schema.Inquiry.tenantId, tenantId))
+      .execute();
+    const totalCount = totalCountResult[0]?.count || 0;
+
     const rows = await this.db
       .select()
       .from(schema.Inquiry)
@@ -32,6 +42,8 @@ export class InquiriesService {
       .innerJoin(schema.Contact, eq(schema.Inquiry.contactId, schema.Contact.id))
       .innerJoin(schema.Asset, eq(schema.Inquiry.assetId, schema.Asset.id))
       .innerJoin(schema.User, eq(schema.Inquiry.assignedTo, schema.User.id))
+      .limit(pageSize)
+      .offset(offset)
       .execute();
 
     // Cheap filters at app layer (or convert to where clauses as needed)
@@ -52,12 +64,22 @@ export class InquiriesService {
       return true;
     });
 
-    return filtered.map((i) => ({
-      ...i,
-      assets: {
+    const paginationData = {
+      page,
+      pageSize,
+      totalCount,
+      totalPages: Math.ceil(totalCount / pageSize),
+      hasNextPage: page * pageSize < totalCount,
+      hasPreviousPage: page > 1,
+    };
 
-      }
-    })).map(this.toExtended);
+    return {
+      data: filtered.map((i) => ({
+        ...i,
+        assets: {}
+      })).map(this.toExtended),
+      pagination: paginationData,
+    };
   }
 
   async getInquiry(id: number) {
@@ -75,8 +97,7 @@ export class InquiriesService {
   }
 
   async updateInquiry(id: number, patch: Partial<schema.UpdateInquiry>) {
-    const contactId = patch.contactId ? BigInt(patch.contactId) : undefined
-    await this.db.update(schema.Inquiry).set({...patch, contactId}).where(eq(schema.Inquiry.id, id)).execute();
+    await this.db.update(schema.Inquiry).set(patch).where(eq(schema.Inquiry.id, id)).execute();
   }
 
   async deleteInquiry(id: number) {

@@ -1,6 +1,6 @@
 import { Controller, Logger, UseGuards } from '@nestjs/common';
 import { TeamsService } from './teams.service';
-import { contract as c}  from "@repo/api-contract"
+import { contract as c } from "@repo/api-contract"
 import { TsRestHandler, tsRestHandler } from '@ts-rest/nest';
 // import { RequireRead, RequireWrite, RequireDelete, RequirePermissionsDecorator } from 'src/auth/decorators/permissions.decorator';
 import { Roles } from 'src/auth/decorators/permissions.decorator';
@@ -43,7 +43,7 @@ export class TeamsController {
     //         }
 
     //         const { name , tenantTeamToAsset, tenantTeamToUsers} = team
-    //         const assets = tenantTeamToAsset.map((asset) => ({...asset.asset, assetTypeId: asset.asset.assetTypeId ? Number(asset.asset.assetTypeId) : undefined}))
+    //         const assets = tenantTeamToAsset.map((asset) => ({...asset.asset, assetTypeId: asset.asset.assetTypeId ? (asset.asset.assetTypeId) : undefined}))
     //         const users = tenantTeamToUsers.map((user) => user.user)
 
     //         return {
@@ -60,9 +60,12 @@ export class TeamsController {
     @TsRestHandler(c.teams.getTeams)
     @Roles(PermissionScope.TEAMS_READ)
     async getTeams(): Promise<ReturnType<typeof tsRestHandler>>{
-        return tsRestHandler(c.teams.getTeams, async({ params }) => {
+        return tsRestHandler(c.teams.getTeams, async({ params, query }) => {
             const { tenant } = params
-            const teams = await this.TeamsService.findAll(tenant)
+            const page = query.page ? Number(query.page) : 1;
+            const pageSize = query.pageSize ? Number(query.pageSize) : 10;
+
+            const teams = await this.TeamsService.findAll(tenant, page, pageSize)
             return {
                 status: 200,
                 body: teams

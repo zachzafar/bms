@@ -5,6 +5,7 @@ import {
   SelectRateSchema,
   UpdateRateSchema,
 } from "../database-schema";
+import { pagination } from "./utils";
 
 const c = initContract();
 
@@ -31,14 +32,19 @@ export const rateContract = c.router({
   summary: "Get all rates, optionally filtered by assetId",
   query: z.object({
     assetId: z.string().optional(),
+    page: z.coerce.number().optional(),
+    pageSize: z.coerce.number().optional(),
   }),
   responses: {
-    200: z.array(
-      z.object({
-        rate: SelectRateSchema,
-        assetIds: z.array(z.string()),
-      })
-    ),
+    200: z.object({
+      data: z.array(
+        z.object({
+          rate: SelectRateSchema,
+          assetIds: z.array(z.string()),
+        })
+      ),
+      pagination
+    })
   },
 },
 
@@ -48,7 +54,7 @@ export const rateContract = c.router({
     path: "/rate/:id",
     summary: "Get a rate by ID",
     pathParams: z.object({
-      id: z.string(),
+      id: z.number(),
     }),
     responses: {
       200: SelectRateSchema,
@@ -61,7 +67,7 @@ export const rateContract = c.router({
     path: "/rate/:id",
     summary: "Update a rate by ID",
     pathParams: z.object({
-      id: z.string(),
+      id: z.coerce.number(),
     }),
     body: UpdateRateSchema,
     responses: {
@@ -79,7 +85,7 @@ export const rateContract = c.router({
     path: "/rate/:id",
     summary: "Delete a rate by ID",
     pathParams: z.object({
-      id: z.string(),
+      id: z.coerce.number(),
     }),
     body: z.object({}).optional(),
     responses: {

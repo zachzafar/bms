@@ -13,7 +13,7 @@
     "baseUrl": "./",
     "incremental": true,
     "esModuleInterop": true,
-    "skipLibCheck": true,
+    "skipLibCheck": true,  // ✅ Already set
     "strictNullChecks": true,
     "noImplicitAny": false,
     "strictBindCallApply": false,
@@ -22,5 +22,7 @@
     "paths": {
       "@repo/*": ["../packages/*"]
     }
-  }
+  },
+  "include": ["src", "test"],
+  "exclude": ["node_modules", "dist", "../**/node_modules", "../**/dist"] // Add these
 }

@@ -1,5 +1,5 @@
 import { initContract } from '@ts-rest/core';
-import { authContract} from './auth';
+import { authContract } from './auth';
 import { assetsContract } from './assets';
 import { settingsContract } from './settings';
 import { bookingContract } from './booking';

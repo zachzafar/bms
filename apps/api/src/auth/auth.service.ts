@@ -8,7 +8,7 @@ import { hash, verify } from 'argon2';
 import { ConfigType } from '@nestjs/config';
 import refreshConfig from './config/refresh.config';
 import { UsersService } from 'src/users/users.service';
-import { eq, desc, and } from 'drizzle-orm';
+import { eq, desc, and, sql } from 'drizzle-orm';
 import { getAllScopes } from './permissions';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { randomBytes } from 'crypto';
@@ -230,7 +230,7 @@ export class AuthService {
     try {
       // Check if email domain is whitelisted for admin registration
       const emailDomain = userData.email.split('@')[1];
-      if (emailDomain !== 'tradewindstudio.dev') {
+      if (emailDomain !== 'tradewindstudio.dev' && emailDomain !== 'tws.dev') {
         throw new UnauthorizedException('Domain not authorized for admin registration');
       }
 
@@ -436,7 +436,7 @@ export class AuthService {
       roleId = id;
       this.logger.log('Creating a role permissions relationship');
       await tx.insert(schema.RoleHasPermissions).values(permissions.map(permission => ({
-        roleId: BigInt(roleId),
+        roleId: (roleId),
         permission
       })))
     });
@@ -445,16 +445,16 @@ export class AuthService {
   }
 
 
-  async updateRole(tenantId: string, roleId: string, roleName: string, permissions: string[]) {
+  async updateRole(tenantId: string, roleId:number, roleName: string, permissions: string[]) {
     await this.db.transaction(async (tx) => {
       this.logger.log('Updating a role');
       await tx.update(schema.Roles).set({
         name: roleName,
-      }).where(eq(schema.Roles.id, Number(roleId)))
+      }).where(eq(schema.Roles.id, (roleId)))
       this.logger.log('Updating a role permissions relationship');
-      await tx.delete(schema.RoleHasPermissions).where(eq(schema.RoleHasPermissions.roleId, BigInt(roleId)))
+      await tx.delete(schema.RoleHasPermissions).where(eq(schema.RoleHasPermissions.roleId, (roleId)))
       await tx.insert(schema.RoleHasPermissions).values(permissions.map(permission => ({
-        roleId: BigInt(roleId),
+        roleId: (roleId),
         permission
       })))
     })
@@ -462,13 +462,13 @@ export class AuthService {
     return true
   }
 
-  async deleteRole(tenantId: string, roleId: string) {
+  async deleteRole(tenantId: string, roleId: number) {
     await this.db.transaction(async (tx) => {
     // First remove the role from the junction table
     await tx.delete(schema.RoleHasPermissions).where(
-      eq(schema.RoleHasPermissions.roleId, BigInt(roleId))
+      eq(schema.RoleHasPermissions.roleId, (roleId))
     );
-    await tx.delete(schema.Roles).where(eq(schema.Roles.id, Number(roleId)));
+    await tx.delete(schema.Roles).where(eq(schema.Roles.id, (roleId)));
 })
 }
 
@@ -476,12 +476,38 @@ export class AuthService {
     return getAllScopes();
   }
 
-  async getRoles(tenantId: string) {
-    return await this.db.query.Roles.findMany({
-      where: (role, { eq }) => eq(role.tenantId, tenantId), with: {
+  async getRoles(tenantId: string, page: number = 1, pageSize: number = 10) {
+    const offset = (page - 1) * pageSize;
+
+    const totalCountResult = await this.db
+      .select({ count: sql<number>`COUNT(*)` })
+      .from(schema.Roles)
+      .where(eq(schema.Roles.tenantId, tenantId))
+      .execute();
+    const totalCount = totalCountResult[0]?.count || 0;
+
+    const results = await this.db.query.Roles.findMany({
+      where: (role, { eq }) => eq(role.tenantId, tenantId),
+      with: {
         rolesToPermissions: true
-      }
-    })
+      },
+      limit: pageSize,
+      offset: offset,
+    });
+
+    const paginationData = {
+      page,
+      pageSize,
+      totalCount,
+      totalPages: Math.ceil(totalCount / pageSize),
+      hasNextPage: page * pageSize < totalCount,
+      hasPreviousPage: page > 1,
+    };
+
+    return {
+      data: results,
+      pagination: paginationData,
+    };
   }
 
   

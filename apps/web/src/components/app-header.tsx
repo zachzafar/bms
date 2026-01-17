@@ -33,19 +33,35 @@ interface AppOption {
 
 const appOptions: AppOption[] = [
   {
+    id: 'admin',
+    name: 'Admin',
+    description: 'Administration Dashboard',
+    icon: <Building className="h-4 w-4" />,
+    url: '/admin',
+    color: 'text-blue-600'
+  },
+  {
+    id: 'booking',
+    name: 'Booking',
+    description: 'Manage bookings',
+    icon: <Calendar className="h-4 w-4" />,
+    url: '/booking',
+    color: 'text-orange-600'
+  },
+  {
     id: 'crm',
     name: 'CRM System',
     description: 'Manage clients, inquiries, and business relationships',
     icon: <Users className="h-4 w-4" />,
-    url: process.env.NODE_ENV === 'production' ? 'https://crm.bookos.xyz' : 'http://localhost:3001',
+    url: '/crm',
     color: 'text-purple-600'
   },
   {
     id: 'auth',
     name: 'Auth Hub',
-    description: 'Central authentication and user management',
+    description: 'Authentication',
     icon: <Globe className="h-4 w-4" />,
-    url: process.env.NODE_ENV === 'production' ? 'https://bookos.xyz' : 'http://localhost:3002',
+    url: '/auth',
     color: 'text-green-600'
   }
 ]
@@ -57,15 +73,12 @@ export function AppHeader() {
   useEffect(() => {
     if (user) {
       const name = user.name || user.email || 'User'
-      const initials = name.split(' ').map(n => n.charAt(0)).join('').toUpperCase().slice(0, 2) || 'U'
+      const initials = name.split(' ').map((n: string) => n.charAt(0)).join('').toUpperCase().slice(0, 2) || 'U'
       setCurrentUser({ name, initials })
     }
   }, [user])
 
   const handleAppSwitch = (app: AppOption) => {
-    // Store current web app state if needed
-    localStorage.setItem('web_last_visited', window.location.pathname)
-    
     // Redirect to the selected app
     window.location.href = app.url
   }
@@ -75,17 +88,11 @@ export function AppHeader() {
       await deleteSession()
       // queryClient.clear();
       // Redirect to auth app
-      const authUrl = process.env.NODE_ENV === 'production' 
-        ? 'https://bookos.xyz'
-        : 'http://localhost:3002'
-      window.location.href = authUrl
+      window.location.href = '/auth/login'
     } catch (error) {
       console.error('Logout failed:', error)
       // Force redirect even if logout fails
-      const authUrl = process.env.NODE_ENV === 'production' 
-        ? 'https://bookos.xyz'
-        : 'http://localhost:3002'
-      window.location.href = authUrl
+      window.location.href = '/auth/login'
     }
   }
 

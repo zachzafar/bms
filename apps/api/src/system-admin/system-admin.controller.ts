@@ -44,8 +44,11 @@ export class SystemAdminController {
   @IsAdminRoute()
   @TsRestHandler(contract.systemAdmin.getSystemAdmins)
   async getSystemAdmins(): Promise<ReturnType<typeof tsRestHandler>> {
-    return tsRestHandler(contract.systemAdmin.getSystemAdmins, async () => {
-      const admins = await this.systemAdminService.getSystemAdmins();
+    return tsRestHandler(contract.systemAdmin.getSystemAdmins, async ({ query }) => {
+      const page = query.page ? Number(query.page) : 1;
+      const pageSize = query.pageSize ? Number(query.pageSize) : 10;
+
+      const admins = await this.systemAdminService.getSystemAdmins(page, pageSize);
       return { status: 200, body: admins };
     });
   }
@@ -69,10 +72,22 @@ export class SystemAdminController {
   }
 
   @IsAdminRoute()
+  @TsRestHandler(contract.systemAdmin.createTenant)
+  async createTenant(): Promise<ReturnType<typeof tsRestHandler>> {
+    return tsRestHandler(contract.systemAdmin.createTenant, async ({ body }) => {
+      const result = await this.systemAdminService.createTenant(body.tenant, body.adminUser);
+      return { status: 201, body: result };
+    });
+  }
+
+  @IsAdminRoute()
   @TsRestHandler(contract.systemAdmin.getTenants)
   async getTenants(): Promise<ReturnType<typeof tsRestHandler>> {
-    return tsRestHandler(contract.systemAdmin.getTenants, async () => {
-      const tenants = await this.systemAdminService.getTenants();
+    return tsRestHandler(contract.systemAdmin.getTenants, async ({ query }) => {
+      const page = query.page ? Number(query.page) : 1;
+      const pageSize = query.pageSize ? Number(query.pageSize) : 10;
+
+      const tenants = await this.systemAdminService.getTenants(page, pageSize);
       return { status: 200, body: tenants };
     });
   }
@@ -305,7 +320,7 @@ export class SystemAdminController {
   async createAssetType(): Promise<ReturnType<typeof tsRestHandler>> {
     return tsRestHandler(contract.systemAdmin.createAssetType, async ({ body }) => {
 
-      const id = await this.assetTypeService.createAssetType({ ...body.assetType }, body.properties);
+      const id = await this.assetTypeService.createAssetType({ ...body.assetType }, body.properties,[]);
       this.logger.log(`Created asset type with id ${id}`);
       return { status: 201, body: { id } };
     });
@@ -316,19 +331,18 @@ export class SystemAdminController {
   async getAssetType(): Promise<ReturnType<typeof tsRestHandler>> {
     return tsRestHandler(contract.systemAdmin.getAssetType, async ({ params }) => {
       console.log(`Asset type id: ${params.id}`);
-      const assetType = await this.assetTypeService.getAssetType(Number(params.id));
-      console.log(`Asset type: ${assetType}`);
-      if (!assetType) {
+      const assetTypeData = await this.assetTypeService.getAssetType((params.id));
+      console.log(`Asset type: ${assetTypeData}`);
+      if (!assetTypeData) {
         return {
           status: 404 as const,
           body: { message: 'Asset type not found' }
         };
       }
-      console.log(assetType);
-      const { properties, ...assetTypeData } = assetType;
+      const { properties, forms ,...assetType } = assetTypeData;
       return {
         status: 200 as const,
-        body: { assetType: assetTypeData, properties }
+        body: { assetType , properties, forms }
       };
     });
   }
@@ -338,8 +352,8 @@ export class SystemAdminController {
   async updateAssetType(): Promise<ReturnType<typeof tsRestHandler>> {
     return tsRestHandler(contract.systemAdmin.updateAssetType, async ({ params, body }) => {
 
-      const assetType = await this.assetTypeService.updateAssetType(Number(params.id), body.assetType);
-      await this.assetTypeService.updateAssetTypeProperties(Number(params.id), body.properties);
+      const assetType = await this.assetTypeService.updateAssetType((params.id), body.assetType);
+      await this.assetTypeService.updateAssetTypeProperties((params.id), body.properties);
       if (!assetType) {
         return {
           status: 500 as const,
@@ -359,7 +373,7 @@ export class SystemAdminController {
   @TsRestHandler(contract.systemAdmin.deleteAssetType)
   async deleteAssetType(): Promise<ReturnType<typeof tsRestHandler>> {
     return tsRestHandler(contract.systemAdmin.deleteAssetType, async ({ params }) => {
-      await this.assetTypeService.deleteAssetType(Number(params.id));
+      await this.assetTypeService.deleteAssetType((params.id));
       return {
         status: 204 as const,
         body: undefined
@@ -427,7 +441,7 @@ export class SystemAdminController {
   @TsRestHandler(contract.systemAdmin.deleteProperty)
   async deleteProperty(): Promise<ReturnType<typeof tsRestHandler>> {
     return tsRestHandler(contract.systemAdmin.deleteProperty, async ({ params }) => {
-      const property = await this.PropertyService.deleteProperty(Number(params.id));
+      const property = await this.PropertyService.deleteProperty((params.id));
       // if (!property) {
       //   return { status: 404, body: { message: 'Property not found' } };
       // }
@@ -451,7 +465,7 @@ export class SystemAdminController {
       // Call the service with the complete data
       const tag = await this.tagsService.createTag(tagData);
 
-      return { status: 201, body: { id: String(tag.id) } };
+      return { status: 201, body: { id: tag.id } };
     });
   }
 
@@ -459,7 +473,7 @@ export class SystemAdminController {
   @TsRestHandler(contract.systemAdmin.getTags)
   async getTags(): Promise<ReturnType<typeof tsRestHandler>> {
     return tsRestHandler(contract.systemAdmin.getTags, async ({ params }) => {
-      
+
       // Fetch only tags belonging to this tenant
       const tags = await this.tagsService.getTags(params.tenantId);
       return { status: 200, body: tags };
@@ -470,7 +484,7 @@ export class SystemAdminController {
   @TsRestHandler(contract.systemAdmin.getTag)
   async getTag(): Promise<ReturnType<typeof tsRestHandler>> {
     return tsRestHandler(contract.systemAdmin.getTag, async ({ params }) => {
-      const tag = await this.tagsService.getTag(Number(params.id));
+      const tag = await this.tagsService.getTag((params.id));
 
       // Validate tenant access
 
@@ -481,12 +495,12 @@ export class SystemAdminController {
   @TsRestHandler(contract.settings.tags.deleteTag)
   async deleteTag(): Promise<ReturnType<typeof tsRestHandler>> {
     return tsRestHandler(contract.systemAdmin.deleteTag, async ({ params }) => {
-      
-      const tag = await this.tagsService.getTag(Number(params.id));
+
+      const tag = await this.tagsService.getTag((params.id));
 
       // Validate tenant access before deleting
 
-      const result = await this.tagsService.deleteTag(Number(params.id));
+      const result = await this.tagsService.deleteTag((params.id));
       return { status: 200, body: result };
     });
   }

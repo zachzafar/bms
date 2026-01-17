@@ -34,7 +34,7 @@ export const inquirySource = mysqlEnum("inquiry_source", ["Website", "Referral",
 export const Contact = mysqlTable(
   "contact",
   {
-    id: serial("id").primaryKey(),
+    id: bigint("id", { mode: "number", unsigned: true }).autoincrement().primaryKey(),
     tenantId: varchar("tenant_id", { length: 36 }).notNull()
       .references(() => Tenant.id, { onDelete: "cascade" }),
     firstName: varchar("first_name", { length: 255 }).notNull(),
@@ -78,10 +78,10 @@ export const contactRelations = relations(Contact, ({ one, many }) => ({
 export const Inquiry = mysqlTable(
   "inquiry",
   {
-    id: serial("id").primaryKey(),
+    id: bigint("id", { mode: "number", unsigned: true }).autoincrement().primaryKey(),
     tenantId: varchar("tenant_id", { length: 36 }).notNull()
       .references(() => Tenant.id, { onDelete: "cascade" }),
-    contactId: bigint("contact_id", { mode: 'bigint', unsigned: true }).notNull()
+    contactId: bigint("contact_id", { mode: "number", unsigned: true }).notNull()
       .references(() => Contact.id, { onDelete: "cascade" }),
     assetId: varchar("asset_id", { length: 255 }).notNull()
       .references(() => Asset.id, { onDelete: "cascade" }),
@@ -110,10 +110,10 @@ export const inquiryRelations = relations(Inquiry, ({ one }) => ({
 }));
 
 export const Offers = mysqlTable("offers", {
-  id: serial("id").primaryKey(),
+  id: bigint("id", { mode: "number", unsigned: true }).autoincrement().primaryKey(),
   tenantId: varchar("tenant_id", { length: 36 }).notNull()
     .references(() => Tenant.id, { onDelete: "cascade" }),
-  contactId: bigint("contact_id", { mode: 'bigint', unsigned: true }).notNull()
+  contactId: bigint("contact_id", { mode: "number", unsigned: true }).notNull()
     .references(() => Contact.id, { onDelete: "cascade" }),
   assetId: varchar("asset_id", { length: 255 }).notNull()
     .references(() => Asset.id, { onDelete: "cascade" }),
@@ -130,10 +130,10 @@ export const Offers = mysqlTable("offers", {
 export const Feedback = mysqlTable(
   "feedback",
   {
-    id: serial("id").primaryKey(),
+    id: bigint("id", { mode: "number", unsigned: true }).autoincrement().primaryKey(),
     tenantId: varchar("tenant_id", { length: 36 }).notNull()
       .references(() => Tenant.id, { onDelete: "cascade" }),
-    contactId: bigint("contact_id", { mode: 'bigint', unsigned: true }).notNull()
+    contactId: bigint("contact_id", { mode: "number", unsigned: true }).notNull()
       .references(() => Contact.id, { onDelete: "cascade" }),
     assetId: varchar("asset_id", { length: 255 }).notNull()
       .references(() => Asset.id, { onDelete: "cascade" }),
@@ -160,7 +160,7 @@ export const feedbackRelations = relations(Feedback, ({ one }) => ({
 export const Brochure = mysqlTable(
   "brochure",
   {
-    id: serial("id").primaryKey(),
+    id: bigint("id", { mode: "number", unsigned: true }).autoincrement().primaryKey(),
     type: varchar("type", { length: 255 }).notNull(),
     content: text("content"),
     tenantId: varchar("tenant_id", { length: 36 }).notNull()
@@ -175,9 +175,9 @@ export const Brochure = mysqlTable(
 
 export const BrochureContact = mysqlTable(
   'brochure_has_contacts', {
-    contactId: bigint("contact_id", { mode: 'bigint', unsigned: true }).notNull()
+    contactId: bigint("contact_id", { mode: "number", unsigned: true }).notNull()
       .references(() => Contact.id, { onDelete: "cascade" }),
-    brochureId: bigint("brochure_id", { mode: 'bigint', unsigned: true }).notNull()
+    brochureId: bigint("brochure_id", { mode: "number", unsigned: true }).notNull()
       .references(() => Brochure.id, { onDelete: "cascade" }),
   }
 )
@@ -185,10 +185,10 @@ export const BrochureContact = mysqlTable(
 export const BrochureAsset = mysqlTable(
   "brochure_has_assets",
   {
-    id: serial("id").primaryKey(),
+    id: bigint("id", { mode: "number", unsigned: true }).autoincrement().primaryKey(),
     tenantId: varchar("tenant_id", { length: 36 }).notNull()
       .references(() => Tenant.id, { onDelete: "cascade" }),
-    brochureId: bigint("brochure_id", { mode: 'bigint', unsigned: true }).notNull()
+    brochureId: bigint("brochure_id", { mode: "number", unsigned: true }).notNull()
       .references(() => Brochure.id, { onDelete: "cascade" }),
     assetId: varchar("asset_id", { length: 255 }).notNull()
       .references(() => Asset.id, { onDelete: "cascade" }),
@@ -221,10 +221,10 @@ export const brochureAssetRelations = relations(BrochureAsset, ({ one }) => ({
 export const CommunicationLog = mysqlTable(
   "communication_log",
   {
-    id: serial("id").primaryKey(),
+    id: bigint("id", { mode: "number", unsigned: true }).autoincrement().primaryKey(),
     tenantId: varchar("tenant_id", { length: 36 }).notNull()
       .references(() => Tenant.id, { onDelete: "cascade" }),
-    contactId: bigint("contact_id", { mode: 'bigint', unsigned: true }).notNull()
+    contactId: bigint("contact_id", { mode: "number", unsigned: true }).notNull()
       .references(() => Contact.id, { onDelete: "cascade" }),
     userId: varchar("user_id", { length: 36 }).notNull()
       .references(() => User.id, { onDelete: "cascade" }),
@@ -252,13 +252,13 @@ export const communicationRelations = relations(CommunicationLog, ({ one }) => (
 export const Task = mysqlTable(
   "task",
   {
-    id: serial("id").primaryKey(),
+    id: bigint("id", { mode: "number", unsigned: true }).autoincrement().primaryKey(),
     tenantId: varchar("tenant_id", { length: 36 }).notNull()
       .references(() => Tenant.id, { onDelete: "cascade" }),
     userId: varchar("user_id", { length: 36 }).notNull()
       .references(() => User.id, { onDelete: "cascade" }),
     /** Tasks may or may not be tied to a specific contact */
-    contactId: bigint("contact_id", { mode: 'bigint', unsigned: true })
+    contactId: bigint("contact_id", { mode: "number", unsigned: true })
       .references(() => Contact.id, { onDelete: "set null" }),
     description: text("description").notNull(),
     dueDate: datetime("due_date").notNull(),
@@ -294,10 +294,10 @@ export const taskRelations = relations(Task, ({ one }) => ({
 export const Document = mysqlTable(
   "document",
   {
-    id: serial("id").primaryKey(),
+    id: bigint("id", { mode: "number", unsigned: true }).autoincrement().primaryKey(),
     tenantId: varchar("tenant_id", { length: 36 }).notNull()
       .references(() => Tenant.id, { onDelete: "cascade" }),
-    contactId: bigint("contact_id", { mode: 'bigint', unsigned: true }).notNull()
+    contactId: bigint("contact_id", { mode: "number", unsigned: true }).notNull()
       .references(() => Contact.id, { onDelete: "cascade" }),
     documentType: documentType.notNull().default("Other"),
     filePath: varchar("file_path", { length: 2048 }).notNull(),
@@ -324,6 +324,9 @@ export const documentRelations = relations(Document, ({ one }) => ({
 export const InsertContactSchema = createInsertSchema(Contact).omit({
   createdAt: true,
   updatedAt: true,
+  dob: true,
+}).extend({
+  dob: z.coerce.date().optional().nullable(),
 });
 export const SelectContactSchema = createSelectSchema(Contact);
 export const UpdateContactSchema = InsertContactSchema.partial().required({ id: true, tenantId: true });
@@ -334,8 +337,12 @@ export type UpdateContact = z.infer<typeof UpdateContactSchema>;
 
 /* -------------------------------- Inquiry -------------------------- */
 export const InsertInquirySchema = createInsertSchema(Inquiry)
-  .omit({ createdAt: true, updatedAt: true, contactId: true })
-  .extend({ contactId: z.number() });
+  .omit({ createdAt: true, updatedAt: true, contactId: true, inquiryDate: true, followUpDate: true })
+  .extend({
+    contactId: z.number(),
+    inquiryDate: z.coerce.date(),
+    followUpDate: z.coerce.date().optional().nullable(),
+  });
 export const SelectInquirySchema = createSelectSchema(Inquiry)
   .omit({ contactId: true })
   .extend({ contactId: z.number() });
@@ -348,7 +355,7 @@ export type UpdateInquiry = z.infer<typeof UpdateInquirySchema>;
 /* ---------------------------- Communication Log -------------------- */
 export const InsertCommunicationLogSchema = createInsertSchema(CommunicationLog)
   .omit({ createdAt: true, updatedAt: true, contactId: true,date: true })
-  .extend({ contactId: z.number(),date: z.string() });
+  .extend({ contactId: z.number(),date: z.coerce.date() });
 export const SelectCommunicationLogSchema = createSelectSchema(CommunicationLog)
   .omit({ contactId: true })
   .extend({ contactId: z.number() });
@@ -364,7 +371,7 @@ export const InsertFeedbackSchema = createInsertSchema(Feedback)
   .extend({
     rating: z.number().int().min(1).max(5),
     contactId: z.number(),
-    viewingDate: z.string(),
+    viewingDate: z.coerce.date(),
   });
 export const SelectFeedbackSchema = createSelectSchema(Feedback).omit({ tenantId: true, contactId:true})
   .extend({ contactId: z.number()});
@@ -397,8 +404,11 @@ export type SelectBrochureAsset = z.infer<typeof SelectBrochureAssetSchema>;
 export type UpdateBrochureAsset = z.infer<typeof UpdateBrochureAssetSchema>;
 /* ---------------------------------- Task --------------------------- */
 export const InsertTaskSchema = createInsertSchema(Task)
-  .omit({ createdAt: true, updatedAt: true, contactId: true, tenantId:true })
-  .extend({ contactId: z.number().optional() });
+  .omit({ createdAt: true, updatedAt: true, contactId: true, tenantId:true, dueDate: true })
+  .extend({
+    contactId: z.number().optional(),
+    dueDate: z.coerce.date(),
+  });
 export const SelectTaskSchema = createSelectSchema(Task)
   .omit({ contactId: true })
   .extend({ contactId: z.number().nullable() });
@@ -409,8 +419,11 @@ export type SelectTask = z.infer<typeof SelectTaskSchema>;
 export type UpdateTask = z.infer<typeof UpdateTaskSchema>;
 /* -------------------------------- Document ------------------------- */
 export const InsertDocumentSchema = createInsertSchema(Document)
-  .omit({ createdAt: true, updatedAt: true, contactId: true })
-  .extend({ contactId: z.number() });
+  .omit({ createdAt: true, updatedAt: true, contactId: true, uploadedAt: true })
+  .extend({
+    contactId: z.number(),
+    uploadedAt: z.coerce.date(),
+  });
 export const SelectDocumentSchema = createSelectSchema(Document)
   .omit({ contactId: true })
   .extend({ contactId: z.number() });
@@ -439,8 +452,11 @@ export type SelectBrochureContact = z.infer<typeof SelectBrochureContactSchema>;
 
 /* -------------------------------- Offers --------------------------- */
 export const InsertOffersSchema = createInsertSchema(Offers)
-  .omit({ createdAt: true, updatedAt: true, contactId: true })
-  .extend({ contactId: z.number() });
+  .omit({ createdAt: true, updatedAt: true, contactId: true, offerDate: true })
+  .extend({
+    contactId: z.number(),
+    offerDate: z.coerce.date(),
+  });
 export const SelectOffersSchema = createSelectSchema(Offers)
   .omit({ contactId: true })
   .extend({ contactId: z.number() });
