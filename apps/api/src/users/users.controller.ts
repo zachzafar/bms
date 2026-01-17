@@ -44,9 +44,12 @@ export class UsersController {
     @Roles(PermissionScope.USERS_READ)
     async getUsers(@Headers() headers: any): Promise<ReturnType<typeof tsRestHandler>> {
         this.logger.log(`Getting all users`);
-        return tsRestHandler(c.users.getUsers, async () => {
+        return tsRestHandler(c.users.getUsers, async ({ query }) => {
             const tenantId = headers['x-tenant-id'];
-            const users = await this.UserService.findAll(tenantId);
+            const page = query.page ? Number(query.page) : 1;
+            const pageSize = query.pageSize ? Number(query.pageSize) : 10;
+
+            const users = await this.UserService.findAll(tenantId, page, pageSize);
             return { status: 200, body: users };
         });
     }
@@ -84,9 +87,12 @@ export class UsersController {
     @Roles(PermissionScope.CUSTOMERS_READ)
     async getCustomers(@Headers() headers: any): Promise<ReturnType<typeof tsRestHandler>> {
         this.logger.log(`Getting all customers`);
-        return tsRestHandler(c.users.getCustomers, async () => {
+        return tsRestHandler(c.users.getCustomers, async ({ query }) => {
             const tenantId = headers['x-tenant-id'];
-            const customers = await this.UserService.getCustomers(tenantId);
+            const page = query.page ? Number(query.page) : 1;
+            const pageSize = query.pageSize ? Number(query.pageSize) : 10;
+
+            const customers = await this.UserService.getCustomers(tenantId, page, pageSize);
             return { status: 200, body: customers };
         });
     }
@@ -95,9 +101,12 @@ export class UsersController {
     @Roles(PermissionScope.CUSTOMERS_READ)
     async getOwners(@Headers() headers: any): Promise<ReturnType<typeof tsRestHandler>> {
         this.logger.log(`Getting all owners`);
-        return tsRestHandler(c.users.getOwners, async () => {
+        return tsRestHandler(c.users.getOwners, async ({ query }) => {
             const tenantId = headers['x-tenant-id'];
-            const owners = await this.UserService.getOwners(tenantId);
+            const page = query.page ? Number(query.page) : 1;
+            const pageSize = query.pageSize ? Number(query.pageSize) : 10;
+
+            const owners = await this.UserService.getOwners(tenantId, page, pageSize);
             return { status: 200, body: owners };
         })
     }

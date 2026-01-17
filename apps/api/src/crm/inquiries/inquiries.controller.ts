@@ -4,7 +4,6 @@ import { crmContract } from '@repo/api-contract';
 import { InquiriesService } from './inquiries.service';
 import { TenantService } from 'src/tenant/tenant.service';
 import * as schema from '@repo/api-contract';
-import { convertBigIntToNumber } from 'src/utils/bigint-converter';
 
 @Controller()
 export class InquiriesController {
@@ -30,7 +29,7 @@ export class InquiriesController {
       };
       
       const id = await this.inquiries.createInquiry(inquiryData);
-      return { status: 201, body: { message: 'inquiry created', inquiryId: Number(id) } };
+      return { status: 201, body: { message: 'inquiry created', inquiryId: (id) } };
     });
   }
 
@@ -38,9 +37,12 @@ export class InquiriesController {
   async listInquiries(@Headers() headers: any): Promise<ReturnType<typeof tsRestHandler>> {
     return tsRestHandler(crmContract.inquiries.listInquiries, async ({ query }) => {
       const tenantId = headers['x-tenant-id'];
-      const rows = await this.inquiries.listInquiries(tenantId, {});
-      
-      return { status: 200, body: rows.map((i) => convertBigIntToNumber(i)) };
+      const page = query.page ? Number(query.page) : 1;
+      const pageSize = query.pageSize ? Number(query.pageSize) : 10;
+
+      const rows = await this.inquiries.listInquiries(tenantId, {}, page, pageSize);
+
+      return { status: 200, body: rows };
     });
   }
 
@@ -48,8 +50,8 @@ export class InquiriesController {
   async getInquiry(@Headers() headers: any): Promise<ReturnType<typeof tsRestHandler>> {
     return tsRestHandler(crmContract.inquiries.getInquiry, async ({ params }) => {
       const tenantId = headers['x-tenant-id'];
-      await this.tenantService.validateTenantAccess(tenantId, schema.Inquiry, Number(params.id));
-      const row = await this.inquiries.getInquiry(Number(params.id));
+      await this.tenantService.validateTenantAccess(tenantId, schema.Inquiry, (params.id));
+      const row = await this.inquiries.getInquiry((params.id));
       return row ? { status: 200, body: row } : { status: 404, body: undefined };
     });
   }
@@ -58,7 +60,7 @@ export class InquiriesController {
   async updateInquiry(@Headers() headers: any): Promise<ReturnType<typeof tsRestHandler>> {
     return tsRestHandler(crmContract.inquiries.updateInquiry, async ({ params, body }) => {
       const tenantId = headers['x-tenant-id'];
-      await this.tenantService.validateTenantAccess(tenantId, schema.Inquiry, Number(params.id));
+      await this.tenantService.validateTenantAccess(tenantId, schema.Inquiry, (params.id));
       
       // Convert string dates to Date objects if provided
       const updateData = {
@@ -70,7 +72,7 @@ export class InquiriesController {
       const inquiryDate = updateData.inquiryDate ? new Date(updateData.inquiryDate) : undefined;
       const followUpDate = updateData.followUpDate ? new Date(updateData.followUpDate) : undefined;
       
-      await this.inquiries.updateInquiry(Number(params.id), {...updateData, contactId: updateData.contactId, inquiryDate, followUpDate });
+      await this.inquiries.updateInquiry((params.id), {...updateData, contactId: updateData.contactId, inquiryDate, followUpDate });
       return { status: 200, body: { message: 'inquiry updated' } };
     });
   }
@@ -79,8 +81,8 @@ export class InquiriesController {
   async deleteInquiry(@Headers() headers: any): Promise<ReturnType<typeof tsRestHandler>> {
     return tsRestHandler(crmContract.inquiries.deleteInquiry, async ({ params }) => {
       const tenantId = headers['x-tenant-id'];
-      await this.tenantService.validateTenantAccess(tenantId, schema.Inquiry, Number(params.id));
-      await this.inquiries.deleteInquiry(Number(params.id));
+      await this.tenantService.validateTenantAccess(tenantId, schema.Inquiry, (params.id));
+      await this.inquiries.deleteInquiry((params.id));
       return { status: 204, body: undefined };
     });
   }
@@ -89,9 +91,9 @@ export class InquiriesController {
   async assignInquiry(@Headers() headers: any): Promise<ReturnType<typeof tsRestHandler>> {
     return tsRestHandler(crmContract.inquiries.assignInquiry, async ({ params, body }) => {
       const tenantId = headers['x-tenant-id'];
-      await this.tenantService.validateTenantAccess(tenantId, schema.Inquiry, Number(params.id));
+      await this.tenantService.validateTenantAccess(tenantId, schema.Inquiry, (params.id));
       // (Optional) enforce user membership in tenant here.
-      await this.inquiries.assignInquiry(Number(params.id), body.assignedTo);
+      await this.inquiries.assignInquiry((params.id), body.assignedTo);
       return { status: 200, body: { message: 'inquiry assigned' } };
     });
   }

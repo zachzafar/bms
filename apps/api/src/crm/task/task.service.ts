@@ -2,7 +2,7 @@ import { Inject, Injectable, NotFoundException } from '@nestjs/common';
 import { MySql2Database } from 'drizzle-orm/mysql2';
 import * as schema from '@repo/api-contract';
 import { DrizzleAsyncProvider } from 'src/drizzle/drizzle.provider';
-import { and, eq } from 'drizzle-orm';
+import { and, eq, sql } from 'drizzle-orm';
 
 @Injectable()
 export class TasksService {
@@ -17,8 +17,7 @@ export class TasksService {
   }
 
   async create(data: Omit<schema.InsertTask, 'id'>,tenantId: string) {
-    const contactId = data.contactId ? BigInt(data.contactId) : undefined
-    const [{ id }] = await this.db.insert(schema.Task).values({...data, contactId,tenantId}).$returningId();
+    const [{ id }] = await this.db.insert(schema.Task).values({...data,tenantId}).$returningId();
     return id;
   }
 
@@ -31,29 +30,44 @@ export class TasksService {
     };
   }
 
-  async list(tenantId: string, query: any) {
-    const rows = await this.db
-      .select()
-      .from(schema.Task)
-      .where(eq(schema.Task.tenantId, tenantId))
-      .leftJoin(schema.Contact, eq(schema.Task.contactId, schema.Contact.id))
-      .innerJoin(schema.User, eq(schema.Task.userId, schema.User.id))
-      .execute();
+  async list(tenantId: string, query: any, page: number = 1, pageSize: number = 10) {
+    const offset = (page - 1) * pageSize;
 
-    const filtered = rows.filter((r) => {
-      if (query.userId && r.users.id !== query.userId) return false;
-      if (query.contactId && String(r.contact?.id) !== String(query.contactId)) return false;
-      if (query.status && r.task.status !== query.status) return false;
-      if (query.from && r.task.dueDate < new Date(query.from)) return false;
-      if (query.to && r.task.dueDate > new Date(query.to)) return false;
-      return true;
+    // Build where conditions
+    const conditions = [eq(schema.Task.tenantId, tenantId)];
+    if (query.userId) conditions.push(eq(schema.Task.userId, query.userId));
+    if (query.contactId) conditions.push(eq(schema.Task.contactId, Number(query.contactId)));
+    if (query.status) conditions.push(eq(schema.Task.status, query.status));
+
+    // Get total count
+    const totalCountResult = await this.db
+      .select({ count: sql<number>`COUNT(*)` })
+      .from(schema.Task)
+      .where(and(...conditions))
+      .execute();
+    const totalCount = totalCountResult[0]?.count || 0;
+
+    // Get paginated tasks
+    const tasksList = await this.db.query.Task.findMany({
+      where: (task, { and, eq }) => and(...conditions),
+      limit: pageSize,
+      offset: offset,
     });
 
-    const tasksList = await this.db.query.Task.findMany({
-      where: and(eq(schema.Task.tenantId, tenantId)),
-    })
+    // Calculate pagination metadata
+    const paginationData = {
+      page,
+      pageSize,
+      totalCount,
+      totalPages: Math.ceil(totalCount / pageSize),
+      hasNextPage: page * pageSize < totalCount,
+      hasPreviousPage: page > 1,
+    };
 
-    return tasksList
+    return {
+      data: tasksList,
+      pagination: paginationData,
+    };
   }
 
   async get(id: number) {
@@ -69,8 +83,7 @@ export class TasksService {
   }
 
   async update(id: number, patch: Partial<schema.UpdateTask>) {
-    const contactId = patch.contactId ? BigInt(patch.contactId) : undefined
-    await this.db.update(schema.Task).set({...patch, contactId, }).where(eq(schema.Task.id, id)).execute();
+    await this.db.update(schema.Task).set(patch).where(eq(schema.Task.id, id)).execute();
   }
 
   async remove(id: number) {

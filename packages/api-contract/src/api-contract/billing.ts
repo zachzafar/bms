@@ -1,6 +1,7 @@
 import { initContract } from "@ts-rest/core";
 import { z } from "zod";
 import { SelectInvoiceSchema, InsertInvoiceSchema, UpdateInvoiceSchema, SelectPaymentSchema, InsertPaymentSchema } from "../database-schema";
+import { pagination } from "./utils";
 
 const c = initContract();
 
@@ -43,13 +44,12 @@ export const billingContract = c.router({
     summary: "Create a new invoice",
     body: z.object({
       invoice: InsertInvoiceSchema.extend({
-        customerId: z.string(), // frontend sends string
-        issueDate: z.string(),  // frontend sends ISO string
-        dueDate: z.string(),    // frontend sends ISO string
+        customerId: z.coerce.number(), // frontend sends string
+        // issueDate and dueDate are handled by schema coercion
       }),
       items: z.array(z.object({
         description: z.string(),
-        quantity: z.number(),
+        quantity: z.coerce.number(),
         unitPrice: z.string(),
         totalPrice: z.string(),
       })),
@@ -70,12 +70,17 @@ export const billingContract = c.router({
     path: "/invoice",
     summary: "Get all invoices, optionally filtered by customerId or bookingId",
     query: z.object({
-      customerId: z.string().optional(),
+      customerId: z.coerce.number().optional(),
       bookingId: z.string().optional(),
       status: z.string().optional(),
+      page: z.coerce.number().optional(),
+      pageSize: z.coerce.number().optional(),
     }),
     responses: {
-      200: z.array(ExtendedInvoiceSchema),
+      200: z.object({
+        data: z.array(ExtendedInvoiceSchema),
+        pagination
+      })
     },
   },
 
@@ -84,7 +89,7 @@ export const billingContract = c.router({
     path: "/invoice/:id",
     summary: "Get an invoice by ID",
     pathParams: z.object({
-      id: z.string(),
+      id: z.coerce.number(),
     }),
     responses: {
       200: ExtendedInvoiceSchema,
@@ -97,16 +102,15 @@ export const billingContract = c.router({
   path: "/invoice/:id",
   summary: "Update an invoice by ID",
   pathParams: z.object({
-    id: z.string(),
+    id: z.coerce.number(),
   }),
   body: UpdateInvoiceSchema.extend({
-    customerId: z.string(), // frontend sends string
-    issueDate: z.string(),  // frontend sends ISO string
-    dueDate: z.string(),    // frontend sends ISO string
+    customerId: z.coerce.number(), // frontend sends string
+    // issueDate and dueDate are handled by schema coercion
     items: z.array(z.object({
       id: z.number(),
       description: z.string(),
-      quantity: z.number(),
+      quantity: z.coerce.number(),
       unitPrice: z.string(),
       totalPrice: z.string(),
       invoiceId: z.number(),
@@ -127,7 +131,7 @@ export const billingContract = c.router({
   path: "/invoice/:id",
   summary: "Delete an invoice by ID",
   pathParams: z.object({
-    id: z.string(), // frontend will send the invoice ID as a string
+    id: z.coerce.number(), // frontend will send the invoice ID as a string
   }),
   body: z.object({}),
   responses: {
@@ -147,11 +151,11 @@ export const billingContract = c.router({
     summary: "Create a new payment",
     body: z.object({
       payment: InsertPaymentSchema.extend({
-        customerId: z.number(), // frontend sends string
+        customerId: z.coerce.number(), // frontend sends string
         amount: z.string(),
-        paymentDate: z.string(), // frontend sends ISO string
+        // paymentDate is handled by schema coercion
       }),
-      invoiceIds: z.array(z.number()),
+      invoiceIds: z.array(z.coerce.number()),
       amountsApplied: z.array(z.string()),
     }),
     responses: {
@@ -170,10 +174,15 @@ export const billingContract = c.router({
     path: "/payment",
     summary: "Get all payments, optionally filtered by customerId",
     query: z.object({
-      customerId: z.string().optional(),
+      customerId: z.coerce.number().optional(),
+      page: z.coerce.number().optional(),
+      pageSize: z.coerce.number().optional(),
     }),
     responses: {
-      200: z.array(ExtendedPaymentListSchema),
+      200: z.object({
+        data: z.array(ExtendedPaymentListSchema),
+        pagination
+      })
     },
   },
 
@@ -182,7 +191,7 @@ export const billingContract = c.router({
     path: "/payment/:id",
     summary: "Get a payment by ID",
     pathParams: z.object({
-      id: z.string(),
+      id: z.coerce.number(),
     }),
     responses: {
       200: ExtendedPaymentSchema,

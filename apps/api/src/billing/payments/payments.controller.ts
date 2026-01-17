@@ -37,8 +37,11 @@ export class PaymentsController {
   async list(@Headers() headers: any): Promise<ReturnType<typeof tsRestHandler>> {
     return tsRestHandler(billingContract.getPayments, async ({ query }) => {
       const tenantId = headers['x-tenant-id'];
-      const rows = await this.payments.list(tenantId, query);
-      return { status: 200, body: rows.map((row) => ({ ...row, paymentDate: row.paymentDate.toISOString() })) };
+      const page = query.page ? Number(query.page) : 1;
+      const pageSize = query.pageSize ? Number(query.pageSize) : 10;
+
+      const rows = await this.payments.list(tenantId, { customerId: query.customerId ? (query.customerId) : undefined }, page, pageSize);
+      return { status: 200, body: {data: rows.data.map((row) => ({ ...row, paymentDate: row.paymentDate.toISOString() })),pagination: rows.pagination} };
     });
   }
 
@@ -47,8 +50,8 @@ export class PaymentsController {
   async get(@Headers() headers: any): Promise<ReturnType<typeof tsRestHandler>> {
     return tsRestHandler(billingContract.getPayment, async ({ params }) => {
       const tenantId = headers['x-tenant-id'];
-      await this.tenantService.validateTenantAccess(tenantId, schema.Payment, Number(params.id));
-      const row = await this.payments.get(Number(params.id));
+      await this.tenantService.validateTenantAccess(tenantId, schema.Payment, (params.id));
+      const row = await this.payments.get((params.id));
       if (!row) {
         return { status: 404, body: undefined };
       }

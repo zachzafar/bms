@@ -2,7 +2,7 @@ import { Inject, Injectable, BadRequestException, NotFoundException } from '@nes
 import { MySql2Database } from 'drizzle-orm/mysql2';
 import * as schema from '@repo/api-contract';
 import { DrizzleAsyncProvider } from 'src/drizzle/drizzle.provider';
-import { and, eq, gte, inArray, lte } from 'drizzle-orm';
+import { and, eq, gte, inArray, lte, sql } from 'drizzle-orm';
 import { SlotService } from 'src/slot/slot.service';
 
 type CreateInvoiceInput = Omit<schema.InsertInvoice, 'id'>;
@@ -44,7 +44,7 @@ export class InvoicesService {
 
       await tx.insert(schema.InvoiceItem).values(
         items.map((i) => ({
-          invoiceId: BigInt(invoiceId),
+          invoiceId: invoiceId,
           description: i.description,
           quantity: i.quantity,
           unitPrice: i.unitPrice as any,
@@ -58,41 +58,70 @@ export class InvoicesService {
     return id;
   }
 
-  async list(tenantId: string, query: { customerId?: string; bookingId?: string; status?: string }) {
+  async list(tenantId: string, query: { customerId?: number; bookingId?: string; status?: string }, page: number = 1, pageSize: number = 10) {
+    const offset = (page - 1) * pageSize;
+
+    const conditions: any[] = [];
+    conditions.push(eq(schema.Invoice.tenantId, tenantId));
+    if (query.customerId) conditions.push(eq(schema.Invoice.customerId, query.customerId));
+    if (query.bookingId) conditions.push(eq(schema.Invoice.bookingId, query.bookingId));
+    if (query.status) conditions.push(eq(schema.Invoice.status, query.status));
+
+    const totalCountResult = await this.db
+      .select({ count: sql<number>`COUNT(*)` })
+      .from(schema.Invoice)
+      .where(and(...conditions))
+      .execute();
+    const totalCount = totalCountResult[0]?.count || 0;
+
     const invoices = await this.db.query.Invoice.findMany({
       where: (i, { eq, and }) =>
         and(
           eq(i.tenantId, tenantId),
-          query.customerId ? eq(i.customerId, BigInt(query.customerId)) : undefined,
+          query.customerId ? eq(i.customerId, (query.customerId)) : undefined,
           query.bookingId ? eq(i.bookingId, query.bookingId) : undefined,
           query.status ? eq(i.status, query.status) : undefined
         ),
       orderBy: (i, { desc }) => [desc(i.createdAt)],
+      limit: pageSize,
+      offset: offset,
     });
 
-    const ids = invoices.map((i) => BigInt(i.id));
+    const ids = invoices.map((i) => i.id);
     const items = ids.length
       ? await this.db.query.InvoiceItem.findMany({ where: (it, { inArray }) => inArray(it.invoiceId, ids) })
       : [];
 
-    const itemsMap = new Map<bigint, typeof items>();
+    const itemsMap = new Map<number, typeof items>();
     items.forEach((it) => {
       itemsMap.set(it.invoiceId, [...(itemsMap.get(it.invoiceId) ?? []), it]);
     });
 
-    return invoices.map((inv) => ({
-      ...inv,
-      // Convert bigint values to numbers for API compatibility
-      id: Number(inv.id),
-      customerId: Number(inv.customerId),
-      items: (itemsMap.get(BigInt(inv.id)) ?? []).map((it) => ({
-        ...it,
-        id: Number(it.id),
-        invoiceId: Number(it.invoiceId),
-        unitPrice: String(it.unitPrice),
-        totalPrice: String(it.totalPrice),
+    const paginationData = {
+      page,
+      pageSize,
+      totalCount,
+      totalPages: Math.ceil(totalCount / pageSize),
+      hasNextPage: page * pageSize < totalCount,
+      hasPreviousPage: page > 1,
+    };
+
+    return {
+      data: invoices.map((inv) => ({
+        ...inv,
+        // Convert bigint values to numbers for API compatibility
+        id: inv.id,
+        customerId: inv.customerId,
+        items: (itemsMap.get(inv.id) ?? []).map((it) => ({
+          ...it,
+          id: it.id,
+          invoiceId: it.invoiceId,
+          unitPrice: String(it.unitPrice),
+          totalPrice: String(it.totalPrice),
+        })),
       })),
-    }));
+      pagination: paginationData,
+    };
   }
 
   async get(id: number) {
@@ -102,18 +131,18 @@ export class InvoicesService {
     if (!invoice) return null;
 
     const items = await this.db.query.InvoiceItem.findMany({
-      where: (it, { eq }) => eq(it.invoiceId, BigInt(id)),
+      where: (it, { eq }) => eq(it.invoiceId, id),
     });
 
     return {
       ...invoice,
       // Convert bigint values to numbers for API compatibility
-      id: Number(invoice.id),
-      customerId: Number(invoice.customerId),
+      id: invoice.id,
+      customerId: invoice.customerId,
       items: items.map((it) => ({
         ...it,
-        id: Number(it.id),
-        invoiceId: Number(it.invoiceId),
+        id: it.id,
+        invoiceId: it.invoiceId,
         unitPrice: String(it.unitPrice),
         totalPrice: String(it.totalPrice),
       })),
@@ -138,7 +167,7 @@ export class InvoicesService {
 
       if (items && items.length > 0) {
         // Delete existing items
-        await tx.delete(schema.InvoiceItem).where(eq(schema.InvoiceItem.invoiceId, BigInt(id))).execute();
+        await tx.delete(schema.InvoiceItem).where(eq(schema.InvoiceItem.invoiceId, id)).execute();
 
         // Insert updated items
         await tx.insert(schema.InvoiceItem).values(
@@ -147,7 +176,7 @@ export class InvoicesService {
             quantity: i.quantity,
             unitPrice: i.unitPrice as any,
             totalPrice: i.totalPrice as any,
-            invoiceId: BigInt(id),
+            invoiceId: id,
           }))
         ).execute();
       }
@@ -179,7 +208,7 @@ export class InvoicesService {
     // Wrap in transaction to also delete related items
     await this.db.transaction(async (tx) => {
       // Delete related invoice items first
-      await tx.delete(schema.InvoiceItem).where(eq(schema.InvoiceItem.invoiceId, BigInt(id))).execute();
+      await tx.delete(schema.InvoiceItem).where(eq(schema.InvoiceItem.invoiceId, id)).execute();
 
       // Delete the invoice itself
       await tx.delete(schema.Invoice).where(eq(schema.Invoice.id, id)).execute();
@@ -202,15 +231,12 @@ export class InvoicesService {
   });
   if (!booking) throw new NotFoundException('Booking not found');
 
-  // 2) Pull first customer linked to booking
-  const userLinks = await this.db.query.UserHasBookings.findMany({
-    where: (ub, { eq }) => eq(ub.bookingId, bookingId),
-  });
-  if (!userLinks.length) throw new BadRequestException('No users linked to booking');
-
-  const firstUserId = userLinks[0].userId;
+  // 2) Pull customer linked to booking via userId and tenantId
   const customer = await this.db.query.Customer.findFirst({
-    where: (c, { eq }) => eq(c.userId, firstUserId),
+    where: (c, { eq, and }) => and(
+      eq(c.userId, booking.userId),
+      eq(c.tenantId, booking.asset.tenantId)
+    ),
   });
   if (!customer) throw new BadRequestException('No customer found for booking user');
 
@@ -261,7 +287,7 @@ export class InvoicesService {
       taxAmount: '0.00' as any,
       totalAmount: total as any,
       notes: `Invoice for booking ${bookingId}`,
-      customerId: BigInt(customer.id),
+      customerId: customer.id,
       bookingId,
     }).$returningId();
 
@@ -269,7 +295,7 @@ export class InvoicesService {
 
     // 6) Insert invoice item
     await tx.insert(schema.InvoiceItem).values({
-      invoiceId: BigInt(invoiceId),
+      invoiceId,
       description: `Rate per night for ${booking.asset?.name ?? booking.assetId}`,
       quantity: nights,
       unitPrice: unitPrice as any,

@@ -11,7 +11,8 @@ import { v4 as uuid } from "uuid";
 export const Tenant = mysqlTable("tenants", {
     id: varchar("id", { length: 36 }).primaryKey().$default(() => uuid()),
     name: varchar("name", { length: 255 }).notNull(),
-    subdomain: varchar("subdomain", { length: 255 }),
+    subdomain: varchar("subdomain", { length: 255 }).unique(),
+    enableAutomaticConfirmation: boolean("enable_automatic_confirmation").notNull().default(true),
     createdAt: timestamp('createdAt',{mode: 'string'}).notNull().defaultNow(),
     updatedAt: timestamp('updatedAt',{mode: 'string'}).defaultNow().onUpdateNow()
 }, (tenant) => ({
@@ -33,7 +34,7 @@ export const TenantRelations = relations(Tenant, ({ one, many }) => ({
 
 
 export const TenantTeams = mysqlTable("tenant_teams",{
-    id: serial("id").primaryKey(),
+    id: bigint("id", { mode: "number", unsigned: true }).autoincrement().primaryKey(),
     tenantId: varchar("tenant_id", { length: 255 }).notNull().references(() => Tenant.id),
     name: varchar("name", { length: 255 }).notNull(),
 })
@@ -55,8 +56,8 @@ export const TenantTeamRelations = relations(TenantTeams, ({ one ,many}) => ({
 
 
 export const TenantTeamHasUsers = mysqlTable("tennat_team_has_users",{
-    id: serial("id").primaryKey(),
-    teamId: bigint("team_id", { mode: 'bigint', unsigned: true}).notNull().references(() => TenantTeams.id),
+    id: bigint("id", { mode: "number", unsigned: true }).autoincrement().primaryKey(),
+    teamId: bigint("team_id", { mode: 'number', unsigned: true}).notNull().references(() => TenantTeams.id),
     userId: varchar("user_id",{length: 255}).notNull().references(() => User.id),
 })
 
@@ -78,8 +79,8 @@ export const TenantTeamHasUsersRelations = relations(TenantTeamHasUsers, ({ one 
 }))
 
 export const TenantTeamHasAssets = mysqlTable("tenant_team_has_assets",{
-    id: serial("id").primaryKey(),
-    teamId: bigint("team_id", { mode: 'bigint', unsigned: true}).notNull().references(() => TenantTeams.id),
+    id: bigint("id", { mode: "number", unsigned: true }).autoincrement().primaryKey(),
+    teamId: bigint("team_id", { mode: 'number', unsigned: true}).notNull().references(() => TenantTeams.id),
     assetId: varchar("asset_id",{ length: 255}).notNull().references(() => Asset.id)
 })
 
@@ -101,7 +102,7 @@ export const TenantTeamHasAssetsRelations = relations(TenantTeamHasAssets, ({ on
 }))
 
 export const TenantHasUsers = mysqlTable("tenant_has_users", {
-    id: serial("id").primaryKey(),
+    id: bigint("id", { mode: "number", unsigned: true }).autoincrement().primaryKey(),
     tenantId: varchar("tenant_id", { length: 255 }).notNull().references(() => Tenant.id),
     userId: varchar("user_id", { length: 255 }).notNull().references(() => User.id),
     isAdmin: boolean("is_admin").default(false)

@@ -1,6 +1,7 @@
 import { initContract } from "@ts-rest/core";
 import { z } from "zod";
 import { SelectKeySchema } from "../database-schema";
+import { pagination } from "./utils";
 
 
 
@@ -25,8 +26,15 @@ export const keysContract = c.router({
         method: 'GET',
         path: '/keys',
         responses: {
-            200: z.array(SelectKeySchema)
+            200: z.object({
+                data: z.array(SelectKeySchema),
+                pagination
+            })
         },
+        query: z.object({
+            page: z.coerce.number().optional(),
+            pageSize: z.coerce.number().optional(),
+        }),
         summary: 'Get all API keys for a tenant',
     },
     deleteKey: {

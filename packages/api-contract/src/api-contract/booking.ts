@@ -2,17 +2,27 @@ import { initContract } from "@ts-rest/core";
 
 import { z } from "zod";
 
-import { InsertBlockedDateSchema, InsertBookingSchema, SelectAssetSchema, SelectBookingSchema, SelectCustomerSchema, SelectUserSchema, UpdateBlockedDateSchema, UpdateBookingSchema } from "../database-schema";
+import { InsertBlockedDateSchema, InsertBookingSchema, InsertCustomerSchema, SelectAssetSchema, SelectBookingSchema, SelectCustomerSchema, SelectUserSchema, UpdateBlockedDateSchema, UpdateBookingSchema } from "../database-schema";
+import { pagination } from './utils';
 
 
 const c = initContract();
+
+export const BookingFormResponseSchema = z.object({
+    id: z.number(),
+    formFieldId: z.number(),
+    value: z.string(),
+    fieldName: z.string(),
+    fieldType: z.string(),
+});
 
 export const ExtendedSelectBookingSchema = SelectBookingSchema.omit({ startDate: true, endDate: true }).extend({
     customer: SelectCustomerSchema,
     asset: SelectAssetSchema,
     user: SelectUserSchema.omit({ roles: true }),
-    startDate: z.string(),
-    endDate: z.string(),
+    startDate: z.coerce.date(),
+    endDate: z.coerce.date(),
+    formResponses: z.array(BookingFormResponseSchema).optional(),
 })
 
 export type ExtendedSelectBooking = z.infer<typeof ExtendedSelectBookingSchema>
@@ -30,7 +40,7 @@ export const bookingContract = c.router({
         },
         body: z.object({
             booking: InsertBookingSchema,
-            customers: z.array(z.number()),
+            customers: z.array(z.coerce.number()),
         }),
 
         summary: 'Create a new booking'
@@ -39,11 +49,16 @@ export const bookingContract = c.router({
         method: 'GET',
         path: '/booking',
         responses: {
-            200: z.array(ExtendedSelectBookingSchema)
+            200: z.object({
+                data: z.array(ExtendedSelectBookingSchema),
+                pagination
+            })
         },
         query: z.object({
             search: z.string().optional(),
             assetId: z.string().optional(),
+            page: z.coerce.number().optional(),
+            pageSize: z.coerce.number().optional(),
         }),
         summary: 'Get all bookings'
     },
@@ -96,22 +111,22 @@ export const bookingContract = c.router({
             })
         },
         body: z.object({
-            tagId: z.number(),
-            startDate: z.string(),
-            endDate: z.string(),
-            customerIds: z.array(z.number())
+            tagId: z.coerce.number(),
+            startDate: z.coerce.date(),
+            endDate: z.coerce.date(),
+            customerIds: z.array(z.coerce.number())
         })
     },
     checkTagAvailability: {
         method: 'GET',
         path: '/booking/availability/by-tag',
         query: z.object({
-            tagId: z.string(),
+            tagId: z.coerce.number(),
         }),
         responses: {
             200: z.array(z.object({
-                from: z.string(),
-                to: z.string(),
+                from: z.coerce.date(),
+                to: z.coerce.date(),
             })),
             400: z.object({ message: z.string() }),
         },
@@ -132,12 +147,12 @@ export const bookingContract = c.router({
           id: z.number(),
           tenantId: z.string(),
           assetId: z.string(),
-          startDate: z.string(),
-          endDate: z.string(),
+          startDate: z.coerce.date(),
+          endDate: z.coerce.date(),
           title: z.string().min(1, "Title is required"),
           reason: z.string().optional(),
-          createdAt: z.string(),
-          updatedAt: z.string(),
+          createdAt: z.coerce.date(),
+          updatedAt: z.coerce.date().optional(),
         })
       ),
     },
@@ -160,7 +175,7 @@ export const bookingContract = c.router({
   updateBlockedDate: {
     method: "PUT",
     path: "/blocked-dates/:id",
-    pathParams: z.object({ id: z.number() }),
+    pathParams: z.object({ id: z.coerce.number() }),
     body: UpdateBlockedDateSchema,
     responses: {
       200: z.object({ message: z.string() }),
@@ -171,11 +186,93 @@ export const bookingContract = c.router({
   deleteBlockedDate: {
     method: "DELETE",
     path: "/blocked-dates/:id",
-    pathParams: z.object({ id: z.string() }),
+    pathParams: z.object({ id: z.coerce.number() }),
     body: z.object({}).optional(),
     responses: {
       204: z.undefined(),
     },
     summary: "Delete a blocked date by ID",
   },
+
+  updateBookingByToken: {
+    method: "PUT",
+    path:"/update-booking-by-token/:token/:bookingId",
+    body:UpdateBookingSchema,
+    responses: {
+      200: z.object({ message: z.string()}),
+      403: z.undefined()
+    },
+    pathParams: z.object({token: z.string(),bookingId:z.string()}),
+    summary: 'create and share token for updating '
+  },
+  customerCreateBooking: {
+    method: "POST",
+    path:"/customer-create-booking/:tenantId",
+    pathParams: z.object({
+      tenantId:z.string()
+    }),
+    body: z.object({
+      booking: InsertBookingSchema,
+      customer: z.object({
+        name: z.string(),
+        email: z.string(),
+        phone: z.string().optional(),
+      }),
+      formResponses: z.array(z.object({
+        formFieldId: z.number(),
+        value: z.string()
+      })).optional()
+    }),
+    responses: {
+      201: z.object({ message: z.string()})
+    },
+    summary: 'endpoint for unauthenticated new customers to create bookings'
+  },
+
+  customerViewBooking: {
+    method: 'GET',
+    path: '/customer-view-booking/:bookingId/:token',
+    pathParams: z.object({
+      bookingId: z.string(),
+      token:z.string(),
+    }),
+    responses: {
+      200: ExtendedSelectBookingSchema,
+      403: z.undefined()
+    }
+  },
+
+  // Update booking status
+  updateBookingStatus: {
+    method: 'PATCH',
+    path: '/booking/:id/status',
+    pathParams: z.object({
+      id: z.string()
+    }),
+    body: z.object({
+      status: z.enum(["Pending", "Confirmed", "Cancelled"])
+    }),
+    responses: {
+      200: z.object({ message: z.string() }),
+      404: z.undefined()
+    },
+    summary: 'Update booking status'
+  },
+
+  // Cancel booking by token (customer-facing)
+  cancelBookingByToken: {
+    method: 'POST',
+    path: '/cancel-booking-by-token/:token/:bookingId',
+    pathParams: z.object({
+      token: z.string(),
+      bookingId: z.string()
+    }),
+    body: z.object({}),
+    responses: {
+      200: z.object({ message: z.string() }),
+      403: z.undefined(),
+      404: z.undefined()
+    },
+    summary: 'Cancel booking using update token (customer-facing)'
+  }
 });

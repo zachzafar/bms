@@ -1,13 +1,15 @@
 import { initContract } from "@ts-rest/core";
 
 import { z } from "zod";
-import { Asset, InsertAssetPropertySchema, InsertAssetTypeSchema, SelectAssetPropertySchema, SelectAssetTypeSchema, UpdateAssetTypeSchema } from "../../database-schema";
+import { Asset, InsertAssetPropertySchema, InsertAssetTypeSchema, SelectAssetPropertySchema, SelectAssetTypeSchema, UpdateAssetTypeSchema, SelectBookingFormSchema } from "../../database-schema";
+import { pagination } from "../utils";
 
 const c = initContract();
 
 export const AssetTypeWithPropertiesSchema = z.object({
     assetType: InsertAssetTypeSchema,
-    properties: z.array(z.number())
+    properties: z.array(z.number()),
+    forms: z.array(z.number())
 })
 
 export const SelectAssetTypeWithPropertiesSchema = z.object({
@@ -34,8 +36,15 @@ export const assetTypeContract = c.router({
         method: 'GET',
         path: '/asset-type',
         responses: {
-            200: z.array(SelectAssetTypeSchema)
+            200: z.object({
+                data: z.array(SelectAssetTypeSchema),
+                pagination
+            })
         },
+        query: z.object({
+            page: z.coerce.number().optional(),
+            pageSize: z.coerce.number().optional(),
+        }),
         summary: 'Get all asset types'
     },
     getAssetType: {
@@ -44,14 +53,15 @@ export const assetTypeContract = c.router({
         responses: {
             200: z.object({
                 assetType: SelectAssetTypeSchema,
-                properties: z.array(SelectAssetPropertySchema)
+                properties: z.array(SelectAssetPropertySchema),
+                forms: z.array(SelectBookingFormSchema)
             }),
             404: z.object({
                 message: z.string()
             })
         },
         pathParams: z.object({
-            id: z.string()
+            id: z.coerce.number()
         }),
         summary: 'Get asset type by id'
     },
@@ -60,13 +70,14 @@ export const assetTypeContract = c.router({
         path: '/asset-type/:id',
         body: z.object({
             assetType: UpdateAssetTypeSchema,
-            properties: z.array(z.number())
+            properties: z.array(z.number()),
+            forms: z.array(z.number())
     }),
         responses: {
             200: z.null()
         },
         pathParams: z.object({
-            id: z.string()
+            id: z.coerce.number()
         }),
         summary: 'Update asset type by id'
     },
@@ -80,7 +91,7 @@ export const assetTypeContract = c.router({
             })
         },
         pathParams: z.object({
-            id: z.string()
+            id: z.coerce.number()
         }),
         summary: 'Delete asset type by id'
     },
@@ -88,8 +99,15 @@ export const assetTypeContract = c.router({
         method: 'GET',
         path: '/properties',
         responses: {
-            200: z.array(SelectAssetPropertySchema)
+            200: z.object({
+                data: z.array(SelectAssetPropertySchema),
+                pagination
+            })
         },
+        query: z.object({
+            page: z.coerce.number().optional(),
+            pageSize: z.coerce.number().optional(),
+        }),
         summary: 'Get all asset properties'
     },
 

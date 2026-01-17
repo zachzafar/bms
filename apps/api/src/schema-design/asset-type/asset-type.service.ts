@@ -3,7 +3,7 @@ import { MySql2Database } from 'drizzle-orm/mysql2';
 import { DrizzleAsyncProvider } from 'src/drizzle/drizzle.provider';
 import * as schema from '@repo/api-contract';
 import type { InsertAssetType, UpdateAssetType } from '@repo/api-contract';
-import { eq } from 'drizzle-orm';
+import { eq, sql } from 'drizzle-orm';
 
 @Injectable()
 export class AssetTypeService {
@@ -13,12 +13,45 @@ export class AssetTypeService {
         @Inject(DrizzleAsyncProvider) private db: MySql2Database<typeof schema>
     ){}
     
-    async getAssetTypes(tenantId: string) {
-        return this.db.query.AssetType.findMany({where: (assetType, { eq }) => eq(assetType.tenantId, tenantId)});
+    async getAssetTypes(tenantId: string, page: number = 1, pageSize: number = 10) {
+        const offset = (page - 1) * pageSize;
+
+        const totalCountResult = await this.db
+            .select({ count: sql<number>`COUNT(*)` })
+            .from(schema.AssetType)
+            .where(eq(schema.AssetType.tenantId, tenantId))
+            .execute();
+        const totalCount = totalCountResult[0]?.count || 0;
+
+        const results = await this.db.query.AssetType.findMany({
+            where: (assetType, { eq }) => eq(assetType.tenantId, tenantId),
+            limit: pageSize,
+            offset: offset,
+        });
+
+        const paginationData = {
+            page,
+            pageSize,
+            totalCount,
+            totalPages: Math.ceil(totalCount / pageSize),
+            hasNextPage: page * pageSize < totalCount,
+            hasPreviousPage: page > 1,
+        };
+
+        return {
+            data: results,
+            pagination: paginationData,
+        };
     }
 
     async getAssetType(id: number) {
-        const assetType = await this.db.query.AssetType.findFirst({ where: (assetType, { eq }) => eq(assetType.id, id), with: { assetTypeHasProperties: { with: { assetProperty: true}}, } });
+        const assetType = await this.db.query.AssetType.findFirst({
+            where: (assetType, { eq }) => eq(assetType.id, id),
+            with: {
+                assetTypeHasProperties: { with: { assetProperty: true}},
+                bookingForms: { with: { bookingForm: true }}
+            }
+        });
 
         if (!assetType) {
             throw new NotFoundException('Asset type not found');
@@ -30,8 +63,9 @@ export class AssetTypeService {
             createdAt,
             updatedAt,
             assetTypeHasProperties,
+            bookingForms,
           } = assetType || {};
-       
+
         return {
             description,
             tenantId,
@@ -39,11 +73,12 @@ export class AssetTypeService {
             name,
             createdAt,
             updatedAt,
-            properties: assetTypeHasProperties?.map((relation) => relation.assetProperty) ?? []
+            properties: assetTypeHasProperties?.map((relation) => relation.assetProperty) ?? [],
+            forms: bookingForms?.map((relation) => relation.bookingForm) ?? []
         }
     }
 
-    async createAssetType(data: InsertAssetType, properties: number[]) {
+    async createAssetType(data: InsertAssetType, properties: number[], forms: number[]) {
         try {
             const result = await this.db.transaction(async (tx) => {
                 const [{ id }] = await tx
@@ -56,8 +91,19 @@ export class AssetTypeService {
                         .insert(schema.AssetTypeHasProperties)
                         .values(
                             properties.map(property => ({
-                                assetTypeId: BigInt(id),
-                                assetPropertyId: BigInt(property)
+                                assetTypeId: id,
+                                assetPropertyId: property
+                            }))
+                        );
+                }
+
+                if (forms.length > 0) {
+                    await tx
+                        .insert(schema.AssetTypeHasBookingForms)
+                        .values(
+                            forms.map(formId => ({
+                                assetTypeId: id,
+                                bookingFormId: formId
                             }))
                         );
                 }
@@ -84,14 +130,28 @@ export class AssetTypeService {
     }
 
     async updateAssetTypeProperties(id: number, properties: number[]) {
-        await this.db.delete(schema.AssetTypeHasProperties).where(eq(schema.AssetTypeHasProperties.assetTypeId, BigInt(id))).execute()
+        await this.db.delete(schema.AssetTypeHasProperties).where(eq(schema.AssetTypeHasProperties.assetTypeId, id)).execute()
         if (properties.length > 0) {
             await this.db
                 .insert(schema.AssetTypeHasProperties)
                 .values(
                     properties.map(property => ({
-                        assetTypeId: BigInt(id),
-                        assetPropertyId: BigInt(property)
+                        assetTypeId: id,
+                        assetPropertyId: property
+                    }))
+                );
+        }
+    }
+
+    async updateAssetTypeForms(id: number, forms: number[]) {
+        await this.db.delete(schema.AssetTypeHasBookingForms).where(eq(schema.AssetTypeHasBookingForms.assetTypeId, id)).execute()
+        if (forms.length > 0) {
+            await this.db
+                .insert(schema.AssetTypeHasBookingForms)
+                .values(
+                    forms.map(formId => ({
+                        assetTypeId: id,
+                        bookingFormId: formId
                     }))
                 );
         }

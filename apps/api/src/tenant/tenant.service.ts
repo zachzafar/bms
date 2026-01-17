@@ -2,7 +2,7 @@ import { Inject, Injectable, Logger, UnauthorizedException } from '@nestjs/commo
 import { MySql2Database } from 'drizzle-orm/mysql2';
 import { DrizzleAsyncProvider } from 'src/drizzle/drizzle.provider';
 import * as schema from '@repo/api-contract';
-import { and, eq } from 'drizzle-orm';
+import { and, eq, sql } from 'drizzle-orm';
 import type { MySqlTableWithColumns,MySqlColumn } from "drizzle-orm/mysql-core"
 
 type TableWithTenant = MySqlTableWithColumns<{
@@ -23,13 +23,37 @@ export class TenantService {
     constructor(@Inject(DrizzleAsyncProvider) private db:MySql2Database<typeof schema>){}
 
     async getTenantsDetails(tenantIds: string[]){
-        return await this.db.query.Tenant.findMany({
-            where: (tenant,{inArray}) => inArray(tenant.id,tenantIds)})
-        
+            return await this.db.query.Tenant.findMany({
+            where: (tenant,{inArray}) => inArray(tenant.id,tenantIds)})  
     }
 
-    async getTenants(){
-        return await this.db.query.Tenant.findMany()
+    async getTenants(page: number = 1, pageSize: number = 10){
+        const offset = (page - 1) * pageSize;
+
+        const totalCountResult = await this.db
+            .select({ count: sql<number>`COUNT(*)` })
+            .from(schema.Tenant)
+            .execute();
+        const totalCount = totalCountResult[0]?.count || 0;
+
+        const results = await this.db.query.Tenant.findMany({
+            limit: pageSize,
+            offset: offset,
+        });
+
+        const paginationData = {
+            page,
+            pageSize,
+            totalCount,
+            totalPages: Math.ceil(totalCount / pageSize),
+            hasNextPage: page * pageSize < totalCount,
+            hasPreviousPage: page > 1,
+        };
+
+        return {
+            data: results,
+            pagination: paginationData,
+        };
     }
 
     async tenantHasUser(tenantId: string, userId: string){

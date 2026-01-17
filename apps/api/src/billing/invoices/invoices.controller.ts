@@ -24,7 +24,7 @@ export class InvoicesController {
       const tenantId = headers['x-tenant-id'];
 
       // Convert string -> proper types
-      const customerId = BigInt(body.invoice.customerId);
+      const customerId = (body.invoice.customerId);
       const issueDate = new Date(body.invoice.issueDate);
       const dueDate = new Date(body.invoice.dueDate);
 
@@ -52,11 +52,14 @@ export class InvoicesController {
   async list(@Headers() headers: any): Promise<ReturnType<typeof tsRestHandler>> {
     return tsRestHandler(billingContract.getInvoices, async ({ query }) => {
       const tenantId = headers['x-tenant-id'];
-      const rows = await this.invoices.list(tenantId, query);
-      return { status: 200, body: rows.map(row => ({
+      const page = query.page ? Number(query.page) : 1;
+      const pageSize = query.pageSize ? Number(query.pageSize) : 10;
+
+      const rows = await this.invoices.list(tenantId, query, page, pageSize);
+      return { status: 200, body: {data: rows.data.map(row => ({
         ...row,
         dueDate: row.dueDate.toISOString(),
-      })) };
+      })),pagination: rows.pagination} };
     });
   }
 
@@ -65,8 +68,8 @@ export class InvoicesController {
   async get(@Headers() headers: any): Promise<ReturnType<typeof tsRestHandler>> {
     return tsRestHandler(billingContract.getInvoice, async ({ params }) => {
       const tenantId = headers['x-tenant-id'];
-      await this.tenantService.validateTenantAccess(tenantId, schema.Invoice, Number(params.id));
-      const row = await this.invoices.get(Number(params.id));
+      await this.tenantService.validateTenantAccess(tenantId, schema.Invoice, (params.id));
+      const row = await this.invoices.get((params.id));
       return row ? { status: 200, body: {
         ...row,
         dueDate: row.dueDate.toISOString(),
@@ -79,22 +82,22 @@ export class InvoicesController {
   async update(@Headers() headers: any): Promise<ReturnType<typeof tsRestHandler>> {
     return tsRestHandler(billingContract.updateInvoice, async ({ params, body }) => {
       const tenantId = headers['x-tenant-id'];
-      await this.tenantService.validateTenantAccess(tenantId, schema.Invoice, Number(params.id));
+      await this.tenantService.validateTenantAccess(tenantId, schema.Invoice, (params.id));
 
       const normalizedBody = {
         ...body,
         issueDate: body.issueDate ? new Date(body.issueDate) : undefined,
         dueDate: body.dueDate ? new Date(body.dueDate) : undefined,
-        customerId: body.customerId ? BigInt(body.customerId) : undefined,
+        customerId: body.customerId ? (body.customerId) : undefined,
       };
 
       // 👇 NEW: handle updated items if included
       const items = body.items?.map(item => ({
         ...item,
-        invoiceId: Number(params.id),
+        invoiceId: (params.id),
       }));
 
-      await this.invoices.update(Number(params.id), normalizedBody, items);
+      await this.invoices.update((params.id), normalizedBody, items);
 
       return { status: 200, body: { message: 'invoice updated' } };
     });
@@ -108,10 +111,10 @@ export class InvoicesController {
       const tenantId = headers['x-tenant-id'];
 
       // Validate tenant access
-      await this.tenantService.validateTenantAccess(tenantId, schema.Invoice, Number(params.id));
+      await this.tenantService.validateTenantAccess(tenantId, schema.Invoice, (params.id));
 
       // Call service delete method
-      await this.invoices.delete(Number(params.id));
+      await this.invoices.delete((params.id));
 
       return { status: 200, body: { message: `Invoice ${params.id} deleted successfully` } };
     });

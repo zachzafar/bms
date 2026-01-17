@@ -1,6 +1,6 @@
 import { ConflictException, Inject, Injectable, NotFoundException, UnauthorizedException } from '@nestjs/common';
 import { MySql2Database } from 'drizzle-orm/mysql2';
-import { and, eq, gte, lte } from 'drizzle-orm';
+import { and, eq, gte, lte, sql } from 'drizzle-orm';
 import * as schema from '@repo/api-contract';
 import { DrizzleAsyncProvider } from 'src/drizzle/drizzle.provider';
 import { InsertRate, UpdateRate } from '@repo/api-contract';
@@ -13,7 +13,7 @@ export class RatesService {
     @Inject(DrizzleAsyncProvider) private db: MySql2Database<typeof schema>,
   ) {}
 
- async createRate(data: InsertRate, assetIds?: string[]): Promise<string> {
+ async createRate(data: InsertRate, assetIds?: string[]): Promise<number> {
   try {
     // Insert Rate record, convert dates properly
     const [inserted] = await this.db
@@ -25,14 +25,14 @@ export class RatesService {
       })
       .$returningId();
 
-    const newRateId = inserted.id.toString();
+    const newRateId = inserted.id;
 
     // If assetIds provided, bulk insert join rows
     if (assetIds && assetIds.length > 0) {
       await this.db.insert(schema.AssetHasRates).values(
         assetIds.map((assetId) => ({
           assetId,
-          rateId: BigInt(inserted.id),
+          rateId: inserted.id,
         }))
       );
     }
@@ -46,8 +46,19 @@ export class RatesService {
 
 
 
-  async getRates(assetId?: string) {
+  async getRates(assetId?: string, page: number = 1, pageSize: number = 10) {
+  const offset = (page - 1) * pageSize;
+
   if (assetId) {
+    // Get total count for asset-specific rates
+    const totalCountResult = await this.db
+      .select({ count: sql<number>`COUNT(DISTINCT ${schema.Rate.id})` })
+      .from(schema.Rate)
+      .innerJoin(schema.AssetHasRates, eq(schema.Rate.id, schema.AssetHasRates.rateId))
+      .where(eq(schema.AssetHasRates.assetId, assetId))
+      .execute();
+    const totalCount = totalCountResult[0]?.count || 0;
+
     // Join Rate with AssetHasRates and filter on assetId
     const rows = await this.db
       .select({
@@ -56,7 +67,9 @@ export class RatesService {
       })
       .from(schema.Rate)
       .innerJoin(schema.AssetHasRates, eq(schema.Rate.id, schema.AssetHasRates.rateId))
-      .where(eq(schema.AssetHasRates.assetId, assetId));
+      .where(eq(schema.AssetHasRates.assetId, assetId))
+      .limit(pageSize)
+      .offset(offset);
 
     const grouped = new Map<
       number,
@@ -70,17 +83,37 @@ export class RatesService {
       grouped.get(rate.id)!.assetIds.push(assetHasRate.assetId);
     }
 
-    return Array.from(grouped.values());
+    const paginationData = {
+      page,
+      pageSize,
+      totalCount,
+      totalPages: Math.ceil(totalCount / pageSize),
+      hasNextPage: page * pageSize < totalCount,
+      hasPreviousPage: page > 1,
+    };
+
+    return {
+      data: Array.from(grouped.values()),
+      pagination: paginationData,
+    };
   }
 
-  // No asset filter - fetch all rates 
+  // No asset filter - fetch all rates with pagination
+  const totalCountResult = await this.db
+    .select({ count: sql<number>`COUNT(*)` })
+    .from(schema.Rate)
+    .execute();
+  const totalCount = totalCountResult[0]?.count || 0;
+
   const rows = await this.db
     .select({
       rate: schema.Rate,
       assetHasRate: schema.AssetHasRates,
     })
     .from(schema.Rate)
-    .leftJoin(schema.AssetHasRates, eq(schema.Rate.id, schema.AssetHasRates.rateId));
+    .leftJoin(schema.AssetHasRates, eq(schema.Rate.id, schema.AssetHasRates.rateId))
+    .limit(pageSize)
+    .offset(offset);
 
   const grouped = new Map<
     number,
@@ -96,18 +129,27 @@ export class RatesService {
     }
   }
 
-  return Array.from(grouped.values());
+  const paginationData = {
+    page,
+    pageSize,
+    totalCount,
+    totalPages: Math.ceil(totalCount / pageSize),
+    hasNextPage: page * pageSize < totalCount,
+    hasPreviousPage: page > 1,
+  };
+
+  return {
+    data: Array.from(grouped.values()),
+    pagination: paginationData,
+  };
 }
 
 
 
 
-async getRate(id: string) {
-  const numericId = Number(id);
-  if (isNaN(numericId)) throw new NotFoundException('Invalid rate id');
-
+async getRate(id: number) {
   const rate = await this.db.query.Rate.findFirst({
-    where: (r, { eq }) => eq(r.id, numericId),
+    where: (r, { eq }) => eq(r.id, id),
     with: {
       assets: true,
     },
@@ -120,12 +162,9 @@ async getRate(id: string) {
   return rate;
 }
 
-async updateRate(id: string, updateData: UpdateRate & { assetIds?: string[] }) {
-  const numericId = Number(id);
-  if (isNaN(numericId)) throw new NotFoundException('Invalid rate id');
-
+async updateRate(id: number, updateData: UpdateRate & { assetIds?: string[] }) {
   const existing = await this.db.query.Rate.findFirst({
-    where: (r, { eq }) => eq(r.id, numericId),
+    where: (r, { eq }) => eq(r.id, id),
   });
 
   if (!existing) {
@@ -144,16 +183,16 @@ async updateRate(id: string, updateData: UpdateRate & { assetIds?: string[] }) {
 
     await this.db.update(schema.Rate)
       .set(safeUpdate)
-      .where(eq(schema.Rate.id, numericId));
+      .where(eq(schema.Rate.id, id));
 
     if (updateData.assetIds) {
-      await this.db.delete(schema.AssetHasRates).where(eq(schema.AssetHasRates.rateId, BigInt(numericId)));
+      await this.db.delete(schema.AssetHasRates).where(eq(schema.AssetHasRates.rateId, id));
 
       if (updateData.assetIds.length > 0) {
         await this.db.insert(schema.AssetHasRates).values(
           updateData.assetIds.map(assetId => ({
             assetId,
-            rateId: BigInt(numericId),
+            rateId: id,
           }))
         );
       }
@@ -164,12 +203,9 @@ async updateRate(id: string, updateData: UpdateRate & { assetIds?: string[] }) {
 }
 
 
-async deleteRate(id: string) {
-  const numericId = Number(id);
-  if (isNaN(numericId)) throw new NotFoundException('Invalid rate id');
-
+async deleteRate(id: number) {
   const existing = await this.db.query.Rate.findFirst({
-    where: (r, { eq }) => eq(r.id, numericId),
+    where: (r, { eq }) => eq(r.id, id),
   });
 
   if (!existing) {
@@ -177,10 +213,10 @@ async deleteRate(id: string) {
   }
 
   // Delete associated asset
-  await this.db.delete(schema.AssetHasRates).where(eq(schema.AssetHasRates.rateId, BigInt(numericId)));
+  await this.db.delete(schema.AssetHasRates).where(eq(schema.AssetHasRates.rateId, id));
 
   // Then delete the rate itself
   await this.db.delete(schema.Rate)
-    .where(eq(schema.Rate.id, numericId));
+    .where(eq(schema.Rate.id, id));
 }
 }

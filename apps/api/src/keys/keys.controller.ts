@@ -34,9 +34,12 @@ export class KeysController {
     @TsRestHandler(contract.keys.getKeys)
     @Roles(PermissionScope.KEYS_READ)
     async getKeys(@Headers() headers: any,): Promise<ReturnType<typeof tsRestHandler>> {
-        return tsRestHandler(contract.keys.getKeys, async () => {
+        return tsRestHandler(contract.keys.getKeys, async ({ query }) => {
             const tenantId = headers['x-tenant-id'];
-            const keys = await this.keysService.getKeys(tenantId)
+            const page = query.page ? Number(query.page) : 1;
+            const pageSize = query.pageSize ? Number(query.pageSize) : 10;
+
+            const keys = await this.keysService.getKeys(tenantId, page, pageSize)
 
             return {
                 status: 200,

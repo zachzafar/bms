@@ -1,13 +1,11 @@
-import { Injectable, Inject, Logger, NotFoundException, ConflictException } from '@nestjs/common';
+import { Injectable, Inject, NotFoundException, ConflictException } from '@nestjs/common';
 import { MySql2Database } from 'drizzle-orm/mysql2';
 import * as schema from '@repo/api-contract';
 import { DrizzleAsyncProvider } from 'src/drizzle/drizzle.provider';
-import { and, eq, gte, lte, or, isNull } from 'drizzle-orm';
+import { and, eq, gte, lte } from 'drizzle-orm';
 
 @Injectable()
 export class SlotService {
-  private readonly logger = new Logger(SlotService.name);
-
   constructor(
     @Inject(DrizzleAsyncProvider) private db: MySql2Database<typeof schema>,
   ) {}
@@ -167,25 +165,32 @@ export class SlotService {
     dates: { startDate: Date, endDate: Date },
     excludeBookingId: string
   ): Promise<'Unavailable' | 'Available' | 'Booked'> {
+    // Fetch ALL slots in the date range (don't filter by bookingId in query)
     const slots = await this.db.query.Slot.findMany({
-      where: (slot, { eq, and, gte, lte, or, isNull }) =>
+      where: (slot, { eq, and, gte, lte }) =>
         and(
           eq(slot.assetId, assetId),
           gte(slot.date, dates.startDate),
-          lte(slot.date, dates.endDate),
-          or(isNull(slot.bookingId), eq(slot.bookingId, excludeBookingId))
+          lte(slot.date, dates.endDate)
         )
     });
 
+    // Check if any slots are unavailable
     const unavailableSlots = slots.filter(slot => slot.status === 'unavailable');
     if (unavailableSlots.length > 0) return 'Unavailable';
 
-    const bookedSlots = slots.filter(slot =>
-      slot.status === 'booked' && slot.bookingId !== excludeBookingId
+    // Check if any slots are booked by OTHER bookings (not the one being updated)
+    const bookedByOtherSlots = slots.filter(slot =>
+      slot.status === 'booked' &&
+      slot.bookingId !== excludeBookingId &&
+      slot.bookingId !== null
     );
-    if (bookedSlots.length > 0) return 'Booked';
+    if (bookedByOtherSlots.length > 0) return 'Booked';
 
+    // Calculate expected number of days (inclusive)
     const dayCount = Math.ceil((dates.endDate.getTime() - dates.startDate.getTime()) / (1000 * 60 * 60 * 24)) + 1;
+
+    // Check if all required slots exist
     if (slots.length < dayCount) return 'Unavailable';
 
     return 'Available';
@@ -218,31 +223,31 @@ export class SlotService {
       orderBy: (slot, { asc }) => [asc(slot.date)],
     });
 
-    const ranges: { startDate: string; endDate: string; price: string; available: boolean }[] = [];
-    let currentRange: { startDate: string; endDate: string; price: string; available: boolean } | null = null;
+    const ranges: { startDate: Date; endDate: Date; price: string; available: boolean }[] = [];
+    let currentRange: { startDate: Date; endDate: Date; price: string; available: boolean } | null = null;
 
     for (const slot of slots) {
       const isAvailable = slot.status === 'available' || slot.status === 'booked';
 
       if (!currentRange) {
         currentRange = {
-          startDate: slot.date.toISOString(),
-          endDate: slot.date.toISOString(),
+          startDate: slot.date,
+          endDate: slot.date,
           price: slot.price ?? '0',
           available: isAvailable,
         };
       } else {
         const samePrice = slot.price === currentRange.price;
         const sameAvailability = isAvailable === currentRange.available;
-        const isConsecutive = slot.date.getTime() === new Date(currentRange.endDate).getTime() + 86400000;
+        const isConsecutive = slot.date.getTime() === currentRange.endDate.getTime() + 86400000;
 
         if (isConsecutive && samePrice && sameAvailability) {
-          currentRange.endDate = slot.date.toISOString();
+          currentRange.endDate = slot.date;
         } else {
           ranges.push(currentRange);
           currentRange = {
-            startDate: slot.date.toISOString(),
-            endDate: slot.date.toISOString(),
+            startDate: slot.date,
+            endDate: slot.date,
             price: slot.price ?? '0',
             available: isAvailable,
           };

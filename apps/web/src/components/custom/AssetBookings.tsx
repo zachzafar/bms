@@ -40,8 +40,8 @@ export default function AssetBookings({ asset }: { asset: SelectAsset}) {
   const { data } = authClient.booking.getBookings.useQuery({ queryKey: ['bookings',asset.id]})
   const { mutate: createBooking } = authClient.booking.createBooking.useMutation();
   const { data: customerResponse } = authClient.users.getCustomers.useQuery({ queryKey: ['customers']})
-  const customerList = customerResponse?.body?? [];
-  const bookings = data?.body ?? [];
+  const customerList = customerResponse?.body.data ?? [];
+  const bookings = data?.body.data ?? [];
   
   const [isOpen, setIsOpen] = useState(false);
 
@@ -49,7 +49,7 @@ export default function AssetBookings({ asset }: { asset: SelectAsset}) {
   const form = useForm<BookingFormValues>({
     resolver: zodResolver(bookingFormSchema),
     defaultValues: {
-      status: '',
+      status: 'Pending',
       assetId: asset.id,
       customers: [],
     },
@@ -61,7 +61,7 @@ export default function AssetBookings({ asset }: { asset: SelectAsset}) {
         booking: {
           startDate: values.startDate,
           endDate: values.endDate,
-          status: '',
+          status: 'Pending',
           assetId: asset.id
         },
           customers: customers.map((customerId) => parseInt(customerId)),
@@ -164,8 +164,8 @@ export default function AssetBookings({ asset }: { asset: SelectAsset}) {
           <TableBody>
             {bookings.map((booking) => (
               <TableRow key={booking.id}>
-                <TableCell>{booking.startDate as string}</TableCell>
-                <TableCell>{booking.endDate as string}</TableCell>
+                <TableCell>{booking.startDate.toDateString()}</TableCell>
+                <TableCell>{booking.endDate.toDateString()}</TableCell>
                 <TableCell>
                   <div>{booking.user.name}</div>
                 </TableCell>

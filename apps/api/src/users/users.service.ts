@@ -3,7 +3,7 @@ import { MySql2Database } from 'drizzle-orm/mysql2';
 import { DrizzleAsyncProvider } from 'src/drizzle/drizzle.provider';
 import * as schema from '@repo/api-contract';
 import { InsertUser, SelectUser, UpdateUser } from '@repo/api-contract';
-import { eq, and } from 'drizzle-orm';
+import { eq, and, sql } from 'drizzle-orm';
 import { hash } from 'argon2';
 
 const userTypes = ["customer", "owner", "system"] as const;
@@ -110,7 +110,7 @@ export class UsersService {
                 const existingRole = await tx.query.UserHasRoles.findFirst({
                     where: (ur, { and, eq }) => and(
                         eq(ur.userId, userId),
-                        eq(ur.roleId, BigInt(role)),
+                        eq(ur.roleId, (role)),
                         eq(ur.tenantId, tenantId)
                     )
                 });
@@ -118,7 +118,7 @@ export class UsersService {
                 if (!existingRole) {
                     await tx.insert(schema.UserHasRoles).values({ 
                         userId, 
-                        roleId: BigInt(role) ,
+                        roleId: (role) ,
                         tenantId
                     });
                 }
@@ -134,7 +134,18 @@ export class UsersService {
         return tenantUser.userId;
     }
 
-    async findAll(tenantId: string): Promise<SelectUser[]> {
+    async findAll(tenantId: string, page: number = 1, pageSize: number = 10): Promise<{ data: SelectUser[]; pagination: any }> {
+  const offset = (page - 1) * pageSize;
+
+  // Get total count
+  const totalCountResult = await this.db
+    .select({ count: sql<number>`COUNT(DISTINCT ${schema.User.id})` })
+    .from(schema.TenantHasUsers)
+    .where(eq(schema.TenantHasUsers.tenantId, tenantId))
+    .innerJoin(schema.User, eq(schema.TenantHasUsers.userId, schema.User.id))
+    .execute();
+  const totalCount = totalCountResult[0]?.count || 0;
+
   const usersWithRoles = await this.db
     .select({
       user: schema.User,
@@ -143,7 +154,9 @@ export class UsersService {
     .from(schema.TenantHasUsers)
     .where(eq(schema.TenantHasUsers.tenantId, tenantId))
     .innerJoin(schema.User, eq(schema.TenantHasUsers.userId, schema.User.id))
-    .leftJoin(schema.UserHasRoles, eq(schema.UserHasRoles.userId, schema.User.id));
+    .leftJoin(schema.UserHasRoles, eq(schema.UserHasRoles.userId, schema.User.id))
+    .limit(pageSize)
+    .offset(offset);
 
   // Group roles by user
   const userMap = new Map<string, SelectUser & { roles: number[] }>();
@@ -152,17 +165,29 @@ export class UsersService {
     if (!userMap.has(row.user.id)) {
       userMap.set(row.user.id, {
         ...row.user,
-        roles: row.roles?.roleId ? [Number(row.roles.roleId)] : []
+        roles: row.roles?.roleId ? [row.roles.roleId] : []
       });
     } else if (row.roles?.roleId) {
       const user = userMap.get(row.user.id)!;
-      if (!user.roles.includes(Number(row.roles.roleId))) {
-        user.roles.push(Number(row.roles.roleId));
+      if (!user.roles.includes(row.roles.roleId)) {
+        user.roles.push(row.roles.roleId);
       }
     }
   });
 
-  return Array.from(userMap.values());
+  const paginationData = {
+    page,
+    pageSize,
+    totalCount,
+    totalPages: Math.ceil(totalCount / pageSize),
+    hasNextPage: page * pageSize < totalCount,
+    hasPreviousPage: page > 1,
+  };
+
+  return {
+    data: Array.from(userMap.values()),
+    pagination: paginationData,
+  };
 }
 
     async findOne(id: string, tenantId?: string): Promise<SelectUser | Omit<SelectUser,"roles"> |undefined> {
@@ -187,8 +212,8 @@ export class UsersService {
         // Process the results to include roles
         const roleIds: number[] = [];
         userWithRoles.forEach(row => {
-            if (row.roles?.roleId && !roleIds.includes(Number(row.roles.roleId))) {
-                roleIds.push(Number(row.roles.roleId));
+            if (row.roles?.roleId && !roleIds.includes(row.roles.roleId)) {
+                roleIds.push(row.roles.roleId);
             }
         });
 
@@ -248,14 +273,14 @@ export class UsersService {
                 where: (userRole, { eq }) => eq(userRole.userId, id)
             });
 
-            const existingRoleIds = existingRoles.map(role => Number(role.roleId));
+            const existingRoleIds = existingRoles.map(role => (role.roleId));
 
             // Add new roles that don't exist yet
             for (const roleId of roles) {
                 if (!existingRoleIds.includes(roleId)) {
                     await tx.insert(schema.UserHasRoles).values({
                         userId: id,
-                        roleId: BigInt(roleId),
+                        roleId: (roleId),
                         tenantId
                     });
                 }
@@ -267,20 +292,70 @@ export class UsersService {
                 await tx.delete(schema.UserHasRoles)
                     .where(and(
                         eq(schema.UserHasRoles.userId, id),
-                        eq(schema.UserHasRoles.roleId, BigInt(roleId))
+                        eq(schema.UserHasRoles.roleId, (roleId))
                     ));
             }
         });
     }
 
-    async getCustomers(tenantId: string): Promise<{ customer: schema.SelectCustomer, user: Omit<SelectUser, "roles"> }[]> {
-        const rows = await this.db.select().from(schema.TenantHasUsers).where(eq(schema.TenantHasUsers.tenantId, tenantId)).innerJoin(schema.User, eq(schema.TenantHasUsers.userId, schema.User.id)).innerJoin(schema.Customer, eq(schema.Customer.userId, schema.User.id))
-        return rows.map(row => ({ customer: row.customer_details, user: row.users }))
+    async getCustomers(tenantId: string, page: number = 1, pageSize: number = 10): Promise<{ data: { customer: schema.SelectCustomer, user: Omit<SelectUser, "roles"> }[]; pagination: any }> {
+        const offset = (page - 1) * pageSize;
+
+        // Get total count
+        const totalCountResult = await this.db
+            .select({ count: sql<number>`COUNT(*)` })
+            .from(schema.TenantHasUsers)
+            .where(eq(schema.TenantHasUsers.tenantId, tenantId))
+            .innerJoin(schema.User, eq(schema.TenantHasUsers.userId, schema.User.id))
+            .innerJoin(schema.Customer, eq(schema.Customer.userId, schema.User.id))
+            .execute();
+        const totalCount = totalCountResult[0]?.count || 0;
+
+        const rows = await this.db.select().from(schema.TenantHasUsers).where(eq(schema.TenantHasUsers.tenantId, tenantId)).innerJoin(schema.User, eq(schema.TenantHasUsers.userId, schema.User.id)).innerJoin(schema.Customer, eq(schema.Customer.userId, schema.User.id)).limit(pageSize).offset(offset)
+
+        const paginationData = {
+            page,
+            pageSize,
+            totalCount,
+            totalPages: Math.ceil(totalCount / pageSize),
+            hasNextPage: page * pageSize < totalCount,
+            hasPreviousPage: page > 1,
+        };
+
+        return {
+            data: rows.map(row => ({ customer: row.customer_details, user: row.users })),
+            pagination: paginationData,
+        };
     }
 
-    async getOwners(tenantId: string): Promise<{ owner: schema.SelectOwner, user: Omit<SelectUser, "roles"> }[]> {
-        const rows = await this.db.select().from(schema.TenantHasUsers).where(eq(schema.TenantHasUsers.tenantId, tenantId)).innerJoin(schema.User, eq(schema.TenantHasUsers.userId, schema.User.id)).innerJoin(schema.Owner, eq(schema.Owner.userId, schema.User.id))
-        return rows.map(row => ({ owner: row.owner_details, user: row.users }))
+    async getOwners(tenantId: string, page: number = 1, pageSize: number = 10): Promise<{ data: { owner: schema.SelectOwner, user: Omit<SelectUser, "roles"> }[]; pagination: any }> {
+        const offset = (page - 1) * pageSize;
+
+        // Get total count
+        const totalCountResult = await this.db
+            .select({ count: sql<number>`COUNT(*)` })
+            .from(schema.TenantHasUsers)
+            .where(eq(schema.TenantHasUsers.tenantId, tenantId))
+            .innerJoin(schema.User, eq(schema.TenantHasUsers.userId, schema.User.id))
+            .innerJoin(schema.Owner, eq(schema.Owner.userId, schema.User.id))
+            .execute();
+        const totalCount = totalCountResult[0]?.count || 0;
+
+        const rows = await this.db.select().from(schema.TenantHasUsers).where(eq(schema.TenantHasUsers.tenantId, tenantId)).innerJoin(schema.User, eq(schema.TenantHasUsers.userId, schema.User.id)).innerJoin(schema.Owner, eq(schema.Owner.userId, schema.User.id)).limit(pageSize).offset(offset)
+
+        const paginationData = {
+            page,
+            pageSize,
+            totalCount,
+            totalPages: Math.ceil(totalCount / pageSize),
+            hasNextPage: page * pageSize < totalCount,
+            hasPreviousPage: page > 1,
+        };
+
+        return {
+            data: rows.map(row => ({ owner: row.owner_details, user: row.users })),
+            pagination: paginationData,
+        };
     }
 
 

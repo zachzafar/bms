@@ -13,9 +13,23 @@ import { UsersService } from './users/users.service';
 import { PermissionsGuard } from './auth/guards/permissions/permissions.guard';
 import { AdminGuard } from './auth/guards/admin/admin.guard';
 import { json, urlencoded } from 'express';
+import helmet from 'helmet';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
+
+  // Security headers with Helmet
+  app.use(helmet({
+    contentSecurityPolicy: {
+      directives: {
+        defaultSrc: ["'self'"],
+        styleSrc: ["'self'", "'unsafe-inline'"],
+        scriptSrc: ["'self'"],
+        imgSrc: ["'self'", 'data:', 'https:'],
+      },
+    },
+    crossOriginEmbedderPolicy: false,
+  }));
 
   app.use(json({limit: '50mb'}))
   app.use(urlencoded({ limit: '50mb', extended: true }));

@@ -3,12 +3,12 @@
     "target": "es2020",
     "lib": ["dom", "dom.iterable", "esnext"],
     "allowJs": true,
-    "skipLibCheck": true,
+    "skipLibCheck": true,  // ✅ Already set
     "strict": true,
     "noEmit": true,
     "esModuleInterop": true,
     "module": "esnext",
-    "moduleResolution": "node",
+    "moduleResolution": "bundler",  // 🔄 Change from "node" to "bundler" (Next.js recommendation)
     "resolveJsonModule": true,
     "isolatedModules": true,
     "jsx": "preserve",
@@ -20,9 +20,9 @@
     ],
     "baseUrl": ".", 
     "paths": {
-      "@/*": ["./src/*", "*"]
+      "@/*": ["./src/*"]  // 🔄 Simplified - remove the extra "*"
     }
   },
   "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", ".next/types/**/*.ts"],
-  "exclude": ["node_modules"]
+  "exclude": ["node_modules", ".next", "dist"]  // Add .next and dist
 }

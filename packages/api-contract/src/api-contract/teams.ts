@@ -2,6 +2,7 @@
 import { initContract } from "@ts-rest/core";
 import { z } from "zod";
 import { InsertTenantTeamSchema, SelectAssetSchema, SelectTenantTeamSchema, SelectUserSchema } from "../database-schema";
+import { pagination } from "./utils";
 
 const c = initContract();
 
@@ -43,11 +44,18 @@ export const teamsContract = c.router({
         method: "GET",
         path: "/teams",
         responses: {
-            200: z.array(SelectTenantTeamSchema)
+            200: z.object({
+                data: z.array(SelectTenantTeamSchema),
+                pagination
+            })
         },
         pathParams: z.object({
             id: z.number(),
             tenant: z.string(),
+        }),
+        query: z.object({
+            page: z.coerce.number().optional(),
+            pageSize: z.coerce.number().optional(),
         }),
         summary: "Get all teams"
     },

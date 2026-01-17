@@ -9,12 +9,18 @@ import {
   SelectAssetSchema,
   SelectTagSchema, // import tag schema
 } from '../database-schema';
+import { pagination } from './utils';
 
 const c = initContract();
 
 const SelectAssetWithTagsSchema = SelectAssetSchema.extend({
   tags: z.array(SelectTagSchema).optional(),
 });
+
+const SelectAssetWithTagsSchemaList = z.object({
+  data: z.array(SelectAssetWithTagsSchema),
+  pagination
+})
 
 export const assetsContract = c.router({
   createAsset: {
@@ -28,7 +34,8 @@ export const assetsContract = c.router({
     body: z.object({
       tenant: z.string(),
       asset: InsertAssetSchema.omit({ tenantId: true }),
-      tagIds: z.array(z.string()).optional(),
+      tagIds: z.array(z.number()).optional(),
+      formIds: z.array(z.number()).optional(),
     }),
     summary: 'Create a new asset',
   },
@@ -36,11 +43,16 @@ export const assetsContract = c.router({
     method: 'GET',
     path: '/asset',
     responses: {
-      200: z.array(SelectAssetWithTagsSchema),
+      200: z.object({
+        data: z.array(SelectAssetWithTagsSchema),
+        pagination
+      }),
     },
     query: z.object({
       search: z.string().optional(),
       userId: z.string().optional(),
+      page: z.coerce.number().optional(),
+      pageSize: z.coerce.number().optional(),
     }),
     summary: 'Get all assets',
   },
@@ -65,7 +77,10 @@ export const assetsContract = c.router({
     pathParams: z.object({
       id: z.string(),
     }),
-    body: InsertAssetSchema.partial(),
+    body: InsertAssetSchema.partial().extend({
+      tagIds: z.array(z.number()).optional(),
+      formIds: z.array(z.number()).optional(),
+    }),
     summary: 'Update an asset by id',
   },
   deleteAsset: {
@@ -93,7 +108,7 @@ export const assetsContract = c.router({
     }),
     body: z.object({
       properties: z.array(z.object({
-        propertyId: z.number(),
+        propertyId: z.coerce.number(),
         value: z.string()
       }))
     }),
@@ -130,24 +145,29 @@ export const assetsContract = c.router({
     method: 'GET',
     path: '/asset-details',
     responses: {
-      200: z.array(z.object({
-        id: z.string(),
-        name: z.string(),
-        description: z.string().optional(),
-        images: z.array(z.string()),
-        properties: z.array(z.object({
-          id: z.number(),
+      200: z.object({
+        data: z.array(z.object({
+          id: z.string(),
           name: z.string(),
-          value: z.string()
+          description: z.string().optional(),
+          images: z.array(z.string()),
+          properties: z.array(z.object({
+            id: z.number(),
+            name: z.string(),
+            value: z.string()
+          })),
+          tags: z.array(z.object({
+            id: z.number(),
+            name: z.string()
+          }))
         })),
-        tags: z.array(z.object({
-          id: z.number(),
-          name: z.string()
-        }))
-      }))
+        pagination
+      })
     },
     query: z.object({
-      assetTypes: z.array(z.number()).optional(),
+      assetTypes: z.array(z.coerce.number()).optional(),
+      page: z.coerce.number().optional(),
+      pageSize: z.coerce.number().optional(),
     })
   },
   getAssetImages: {
@@ -175,25 +195,106 @@ export const assetsContract = c.router({
       id: z.string(),
     }),
     body: z.object({
-      images: z.array(z.number())
+      images: z.array(z.coerce.number())
     }),
     summary: 'Delete images for an asset'
   },
   getAvailableAssets: {
-        method: 'GET',
-        path: '/assets/available',
-        summary: 'Get all assets available between a date range',
-        query: z.object({
-            startDate: z.string(), // ISO date
-            endDate: z.string()
-        }),
-        responses: {
-            200: z.array(
-                z.object({
-                    id: z.string(),
-                    name: z.string(),
-                })
-            )
-        }
+    method: 'GET',
+    path: '/assets/available',
+    summary: 'Get all assets available between a date range',
+    query: z.object({
+      startDate: z.coerce.date(), // ISO date
+      endDate: z.coerce.date(),
+      page: z.coerce.number().optional(),
+      pageSize: z.coerce.number().optional(),
+    }),
+    responses: {
+      200: z.object({
+        data: z.array(
+          z.object({
+            id: z.string(),
+            name: z.string(),
+          })
+        ),
+        pagination
+      })
     }
+  },
+
+  getAssetsBySubdomain: {
+    method: 'GET',
+    path: '/assets-by-sub/:subdomain',
+    pathParams: z.object({
+      subdomain: z.string()
+    }),
+    query: z.object({
+      page: z.coerce.number().optional(),
+      pageSize: z.coerce.number().optional()
+    }),
+    responses: {
+      200: z.object({
+        data: z.array(z.object({
+          id: z.string(),
+          name: z.string(),
+          description: z.string().optional(),
+          images: z.array(z.string()),
+          properties: z.array(z.object({
+            id: z.number(),
+            name: z.string(),
+            value: z.string()
+          })),
+          tags: z.array(z.object({
+            id: z.number(),
+            name: z.string()
+          })),
+          pagination
+        })),
+
+      })
+    },
+    summary: 'Get assets by tenant subdomain (public)'
+  },
+  getAssetDetailsBySubdomain: {
+    method: 'GET',
+    path: '/assets-by-sub/:subdomain/:assetId',
+    pathParams: z.object({
+      subdomain: z.string(),
+      assetId: z.string()
+    }),
+    responses: {
+      200: z.object({
+        id: z.string(),
+        name: z.string(),
+        description: z.string().nullable(),
+        tenantId: z.string(),
+        assetTypeId: z.number().nullable(),
+        createdAt: z.coerce.date(),
+        updatedAt: z.coerce.date().nullable(),
+        tags: z.array(SelectTagSchema),
+        images: z.array(SelectAssetImagesSchema),
+        properties: z.array(SelectAssetHasPropertiesSchema.omit({ assetPropertyId: true }).extend({
+          assetPropertyId: z.number(),
+          assetProperty: SelectAssetPropertySchema
+        }))
+      }),
+      404: z.undefined()
+    },
+    summary: 'Get asset details with images and properties (public)'
+  },
+  updateAssetIsAvailable: {
+    method: "PUT",
+    path: "/assets/availability/:id",
+    pathParams: z.object({
+      id: z.string()
+    }),
+    body: z.object({
+      available: z.boolean(),
+    }),
+    responses: {
+      201: z.object({ mesage: z.string()})
+    }
+
+
+  }
 })

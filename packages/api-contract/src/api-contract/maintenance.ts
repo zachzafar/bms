@@ -2,6 +2,7 @@ import { initContract } from "@ts-rest/core";
 
 import { z } from "zod";
 import { InsertMaintenanceTaskSchema, SelectFileSchema, SelectMaintenanceTaskSchema, UpdateMaintenanceTaskSchema } from "../database-schema";
+import { pagination } from "./utils";
 
 
 
@@ -23,10 +24,15 @@ export const maintenanceContract = c.router({
         method: 'GET',
         path: '/maintenance',
         responses: {
-            200: z.array(SelectMaintenanceTaskSchema)
+            200: z.object({
+                data: z.array(SelectMaintenanceTaskSchema),
+                pagination
+            })
         },
         query: z.object({
             search: z.string().optional(),
+            page: z.coerce.number().optional(),
+            pageSize: z.coerce.number().optional(),
         }),
         summary: 'Get all maintenance tasks'
     },
@@ -85,10 +91,17 @@ export const maintenanceContract = c.router({
         method: 'GET',
         path: '/maintenance/:id/files',
         responses: {
-            200: z.array(SelectFileSchema)
+            200: z.object({
+                data: z.array(SelectFileSchema),
+                pagination
+            })
         },
         pathParams: z.object({
             id: z.string()
+        }),
+        query: z.object({
+            page: z.coerce.number().optional(),
+            pageSize: z.coerce.number().optional(),
         }),
         summary: 'Get images for an asset'
     },

@@ -15,7 +15,7 @@ import { Roles } from './decorators/permissions.decorator';
 @Controller()
 export class AuthController {
     private readonly logger = new Logger(AuthController.name);
-    constructor(private authService: AuthService, private passwordResetService: PasswordRestService) {}
+    constructor(private authService: AuthService, private passwordResetService: PasswordRestService) { }
 
     @Public()
     @RequireAdminPermission('tenant:create')
@@ -26,8 +26,8 @@ export class AuthController {
             this.logger.log(`Tenant created with id: ${tenantId} and admin user created with id: ${userId}`);
             return { status: 201, body: { tenantId, userId } };
         });
-     
-    } 
+
+    }
 
     @Public()
     @UseGuards(LocalAuthGuard)
@@ -35,12 +35,16 @@ export class AuthController {
     async login(): Promise<ReturnType<typeof tsRestHandler>> {
         this.logger.log('User login attempt');
         return tsRestHandler(contract.auth.login, async ({ body }) => {
-            const { user, accessToken, refreshToken,tenants } = await this.authService.login(body.email, body.password);
+            const { user, accessToken, refreshToken, tenants } = await this.authService.login(body.email, body.password);
             this.logger.log(`User logged in with email: ${user.email}`);
-            return { status: 200, body: { user: {
-                ...user,
-                roles: []
-            }, token:accessToken,refreshToken, tenants } };
+            return {
+                status: 200, body: {
+                    user: {
+                        ...user,
+                        roles: []
+                    }, token: accessToken, refreshToken, tenants
+                }
+            };
         });
     }
     @Public()
@@ -49,9 +53,9 @@ export class AuthController {
     async refreshToken(@Request() req) {
         const { user, accessToken, refreshToken } = await this.authService.refreshToken(req.user.sub);
 
-        
-            this.logger.log(`Token refreshed for user ID: ${req.user.sub}`);
-            return { status: 200, body: { user, token:accessToken,refreshToken } };
+
+        this.logger.log(`Token refreshed for user ID: ${req.user.sub}`);
+        return { status: 200, body: { user, token: accessToken, refreshToken } };
     }
 
 
@@ -68,65 +72,67 @@ export class AuthController {
     async getPermissions(): Promise<ReturnType<typeof tsRestHandler>> {
         return tsRestHandler(contract.auth.getPermissions, async () => {
             const permissions = await this.authService.getPermissions();
-            
+
             return { status: 200, body: permissions };
         })
     }
 
     @TsRestHandler(contract.auth.getRoles)
     @Roles(PermissionScope.USERS_ROLES_MANAGE)
-    async getRoles(@Headers() headers:any): Promise<ReturnType<typeof tsRestHandler>> {
+    async getRoles(@Headers() headers: any): Promise<ReturnType<typeof tsRestHandler>> {
         return tsRestHandler(contract.auth.getRoles, async () => {
             const tenantId = headers['x-tenant-id'];
-            const roles = (await this.authService.getRoles(tenantId)).map(role => {
+            const data = await this.authService.getRoles(tenantId);
+            const roles = data.data.map(role => {
                 return {
-                    roleId: String(role.id),
+                    roleId: role.id,
                     name: role.name,
                     permissions: role.rolesToPermissions.map(permission => permission.permission)
                 }
             })
-            
+
             return { status: 200, body: roles };
         })
     }
 
     @TsRestHandler(contract.auth.createRole)
     @Roles(PermissionScope.USERS_ROLES_MANAGE)
-    async createRole(@Headers() headers:any): Promise<ReturnType<typeof tsRestHandler>> {
+    async createRole(@Headers() headers: any): Promise<ReturnType<typeof tsRestHandler>> {
         return tsRestHandler(contract.auth.createRole, async ({ body }) => {
             const tenantId = headers['x-tenant-id'];
-            const role = await this.authService.createRole(tenantId,body.name,body.permissions);
+            const role = await this.authService.createRole(tenantId, body.name, body.permissions);
             this.logger.log(`Role created with id: ${role}`);
             if (role === 0) {
                 return { status: 400, body: { message: 'Error occured while creating role' } };
             }
-            return { status: 201, body: {message: "role created successfully"} };
+            return { status: 201, body: { message: "role created successfully" } };
         })
     }
 
     @TsRestHandler(contract.auth.updateRole)
     @Roles(PermissionScope.USERS_ROLES_MANAGE)
-    async updateRole(@Headers() headers:any): Promise<ReturnType<typeof tsRestHandler>> {
+    async updateRole(@Headers() headers: any): Promise<ReturnType<typeof tsRestHandler>> {
         return tsRestHandler(contract.auth.updateRole, async ({ params, body }) => {
             const tenantId = headers['x-tenant-id'];
-            const updateSuccessful = await this.authService.updateRole(tenantId,params.roleId,body.name,body.permissions);
+            const updateSuccessful = await this.authService.updateRole(tenantId, params.roleId, body.name, body.permissions);
 
             if (!updateSuccessful) {
                 throw new InternalServerErrorException(`Error occured while updating role`);
             }
 
-            return { status: 201, body: {message: "role updated successfully"} };
+            return { status: 201, body: { message: "role updated successfully" } };
         })
     }
 
     @TsRestHandler(contract.auth.deleteRole)
     @Roles(PermissionScope.USERS_ROLES_MANAGE)
-    async deleteRole(@Headers() headers:any): Promise<ReturnType<typeof tsRestHandler>> {
+    async deleteRole(@Headers() headers: any): Promise<ReturnType<typeof tsRestHandler>> {
         return tsRestHandler(contract.auth.deleteRole, async ({ params }) => {
             const tenantId = headers['x-tenant-id'];
-            await this.authService.deleteRole(tenantId, String(params.roleId));
+            await this.authService.deleteRole(tenantId, params.roleId);
 
-            return { status: 204, body: {message: "role deleted successfully"} };
+
+            return { status: 204, body: { message: "role deleted successfully" } };
         })
     }
 
@@ -168,6 +174,25 @@ export class AuthController {
             this.logger.log(`Admin token validation: ${isValid ? 'valid' : 'invalid'}`);
             return { status: 200, body: { isAdmin: isValid, valid: isValid } };
         });
+    }
+
+    @Public()
+    @TsRestHandler(contract.auth.getMyPermissions)
+    async getMyPermissions(
+        @Headers('x-tenant-id') tenantId: string,
+        @Request() req
+    ): Promise<ReturnType<typeof tsRestHandler>> {
+        return tsRestHandler(contract.auth.getMyPermissions, async () => {
+            const userId = req.user.id ?? req.user.sub
+
+            const permissions =
+                await this.authService.getUserPermissionsForTenant(userId, tenantId)
+
+            return {
+                status: 200,
+                body: permissions,
+            }
+        })
     }
 
     // @RequireAdmin()

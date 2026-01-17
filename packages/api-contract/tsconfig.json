@@ -1,9 +1,29 @@
 {
-  "extends": "@repo/typescript-config/base.json",
+  "$schema": "https://json.schemastore.org/tsconfig",
   "compilerOptions": {
+    "declaration": true,
+    "declarationMap": true,
     "outDir": "dist",
-    "rootDir": "src"
+    "rootDir": "src",
+    "declarationDir": "./dist", 
+    "esModuleInterop": true,
+    "incremental": true,  // 🔄 Change from false to true (helps with performance)
+    "isolatedModules": true,
+    "lib": ["es2022", "DOM", "DOM.Iterable"],
+    "module": "CommonJS",
+    "moduleDetection": "force",
+    "moduleResolution": "node",
+    "noUncheckedIndexedAccess": true,
+    "resolveJsonModule": true,
+    "skipLibCheck": true,  // ✅ Already set
+    "strict": true,
+    "target": "ES2022",
+    "types": ["node"],
+    "baseUrl": "./",
+    "paths": {
+      "@repo/*": ["../*/src"]
+    }
   },
-  "include": ["src"],
-  "exclude": ["node_modules", "dist"]
+  "include": ["src/**/*"],
+  "exclude": ["node_modules", "dist", "../**/node_modules", "../**/dist"] // Be more explicit
 }

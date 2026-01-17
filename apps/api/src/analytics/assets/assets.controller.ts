@@ -24,7 +24,7 @@ export class AssetsController {
                     totalAssets: result.totalAssets,
                     byAssetType: result.byAssetType.map((assetType) => {
                         return {
-                            assetTypeId: Number(assetType.assetTypeId),
+                            assetTypeId: assetType.assetTypeId as number,
                             count: assetType.count
                         }
                     })
@@ -38,7 +38,7 @@ export class AssetsController {
     async getAssetUtilization(@Headers() headers: any): Promise<ReturnType<typeof tsRestHandler>> {
         return tsRestHandler(contract.analytics.getAssetUtilization, async ({query}) => {
             const tenantId = headers['x-tenant-id'];
-            const result = await this.assetAnalyticsService.getAssetUtilization(tenantId,Number(query.period));
+            const result = await this.assetAnalyticsService.getAssetUtilization(tenantId,(query.period));
             const resultList = Object.entries(result);
             return {
                 status: 200,
@@ -59,7 +59,7 @@ export class AssetsController {
     async getMaintenanceCostByAssetTypePerMonth(@Headers() headers: any): Promise<ReturnType<typeof tsRestHandler>> {
         return tsRestHandler(contract.analytics.getMaintenanceCostByAssetTypePerMonth, async ({query}) => {
             const tenantId = headers['x-tenant-id'];
-            const result = await this.assetAnalyticsService.getMaintenanceCostByAssetTypePerMonth(tenantId,Number(query.period));
+            const result = await this.assetAnalyticsService.getMaintenanceCostByAssetTypePerMonth(tenantId,(query.period));
             return {
                 status: 200,
                 body: result
@@ -72,7 +72,7 @@ export class AssetsController {
     async getRevenueByAssetTypePerYear(@Headers() headers: any): Promise<ReturnType<typeof tsRestHandler>> {
         return tsRestHandler(contract.analytics.getRevenueByAssetTypePerYear, async ({query}) => {
             const tenantId = headers['x-tenant-id'];
-            const result = await this.assetAnalyticsService.getRevenueByAssetType(tenantId,Number(query.period));
+            const result = await this.assetAnalyticsService.getRevenueByAssetType(tenantId,(query.period));
             return {
                 status: 200,
                 body: result
