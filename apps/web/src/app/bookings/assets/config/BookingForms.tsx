@@ -69,6 +69,78 @@ const bookingFormSchema = z.object({
   fields: z.array(InsertBookingFormFieldSchema.omit({ formId: true })),
 });
 
+// Separate component for options field to avoid React Hooks violation
+const OptionsField = ({ field }: { field: any }) => {
+  const currentOptions = field.value ? JSON.parse(field.value) : [];
+  const [newOption, setNewOption] = useState('');
+
+  const addOption = () => {
+    if (newOption.trim()) {
+      const updated = [...currentOptions, newOption.trim()];
+      field.onChange(JSON.stringify(updated));
+      setNewOption('');
+    }
+  };
+
+  const removeOption = (indexToRemove: number) => {
+    const updated = currentOptions.filter((_: string, i: number) => i !== indexToRemove);
+    field.onChange(JSON.stringify(updated));
+  };
+
+  return (
+    <FormItem className="col-span-2">
+      <FormLabel>Options</FormLabel>
+      <FormControl>
+        <div className="space-y-2">
+          {/* Display existing options */}
+          {currentOptions.length > 0 && (
+            <div className="border rounded p-2 space-y-1 max-h-32 overflow-y-auto">
+              {currentOptions.map((option: string, optIdx: number) => (
+                <div key={optIdx} className="flex items-center justify-between bg-secondary px-2 py-1 rounded text-sm">
+                  <span>{option}</span>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    className="h-6 w-6 p-0"
+                    onClick={() => removeOption(optIdx)}
+                  >
+                    <XIcon className="h-3 w-3" />
+                  </Button>
+                </div>
+              ))}
+            </div>
+          )}
+          {/* Add new option */}
+          <div className="flex gap-2">
+            <Input
+              placeholder="Enter an option"
+              value={newOption}
+              onChange={(e) => setNewOption(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  e.preventDefault();
+                  addOption();
+                }
+              }}
+            />
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={addOption}
+            >
+              <Plus className="h-4 w-4" />
+            </Button>
+          </div>
+        </div>
+      </FormControl>
+      <FormDescription>Add options for this select field</FormDescription>
+      <FormMessage />
+    </FormItem>
+  );
+};
+
 const ModifiedInsertBookingFormFieldSchema = InsertBookingFormFieldSchema.omit({
   formId: true,
 });
@@ -465,76 +537,7 @@ function BookingForms() {
                               <FormField
                                 control={form.control}
                                 name={`fields.${index}.options`}
-                                render={({ field }) => {
-                                  const currentOptions = field.value ? JSON.parse(field.value) : [];
-                                  const [newOption, setNewOption] = useState('');
-
-                                  const addOption = () => {
-                                    if (newOption.trim()) {
-                                      const updated = [...currentOptions, newOption.trim()];
-                                      field.onChange(JSON.stringify(updated));
-                                      setNewOption('');
-                                    }
-                                  };
-
-                                  const removeOption = (indexToRemove: number) => {
-                                    const updated = currentOptions.filter((_: string, i: number) => i !== indexToRemove);
-                                    field.onChange(JSON.stringify(updated));
-                                  };
-
-                                  return (
-                                    <FormItem className="col-span-2">
-                                      <FormLabel>Options</FormLabel>
-                                      <FormControl>
-                                        <div className="space-y-2">
-                                          {/* Display existing options */}
-                                          {currentOptions.length > 0 && (
-                                            <div className="border rounded p-2 space-y-1 max-h-32 overflow-y-auto">
-                                              {currentOptions.map((option: string, optIdx: number) => (
-                                                <div key={optIdx} className="flex items-center justify-between bg-secondary px-2 py-1 rounded text-sm">
-                                                  <span>{option}</span>
-                                                  <Button
-                                                    type="button"
-                                                    variant="ghost"
-                                                    size="sm"
-                                                    className="h-6 w-6 p-0"
-                                                    onClick={() => removeOption(optIdx)}
-                                                  >
-                                                    <XIcon className="h-3 w-3" />
-                                                  </Button>
-                                                </div>
-                                              ))}
-                                            </div>
-                                          )}
-                                          {/* Add new option */}
-                                          <div className="flex gap-2">
-                                            <Input
-                                              placeholder="Enter an option"
-                                              value={newOption}
-                                              onChange={(e) => setNewOption(e.target.value)}
-                                              onKeyDown={(e) => {
-                                                if (e.key === 'Enter') {
-                                                  e.preventDefault();
-                                                  addOption();
-                                                }
-                                              }}
-                                            />
-                                            <Button
-                                              type="button"
-                                              variant="outline"
-                                              size="sm"
-                                              onClick={addOption}
-                                            >
-                                              <Plus className="h-4 w-4" />
-                                            </Button>
-                                          </div>
-                                        </div>
-                                      </FormControl>
-                                      <FormDescription>Add options for this select field</FormDescription>
-                                      <FormMessage />
-                                    </FormItem>
-                                  );
-                                }}
+                                render={({ field }) => <OptionsField field={field} />}
                               />
                               <FormField
                                 control={form.control}
