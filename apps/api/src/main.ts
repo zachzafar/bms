@@ -39,21 +39,8 @@ async function bootstrap() {
     ? process.env.CORS_ORIGINS.split(',')
     : [
         'http://localhost:3000', // Web app
-        'http://localhost:3001', // CRM app
-        'http://localhost:3002', // Auth app
-        'http://localhost:3003', // System Admin app
-        'http://localhost:4000', // API itself
-        'http://localhost:3004',
-        'https://bookos.xyz',
-        'https://crm.bookos.xyz',
-        'https://auth.bookos.xyz',
-        'https://admin.bookos.xyz',
-        'https://booking.bookos.xyz',
-        'https://www.bookos.xyz',
-        'https://www.crm.bookos.xyz',
-        'https://www.auth.bookos.xyz',
-        'https://www.admin.bookos.xyz',
-        'https://www.booking.bookos.xyz'
+        'https://app.bookos.xyz',
+        'https://www.app.bookos.xyz',
       ];
 
   // Enable CORS for development
