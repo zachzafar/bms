@@ -61,8 +61,8 @@ export function useCrossDomainAuth() {
 
   const redirectToAuth = () => {
     const authUrl = process.env.NODE_ENV === 'production' 
-      ? 'https://bookos.xyz/login'
-      : 'http://localhost:3002/login';
+      ? 'https://app.bookos.xyz/login'
+      : 'http://localhost:3000/login';
     
     window.location.href = authUrl;
   };

@@ -22,7 +22,7 @@ export default function Logout() {
                     await deleteSession();
                     // Redirect to auth app instead of /login
                     const authUrl = process.env.NODE_ENV === 'production' 
-                        ? 'https://bookos.xyz'
+                        ? 'https://app.bookos.xyz'
                         : 'http://localhost:3002';
                     window.location.href = authUrl;
                 }
