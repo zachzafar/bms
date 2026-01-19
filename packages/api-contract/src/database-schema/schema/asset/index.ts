@@ -77,7 +77,7 @@ export const AssetImagesRelations = relations(AssetImages, ({ one }) => ({
 // AssetHasProperties Model
 export const AssetHasProperties = mysqlTable("asset_has_properties", {
     id: bigint("id", { mode: "number", unsigned: true }).autoincrement().primaryKey(),
-    assetId: varchar("tenant_id", { length: 255 }).notNull().references(() => Asset.id),
+    assetId: varchar("asset_id", { length: 255 }).notNull().references(() => Asset.id),
     assetPropertyId: bigint("asset_property_id", { mode: 'number', unsigned: true}).notNull().references(() => assetProperty.id),
     value: text("value").notNull(),
 }, (table) => ({
