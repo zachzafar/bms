@@ -216,4 +216,68 @@ export class MaintenanceService {
 
         return unsuccessfulDeletes
     }
+
+    // -----------------------------
+    // Owner-specific Methods
+    // -----------------------------
+
+    async getOwnerMaintenances(ownerId: string, ownerAssets: string[], page: number = 1, pageSize: number = 10) {
+        const offset = (page - 1) * pageSize;
+
+        // Get total count
+        const totalCountResult = await this.db
+            .select({ count: sql<number>`COUNT(*)` })
+            .from(schema.MaintenanceTask)
+            .where(inArray(schema.MaintenanceTask.assetId, ownerAssets))
+            .execute();
+        const totalCount = totalCountResult[0]?.count || 0;
+
+        const maintenances = await this.db.select()
+            .from(schema.MaintenanceTask)
+            .innerJoin(
+                schema.Asset,
+                eq(schema.MaintenanceTask.assetId, schema.Asset.id)
+            )
+            .where(inArray(schema.MaintenanceTask.assetId, ownerAssets))
+            .limit(pageSize)
+            .offset(offset);
+
+        const results = maintenances.map((maintenance) => {
+            return {
+                ...maintenance.maintenance_tasks,
+                asset: maintenance.assets,
+            }
+        });
+
+        const paginationData = {
+            page,
+            pageSize,
+            totalCount,
+            totalPages: Math.ceil(totalCount / pageSize),
+            hasNextPage: page * pageSize < totalCount,
+            hasPreviousPage: page > 1,
+        };
+
+        return {
+            data: results,
+            pagination: paginationData,
+        };
+    }
+
+    async getOwnerMaintenance(ownerId: string, ownerAssets: string[], maintenanceId: string) {
+        const maintenance = await this.db.query.MaintenanceTask.findFirst({
+            where: (m, { eq }) => eq(m.id, maintenanceId),
+        });
+
+        if (!maintenance) {
+            throw new NotFoundException('Maintenance task not found');
+        }
+
+        // Verify owner owns the asset
+        if (!ownerAssets.includes(maintenance.assetId)) {
+            throw new NotFoundException('Maintenance task not found or you do not have access to it');
+        }
+
+        return maintenance;
+    }
 }
