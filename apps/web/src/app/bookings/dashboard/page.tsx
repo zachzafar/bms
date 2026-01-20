@@ -23,6 +23,7 @@ import {
 } from 'lucide-react';
 import { authClient } from '@/lib/api/publicClient';
 import { BOOKINGS_QUERY_KEY } from '@/lib/api/queryKeys';
+import CopyableId from '@/components/custom/CopyableId';
 
 export default function Component() {
   const [selectedAssetType, setSelectedAssetType] = useState('all');
@@ -131,7 +132,7 @@ export default function Component() {
             </p>
           </CardContent>
         </Card>
-        
+
       </div>
       <Card className="mt-6">
         <CardHeader>
@@ -153,7 +154,9 @@ export default function Component() {
               {bookings.length > 0 ? (
                 bookings.slice(0, 5).map((booking) => (
                   <TableRow key={booking.id}>
-                    <TableCell className='font-medium'>{booking.id}</TableCell>
+                    <TableCell className="font-medium">
+                      <CopyableId id={booking.id} />
+                    </TableCell>
                     <TableCell>{booking.user?.name || booking.customer?.userId || 'Unknown'}</TableCell>
                     <TableCell>{booking.asset?.name || 'Unknown Asset'}</TableCell>
                     <TableCell >{new Date(booking.startDate).toISOString().split('T')[0]}</TableCell>
