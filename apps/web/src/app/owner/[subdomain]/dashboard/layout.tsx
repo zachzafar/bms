@@ -4,9 +4,9 @@ import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { StorageService } from '@/lib/api/storage';
 import { useEffect, useState } from 'react';
-import { Button } from '@/components/ui/button';
-import { LogOut, Building2, Calendar, Wrench, FileText, DollarSign } from 'lucide-react';
+import { Building2, Calendar, Wrench, FileText, DollarSign, Home } from 'lucide-react';
 import { toast } from 'sonner';
+import OwnerLogout from '@/components/custom/OwnerLogout';
 
 export default function OwnerDashboardLayout({ children }: { children: React.ReactNode }) {
   const params = useParams();
@@ -37,12 +37,6 @@ export default function OwnerDashboardLayout({ children }: { children: React.Rea
     setTenantName(tenant?.name || subdomain);
   }, [subdomain, router]);
 
-  const handleLogout = () => {
-    StorageService.clearAuth();
-    toast.success('Logged out successfully');
-    router.replace(`/owner/${subdomain}/login`);
-  };
-
   return (
     <div className="min-h-screen bg-slate-50">
       {/* Header */}
@@ -58,10 +52,7 @@ export default function OwnerDashboardLayout({ children }: { children: React.Rea
             </div>
             <div className="flex items-center space-x-4">
               <span className="text-sm text-slate-600">Welcome, {userName}</span>
-              <Button variant="outline" size="sm" onClick={handleLogout}>
-                <LogOut className="h-4 w-4 mr-2" />
-                Logout
-              </Button>
+              <OwnerLogout subdomain={subdomain} />
             </div>
           </div>
         </div>
@@ -77,6 +68,13 @@ export default function OwnerDashboardLayout({ children }: { children: React.Rea
             >
               <Building2 className="h-4 w-4 mr-2" />
               Overview
+            </Link>
+            <Link
+              href={`/owner/${subdomain}/dashboard/assets`}
+              className="flex items-center px-1 py-4 border-b-2 border-transparent hover:border-blue-500 text-sm font-medium text-slate-700 hover:text-blue-600 transition-colors"
+            >
+              <Home className="h-4 w-4 mr-2" />
+              Assets
             </Link>
             <Link
               href={`/owner/${subdomain}/dashboard/bookings`}

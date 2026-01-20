@@ -116,6 +116,11 @@ export class BookingService {
 
             userId = newUserId;
 
+            const [{id: tenant_has_use_id}] = await tx.insert(schema.TenantHasUsers).values({
+                tenantId: newCustomer.tenantId,
+                userId,
+            }).$returningId();
+
             // Create customer details
             const [{ id: customerId }] = await tx.insert(schema.Customer).values({
               userId,

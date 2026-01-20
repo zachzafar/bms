@@ -296,5 +296,49 @@ export const assetsContract = c.router({
     }
 
 
+  },
+
+  // Owner-specific endpoints
+  getOwnerAssets: {
+    method: 'GET',
+    path: '/owner/assets',
+    responses: {
+      200: z.object({
+        data: z.array(SelectAssetWithTagsSchema.extend({
+          images: z.array(SelectAssetImagesSchema),
+          propertyValues: z.array(SelectAssetHasPropertiesSchema.omit({ assetPropertyId: true }).extend({
+            assetPropertyId: z.number(),
+            assetProperty: SelectAssetPropertySchema
+          }))
+        })),
+        pagination
+      })
+    },
+    query: z.object({
+      search: z.string().optional(),
+      page: z.coerce.number().optional(),
+      pageSize: z.coerce.number().optional(),
+    }),
+    summary: 'Get assets for owner only (read-only)'
+  },
+
+  getOwnerAsset: {
+    method: 'GET',
+    path: '/owner/assets/:id',
+    responses: {
+      200: SelectAssetWithTagsSchema.extend({
+        images: z.array(SelectAssetImagesSchema),
+        propertyValues: z.array(SelectAssetHasPropertiesSchema.omit({ assetPropertyId: true }).extend({
+          assetPropertyId: z.number(),
+          assetProperty: SelectAssetPropertySchema
+        }))
+      }),
+      403: z.undefined(),
+      404: z.undefined()
+    },
+    pathParams: z.object({
+      id: z.string()
+    }),
+    summary: 'Get a specific asset if owner owns it (read-only)'
   }
 })

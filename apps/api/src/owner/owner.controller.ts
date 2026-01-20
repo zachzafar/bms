@@ -1,9 +1,10 @@
 import { Controller, Logger, Req, UseGuards } from '@nestjs/common';
 import { tsRestHandler, TsRestHandler } from '@ts-rest/nest';
-import { bookingContract, maintenanceContract } from '@repo/api-contract';
+import { bookingContract, maintenanceContract, assetsContract } from '@repo/api-contract';
 import { OwnerGuard } from 'src/auth/guards/owner/owner.guard';
 import { BookingService } from 'src/booking/booking.service';
 import { MaintenanceService } from 'src/maintenance/maintenance.service';
+import { AssetsService } from 'src/assets/assets.service';
 
 @Controller()
 @UseGuards(OwnerGuard)
@@ -13,6 +14,7 @@ export class OwnerController {
   constructor(
     private readonly bookingService: BookingService,
     private readonly maintenanceService: MaintenanceService,
+    private readonly assetsService: AssetsService,
   ) {}
 
   // ==========================================
@@ -100,7 +102,7 @@ export class OwnerController {
     return tsRestHandler(maintenanceContract.getOwnerMaintenance, async ({ params }) => {
       const ownerAssets = request.ownerAssets || [];
       const ownerId = request.user.sub;
-
+      console.log(`ownerid ${ownerId}`)
       try {
         const maintenance = await this.maintenanceService.getOwnerMaintenance(
           ownerId,
@@ -119,6 +121,55 @@ export class OwnerController {
           body: undefined,
         };
       }
+    });
+  }
+
+  // ==========================================
+  // Owner Asset Endpoints
+  // ==========================================
+
+  @TsRestHandler(assetsContract.getOwnerAssets)
+  async getOwnerAssets(@Req() request: any) {
+    return tsRestHandler(assetsContract.getOwnerAssets, async ({ query }) => {
+      const ownerId = request.user.sub;
+
+      this.logger.log(`Owner ${ownerId} fetching assets`);
+
+      const result = await this.assetsService.getOwnerAssets(
+        ownerId,
+        query.page || 1,
+        query.pageSize || 10
+      );
+
+      return {
+        status: 200 as const,
+        body: result,
+      };
+    });
+  }
+
+  @TsRestHandler(assetsContract.getOwnerAsset)
+  async getOwnerAsset(@Req() request: any) {
+    return tsRestHandler(assetsContract.getOwnerAsset, async ({ params }) => {
+      const ownerId = request.user.sub;
+
+      const asset = await this.assetsService.getOwnerAsset(
+        ownerId,
+        params.id
+      );
+
+      if (!asset) {
+        this.logger.error(`Asset ${params.id} not found or not accessible for owner ${ownerId}`);
+        return {
+          status: 404 as const,
+          body: undefined,
+        };
+      }
+
+      return {
+        status: 200 as const,
+        body: asset as any,
+      };
     });
   }
 }

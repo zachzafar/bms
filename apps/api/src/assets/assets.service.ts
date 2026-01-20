@@ -540,5 +540,125 @@ export class AssetsService {
     return { message: 'Asset availability updated successfully' };
   }
 
+  // -----------------------------
+  // Owner-specific Methods
+  // -----------------------------
+
+  async getOwnerInformation(ownerId: string) {
+    const owner = await this.db.query.Owner.findFirst({
+      where: (owner, { eq }) => eq(owner.userId, ownerId),
+      with: {
+        user: true,
+        contact: true,
+      }
+    });
+
+    if (!owner) {
+      return null;
+    }
+
+    // Get owner's assets
+    const ownerAssets = await this.db.query.UserHasAssets.findMany({
+      where: (uha, { eq }) => eq(uha.userId, ownerId),
+      with: {
+        asset: true,
+      }
+    });
+
+    return {
+      ...owner,
+      assets: ownerAssets.map(ua => ua.asset),
+    };
+  }
+
+  async getOwnerAssets(ownerId: string, page: number = 1, pageSize: number = 10) {
+    const offset = (page - 1) * pageSize;
+
+    // Get total count of assets for this owner
+    const totalCountResult = await this.db
+      .select({ count: sql<number>`COUNT(*)` })
+      .from(schema.Asset)
+      .where(eq(schema.Asset.userId, ownerId))
+      .execute();
+    const totalCount = totalCountResult[0]?.count || 0;
+
+    // Get paginated assets for this owner with join
+    const assets = await this.db
+      .select()
+      .from(schema.Asset)
+      .where(eq(schema.Asset.userId, ownerId))
+      .limit(pageSize)
+      .offset(offset)
+      .execute();
+
+    // Fetch tags, images, and property values for each asset
+    const assetsWithDetails = await Promise.all(
+      assets.map(async (asset) => {
+        const [tagRels, images, propertyValues] = await Promise.all([
+          this.getTagsForAsset(asset.id),
+          this.getAssetImages(asset.id),
+          this.getPropertyValues(asset.id)
+        ]);
+
+        const tags = tagRels
+          .map((rel) => rel.tag)
+          .filter((tag): tag is NonNullable<typeof tag> => tag !== null);
+
+        return {
+          ...asset,
+          tags,
+          images,
+          propertyValues
+        };
+      })
+    );
+
+    const paginationData = {
+      page,
+      pageSize,
+      totalCount,
+      totalPages: Math.ceil(totalCount / pageSize),
+      hasNextPage: page * pageSize < totalCount,
+      hasPreviousPage: page > 1,
+    };
+
+    return {
+      data: assetsWithDetails,
+      pagination: paginationData,
+    };
+  }
+
+  async getOwnerAsset(ownerId: string, assetId: string) {
+    // Verify owner owns the asset by checking UserHasAssets
+    const ownerAssetLink = await this.db.query.Asset.findFirst({
+      where: (uha, { eq, and }) => and(
+        eq(uha.userId, ownerId),
+        eq(uha.id, assetId)
+      ),
+    });
+
+    if (!ownerAssetLink) {
+      return null;
+    }
+
+    // Fetch tags, images, and property values
+    const [tagRels, images, propertyValues] = await Promise.all([
+      this.getTagsForAsset(assetId),
+      this.getAssetImages(assetId),
+      this.getPropertyValues(assetId)
+    ]);
+
+    const tags = tagRels
+      .map((rel) => rel.tag)
+      .filter((tag): tag is NonNullable<typeof tag> => tag !== null);
+
+    return {
+      ...ownerAssetLink,
+      tags,
+      images,
+      propertyValues
+    };
+  }
+
 
 }
