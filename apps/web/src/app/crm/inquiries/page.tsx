@@ -309,7 +309,7 @@ export default function InquiryManagement() {
                         </DropdownMenuItem>
                         <DropdownMenuItem
                           onClick={() => handleDeleteInquiry(inquiry.id)}
-                          className="text-red-600"
+                          className="text-destructive"
                         >
                           <Trash2 className="mr-2 h-4 w-4" />
                           Delete

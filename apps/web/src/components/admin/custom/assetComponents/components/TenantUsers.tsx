@@ -185,11 +185,11 @@ export function TenantUsers({ tenantId }: TenantUsersProps) {
         <div className="flex items-center justify-between">
           <h2 className="text-2xl font-bold text-white">User Management</h2>
         </div>
-        <Card className="border-slate-700 bg-slate-800">
+        <Card className="border-border bg-card">
           <CardContent className="p-6">
             <div className="animate-pulse space-y-4">
               {[1, 2, 3].map((i) => (
-                <div key={i} className="h-12 bg-slate-600 rounded"></div>
+                <div key={i} className="h-12 bg-muted rounded"></div>
               ))}
             </div>
           </CardContent>
@@ -204,12 +204,12 @@ export function TenantUsers({ tenantId }: TenantUsersProps) {
         <h2 className="text-2xl font-bold text-white">User Management</h2>
         <Dialog open={showAddUserModal} onOpenChange={setShowAddUserModal}>
           <DialogTrigger asChild>
-            <Button className="bg-blue-600 hover:bg-blue-700">
+            <Button className="bg-primary hover:bg-primary">
               <Plus className="h-4 w-4 mr-2" />
               Add User
             </Button>
           </DialogTrigger>
-          <DialogContent className="bg-slate-800 border-slate-700 text-white max-w-2xl">
+          <DialogContent className="bg-card border-border text-white max-w-2xl">
             <DialogHeader>
               <DialogTitle>Add New User</DialogTitle>
               <DialogDescription>
@@ -219,52 +219,52 @@ export function TenantUsers({ tenantId }: TenantUsersProps) {
             <div className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <Label htmlFor="user-name" className="text-slate-300">Full Name *</Label>
+                  <Label htmlFor="user-name" className="text-card-foreground">Full Name *</Label>
                   <Input
                     id="user-name"
                     value={newUser.name}
                     onChange={(e) => setNewUser(prev => ({ ...prev, name: e.target.value }))}
-                    className="bg-slate-700 border-slate-600 text-white"
+                    className="bg-card border-border text-white"
                     placeholder="Enter full name"
                   />
                 </div>
                 <div>
-                  <Label htmlFor="user-email" className="text-slate-300">Email Address *</Label>
+                  <Label htmlFor="user-email" className="text-card-foreground">Email Address *</Label>
                   <Input
                     id="user-email"
                     type="email"
                     value={newUser.email}
                     onChange={(e) => setNewUser(prev => ({ ...prev, email: e.target.value }))}
-                    className="bg-slate-700 border-slate-600 text-white"
+                    className="bg-card border-border text-white"
                     placeholder="Enter email address"
                   />
                 </div>
               </div>
               <div>
-                <Label htmlFor="password" className="text-slate-300">Password *</Label>
+                <Label htmlFor="password" className="text-card-foreground">Password *</Label>
                   <Input
                     id="password"
                     type="password"
                     value={newUser.password}
                     onChange={(e) => setNewUser(prev => ({ ...prev, password: e.target.value }))}
-                    className="bg-slate-700 border-slate-600 text-white"
+                    className="bg-card border-border text-white"
                     placeholder="Enter password"
                   />
               </div>
               <div>
-                <Label htmlFor="user-type" className="text-slate-300">User Type</Label>
+                <Label htmlFor="user-type" className="text-card-foreground">User Type</Label>
                 <Select value={newUser.userType} onValueChange={(value: 'user' | 'admin') => setNewUser(prev => ({ ...prev, userType: value }))}>
-                  <SelectTrigger className="bg-slate-700 border-slate-600 text-white">
+                  <SelectTrigger className="bg-card border-border text-white">
                     <SelectValue />
                   </SelectTrigger>
-                  <SelectContent className="bg-slate-700 border-slate-600">
+                  <SelectContent className="bg-card border-border">
                     <SelectItem value="user">User</SelectItem>
                     <SelectItem value="admin">Admin</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
               <div>
-                <Label className="text-slate-300">Roles</Label>
+                <Label className="text-card-foreground">Roles</Label>
                 <div className="grid grid-cols-2 gap-2 mt-2 max-h-40 overflow-y-auto">
                   {roles.map((role) => (
                     <div key={role.id} className="flex items-center space-x-2">
@@ -272,9 +272,9 @@ export function TenantUsers({ tenantId }: TenantUsersProps) {
                         id={`role-${role.id}`}
                         checked={newUser.roleIds.includes(role.id)}
                         onCheckedChange={() => toggleUserRole(role.id)}
-                        className="border-slate-600"
+                        className="border-border"
                       />
-                      <Label htmlFor={`role-${role.id}`} className="text-slate-300 text-sm">
+                      <Label htmlFor={`role-${role.id}`} className="text-card-foreground text-sm">
                         {role.name}
                       </Label>
                     </div>
@@ -286,14 +286,14 @@ export function TenantUsers({ tenantId }: TenantUsersProps) {
               <Button
                 variant="outline"
                 onClick={() => setShowAddUserModal(false)}
-                className="border-slate-600 text-slate-300 hover:bg-slate-700"
+                className="border-border text-card-foreground hover:bg-card"
               >
                 Cancel
               </Button>
               <Button
                 onClick={handleAddUser}
                 disabled={createUserMutation.isPending}
-                className="bg-blue-600 hover:bg-blue-700"
+                className="bg-primary hover:bg-primary"
               >
                 {createUserMutation.isPending ? (
                   <Loader2 className="h-4 w-4 mr-2 animate-spin" />
@@ -309,7 +309,7 @@ export function TenantUsers({ tenantId }: TenantUsersProps) {
 
       {/* Add Edit User Modal */}
       <Dialog open={showEditUserModal} onOpenChange={setShowEditUserModal}>
-        <DialogContent className="bg-slate-800 border-slate-700 text-white max-w-2xl">
+        <DialogContent className="bg-card border-border text-white max-w-2xl">
           <DialogHeader>
             <DialogTitle>Edit User Roles</DialogTitle>
             <DialogDescription>
@@ -318,7 +318,7 @@ export function TenantUsers({ tenantId }: TenantUsersProps) {
           </DialogHeader>
           <div className="space-y-4">
             <div>
-              <Label className="text-slate-300">Roles</Label>
+              <Label className="text-card-foreground">Roles</Label>
               <div className="grid grid-cols-2 gap-2 mt-2 max-h-40 overflow-y-auto">
                 {roles.map((role) => (
                   <div key={role.id} className="flex items-center space-x-2">
@@ -326,9 +326,9 @@ export function TenantUsers({ tenantId }: TenantUsersProps) {
                       id={`edit-role-${role.id}`}
                       checked={editUserRoles.roleIds.includes(role.id)}
                       onCheckedChange={() => toggleEditUserRole(role.id)}
-                      className="border-slate-600"
+                      className="border-border"
                     />
-                    <Label htmlFor={`edit-role-${role.id}`} className="text-slate-300 text-sm">
+                    <Label htmlFor={`edit-role-${role.id}`} className="text-card-foreground text-sm">
                       {role.name}
                     </Label>
                   </div>
@@ -340,14 +340,14 @@ export function TenantUsers({ tenantId }: TenantUsersProps) {
             <Button
               variant="outline"
               onClick={() => setShowEditUserModal(false)}
-              className="border-slate-600 text-slate-300 hover:bg-slate-700"
+              className="border-border text-card-foreground hover:bg-card"
             >
               Cancel
             </Button>
             <Button
               onClick={handleUpdateUserRoles}
               disabled={updateUserRolesMutation.isPending}
-              className="bg-green-600 hover:bg-green-700"
+              className="bg-green-500 hover:bg-green-600"
             >
               {updateUserRolesMutation.isPending ? (
                 <Loader2 className="h-4 w-4 mr-2 animate-spin" />
@@ -360,10 +360,10 @@ export function TenantUsers({ tenantId }: TenantUsersProps) {
         </DialogContent>
       </Dialog>
 
-      <Card className="border-slate-700 bg-slate-800">
+      <Card className="border-border bg-card">
         <CardHeader>
           <CardTitle className="text-white">Users ({users.length})</CardTitle>
-          <CardDescription className="text-slate-400">
+          <CardDescription className="text-muted-foreground">
             Manage users within this tenant
           </CardDescription>
         </CardHeader>
@@ -371,31 +371,31 @@ export function TenantUsers({ tenantId }: TenantUsersProps) {
           <div className="overflow-x-auto">
             <table className="w-full">
               <thead>
-                <tr className="border-b border-slate-700">
-                  <th className="text-left p-3 text-slate-300 font-medium">User</th>
-                  <th className="text-left p-3 text-slate-300 font-medium">Email</th>
-                  <th className="text-left p-3 text-slate-300 font-medium">Type</th>
-                  <th className="text-left p-3 text-slate-300 font-medium">Roles</th>
-                  <th className="text-left p-3 text-slate-300 font-medium">Joined</th>
-                  <th className="text-left p-3 text-slate-300 font-medium">Actions</th>
+                <tr className="border-b border-border">
+                  <th className="text-left p-3 text-card-foreground font-medium">User</th>
+                  <th className="text-left p-3 text-card-foreground font-medium">Email</th>
+                  <th className="text-left p-3 text-card-foreground font-medium">Type</th>
+                  <th className="text-left p-3 text-card-foreground font-medium">Roles</th>
+                  <th className="text-left p-3 text-card-foreground font-medium">Joined</th>
+                  <th className="text-left p-3 text-card-foreground font-medium">Actions</th>
                 </tr>
               </thead>
               <tbody>
                 {users.map((user) => (
-                  <tr key={user.user.id} className="border-b border-slate-700 hover:bg-slate-700">
+                  <tr key={user.user.id} className="border-b border-border hover:bg-card">
                     <td className="p-3 text-white">
                       <div className="flex items-center space-x-3">
-                        <div className="w-8 h-8 bg-slate-600 rounded-full flex items-center justify-center">
+                        <div className="w-8 h-8 bg-muted rounded-full flex items-center justify-center">
                           <User className="h-4 w-4 text-white" />
                         </div>
                         <span>{user.user.name}</span>
                       </div>
                     </td>
-                    <td className="p-3 text-slate-300">{user.user.email}</td>
+                    <td className="p-3 text-card-foreground">{user.user.email}</td>
                     <td className="p-3">
                       <Badge 
                         variant={user.user.userType === 'admin' ? 'default' : 'secondary'}
-                        className={user.user.userType === 'admin' ? 'bg-purple-600' : 'bg-slate-600'}
+                        className={user.user.userType === 'admin' ? 'bg-purple-500' : 'bg-muted'}
                       >
                         {user.user.userType}
                       </Badge>
@@ -405,14 +405,14 @@ export function TenantUsers({ tenantId }: TenantUsersProps) {
                         {user.roles?.map((role_) => {
                           const role = roles.find(r => r.id === role_.id);
                           return role ? (
-                            <Badge key={role_.id} variant="outline" className="border-slate-600 text-slate-300">
+                            <Badge key={role_.id} variant="outline" className="border-border text-card-foreground">
                               {role.name}
                             </Badge>
                           ) : null;
                         })}
                       </div>
                     </td>
-                    <td className="p-3 text-slate-400 text-sm">
+                    <td className="p-3 text-muted-foreground text-sm">
                       {user.user.createdAt ? new Date(user.user.createdAt).toLocaleDateString() : 'N/A'}
                     </td>
                     <td className="p-3">
@@ -421,7 +421,7 @@ export function TenantUsers({ tenantId }: TenantUsersProps) {
                           size="sm"
                           variant="outline"
                           onClick={() => handleEditUser(user)}
-                          className="border-slate-600 text-slate-300 hover:bg-slate-700"
+                          className="border-border text-card-foreground hover:bg-card"
                         >
                           <Edit className="h-3 w-3" />
                         </Button>
@@ -429,7 +429,7 @@ export function TenantUsers({ tenantId }: TenantUsersProps) {
                           size="sm"
                           variant="outline"
                           // onClick={() => handleRemoveUser(user.user.id)}
-                          className="border-red-600 text-red-400 hover:bg-red-900"
+                          className="border-destructive text-destructive hover:bg-destructive/90"
                         >
                           <Trash2 className="h-3 w-3" />
                         </Button>
@@ -442,8 +442,8 @@ export function TenantUsers({ tenantId }: TenantUsersProps) {
             
             {users.length === 0 && (
               <div className="text-center py-8">
-                <Users className="h-12 w-12 text-slate-500 mx-auto mb-4" />
-                <p className="text-slate-400">No users found in this tenant</p>
+                <Users className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                <p className="text-muted-foreground">No users found in this tenant</p>
               </div>
             )}
           </div>

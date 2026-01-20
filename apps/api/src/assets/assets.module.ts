@@ -12,6 +12,7 @@ import { KeysModule } from 'src/keys/keys.module';
 @Module({
   imports: [DrizzleModule,TenantModule,AuthModule, KeysModule],
   controllers: [AssetsController],
-  providers: [AssetsService,TenantService,ObjectStorageService,PermissionsGuard]
+  providers: [AssetsService,TenantService,ObjectStorageService,PermissionsGuard],
+  exports: [AssetsService]
 })
 export class AssetsModule {}

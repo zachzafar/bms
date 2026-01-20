@@ -97,7 +97,7 @@ function BulkUploadForm({ tenantId, onSuccess }: BulkUploadFormProps) {
                   </SelectTrigger>
                 </FormControl>
                 <SelectContent>
-                  {assetTypes?.status === 200 ? assetTypes.body.map((type) => (
+                  {assetTypes?.status === 200 ? assetTypes.body.data.map((type) => (
                     <SelectItem key={type.id} value={type.id?.toString()}>
                       {type.name}
                     </SelectItem>
@@ -137,7 +137,7 @@ function BulkUploadForm({ tenantId, onSuccess }: BulkUploadFormProps) {
         />
         
         {selectedFile && (
-          <div className="text-sm text-gray-600">
+          <div className="text-sm text-muted-foreground">
             Selected file: {selectedFile.name} ({(selectedFile.size / 1024).toFixed(2)} KB)
           </div>
         )}

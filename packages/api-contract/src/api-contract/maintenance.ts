@@ -123,5 +123,37 @@ export const maintenanceContract = c.router({
         }),
         summary: 'Delete images for an asset'
     },
-        
+
+    // Owner-specific endpoints
+    getOwnerMaintenances: {
+        method: 'GET',
+        path: '/owner/maintenance',
+        responses: {
+            200: z.object({
+                data: z.array(SelectMaintenanceTaskSchema),
+                pagination
+            })
+        },
+        query: z.object({
+            search: z.string().optional(),
+            page: z.coerce.number().optional(),
+            pageSize: z.coerce.number().optional(),
+        }),
+        summary: 'Get maintenance tasks for owner assets only'
+    },
+
+    getOwnerMaintenance: {
+        method: 'GET',
+        path: '/owner/maintenance/:id',
+        responses: {
+            200: SelectMaintenanceTaskSchema,
+            403: z.undefined(),
+            404: z.undefined()
+        },
+        pathParams: z.object({
+            id: z.string()
+        }),
+        summary: 'Get a specific maintenance task if owner owns the asset'
+    }
+
 })

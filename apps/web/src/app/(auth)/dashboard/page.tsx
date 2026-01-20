@@ -26,7 +26,7 @@ export default function DashboardPage() {
       description: 'Add a new system administrator',
       icon: Shield,
       href: '/dashboard/users',
-      color: 'bg-purple-600',
+      color: 'bg-primary',
       action: 'Create Admin'
     },
     {
@@ -34,7 +34,7 @@ export default function DashboardPage() {
       description: 'Set up a new tenant with admin user',
       icon: Building,
       href: '/dashboard/tenants',
-      color: 'bg-blue-600',
+      color: 'bg-primary',
       action: 'Create Tenant'
     },
     {
@@ -42,7 +42,7 @@ export default function DashboardPage() {
       description: 'Create and manage user roles',
       icon: Users,
       href: '/dashboard/tenants',
-      color: 'bg-green-600',
+      color: 'bg-primary',
       action: 'Manage Roles'
     },
     {
@@ -50,7 +50,7 @@ export default function DashboardPage() {
       description: 'Generate and manage API keys',
       icon: Key,
       href: '/dashboard/tenants',
-      color: 'bg-orange-600',
+      color: 'bg-primary',
       action: 'Manage Keys'
     }
   ];
@@ -58,7 +58,7 @@ export default function DashboardPage() {
   if (isLoading) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
-        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-purple-600"></div>
+        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-primary"></div>
       </div>
     );
   }
@@ -66,7 +66,7 @@ export default function DashboardPage() {
   if (error) {
     return (
       <div className="text-center py-8">
-        <p className="text-red-500 mb-4">Failed to load dashboard data</p>
+        <p className="text-destructive mb-4">Failed to load dashboard data</p>
         <Button onClick={() => window.location.reload()}>Retry</Button>
       </div>
     );
@@ -79,61 +79,61 @@ export default function DashboardPage() {
     <div className="space-y-8">
       {/* Welcome Section */}
       <div className="text-center">
-        <h1 className="text-4xl font-bold text-white mb-4">System Administration Dashboard</h1>
-        <p className="text-slate-300 text-lg">
+        <h1 className="text-4xl font-bold text-foreground mb-4">System Administration Dashboard</h1>
+        <p className="text-card-foreground text-lg">
           Manage your system, tenants, users, and configurations
         </p>
       </div>
 
       {/* Stats Overview */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <Card className="bg-slate-800 border-slate-700">
+        <Card className="bg-card border-border">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-slate-300">Total Tenants</CardTitle>
-            <Building className="h-4 w-4 text-blue-400" />
+            <CardTitle className="text-sm font-medium text-card-foreground">Total Tenants</CardTitle>
+            <Building className="h-4 w-4 text-primary" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-white">{statsData?.totalTenants || 0}</div>
-            <p className="text-xs text-slate-400">
+            <div className="text-2xl font-bold text-foreground">{statsData?.totalTenants || 0}</div>
+            <p className="text-xs text-muted-foreground">
               {statsData?.activeTenants || 0} active
             </p>
           </CardContent>
         </Card>
 
-        <Card className="bg-slate-800 border-slate-700">
+        <Card className="bg-card border-border">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-slate-300">Total Users</CardTitle>
-            <Users className="h-4 w-4 text-green-400" />
+            <CardTitle className="text-sm font-medium text-card-foreground">Total Users</CardTitle>
+            <Users className="h-4 w-4 text-primary" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-white">{statsData?.totalUsers || 0}</div>
-            <p className="text-xs text-slate-400">
+            <div className="text-2xl font-bold text-foreground">{statsData?.totalUsers || 0}</div>
+            <p className="text-xs text-muted-foreground">
               Across all tenants
             </p>
           </CardContent>
         </Card>
 
-        <Card className="bg-slate-800 border-slate-700">
+        <Card className="bg-card border-border">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-slate-300">System Admins</CardTitle>
-            <Shield className="h-4 w-4 text-purple-400" />
+            <CardTitle className="text-sm font-medium text-card-foreground">System Admins</CardTitle>
+            <Shield className="h-4 w-4 text-primary" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-white">{statsData?.totalSystemAdmins || 0}</div>
-            <p className="text-xs text-slate-400">
+            <div className="text-2xl font-bold text-foreground">{statsData?.totalSystemAdmins || 0}</div>
+            <p className="text-xs text-muted-foreground">
               System administrators
             </p>
           </CardContent>
         </Card>
 
-        <Card className="bg-slate-800 border-slate-700">
+        <Card className="bg-card border-border">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-slate-300">API Keys</CardTitle>
-            <Key className="h-4 w-4 text-orange-400" />
+            <CardTitle className="text-sm font-medium text-card-foreground">API Keys</CardTitle>
+            <Key className="h-4 w-4 text-primary" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-white">{statsData?.totalApiKeys || 0}</div>
-            <p className="text-xs text-slate-400">
+            <div className="text-2xl font-bold text-foreground">{statsData?.totalApiKeys || 0}</div>
+            <p className="text-xs text-muted-foreground">
               Active API keys
             </p>
           </CardContent>
@@ -142,26 +142,26 @@ export default function DashboardPage() {
 
       {/* Quick Actions */}
       <div>
-        <h2 className="text-2xl font-bold text-white mb-6">Quick Actions</h2>
+        <h2 className="text-2xl font-bold text-foreground mb-6">Quick Actions</h2>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
           {quickActions.map((action, index) => {
             const Icon = action.icon;
             return (
-              <Card key={index} className="bg-slate-800 border-slate-700 hover:border-slate-600 transition-colors">
+              <Card key={index} className="bg-card border-border hover:border-primary/50 transition-colors">
                 <CardHeader>
                   <div className={`w-12 h-12 ${action.color} rounded-lg flex items-center justify-center mb-4`}>
-                    <Icon className="h-6 w-6 text-white" />
+                    <Icon className="h-6 w-6 text-foreground" />
                   </div>
-                  <CardTitle className="text-white">{action.title}</CardTitle>
-                  <CardDescription className="text-slate-400">
+                  <CardTitle className="text-foreground">{action.title}</CardTitle>
+                  <CardDescription className="text-muted-foreground">
                     {action.description}
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
                   <Link href={action.href}>
-                    <Button 
-                      variant="outline" 
-                      className="w-full border-slate-600 text-slate-300 hover:bg-slate-700 hover:text-white"
+                    <Button
+                      variant="outline"
+                      className="w-full text-card-foreground hover:text-foreground"
                     >
                       {action.action}
                       <ArrowRight className="ml-2 h-4 w-4" />
@@ -176,36 +176,36 @@ export default function DashboardPage() {
 
       {/* Recent Activity */}
       <div>
-        <h2 className="text-2xl font-bold text-white mb-6">Recent Activity</h2>
-        <Card className="bg-slate-800 border-slate-700">
+        <h2 className="text-2xl font-bold text-foreground mb-6">Recent Activity</h2>
+        <Card className="bg-card border-border">
           <CardHeader>
-            <CardTitle className="text-white">System Overview</CardTitle>
-            <CardDescription className="text-slate-400">
+            <CardTitle className="text-foreground">System Overview</CardTitle>
+            <CardDescription className="text-muted-foreground">
               Recent system activities and updates
             </CardDescription>
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
-              <div className="flex items-center justify-between p-3 bg-slate-700 rounded-lg">
+              <div className="flex items-center justify-between p-3 bg-muted rounded-lg">
                 <div className="flex items-center space-x-3">
-                  <div className="w-2 h-2 bg-green-400 rounded-full"></div>
-                  <span className="text-slate-300">System running normally</span>
+                  <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                  <span className="text-card-foreground">System running normally</span>
                 </div>
-                <span className="text-sm text-slate-400">Just now</span>
+                <span className="text-sm text-muted-foreground">Just now</span>
               </div>
-              <div className="flex items-center justify-between p-3 bg-slate-700 rounded-lg">
+              <div className="flex items-center justify-between p-3 bg-muted rounded-lg">
                 <div className="flex items-center space-x-3">
-                  <div className="w-2 h-2 bg-blue-400 rounded-full"></div>
-                  <span className="text-slate-300">Dashboard data refreshed</span>
+                  <div className="w-2 h-2 bg-primary rounded-full"></div>
+                  <span className="text-card-foreground">Dashboard data refreshed</span>
                 </div>
-                <span className="text-sm text-slate-400">2 minutes ago</span>
+                <span className="text-sm text-muted-foreground">2 minutes ago</span>
               </div>
-              <div className="flex items-center justify-between p-3 bg-slate-700 rounded-lg">
+              <div className="flex items-center justify-between p-3 bg-muted rounded-lg">
                 <div className="flex items-center space-x-3">
-                  <div className="w-2 h-2 bg-purple-400 rounded-full"></div>
-                  <span className="text-slate-300">Authentication system active</span>
+                  <div className="w-2 h-2 bg-purple-500 rounded-full"></div>
+                  <span className="text-card-foreground">Authentication system active</span>
                 </div>
-                <span className="text-sm text-slate-400">5 minutes ago</span>
+                <span className="text-sm text-muted-foreground">5 minutes ago</span>
               </div>
             </div>
           </CardContent>

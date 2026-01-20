@@ -1,0 +1,119 @@
+'use client';
+
+import { useParams, useRouter } from 'next/navigation';
+import Link from 'next/link';
+import { StorageService } from '@/lib/api/storage';
+import { useEffect, useState } from 'react';
+import { Building2, Calendar, Wrench, FileText, DollarSign, Home } from 'lucide-react';
+import { toast } from 'sonner';
+import OwnerLogout from '@/components/custom/OwnerLogout';
+import { ModeToggle } from '@/components/mode-toggle';
+
+export default function OwnerDashboardLayout({ children }: { children: React.ReactNode }) {
+  const params = useParams();
+  const router = useRouter();
+  const subdomain = params.subdomain as string;
+  const [tenantName, setTenantName] = useState('');
+  const [userName, setUserName] = useState('');
+
+  useEffect(() => {
+    // Check if user is authenticated
+    const token = StorageService.getToken();
+    const user = StorageService.getUser();
+    const tenant = StorageService.getTenant();
+
+    if (!token || !user) {
+      router.replace(`/owner/${subdomain}/login`);
+      return;
+    }
+
+    // Verify user is an owner
+    if (user.userType !== 'owner') {
+      toast.error('Access denied. Owner credentials required.');
+      router.replace(`/owner/${subdomain}/login`);
+      return;
+    }
+
+    setUserName(user.name);
+    setTenantName(tenant?.name || subdomain);
+  }, [subdomain, router]);
+
+  return (
+    <div className="min-h-screen bg-background">
+      {/* Header */}
+      <header className="bg-background border-b border-border sticky top-0 z-10">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex justify-between items-center h-16">
+            <div className="flex items-center space-x-3">
+              <Building2 className="h-8 w-8 text-primary" />
+              <div>
+                <h1 className="text-lg font-bold text-foreground">{tenantName}</h1>
+                <p className="text-xs text-muted-foreground">Owner Portal</p>
+              </div>
+            </div>
+            <div className="flex items-center space-x-4">
+              <span className="text-sm text-muted-foreground">Welcome, {userName}</span>
+              <ModeToggle />
+              <OwnerLogout subdomain={subdomain} />
+            </div>
+          </div>
+        </div>
+      </header>
+
+      {/* Navigation */}
+      <nav className="bg-white border-b border-border">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex space-x-8">
+            <Link
+              href={`/owner/${subdomain}/dashboard`}
+              className="flex items-center px-1 py-4 border-b-2 border-transparent hover:border-primary text-sm font-medium text-muted-foreground hover:text-primary transition-colors"
+            >
+              <Building2 className="h-4 w-4 mr-2" />
+              Overview
+            </Link>
+            <Link
+              href={`/owner/${subdomain}/dashboard/assets`}
+              className="flex items-center px-1 py-4 border-b-2 border-transparent hover:border-primary text-sm font-medium text-muted-foreground hover:text-primary transition-colors"
+            >
+              <Home className="h-4 w-4 mr-2" />
+              Assets
+            </Link>
+            <Link
+              href={`/owner/${subdomain}/dashboard/bookings`}
+              className="flex items-center px-1 py-4 border-b-2 border-transparent hover:border-primary text-sm font-medium text-muted-foreground hover:text-primary transition-colors"
+            >
+              <Calendar className="h-4 w-4 mr-2" />
+              Bookings
+            </Link>
+            <Link
+              href={`/owner/${subdomain}/dashboard/maintenance`}
+              className="flex items-center px-1 py-4 border-b-2 border-transparent hover:border-primary text-sm font-medium text-muted-foreground hover:text-primary transition-colors"
+            >
+              <Wrench className="h-4 w-4 mr-2" />
+              Maintenance
+            </Link>
+            <Link
+              href={`/owner/${subdomain}/dashboard/invoices`}
+              className="flex items-center px-1 py-4 border-b-2 border-transparent hover:border-primary text-sm font-medium text-muted-foreground hover:text-primary transition-colors"
+            >
+              <FileText className="h-4 w-4 mr-2" />
+              Invoices
+            </Link>
+            <Link
+              href={`/owner/${subdomain}/dashboard/payments`}
+              className="flex items-center px-1 py-4 border-b-2 border-transparent hover:border-primary text-sm font-medium text-muted-foreground hover:text-primary transition-colors"
+            >
+              <DollarSign className="h-4 w-4 mr-2" />
+              Payments
+            </Link>
+          </div>
+        </div>
+      </nav>
+
+      {/* Main Content */}
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {children}
+      </main>
+    </div>
+  );
+}

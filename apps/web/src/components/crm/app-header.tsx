@@ -37,7 +37,7 @@ const appOptions: AppOption[] = [
     description: 'Manage bookings, invoices, assets and payments',
     icon: <Calendar className="h-4 w-4" />,
     url: '/bookings',
-    color: 'text-purple-600'
+    color: 'text-purple-500'
   },
   {
     id: 'auth',
@@ -95,7 +95,7 @@ export function AppHeader() {
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="w-56">
-            <div className="px-2 py-1.5 text-sm font-medium text-gray-500">
+            <div className="px-2 py-1.5 text-sm font-medium text-muted-foreground">
               Switch Application
             </div>
             <DropdownMenuSeparator />
@@ -109,8 +109,8 @@ export function AppHeader() {
                   {app.icon}
                 </div>
                 <div className="flex flex-col items-start">
-                  <span className="text-sm font-medium text-gray-900">{app.name}</span>
-                  <span className="text-xs text-gray-500">{app.description}</span>
+                  <span className="text-sm font-medium text-foreground">{app.name}</span>
+                  <span className="text-xs text-muted-foreground">{app.description}</span>
                 </div>
               </DropdownMenuItem>
             ))}
@@ -121,17 +121,17 @@ export function AppHeader() {
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button variant="ghost" size="sm" className="flex items-center gap-2">
-              <div className="h-8 w-8 rounded-full bg-blue-500 flex items-center justify-center">
+              <div className="h-8 w-8 rounded-full bg-primary/100 flex items-center justify-center">
                 <span className="text-sm font-medium text-white">{currentUser.initials}</span>
               </div>
-              <span className="hidden sm:inline text-sm font-medium text-gray-700">
+              <span className="hidden sm:inline text-sm font-medium text-foreground">
                 {currentUser.name}
               </span>
               <ChevronDown className="h-4 w-4" />
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="w-48">
-            <div className="px-2 py-1.5 text-sm font-medium text-gray-500">
+            <div className="px-2 py-1.5 text-sm font-medium text-muted-foreground">
               Account
             </div>
             <DropdownMenuSeparator />
@@ -142,7 +142,7 @@ export function AppHeader() {
             <DropdownMenuSeparator />
             <DropdownMenuItem 
               onClick={handleLogout}
-              className="flex items-center gap-2 px-3 py-2 cursor-pointer text-red-600 hover:text-red-700"
+              className="flex items-center gap-2 px-3 py-2 cursor-pointer text-destructive hover:text-destructive"
             >
               <LogOut className="h-4 w-4" />
               <span>Logout</span>

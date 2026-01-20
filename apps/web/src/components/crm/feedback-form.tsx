@@ -241,13 +241,13 @@ export function FeedbackForm({ feedback, onClose }: FeedbackFormProps) {
                       <Star
                         className={`h-6 w-6 ${
                           value <= (hoveredRating || rating)
-                            ? "text-yellow-400 fill-current"
-                            : "text-gray-300"
+                            ? "text-yellow-500 fill-current"
+                            : "text-muted-foreground/50"
                         }`}
                       />
                     </button>
                   ))}
-                  <span className="ml-2 text-sm text-gray-600">
+                  <span className="ml-2 text-sm text-muted-foreground">
                     {rating > 0 ? `${rating}/5` : "Select rating"}
                   </span>
                 </div>

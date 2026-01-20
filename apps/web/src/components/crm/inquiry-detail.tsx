@@ -53,20 +53,20 @@ const mockTimeline = [
 export function InquiryDetail({ inquiry }: InquiryDetailProps) {
   const getStatusBadge = (status: string) => {
     const colors = {
-      New: "bg-blue-100 text-blue-800",
+      New: "bg-primary/20 text-primary",
       "Follow-Up": "bg-yellow-100 text-yellow-800",
-      Closed: "bg-green-100 text-green-800",
+      Closed: "bg-green-500/10 text-green-600",
     }
-    return colors[status as keyof typeof colors] || "bg-gray-100 text-gray-800"
+    return colors[status as keyof typeof colors] || "bg-muted text-foreground"
   }
 
   const getPriorityBadge = (priority: string) => {
     const colors = {
-      High: "bg-red-100 text-red-800",
+      High: "bg-destructive/10 text-destructive",
       Medium: "bg-orange-100 text-orange-800",
-      Low: "bg-gray-100 text-gray-800",
+      Low: "bg-muted text-foreground",
     }
-    return colors[priority as keyof typeof colors] || "bg-gray-100 text-gray-800"
+    return colors[priority as keyof typeof colors] || "bg-muted text-foreground"
   }
 
   const getTimelineIcon = (type: string) => {
@@ -94,14 +94,14 @@ export function InquiryDetail({ inquiry }: InquiryDetailProps) {
       {/* Inquiry Header */}
       <div className="flex items-start justify-between">
         <div>
-          <h2 className="text-2xl font-bold text-gray-900">Inquiry #{inquiry.id}</h2>
-          <p className="text-gray-600 mt-1">Created on {inquiry.inquiryDate}</p>
+          <h2 className="text-2xl font-bold text-foreground">Inquiry #{inquiry.id}</h2>
+          <p className="text-muted-foreground mt-1">Created on {inquiry.inquiryDate}</p>
         </div>
         <div className="flex space-x-2">
           <Badge className={getStatusBadge(inquiry.status)}>{inquiry.status}</Badge>
           <Badge className={getPriorityBadge(inquiry.priority)}>{inquiry.priority}</Badge>
           {isOverdue(inquiry.followUpDate, inquiry.status) && (
-            <Badge className="bg-red-100 text-red-800">
+            <Badge className="bg-destructive/10 text-destructive">
               <AlertCircle className="h-3 w-3 mr-1" />
               Overdue
             </Badge>
@@ -120,29 +120,29 @@ export function InquiryDetail({ inquiry }: InquiryDetailProps) {
             <CardContent className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <h4 className="font-medium text-gray-900 mb-2">Client Details</h4>
+                  <h4 className="font-medium text-foreground mb-2">Client Details</h4>
                   <div className="space-y-2">
                     <div className="flex items-center text-sm">
-                      <User className="h-4 w-4 mr-2 text-gray-400" />
+                      <User className="h-4 w-4 mr-2 text-muted-foreground" />
                       {inquiry.clientName}
                     </div>
                     <div className="flex items-center text-sm">
-                      <Mail className="h-4 w-4 mr-2 text-gray-400" />
+                      <Mail className="h-4 w-4 mr-2 text-muted-foreground" />
                       {inquiry.clientEmail}
                     </div>
                   </div>
                 </div>
                 <div>
-                  <h4 className="font-medium text-gray-900 mb-2">Property Details</h4>
+                  <h4 className="font-medium text-foreground mb-2">Property Details</h4>
                   <div className="flex items-center text-sm">
-                    <Building className="h-4 w-4 mr-2 text-gray-400" />
+                    <Building className="h-4 w-4 mr-2 text-muted-foreground" />
                     {inquiry.propertyTitle}
                   </div>
                 </div>
               </div>
               <Separator />
               <div>
-                <h4 className="font-medium text-gray-900 mb-2">Inquiry Source</h4>
+                <h4 className="font-medium text-foreground mb-2">Inquiry Source</h4>
                 <Badge variant="secondary">{inquiry.source}</Badge>
               </div>
             </CardContent>
@@ -154,7 +154,7 @@ export function InquiryDetail({ inquiry }: InquiryDetailProps) {
               <CardTitle className="text-lg">Notes & Comments</CardTitle>
             </CardHeader>
             <CardContent>
-              <p className="text-gray-700">{inquiry.notes}</p>
+              <p className="text-foreground">{inquiry.notes}</p>
             </CardContent>
           </Card>
 
@@ -172,13 +172,13 @@ export function InquiryDetail({ inquiry }: InquiryDetailProps) {
                       <div className="flex-shrink-0 mt-1">{getTimelineIcon(activity.type)}</div>
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center justify-between">
-                          <p className="text-sm font-medium text-gray-900">{activity.title}</p>
-                          <span className="text-xs text-gray-500">
+                          <p className="text-sm font-medium text-foreground">{activity.title}</p>
+                          <span className="text-xs text-muted-foreground">
                             {activity.date} at {activity.time}
                           </span>
                         </div>
-                        <p className="text-sm text-gray-600 mt-1">{activity.description}</p>
-                        <p className="text-xs text-gray-500 mt-1">by {activity.user}</p>
+                        <p className="text-sm text-muted-foreground mt-1">{activity.description}</p>
+                        <p className="text-xs text-muted-foreground mt-1">by {activity.user}</p>
                       </div>
                     </div>
                     {index < mockTimeline.length - 1 && <Separator className="mt-4" />}
@@ -198,19 +198,19 @@ export function InquiryDetail({ inquiry }: InquiryDetailProps) {
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="flex items-center space-x-3">
-                <User className="h-4 w-4 text-gray-400" />
+                <User className="h-4 w-4 text-muted-foreground" />
                 <div>
                   <p className="text-sm font-medium">Assigned To</p>
-                  <p className="text-sm text-gray-600">{inquiry.assignedTo}</p>
+                  <p className="text-sm text-muted-foreground">{inquiry.assignedTo}</p>
                 </div>
               </div>
               {inquiry.followUpDate && (
                 <div className="flex items-center space-x-3">
-                  <Calendar className="h-4 w-4 text-gray-400" />
+                  <Calendar className="h-4 w-4 text-muted-foreground" />
                   <div>
                     <p className="text-sm font-medium">Follow-up Date</p>
                     <p
-                      className={`text-sm ${isOverdue(inquiry.followUpDate, inquiry.status) ? "text-red-600 font-medium" : "text-gray-600"}`}
+                      className={`text-sm ${isOverdue(inquiry.followUpDate, inquiry.status) ? "text-destructive font-medium" : "text-muted-foreground"}`}
                     >
                       {inquiry.followUpDate}
                     </p>
@@ -252,17 +252,17 @@ export function InquiryDetail({ inquiry }: InquiryDetailProps) {
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="flex justify-between items-center">
-                <span className="text-sm text-gray-600">Days Open</span>
+                <span className="text-sm text-muted-foreground">Days Open</span>
                 <span className="font-semibold">
                   {Math.ceil((new Date().getTime() - new Date(inquiry.inquiryDate).getTime()) / (1000 * 3600 * 24))}
                 </span>
               </div>
               <div className="flex justify-between items-center">
-                <span className="text-sm text-gray-600">Contacts Made</span>
+                <span className="text-sm text-muted-foreground">Contacts Made</span>
                 <span className="font-semibold">3</span>
               </div>
               <div className="flex justify-between items-center">
-                <span className="text-sm text-gray-600">Response Time</span>
+                <span className="text-sm text-muted-foreground">Response Time</span>
                 <span className="font-semibold">30 min</span>
               </div>
             </CardContent>

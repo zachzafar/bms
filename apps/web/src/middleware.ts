@@ -8,13 +8,58 @@ export async function middleware(req: NextRequest) {
     return NextResponse.next();
   }
 
-  // Public paths
-  const publicPaths = ['/login', '/forgot-password', '/password-reset', '/customer','/admin-signup'];
+  // Public paths - includes owner login
+  const publicPaths = ['/login', '/forgot-password', '/password-reset', '/customer', '/admin-signup'];
   if (publicPaths.some(path => pathname.startsWith(path))) {
     return NextResponse.next();
   }
 
-  // Check for session cookie
+  // Owner portal - handle separately
+  if (pathname.startsWith('/owner')) {
+    // Extract subdomain from path: /owner/[subdomain]/...
+    const ownerPathMatch = pathname.match(/^\/owner\/([^\/]+)\/(.+)/);
+
+    if (ownerPathMatch) {
+      const [, subdomain, rest] = ownerPathMatch;
+
+      // Allow owner login page without authentication
+      if (rest.startsWith('login')) {
+        return NextResponse.next();
+      }
+
+      // For dashboard routes, check authentication
+      if (rest.startsWith('dashboard')) {
+        const session = req.cookies.get("session")?.value;
+
+        if (!session) {
+          // Redirect to owner-specific login page
+          return NextResponse.redirect(new URL(`/owner/${subdomain}/login`, req.url));
+        }
+
+        // Check if user is an owner
+        const userCookie = req.cookies.get("user")?.value;
+        try {
+          if (userCookie) {
+            const user = JSON.parse(userCookie);
+            if (user.userType !== 'owner') {
+              // Not an owner, redirect to owner login
+              return NextResponse.redirect(new URL(`/owner/${subdomain}/login`, req.url));
+            }
+          } else {
+            // No user cookie, redirect to login
+            return NextResponse.redirect(new URL(`/owner/${subdomain}/login`, req.url));
+          }
+        } catch {
+          // Invalid user cookie, redirect to login
+          return NextResponse.redirect(new URL(`/owner/${subdomain}/login`, req.url));
+        }
+      }
+    }
+
+    return NextResponse.next();
+  }
+
+  // Check for session cookie for other protected routes
   const session = req.cookies.get("session")?.value;
 
   if (!session) {
@@ -31,7 +76,7 @@ export async function middleware(req: NextRequest) {
 
   // Role-based routing
   const userCookie = req.cookies.get("user")?.value;
-  let userType: 'user' | 'admin' | 'system' = 'user';
+  let userType: 'user' | 'admin' | 'system' | 'owner' = 'user';
 
   try {
     if (userCookie) {
@@ -51,6 +96,10 @@ export async function middleware(req: NextRequest) {
     if (userType === 'admin') {
       return NextResponse.redirect(new URL('/dashboard', req.url));
     }
+
+    // Owners should be redirected to their tenant's portal
+    // We can't determine subdomain here without more context,
+    // so we'll let them access the root
   }
 
   // /admin → system only

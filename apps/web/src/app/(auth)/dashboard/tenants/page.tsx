@@ -60,13 +60,13 @@ export default function TenantsPage() {
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'active':
-        return 'bg-green-500';
+        return 'bg-primary/50';
       case 'pending':
-        return 'bg-yellow-500';
+        return 'bg-secondary/50';
       case 'inactive':
-        return 'bg-red-500';
+        return 'bg-destructive/50';
       default:
-        return 'bg-gray-500';
+        return 'bg-background0';
     }
   };
 
@@ -79,52 +79,52 @@ export default function TenantsPage() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-white">Tenant Management</h1>
-          <p className="text-slate-300">Manage tenant organizations and their configurations</p>
+          <h1 className="text-3xl font-bold text-foreground">Tenant Management</h1>
+          <p className="text-card-foreground">Manage tenant organizations and their configurations</p>
         </div>
         <CreateTenantModal />
       </div>
 
       {/* Stats Overview */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <Card className="bg-slate-800 border-slate-700">
+        <Card className="bg-card border-border">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-slate-300">Total Tenants</CardTitle>
-            <Building className="h-4 w-4 text-blue-400" />
+            <CardTitle className="text-sm font-medium text-card-foreground">Total Tenants</CardTitle>
+            <Building className="h-4 w-4 text-primary" />
           </CardHeader>
           <CardContent>
-       {/* <div className="text-2xl font-bold text-white">{stats?.totalTenants || tenants.length}</div> */}
-            {/* <p className="text-xs text-slate-400">
+       {/* <div className="text-2xl font-bold text-foreground">{stats?.totalTenants || tenants.length}</div> */}
+            {/* <p className="text-xs text-muted-foreground">
               {tenants.filter(t => t.status === 'active').length} active
             </p> */}
           </CardContent>
         </Card>
 
-        <Card className="bg-slate-800 border-slate-700">
+        <Card className="bg-card border-border">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-slate-300">Total Users</CardTitle>
-            <Users className="h-4 w-4 text-green-400" />
+            <CardTitle className="text-sm font-medium text-card-foreground">Total Users</CardTitle>
+            <Users className="h-4 w-4 text-primary" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-white">
+            <div className="text-2xl font-bold text-foreground">
               {stats.totalUsers}
             </div>
-            <p className="text-xs text-slate-400">
+            <p className="text-xs text-muted-foreground">
               Across all tenants
             </p>
           </CardContent>
         </Card>
 
-        <Card className="bg-slate-800 border-slate-700">
+        <Card className="bg-card border-border">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-slate-300">API Keys</CardTitle>
-            <Building className="h-4 w-4 text-orange-400" />
+            <CardTitle className="text-sm font-medium text-card-foreground">API Keys</CardTitle>
+            <Building className="h-4 w-4 text-primary" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-white">
+            <div className="text-2xl font-bold text-foreground">
               {stats.totalApiKeys}
             </div>
-            <p className="text-xs text-slate-400">
+            <p className="text-xs text-muted-foreground">
               Active API keys
             </p>
           </CardContent>
@@ -132,10 +132,10 @@ export default function TenantsPage() {
       </div>
 
       {/* Tenants Table */}
-      <Card className="bg-slate-800 border-slate-700">
+      <Card className="bg-card border-border">
         <CardHeader>
-          <CardTitle className="text-white">Tenants</CardTitle>
-          <CardDescription className="text-slate-400">
+          <CardTitle className="text-foreground">Tenants</CardTitle>
+          <CardDescription className="text-muted-foreground">
             Manage tenant organizations and their settings
           </CardDescription>
         </CardHeader>
@@ -143,15 +143,15 @@ export default function TenantsPage() {
           <div className="overflow-x-auto">
             <table className="w-full">
               <thead>
-                <tr className="border-b border-slate-700">
-                  <th className="text-left p-3 text-slate-300 font-medium">Name</th>
-                  <th className="text-left p-3 text-slate-300 font-medium">Subdomain</th>
-                  <th className="text-left p-3 text-slate-300 font-medium">Status</th>
-                  <th className="text-left p-3 text-slate-300 font-medium">Users</th>
-                  <th className="text-left p-3 text-slate-300 font-medium">Roles</th>
-                  <th className="text-left p-3 text-slate-300 font-medium">API Keys</th>
-                  <th className="text-left p-3 text-slate-300 font-medium">Created</th>
-                  <th className="text-left p-3 text-slate-300 font-medium">Actions</th>
+                <tr className="border-b border-border">
+                  <th className="text-left p-3 text-card-foreground font-medium">Name</th>
+                  <th className="text-left p-3 text-card-foreground font-medium">Subdomain</th>
+                  <th className="text-left p-3 text-card-foreground font-medium">Status</th>
+                  <th className="text-left p-3 text-card-foreground font-medium">Users</th>
+                  <th className="text-left p-3 text-card-foreground font-medium">Roles</th>
+                  <th className="text-left p-3 text-card-foreground font-medium">API Keys</th>
+                  <th className="text-left p-3 text-card-foreground font-medium">Created</th>
+                  <th className="text-left p-3 text-card-foreground font-medium">Actions</th>
                 </tr>
               </thead>
               <tbody>
@@ -166,10 +166,10 @@ export default function TenantsPage() {
 
       {/* Quick Actions */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        <Card className="bg-slate-800 border-slate-700 hover:border-slate-600 transition-colors">
+        <Card className="bg-card border-border hover:border-primary/50 transition-colors">
           <CardHeader>
-            <CardTitle className="text-white">Create New Tenant</CardTitle>
-            <CardDescription className="text-slate-400">
+            <CardTitle className="text-foreground">Create New Tenant</CardTitle>
+            <CardDescription className="text-muted-foreground">
               Set up a new tenant organization with admin user
             </CardDescription>
           </CardHeader>
@@ -178,17 +178,17 @@ export default function TenantsPage() {
           </CardContent>
         </Card>
 
-        <Card className="bg-slate-800 border-slate-700 hover:border-slate-600 transition-colors">
+        <Card className="bg-card border-border hover:border-primary/50 transition-colors">
           <CardHeader>
-            <CardTitle className="text-white">Bulk Operations</CardTitle>
-            <CardDescription className="text-slate-400">
+            <CardTitle className="text-foreground">Bulk Operations</CardTitle>
+            <CardDescription className="text-muted-foreground">
               Perform operations on multiple tenants
             </CardDescription>
           </CardHeader>
           <CardContent>
             <Button 
               variant="outline"
-              className="w-full border-slate-600 text-slate-300 hover:bg-slate-700 hover:text-white"
+              className="w-full border-border text-card-foreground hover:bg-muted/50 hover:text-foreground"
             >
               <MoreHorizontal className="mr-2 h-4 w-4" />
               Bulk Actions
@@ -196,17 +196,17 @@ export default function TenantsPage() {
           </CardContent>
         </Card>
 
-        <Card className="bg-slate-800 border-slate-700 hover:border-slate-600 transition-colors">
+        <Card className="bg-card border-border hover:border-primary/50 transition-colors">
           <CardHeader>
-            <CardTitle className="text-white">Export Data</CardTitle>
-            <CardDescription className="text-slate-400">
+            <CardTitle className="text-foreground">Export Data</CardTitle>
+            <CardDescription className="text-muted-foreground">
               Export tenant information and reports
             </CardDescription>
           </CardHeader>
           <CardContent>
             <Button 
               variant="outline"
-              className="w-full border-slate-600 text-slate-300 hover:bg-slate-700 hover:text-white"
+              className="w-full border-border text-card-foreground hover:bg-muted/50 hover:text-foreground"
             >
               <Building className="mr-2 h-4 w-4" />
               Export Tenants
@@ -236,36 +236,36 @@ function TenantRow({id}:{id: string}) {
   }
 
   return (
-    <tr key={tenant.tenant.id} className="border-b border-slate-700 hover:bg-slate-700">
+    <tr key={tenant.tenant.id} className="border-b border-border hover:bg-muted/50">
                     <td className="p-3">
                       <div className="flex items-center space-x-3">
-                        <div className="w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center">
-                          <Building className="h-4 w-4 text-white" />
+                        <div className="w-8 h-8 bg-primary rounded-full flex items-center justify-center">
+                          <Building className="h-4 w-4 text-foreground" />
                         </div>
                         <div>
-                          <div className="font-medium text-white">{tenant.tenant.name}</div>
+                          <div className="font-medium text-foreground">{tenant.tenant.name}</div>
                         </div>
                       </div>
                     </td>
-                    <td className="p-3 text-slate-300">{tenant.tenant.subdomain}</td>
+                    <td className="p-3 text-card-foreground">{tenant.tenant.subdomain}</td>
                     <td className="p-3">
                       {/* <Badge 
-                        className={`${getStatusColor(tenant.status)} text-white`}
+                        className={`${getStatusColor(tenant.status)} text-foreground`}
                       >
                         {tenant.status}
                       </Badge> */}
                     </td>
-                    <td className="p-3 text-slate-300">{tenant.userCount}</td>
-                    <td className="p-3 text-slate-300">{tenant.roleCount}</td>
-                    <td className="p-3 text-slate-300">{tenant.apiKeyCount}</td>
-                    <td className="p-3 text-slate-300">{tenant.tenant.createdAt}</td>
+                    <td className="p-3 text-card-foreground">{tenant.userCount}</td>
+                    <td className="p-3 text-card-foreground">{tenant.roleCount}</td>
+                    <td className="p-3 text-card-foreground">{tenant.apiKeyCount}</td>
+                    <td className="p-3 text-card-foreground">{tenant.tenant.createdAt}</td>
                     <td className="p-3">
                       <div className="flex items-center space-x-2">
                         <Link href={`/tenants/${tenant.tenant.id}`}>
                           <Button
                             variant="ghost"
                             size="sm"
-                            className="text-blue-400 hover:text-blue-300 hover:bg-blue-900/20"
+                            className="text-primary hover:opacity-80"
                           >
                             <Eye className="h-4 w-4" />
                           </Button>
@@ -282,7 +282,7 @@ function TenantRow({id}:{id: string}) {
                           variant="ghost"
                           size="sm"
                           onClick={() => handleDeleteTenant(tenant.id)}
-                          className="text-red-400 hover:text-red-300 hover:bg-red-900/20"
+                          className="text-destructive hover:opacity-80"
                         >
                           <Trash2 className="h-4 w-4" />
                         </Button> */}
@@ -385,15 +385,15 @@ function CreateTenantModal() {
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button className="bg-purple-600 hover:bg-purple-700">
+        <Button className="bg-primary hover:bg-primary/90">
           <Plus className="mr-2 h-4 w-4" />
           Create Tenant
         </Button>
       </DialogTrigger>
-      <DialogContent className="sm:max-w-[600px] bg-slate-800 border-slate-700">
+      <DialogContent className="sm:max-w-[600px] bg-card border-border">
         <DialogHeader>
-          <DialogTitle className="text-white">Create New Tenant</DialogTitle>
-          <DialogDescription className="text-slate-400">
+          <DialogTitle className="text-foreground">Create New Tenant</DialogTitle>
+          <DialogDescription className="text-muted-foreground">
             Set up a new tenant organization with an admin user. This will create a new tenant and an administrative user account.
           </DialogDescription>
         </DialogHeader>
@@ -402,7 +402,7 @@ function CreateTenantModal() {
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
             {/* Tenant Information */}
             <div className="space-y-4">
-              <h3 className="text-lg font-medium text-white border-b border-slate-700 pb-2">
+              <h3 className="text-lg font-medium text-foreground border-b border-border pb-2">
                 Tenant Information
               </h3>
               
@@ -412,15 +412,15 @@ function CreateTenantModal() {
                   name="tenant.name"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel className="text-slate-300">Tenant Name</FormLabel>
+                      <FormLabel className="text-card-foreground">Tenant Name</FormLabel>
                       <FormControl>
                         <Input 
                           placeholder="Enter tenant name" 
-                          className="bg-slate-700 border-slate-600 text-white placeholder:text-slate-400"
+                          className="border-border text-foreground placeholder:text-muted-foreground"
                           {...field} 
                         />
                       </FormControl>
-                      <FormMessage className="text-red-400" />
+                      <FormMessage className="text-destructive" />
                     </FormItem>
                   )}
                 />
@@ -430,20 +430,20 @@ function CreateTenantModal() {
                   name="tenant.subdomain"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel className="text-slate-300">Subdomain</FormLabel>
+                      <FormLabel className="text-card-foreground">Subdomain</FormLabel>
                       <FormControl>
                         <div className="relative">
                           <Input 
                             placeholder="your-tenant" 
-                            className="bg-slate-700 border-slate-600 text-white placeholder:text-slate-400 pr-20"
+                            className="border-border text-foreground placeholder:text-muted-foreground pr-20"
                             {...field} 
                           />
-                          <span className="absolute right-3 top-1/2 transform -translate-y-1/2 text-slate-400 text-sm">
+                          <span className="absolute right-3 top-1/2 transform -translate-y-1/2 text-muted-foreground text-sm">
                             .bookos.com
                           </span>
                         </div>
                       </FormControl>
-                      <FormMessage className="text-red-400" />
+                      <FormMessage className="text-destructive" />
                     </FormItem>
                   )}
                 />
@@ -452,7 +452,7 @@ function CreateTenantModal() {
 
             {/* Admin User Information */}
             <div className="space-y-4">
-              <h3 className="text-lg font-medium text-white border-b border-slate-700 pb-2">
+              <h3 className="text-lg font-medium text-foreground border-b border-border pb-2">
                 Admin User Information
               </h3>
               
@@ -462,15 +462,15 @@ function CreateTenantModal() {
                   name="adminUser.name"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel className="text-slate-300">Admin Name</FormLabel>
+                      <FormLabel className="text-card-foreground">Admin Name</FormLabel>
                       <FormControl>
                         <Input 
                           placeholder="Enter admin name" 
-                          className="bg-slate-700 border-slate-600 text-white placeholder:text-slate-400"
+                          className="border-border text-foreground placeholder:text-muted-foreground"
                           {...field} 
                         />
                       </FormControl>
-                      <FormMessage className="text-red-400" />
+                      <FormMessage className="text-destructive" />
                     </FormItem>
                   )}
                 />
@@ -480,16 +480,16 @@ function CreateTenantModal() {
                   name="adminUser.email"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel className="text-slate-300">Admin Email</FormLabel>
+                      <FormLabel className="text-card-foreground">Admin Email</FormLabel>
                       <FormControl>
                         <Input 
                           type="email"
                           placeholder="admin@example.com" 
-                          className="bg-slate-700 border-slate-600 text-white placeholder:text-slate-400"
+                          className="border-border text-foreground placeholder:text-muted-foreground"
                           {...field} 
                         />
                       </FormControl>
-                      <FormMessage className="text-red-400" />
+                      <FormMessage className="text-destructive" />
                     </FormItem>
                   )}
                 />
@@ -500,16 +500,16 @@ function CreateTenantModal() {
                 name="adminUser.password"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel className="text-slate-300">Admin Password</FormLabel>
+                    <FormLabel className="text-card-foreground">Admin Password</FormLabel>
                     <FormControl>
                       <Input 
                         type="password"
                         placeholder="Enter password" 
-                        className="bg-slate-700 border-slate-600 text-white placeholder:text-slate-400"
+                        className="border-border text-foreground placeholder:text-muted-foreground"
                         {...field} 
                       />
                     </FormControl>
-                    <FormMessage className="text-red-400" />
+                    <FormMessage className="text-destructive" />
                   </FormItem>
                 )}
               />
@@ -529,14 +529,14 @@ function CreateTenantModal() {
                 type="button"
                 variant="outline"
                 onClick={() => setOpen(false)}
-                className="border-slate-600 text-slate-300 hover:bg-slate-700 hover:text-white"
+                className="border-border text-card-foreground hover:bg-muted/50 hover:text-foreground"
               >
                 Cancel
               </Button>
               <Button
                 type="submit"
                 disabled={isPending}
-                className="bg-purple-600 hover:bg-purple-700"
+                className="bg-primary hover:bg-primary/90"
               >
                 {isPending ? 'Creating...' : 'Create Tenant'}
               </Button>

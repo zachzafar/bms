@@ -116,6 +116,11 @@ export class BookingService {
 
             userId = newUserId;
 
+            const [{id: tenant_has_use_id}] = await tx.insert(schema.TenantHasUsers).values({
+                tenantId: newCustomer.tenantId,
+                userId,
+            }).$returningId();
+
             // Create customer details
             const [{ id: customerId }] = await tx.insert(schema.Customer).values({
               userId,
@@ -1552,6 +1557,109 @@ export class BookingService {
       </body>
       </html>
     `;
+  }
+
+  // -----------------------------
+  // Owner-specific Methods
+  // -----------------------------
+
+  async getOwnerBookings(ownerId: string, ownerAssets: string[], assetId?: string, page: number = 1, pageSize: number = 10) {
+    const offset = (page - 1) * pageSize;
+    const filters: any[] = [
+      inArray(schema.Booking.assetId, ownerAssets),
+      isNull(schema.Booking.deletedAt)
+    ];
+
+    if (assetId) {
+      // Verify owner owns this specific asset
+      if (!ownerAssets.includes(assetId)) {
+        throw new NotFoundException('Asset not found or you do not have access to it');
+      }
+      filters.push(eq(schema.Booking.assetId, assetId));
+    }
+
+    // Get total count
+    const totalCountResult = await this.db
+      .select({ count: sql<number>`COUNT(*)` })
+      .from(schema.Booking)
+      .where(and(...filters))
+      .execute();
+
+    const totalCount = totalCountResult[0]?.count || 0;
+
+    // Get paginated bookings with all related data
+    const bookings = await this.db
+      .select()
+      .from(schema.Booking)
+      .innerJoin(schema.Asset, eq(schema.Booking.assetId, schema.Asset.id))
+      .innerJoin(schema.User, eq(schema.Booking.userId, schema.User.id))
+      .innerJoin(schema.Customer,
+        and(
+          eq(schema.Customer.userId, schema.User.id),
+          eq(schema.Customer.tenantId, schema.Asset.tenantId)
+        )
+      )
+      .where(and(...filters))
+      .limit(pageSize)
+      .offset(offset)
+      .execute();
+
+    // Calculate pagination metadata
+    const paginationData = {
+      page,
+      pageSize,
+      totalCount,
+      totalPages: Math.ceil(totalCount / pageSize),
+      hasNextPage: page * pageSize < totalCount,
+      hasPreviousPage: page > 1,
+    };
+
+    const bookingData = bookings.map((row) => ({
+      ...row.booking,
+      asset: row.assets,
+      user: row.users,
+      customer: row.customer_details,
+    }));
+
+    return {
+      data: bookingData,
+      pagination: paginationData,
+    };
+  }
+
+  async getOwnerBooking(ownerId: string, ownerAssets: string[], bookingId: string) {
+    const booking = await this.db.query.Booking.findFirst({
+      where: (b, { eq, and, isNull }) => and(
+        eq(b.id, bookingId),
+        isNull(b.deletedAt)
+      ),
+      with: {
+        asset: true,
+        user: true,
+      }
+    });
+
+    if (!booking) {
+      throw new NotFoundException('Booking not found');
+    }
+
+    // Verify owner owns the asset
+    if (!ownerAssets.includes(booking.assetId)) {
+      throw new NotFoundException('Booking not found or you do not have access to it');
+    }
+
+    // Get customer details
+    const customer = await this.db.query.Customer.findFirst({
+      where: (c, { eq, and }) => and(
+        eq(c.userId, booking.userId),
+        eq(c.tenantId, booking.asset.tenantId)
+      ),
+    });
+
+    return {
+      ...booking,
+      customer,
+    };
   }
 
 }

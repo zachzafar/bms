@@ -194,7 +194,7 @@ export default function AssetTypes({ tenantId }: { tenantId: string }) {
 
   return (
     <div className="space-y-6">
-      <Card className="border-slate-700 bg-slate-800">
+      <Card className="border-border bg-card">
         <CardHeader>
           <CardTitle>{editingAssetType ? 'Edit Asset Type' : 'Add New Asset Type'}</CardTitle>
           <CardDescription>

@@ -151,10 +151,10 @@ export default function EditBookingPage() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-slate-50">
+      <div className="min-h-screen flex items-center justify-center bg-background">
         <div className="text-center">
-          <Loader2 className="h-12 w-12 animate-spin text-blue-600 mx-auto" />
-          <p className="mt-4 text-slate-600">Loading booking details...</p>
+          <Loader2 className="h-12 w-12 animate-spin text-primary mx-auto" />
+          <p className="mt-4 text-muted-foreground">Loading booking details...</p>
         </div>
       </div>
     );
@@ -162,17 +162,17 @@ export default function EditBookingPage() {
 
   if (queryError || !booking) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-slate-50">
+      <div className="min-h-screen flex items-center justify-center bg-background">
         <Card className="max-w-md">
           <CardContent className="pt-6">
             <div className="text-center">
-              <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                <svg className="w-8 h-8 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <div className="w-16 h-16 bg-destructive/10 rounded-full flex items-center justify-center mx-auto mb-4">
+                <svg className="w-8 h-8 text-destructive" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                 </svg>
               </div>
-              <h2 className="text-xl font-bold text-slate-900 mb-2">Booking Not Found</h2>
-              <p className="text-slate-600 mb-6">
+              <h2 className="text-xl font-bold text-foreground mb-2">Booking Not Found</h2>
+              <p className="text-muted-foreground mb-6">
                 We couldn't find the booking you're trying to update. The link may be invalid or expired.
               </p>
             </div>
@@ -184,19 +184,19 @@ export default function EditBookingPage() {
 
   if (cancelled) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-slate-50">
+      <div className="min-h-screen flex items-center justify-center bg-background">
         <Card className="max-w-md">
           <CardContent className="pt-6">
             <div className="text-center">
-              <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                <XCircle className="w-8 h-8 text-red-600" />
+              <div className="w-16 h-16 bg-destructive/10 rounded-full flex items-center justify-center mx-auto mb-4">
+                <XCircle className="w-8 h-8 text-destructive" />
               </div>
-              <h2 className="text-2xl font-bold text-slate-900 mb-2">Booking Cancelled</h2>
-              <p className="text-slate-600 mb-6">
+              <h2 className="text-2xl font-bold text-foreground mb-2">Booking Cancelled</h2>
+              <p className="text-muted-foreground mb-6">
                 Your booking has been successfully cancelled. You'll receive a confirmation email shortly.
               </p>
-              <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-                <p className="text-sm text-red-800">
+              <div className="bg-destructive/5 border border-destructive/20 rounded-lg p-4">
+                <p className="text-sm text-destructive">
                   If you cancelled by mistake, please contact us directly to rebook.
                 </p>
               </div>
@@ -209,20 +209,20 @@ export default function EditBookingPage() {
 
   if (success) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-slate-50">
+      <div className="min-h-screen flex items-center justify-center bg-background">
         <Card className="max-w-md">
           <CardContent className="pt-6">
             <div className="text-center">
-              <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                <CheckCircle2 className="w-8 h-8 text-green-600" />
+              <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-4">
+                <CheckCircle2 className="w-8 h-8 text-primary" />
               </div>
-              <h2 className="text-2xl font-bold text-slate-900 mb-2">Booking Updated!</h2>
-              <p className="text-slate-600 mb-6">
+              <h2 className="text-2xl font-bold text-foreground mb-2">Booking Updated!</h2>
+              <p className="text-muted-foreground mb-6">
                 Your booking has been successfully updated. You'll receive a confirmation email with the new details.
               </p>
-              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                <p className="text-sm font-medium text-slate-900 mb-2">Updated Booking Details</p>
-                <p className="text-sm text-slate-600">
+              <div className="bg-primary/5 border border-primary/20 rounded-lg p-4">
+                <p className="text-sm font-medium text-foreground mb-2">Updated Booking Details</p>
+                <p className="text-sm text-muted-foreground">
                   {new Date(form.getValues('startDate')).toLocaleDateString('en-US', {
                     weekday: 'long',
                     year: 'numeric',
@@ -230,8 +230,8 @@ export default function EditBookingPage() {
                     day: 'numeric',
                   })}
                 </p>
-                <p className="text-sm text-slate-600 mb-1">to</p>
-                <p className="text-sm text-slate-600">
+                <p className="text-sm text-muted-foreground mb-1">to</p>
+                <p className="text-sm text-muted-foreground">
                   {new Date(form.getValues('endDate')).toLocaleDateString('en-US', {
                     weekday: 'long',
                     year: 'numeric',
@@ -248,13 +248,13 @@ export default function EditBookingPage() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-50 py-8">
+    <div className="min-h-screen bg-background py-8">
       <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8">
         <Card>
           <CardHeader>
             <div className="flex items-center space-x-3">
-              <div className="w-12 h-12 bg-blue-600 rounded-full flex items-center justify-center">
-                <Calendar className="h-6 w-6 text-white" />
+              <div className="w-12 h-12 bg-primary rounded-full flex items-center justify-center">
+                <Calendar className="h-6 w-6 text-primary-foreground" />
               </div>
               <div>
                 <CardTitle className="text-2xl">Update Your Booking</CardTitle>
@@ -264,24 +264,24 @@ export default function EditBookingPage() {
           </CardHeader>
           <CardContent>
             {/* Current Booking Information */}
-            <div className="bg-blue-50 border border-blue-200 rounded-lg p-6 mb-6">
-              <h2 className="text-lg font-semibold text-slate-900 mb-4">Current Booking Details</h2>
+            <div className="bg-primary/5 border border-primary/20 rounded-lg p-6 mb-6">
+              <h2 className="text-lg font-semibold text-foreground mb-4">Current Booking Details</h2>
               <div className="space-y-2 text-sm">
                 <div className="flex justify-between">
-                  <span className="text-slate-600">Booking ID:</span>
-                  <span className="font-medium text-slate-900">{booking.id}</span>
+                  <span className="text-muted-foreground">Booking ID:</span>
+                  <span className="font-medium text-foreground">{booking.id}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-slate-600">Asset:</span>
-                  <span className="font-medium text-slate-900">{booking.asset.name}</span>
+                  <span className="text-muted-foreground">Asset:</span>
+                  <span className="font-medium text-foreground">{booking.asset.name}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-slate-600">Customer:</span>
-                  <span className="font-medium text-slate-900">{booking.user.name}</span>
+                  <span className="text-muted-foreground">Customer:</span>
+                  <span className="font-medium text-foreground">{booking.user.name}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-slate-600">Total Price:</span>
-                  <span className="font-medium text-slate-900">${booking.totalPrice}</span>
+                  <span className="text-muted-foreground">Total Price:</span>
+                  <span className="font-medium text-foreground">${booking.totalPrice}</span>
                 </div>
               </div>
             </div>
@@ -398,7 +398,7 @@ export default function EditBookingPage() {
                         <AlertDialogCancel>Keep Booking</AlertDialogCancel>
                         <AlertDialogAction
                           onClick={handleCancelBooking}
-                          className="bg-red-600 hover:bg-red-700"
+                          className="bg-destructive hover:bg-destructive/90"
                         >
                           Yes, Cancel Booking
                         </AlertDialogAction>
@@ -407,7 +407,7 @@ export default function EditBookingPage() {
                   </AlertDialog>
                 </div>
 
-                <p className="text-sm text-slate-500 text-center">
+                <p className="text-sm text-muted-foreground text-center">
                   * Required fields
                 </p>
               </form>

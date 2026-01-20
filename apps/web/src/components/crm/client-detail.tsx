@@ -61,7 +61,7 @@ export function ClientDetail({ client }: ClientDetailProps) {
       {/* Client Header */}
       <div className="flex items-start justify-between">
         <div className="flex items-center space-x-4">
-          <div className="h-16 w-16 rounded-full bg-blue-500 flex items-center justify-center">
+          <div className="h-16 w-16 rounded-full bg-primary/100 flex items-center justify-center">
             <span className="text-xl font-bold text-white">
               {client.firstName[0]}
               {client.lastName[0]}
@@ -128,21 +128,21 @@ export function ClientDetail({ client }: ClientDetailProps) {
           </CardHeader>
           <CardContent className="space-y-4">
             {client.customerProfile && (
-              <div className="p-3 bg-green-50 rounded-lg">
-                <p className="text-sm font-medium text-green-800">Customer Profile</p>
+              <div className="p-3 bg-green-500/5 rounded-lg">
+                <p className="text-sm font-medium text-green-600">Customer Profile</p>
                 <p className="text-xs text-green-600">Active customer account</p>
               </div>
             )}
             {client.ownerProfile && (
-              <div className="p-3 bg-blue-50 rounded-lg">
-                <p className="text-sm font-medium text-blue-800">Property Owner</p>
-                <p className="text-xs text-blue-600">Owns properties in the system</p>
+              <div className="p-3 bg-primary/10 rounded-lg">
+                <p className="text-sm font-medium text-primary">Property Owner</p>
+                <p className="text-xs text-primary">Owns properties in the system</p>
               </div>
             )}
             {!client.customerProfile && !client.ownerProfile && (
-              <div className="p-3 bg-gray-50 rounded-lg">
-                <p className="text-sm font-medium text-gray-800">Lead</p>
-                <p className="text-xs text-gray-600">Potential customer</p>
+              <div className="p-3 bg-background rounded-lg">
+                <p className="text-sm font-medium text-foreground">Lead</p>
+                <p className="text-xs text-muted-foreground">Potential customer</p>
               </div>
             )}
           </CardContent>
@@ -155,7 +155,7 @@ export function ClientDetail({ client }: ClientDetailProps) {
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="text-center">
-              <p className="text-2xl font-bold text-blue-600">{inquiries.length}</p>
+              <p className="text-2xl font-bold text-primary">{inquiries.length}</p>
               <p className="text-sm text-muted-foreground">Total Inquiries</p>
             </div>
             <div className="text-center">
@@ -163,7 +163,7 @@ export function ClientDetail({ client }: ClientDetailProps) {
               <p className="text-sm text-muted-foreground">Communications</p>
             </div>
             <div className="text-center">
-              <p className="text-2xl font-bold text-purple-600">{feedback.length}</p>
+              <p className="text-2xl font-bold text-purple-500">{feedback.length}</p>
               <p className="text-sm text-muted-foreground">Feedback</p>
             </div>
           </CardContent>

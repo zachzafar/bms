@@ -19,7 +19,7 @@ import {
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { authClient } from '@/lib/api/publicClient';
-import { InsertBookingSchema, SelectAsset} from '@repo/api-contract';
+import { ExtendedSelectBookingSchema, InsertBookingSchema, SelectAsset} from '@repo/api-contract';
 import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -37,7 +37,17 @@ type BookingFormValues = z.infer<typeof bookingFormSchema>;
 
 export default function AssetBookings({ asset }: { asset: SelectAsset}) {
   const [customers, setCustomers] = useState<string[]>([]);
-  const { data } = authClient.booking.getBookings.useQuery({ queryKey: ['bookings',asset.id]})
+const { data } = authClient.booking.getBookings.useQuery(
+  { queryKey: ['bookings', asset.id],
+    select: (res) => ({
+      ...res,
+      body: {
+        ...res.body,
+        data: z.array(ExtendedSelectBookingSchema).parse(res.body.data),
+      },
+    }),
+   },
+);
   const { mutate: createBooking } = authClient.booking.createBooking.useMutation();
   const { data: customerResponse } = authClient.users.getCustomers.useQuery({ queryKey: ['customers']})
   const customerList = customerResponse?.body.data ?? [];
@@ -190,8 +200,8 @@ function getStatusColor(status: string) {
     case 'pending':
       return 'text-yellow-600';
     case 'rejected':
-      return 'text-red-600';
+      return 'text-destructive';
     default:
-      return 'text-gray-600';
+      return 'text-muted-foreground';
   }
 }

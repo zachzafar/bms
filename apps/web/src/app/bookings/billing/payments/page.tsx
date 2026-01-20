@@ -141,13 +141,13 @@ export default function PaymentsPage() {
   const getStatusColor = (status: string) => {
     switch (status.toLowerCase()) {
       case 'completed':
-        return 'bg-green-100 text-green-800';
+        return 'bg-primary/10 text-primary';
       case 'pending':
-        return 'bg-yellow-100 text-yellow-800';
+        return 'bg-secondary/10 text-secondary-foreground';
       case 'failed':
-        return 'bg-red-100 text-red-800';
+        return 'bg-destructive/10 text-destructive';
       default:
-        return 'bg-gray-100 text-gray-800';
+        return 'bg-muted text-gray-800';
     }
   };
 
@@ -262,7 +262,7 @@ export default function PaymentsPage() {
             <div className="space-y-2">
               <Label>Search</Label>
               <div className="relative">
-                <Search className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
+                <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
                 <Input
                   placeholder="Search payments..."
                   value={searchTerm}
@@ -320,7 +320,7 @@ export default function PaymentsPage() {
         </CardHeader>
         <CardContent>
           {filteredPayments.length === 0 ? (
-            <div className="text-center py-8 text-gray-500">No payments found matching your criteria.</div>
+            <div className="text-center py-8 text-muted-foreground">No payments found matching your criteria.</div>
           ) : (
             <Table>
               <TableHeader>

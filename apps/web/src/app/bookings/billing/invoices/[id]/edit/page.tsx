@@ -311,7 +311,7 @@ export default function EditInvoicePage() {
                   <FormItem>
                     <FormLabel>Subtotal</FormLabel>
                     <FormControl>
-                      <Input {...field} readOnly className="bg-gray-100" />
+                      <Input {...field} readOnly className="bg-muted" />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -325,7 +325,7 @@ export default function EditInvoicePage() {
                   <FormItem>
                     <FormLabel>Total Amount</FormLabel>
                     <FormControl>
-                      <Input {...field} readOnly className="bg-gray-100" />
+                      <Input {...field} readOnly className="bg-muted" />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -364,7 +364,7 @@ export default function EditInvoicePage() {
                 <div className="overflow-x-auto">
                   <table className="w-full border border-gray-300">
                     <thead>
-                      <tr className="bg-gray-100">
+                      <tr className="bg-muted">
                         <th className="p-2 border text-left">Description</th>
                         <th className="p-2 border text-left w-24">Quantity</th>
                         <th className="p-2 border text-left w-32">Unit Price</th>
@@ -434,7 +434,7 @@ export default function EditInvoicePage() {
                               control={form.control}
                               name={`items.${index}.totalPrice`}
                               render={({ field }) => (
-                                <Input {...field} readOnly className="bg-gray-100" />
+                                <Input {...field} readOnly className="bg-muted" />
                               )}
                             />
                           </td>

@@ -107,15 +107,15 @@ export function DynamicFieldSelector({ properties, initialFields = [], onFieldsC
             className="w-full"
           />
           {isDropdownVisible && (
-            <ul className="absolute z-10 w-full bg-white border border-gray-300 rounded-md shadow-lg max-h-60 overflow-auto">
+            <ul className="absolute z-10 w-full bg-white border border-border rounded-md shadow-lg max-h-60 overflow-auto">
               {filteredProperties.map((property) => (
                 <li
                   key={property.id}
-                  className="px-4 py-2 hover:bg-gray-100 cursor-pointer"
+                  className="px-4 py-2 hover:bg-muted cursor-pointer"
                   onClick={() => addField(property)}
                 >
                   <div className="font-medium">{property.name}</div>
-                  <div className="text-sm text-gray-500">{property.description}</div>
+                  <div className="text-sm text-muted-foreground">{property.description}</div>
                 </li>
               ))}
             </ul>
@@ -157,12 +157,12 @@ export function DynamicFieldSelector({ properties, initialFields = [], onFieldsC
       {fields.map((field) => (
         <div key={field.id} className="flex items-center space-x-2">
           <div className="flex-grow">{field.name}</div>
-          <div className="w-[120px] text-sm text-gray-500">{field.type}</div>
+          <div className="w-[120px] text-sm text-muted-foreground">{field.type}</div>
           <div className="w-24 text-center">
             {field.isRequired ? (
-              <span className="text-sm text-gray-500">Required</span>
+              <span className="text-sm text-muted-foreground">Required</span>
             ) : (
-              <span className="text-sm text-gray-500">Optional</span>
+              <span className="text-sm text-muted-foreground">Optional</span>
             )}
           </div>
           <Button

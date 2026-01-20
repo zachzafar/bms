@@ -305,7 +305,6 @@ export class UsersService {
         const totalCountResult = await this.db
             .select({ count: sql<number>`COUNT(*)` })
             .from(schema.TenantHasUsers)
-            .where(eq(schema.TenantHasUsers.tenantId, tenantId))
             .innerJoin(schema.User, eq(schema.TenantHasUsers.userId, schema.User.id))
             .innerJoin(schema.Customer, eq(schema.Customer.userId, schema.User.id))
             .execute();

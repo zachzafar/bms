@@ -290,7 +290,7 @@ export default function CreateInvoicePage() {
                 <div className="overflow-x-auto">
                   <table className="w-full border border-gray-300">
                     <thead>
-                      <tr className="bg-gray-100">
+                      <tr className="bg-muted">
                         <th className="p-2 border text-left">Description</th>
                         <th className="p-2 border text-left w-24">Quantity</th>
                         <th className="p-2 border text-left w-32">Unit Price</th>
@@ -360,7 +360,7 @@ export default function CreateInvoicePage() {
                               control={form.control}
                               name={`items.${index}.totalPrice`}
                               render={({ field }) => (
-                                <Input {...field} readOnly className="bg-gray-100" />
+                                <Input {...field} readOnly className="bg-muted" />
                               )}
                             />
                           </td>

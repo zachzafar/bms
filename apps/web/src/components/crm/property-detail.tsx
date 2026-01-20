@@ -51,24 +51,24 @@ const mockViewings = [
 export function PropertyDetail({ property, onClose }: PropertyDetailProps) {
   const getStatusBadge = (status: string) => {
     const colors = {
-      Available: "bg-green-100 text-green-800",
-      Rented: "bg-blue-100 text-blue-800",
-      Sold: "bg-gray-100 text-gray-800",
+      Available: "bg-green-500/10 text-green-600",
+      Rented: "bg-primary/20 text-primary",
+      Sold: "bg-muted text-foreground",
       "Under Review": "bg-yellow-100 text-yellow-800",
-      Open: "bg-blue-100 text-blue-800",
+      Open: "bg-primary/20 text-primary",
       "Follow-up": "bg-yellow-100 text-yellow-800",
-      Scheduled: "bg-green-100 text-green-800",
-      Completed: "bg-gray-100 text-gray-800",
+      Scheduled: "bg-green-500/10 text-green-600",
+      Completed: "bg-muted text-foreground",
     }
-    return colors[status as keyof typeof colors] || "bg-gray-100 text-gray-800"
+    return colors[status as keyof typeof colors] || "bg-muted text-foreground"
   }
 
   const getTypeBadge = (type: string) => {
     const colors = {
-      Sale: "bg-purple-100 text-purple-800",
+      Sale: "bg-purple-500/10 text-purple-500",
       Rental: "bg-orange-100 text-orange-800",
     }
-    return colors[type as keyof typeof colors] || "bg-gray-100 text-gray-800"
+    return colors[type as keyof typeof colors] || "bg-muted text-foreground"
   }
 
   return (
@@ -77,8 +77,8 @@ export function PropertyDetail({ property, onClose }: PropertyDetailProps) {
       <div className="space-y-4">
         <div className="flex items-start justify-between">
           <div>
-            <h2 className="text-2xl font-bold text-gray-900">{property.title}</h2>
-            <p className="text-gray-600 flex items-center mt-1">
+            <h2 className="text-2xl font-bold text-foreground">{property.title}</h2>
+            <p className="text-muted-foreground flex items-center mt-1">
               <MapPin className="h-4 w-4 mr-1" />
               {property.location}
             </p>
@@ -97,7 +97,7 @@ export function PropertyDetail({ property, onClose }: PropertyDetailProps) {
             className="w-full h-64 object-cover rounded-lg"
           />
           <div className="absolute bottom-4 right-4 bg-white px-3 py-1 rounded-lg shadow-md">
-            <span className="text-lg font-bold text-gray-900 flex items-center">
+            <span className="text-lg font-bold text-foreground flex items-center">
               <DollarSign className="h-4 w-4" />
               {property.type === "Sale" ? `${property.price.toLocaleString()}` : `${property.price}/month`}
             </span>
@@ -115,31 +115,31 @@ export function PropertyDetail({ property, onClose }: PropertyDetailProps) {
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="flex items-center space-x-6">
-                <div className="flex items-center text-gray-600">
+                <div className="flex items-center text-muted-foreground">
                   <Bed className="h-5 w-5 mr-2" />
                   <span className="font-medium">{property.bedrooms}</span>
                   <span className="ml-1">Bedrooms</span>
                 </div>
-                <div className="flex items-center text-gray-600">
+                <div className="flex items-center text-muted-foreground">
                   <Bath className="h-5 w-5 mr-2" />
                   <span className="font-medium">{property.bathrooms}</span>
                   <span className="ml-1">Bathrooms</span>
                 </div>
-                <div className="flex items-center text-gray-600">
+                <div className="flex items-center text-muted-foreground">
                   <Calendar className="h-5 w-5 mr-2" />
                   <span>Listed {property.createdAt}</span>
                 </div>
               </div>
               <Separator />
               <div>
-                <h4 className="font-medium text-gray-900 mb-2">Description</h4>
-                <p className="text-gray-600">{property.description}</p>
+                <h4 className="font-medium text-foreground mb-2">Description</h4>
+                <p className="text-muted-foreground">{property.description}</p>
               </div>
               {property.features && property.features.length > 0 && (
                 <>
                   <Separator />
                   <div>
-                    <h4 className="font-medium text-gray-900 mb-2">Features & Amenities</h4>
+                    <h4 className="font-medium text-foreground mb-2">Features & Amenities</h4>
                     <div className="flex flex-wrap gap-2">
                       {property.features.map((feature: string) => (
                         <Badge key={feature} variant="secondary">
@@ -169,11 +169,11 @@ export function PropertyDetail({ property, onClose }: PropertyDetailProps) {
                     <div className="flex items-start justify-between">
                       <div className="flex-1">
                         <div className="flex items-center justify-between">
-                          <p className="text-sm font-medium text-gray-900">{inquiry.clientName}</p>
+                          <p className="text-sm font-medium text-foreground">{inquiry.clientName}</p>
                           <Badge className={getStatusBadge(inquiry.status)}>{inquiry.status}</Badge>
                         </div>
-                        <p className="text-sm text-gray-600 mt-1">{inquiry.message}</p>
-                        <p className="text-xs text-gray-500 mt-1 flex items-center">
+                        <p className="text-sm text-muted-foreground mt-1">{inquiry.message}</p>
+                        <p className="text-xs text-muted-foreground mt-1 flex items-center">
                           <Calendar className="h-3 w-3 mr-1" />
                           {inquiry.date}
                         </p>
@@ -217,19 +217,19 @@ export function PropertyDetail({ property, onClose }: PropertyDetailProps) {
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="flex justify-between items-center">
-                <span className="text-sm text-gray-600">Total Views</span>
+                <span className="text-sm text-muted-foreground">Total Views</span>
                 <span className="font-semibold">247</span>
               </div>
               <div className="flex justify-between items-center">
-                <span className="text-sm text-gray-600">Inquiries</span>
+                <span className="text-sm text-muted-foreground">Inquiries</span>
                 <span className="font-semibold">{mockInquiries.length}</span>
               </div>
               <div className="flex justify-between items-center">
-                <span className="text-sm text-gray-600">Viewings</span>
+                <span className="text-sm text-muted-foreground">Viewings</span>
                 <span className="font-semibold">{mockViewings.length}</span>
               </div>
               <div className="flex justify-between items-center">
-                <span className="text-sm text-gray-600">Days on Market</span>
+                <span className="text-sm text-muted-foreground">Days on Market</span>
                 <span className="font-semibold">12</span>
               </div>
             </CardContent>
@@ -248,7 +248,7 @@ export function PropertyDetail({ property, onClose }: PropertyDetailProps) {
                       <p className="text-sm font-medium">{viewing.clientName}</p>
                       <Badge className={getStatusBadge(viewing.status)}>{viewing.status}</Badge>
                     </div>
-                    <p className="text-xs text-gray-500">
+                    <p className="text-xs text-muted-foreground">
                       {viewing.date} at {viewing.time}
                     </p>
                     {viewing.feedback && (
@@ -258,12 +258,12 @@ export function PropertyDetail({ property, onClose }: PropertyDetailProps) {
                             <Star
                               key={i}
                               className={`h-3 w-3 ${
-                                i < (viewing.rating || 0) ? "text-yellow-400 fill-current" : "text-gray-300"
+                                i < (viewing.rating || 0) ? "text-yellow-500 fill-current" : "text-muted-foreground/50"
                               }`}
                             />
                           ))}
                         </div>
-                        <p className="text-xs text-gray-600 mt-1">{viewing.feedback}</p>
+                        <p className="text-xs text-muted-foreground mt-1">{viewing.feedback}</p>
                       </div>
                     )}
                   </div>

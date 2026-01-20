@@ -145,20 +145,20 @@ export default function CommunicationManagement() {
 
   const typeBadge = (type: string) => {
     const m: Record<string, string> = {
-      'Phone Call': 'bg-blue-100 text-blue-800',
-      Email: 'bg-green-100 text-green-800',
+      'Phone Call': 'bg-primary/10 text-primary',
+      Email: 'bg-primary/10 text-primary',
       Meeting: 'bg-purple-100 text-purple-800',
     }
-    return m[type] ?? 'bg-gray-100 text-gray-800'
+    return m[type] ?? 'bg-muted text-gray-800'
   }
 
   const outcomeBadge = (outcome: string) => {
     const m: Record<string, string> = {
-      Positive: 'bg-green-100 text-green-800',
-      Neutral: 'bg-yellow-100 text-yellow-800',
-      Negative: 'bg-red-100 text-red-800',
+      Positive: 'bg-primary/10 text-primary',
+      Neutral: 'bg-secondary/10 text-secondary-foreground',
+      Negative: 'bg-destructive/10 text-destructive',
     }
-    return m[outcome] ?? 'bg-gray-100 text-gray-800'
+    return m[outcome] ?? 'bg-muted text-gray-800'
   }
 
   if (communicationsLoading) return <div>Loading communications…</div>
@@ -369,7 +369,7 @@ export default function CommunicationManagement() {
                           Edit
                         </DropdownMenuItem>
                         <DropdownMenuItem
-                          className="text-red-600"
+                          className="text-destructive"
                           onClick={() => handleDeleteCommunication(comm.id)}
                           disabled={isDeleting}
                         >

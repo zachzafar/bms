@@ -274,5 +274,38 @@ export const bookingContract = c.router({
       404: z.undefined()
     },
     summary: 'Cancel booking using update token (customer-facing)'
+  },
+
+  // Owner-specific endpoints
+  getOwnerBookings: {
+    method: 'GET',
+    path: '/owner/bookings',
+    responses: {
+      200: z.object({
+        data: z.array(ExtendedSelectBookingSchema),
+        pagination
+      })
+    },
+    query: z.object({
+      search: z.string().optional(),
+      assetId: z.string().optional(),
+      page: z.coerce.number().optional(),
+      pageSize: z.coerce.number().optional(),
+    }),
+    summary: 'Get bookings for owner assets only'
+  },
+
+  getOwnerBooking: {
+    method: 'GET',
+    path: '/owner/bookings/:id',
+    responses: {
+      200: ExtendedSelectBookingSchema,
+      403: z.undefined(),
+      404: z.undefined()
+    },
+    pathParams: z.object({
+      id: z.string()
+    }),
+    summary: 'Get a specific booking if owner owns the asset'
   }
 });

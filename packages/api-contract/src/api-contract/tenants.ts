@@ -1,6 +1,6 @@
 
 import { initContract } from "@ts-rest/core";
-import { InsertTenantSchema, InsertUserSchema, SelectTenantSchema, SelectUserSchema } from "../database-schema"
+import { InsertTenantSchema, InsertUserSchema, SelectTenantSchema, SelectUserSchema, UpdateTenantSchema } from "../database-schema"
 import { z } from "zod";
 import { pagination } from "./utils";
 
@@ -74,8 +74,6 @@ export const tenantsContract = c.router({
     pathParams: z.object({
       id: z.string()
     }),
-    body: z.object({
-      tenant: InsertTenantSchema
-    })
+    body: UpdateTenantSchema
   }
 });

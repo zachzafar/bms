@@ -61,13 +61,13 @@ export default function ViewPaymentPage() {
   const getStatusColor = (status: string) => {
     switch ((status ?? '').toLowerCase()) {
       case 'completed':
-        return 'bg-green-100 text-green-800';
+        return 'bg-primary/10 text-primary';
       case 'pending':
-        return 'bg-yellow-100 text-yellow-800';
+        return 'bg-secondary/10 text-secondary-foreground';
       case 'failed':
-        return 'bg-red-100 text-red-800';
+        return 'bg-destructive/10 text-destructive';
       default:
-        return 'bg-gray-100 text-gray-800';
+        return 'bg-muted text-gray-800';
     }
   };
 
@@ -161,7 +161,7 @@ export default function ViewPaymentPage() {
               </TableBody>
             </Table>
           ) : (
-            <div className="text-gray-500">No invoices applied.</div>
+            <div className="text-muted-foreground">No invoices applied.</div>
           )}
         </CardContent>
       </Card>

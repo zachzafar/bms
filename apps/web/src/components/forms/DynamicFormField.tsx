@@ -197,7 +197,7 @@ export function DynamicFormField<T extends FieldValues>({
       render={({ field }) => (
         <FormItem>
           <FormLabel>
-            {label} {required && <span className="text-red-500">*</span>}
+            {label} {required && <span className="text-destructive">*</span>}
           </FormLabel>
           <FormControl>{renderField(field)}</FormControl>
           {description && type !== 'boolean' && (

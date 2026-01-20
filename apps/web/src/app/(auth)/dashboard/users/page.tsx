@@ -123,13 +123,13 @@ export default function UsersPage() {
   const getStatusBadgeColor = (userType: string) => {
     switch (userType) {
       case 'system':
-        return 'bg-purple-600';
+        return 'bg-primary';
       case 'admin':
-        return 'bg-blue-600';
+        return 'bg-primary';
       case 'user':
-        return 'bg-slate-600';
+        return 'bg-muted';
       default:
-        return 'bg-slate-600';
+        return 'bg-muted';
     }
   };
 
@@ -138,27 +138,27 @@ export default function UsersPage() {
       {/* Page Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-white">User Management</h1>
-          <p className="text-slate-300">View and manage system users and their permissions</p>
+          <h1 className="text-3xl font-bold text-foreground">User Management</h1>
+          <p className="text-card-foreground">View and manage system users and their permissions</p>
         </div>
-        <div className="text-slate-400 text-sm">
+        <div className="text-muted-foreground text-sm">
           System admins can only be created through the API
         </div>
       </div>
 
       {/* Filters and Search */}
-      <Card className="border-slate-700 bg-slate-800">
+      <Card className="border-border bg-card">
         <CardContent className="p-4">
           <div className="flex flex-col md:flex-row gap-4">
             {/* Search */}
             <div className="flex-1">
               <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400 h-4 w-4" />
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
                 <Input
                   placeholder="Search users..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-10 bg-slate-700 border-slate-600 text-white placeholder:text-slate-400"
+                  className="pl-10 text-foreground placeholder:text-muted-foreground"
                 />
               </div>
             </div>
@@ -166,10 +166,10 @@ export default function UsersPage() {
             {/* Tenant Filter */}
             <div className="w-full md:w-48">
               <Select value={selectedTenant} onValueChange={setSelectedTenant}>
-                <SelectTrigger className="bg-slate-700 border-slate-600 text-white">
+                <SelectTrigger className="text-foreground">
                   <SelectValue placeholder="All Tenants" />
                 </SelectTrigger>
-                <SelectContent className="bg-slate-700 border-slate-600">
+                <SelectContent>
                   <SelectItem value="all">All Tenants</SelectItem>
                   <SelectItem value="system">System Users</SelectItem>
                   {tenants.map((tenant) => (
@@ -184,10 +184,10 @@ export default function UsersPage() {
             {/* User Type Filter */}
             <div className="w-full md:w-48">
               <Select value={userTypeFilter} onValueChange={setUserTypeFilter}>
-                <SelectTrigger className="bg-slate-700 border-slate-600 text-white">
+                <SelectTrigger className="text-foreground">
                   <SelectValue placeholder="All Types" />
                 </SelectTrigger>
-                <SelectContent className="bg-slate-700 border-slate-600">
+                <SelectContent>
                   <SelectItem value="all">All Types</SelectItem>
                   <SelectItem value="system">System Admin</SelectItem>
                   <SelectItem value="admin">Tenant Admin</SelectItem>
@@ -205,7 +205,7 @@ export default function UsersPage() {
                   setSelectedTenant('all');
                   setUserTypeFilter('all');
                 }}
-                className="border-slate-600 text-slate-300 hover:bg-slate-700"
+                className="text-card-foreground"
               >
                 <X className="h-4 w-4 mr-2" />
                 Clear Filters
@@ -216,10 +216,10 @@ export default function UsersPage() {
       </Card>
 
       {/* Users Table */}
-      <Card className="border-slate-700 bg-slate-800">
+      <Card className="border-border bg-card">
         <CardHeader>
-          <CardTitle className="text-white">Users ({filteredUsers.length})</CardTitle>
-          <CardDescription className="text-slate-400">
+          <CardTitle className="text-foreground">Users ({filteredUsers.length})</CardTitle>
+          <CardDescription className="text-muted-foreground">
             View system users and their permissions. System admins are read-only.
           </CardDescription>
         </CardHeader>
@@ -227,27 +227,27 @@ export default function UsersPage() {
           <div className="overflow-x-auto">
             <table className="w-full">
               <thead>
-                <tr className="border-b border-slate-700">
-                  <th className="text-left p-3 text-slate-300 font-medium">Name</th>
-                  <th className="text-left p-3 text-slate-300 font-medium">Email</th>
-                  <th className="text-left p-3 text-slate-300 font-medium">Type</th>
-                  <th className="text-left p-3 text-slate-300 font-medium">Tenant</th>
-                  <th className="text-left p-3 text-slate-300 font-medium">Created</th>
-                  <th className="text-left p-3 text-slate-300 font-medium">Actions</th>
+                <tr className="border-b border-border">
+                  <th className="text-left p-3 text-card-foreground font-medium">Name</th>
+                  <th className="text-left p-3 text-card-foreground font-medium">Email</th>
+                  <th className="text-left p-3 text-card-foreground font-medium">Type</th>
+                  <th className="text-left p-3 text-card-foreground font-medium">Tenant</th>
+                  <th className="text-left p-3 text-card-foreground font-medium">Created</th>
+                  <th className="text-left p-3 text-card-foreground font-medium">Actions</th>
                 </tr>
               </thead>
               <tbody>
                 {filteredUsers.map((user) => (
-                  <tr key={user.id} className="border-b border-slate-700 hover:bg-slate-700">
-                    <td className="p-3 text-white">
+                  <tr key={user.id} className="border-b border-border hover:bg-muted/50">
+                    <td className="p-3 text-foreground">
                       <div className="flex items-center space-x-3">
-                        <div className="w-8 h-8 bg-slate-600 rounded-full flex items-center justify-center">
-                          <User className="h-4 w-4 text-white" />
+                        <div className="w-8 h-8 bg-muted rounded-full flex items-center justify-center">
+                          <User className="h-4 w-4 text-foreground" />
                         </div>
                         <span>{user.name}</span>
                       </div>
                     </td>
-                    <td className="p-3 text-slate-300">{user.email}</td>
+                    <td className="p-3 text-card-foreground">{user.email}</td>
                     <td className="p-3">
                       <Badge 
                         variant="default"
@@ -256,13 +256,13 @@ export default function UsersPage() {
                         {user.userType}
                       </Badge>
                     </td>
-                    {/* <td className="p-3 text-slate-300">
+                    {/* <td className="p-3 text-card-foreground">
                       {user.tenantId ? 
                         tenants.find(t => t.id === user.tenantId)?.name || 'Unknown' : 
                         'System'
                       }
                     </td> */}
-                    <td className="p-3 text-slate-400 text-sm">
+                    <td className="p-3 text-muted-foreground text-sm">
                       {user.createdAt ? new Date(user.createdAt).toLocaleDateString() : 'N/A'}
                     </td>
                     <td className="p-3">
@@ -273,22 +273,21 @@ export default function UsersPage() {
                               size="sm"
                               variant="outline"
                               onClick={() => openEditModal(user)}
-                              className="border-slate-600 text-slate-300 hover:bg-slate-700"
+                              className="text-card-foreground"
                             >
                               <Edit className="h-3 w-3" />
                             </Button>
                             <Button
                               size="sm"
-                              variant="outline"
+                              variant="destructive"
                               onClick={() => handleDeleteUser(user.id)}
-                              className="border-red-600 text-red-400 hover:bg-red-900"
                             >
                               <Trash2 className="h-3 w-3" />
                             </Button>
                           </>
                         )}
                         {user.userType === 'system' && (
-                          <span className="text-slate-500 text-sm">Read-only</span>
+                          <span className="text-muted-foreground text-sm">Read-only</span>
                         )}
                       </div>
                     </td>
@@ -299,8 +298,8 @@ export default function UsersPage() {
             
             {filteredUsers.length === 0 && (
               <div className="text-center py-8">
-                <User className="h-12 w-12 text-slate-500 mx-auto mb-4" />
-                <p className="text-slate-400">No users found matching your criteria</p>
+                <User className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                <p className="text-muted-foreground">No users found matching your criteria</p>
               </div>
             )}
           </div>
@@ -310,44 +309,44 @@ export default function UsersPage() {
       {/* Edit User Modal */}
       {editingUser && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <Card className="w-full max-w-md border-slate-700 bg-slate-800">
+          <Card className="w-full max-w-md border-border bg-card">
             <CardHeader>
-              <CardTitle className="text-white">Edit User</CardTitle>
+              <CardTitle className="text-foreground">Edit User</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="edit-name" className="text-slate-300">Name</Label>
+                <Label htmlFor="edit-name" className="text-card-foreground">Name</Label>
                 <Input
                   id="edit-name"
                   value={editingUser.name}
                   onChange={(e) => setEditingUser({ ...editingUser, name: e.target.value })}
-                  className="bg-slate-700 border-slate-600 text-white"
+                  className="text-foreground"
                 />
               </div>
               
               <div className="space-y-2">
-                <Label htmlFor="edit-email" className="text-slate-300">Email</Label>
+                <Label htmlFor="edit-email" className="text-card-foreground">Email</Label>
                 <Input
                   id="edit-email"
                   type="email"
                   value={editingUser.email}
                   onChange={(e) => setEditingUser({ ...editingUser, email: e.target.value })}
-                  className="bg-slate-700 border-slate-600 text-white"
+                  className="text-foreground"
                 />
               </div>
 
               <div className="flex space-x-2 pt-4">
-                <Button 
+                <Button
                   onClick={() => setEditingUser(null)}
                   variant="outline"
-                  className="border-slate-600 text-slate-300 flex-1"
+                  className="text-card-foreground flex-1"
                 >
                   Cancel
                 </Button>
                 <Button 
                   onClick={handleUpdateUser}
                   disabled={isLoading}
-                  className="bg-blue-600 hover:bg-blue-700 flex-1"
+                  className="bg-primary hover:bg-primary/90 flex-1"
                 >
                   {isLoading ? 'Updating...' : 'Update User'}
                 </Button>
