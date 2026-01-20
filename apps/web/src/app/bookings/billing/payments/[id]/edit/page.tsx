@@ -88,7 +88,7 @@ export default function EditPaymentPage() {
   return (
     <div className="container mx-auto py-10">
       <div className="flex items-center mb-6">
-        <Button variant="ghost" onClick={() => router.push(`/billing/payments/${paymentId}/view`)} className="mr-4">
+        <Button variant="ghost" onClick={() => router.push(`/bookings/billing/payments/${paymentId}/view`)} className="mr-4">
           Back
         </Button>
         <h1 className="text-3xl font-bold">Edit Payment #{payment.id}</h1>
@@ -212,7 +212,7 @@ export default function EditPaymentPage() {
               </div>
 
               <div className="flex justify-end gap-2">
-                <Button type="button" variant="outline" onClick={() => router.push(`/billing/payments/${paymentId}/view`)}>
+                <Button type="button" variant="outline" onClick={() => router.push(`/bookings/billing/payments/${paymentId}/view`)}>
                   Cancel
                 </Button>
                 <Button type="submit">Save Changes</Button>

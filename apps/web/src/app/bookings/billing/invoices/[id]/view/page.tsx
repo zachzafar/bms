@@ -41,7 +41,7 @@ export default function ViewInvoicePage() {
   return (
     <div className="container mx-auto py-10">
       <div className="flex items-center mb-6">
-        <Button variant="ghost" onClick={() => router.push(`/billing/invoices/`)} className="mr-4">
+        <Button variant="ghost" onClick={() => router.push(`/bookings/billing/invoices/`)} className="mr-4">
           Back
         </Button>
         <h1 className="text-3xl font-bold">View Invoice</h1>

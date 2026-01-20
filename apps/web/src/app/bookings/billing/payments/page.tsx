@@ -351,10 +351,10 @@ export default function PaymentsPage() {
                     <TableCell>{new Date(payment.createdAt).toLocaleDateString()}</TableCell>
                     <TableCell>
                       <div className="flex items-center gap-2">
-                        <Button variant="outline" size="sm" onClick={() => router.push(`/billing/payments/${payment.id}/view`)}>
+                        <Button variant="outline" size="sm" onClick={() => router.push(`/bookings/billing/payments/${payment.id}/view`)}>
                           <Eye className="h-4 w-4" />
                         </Button>
-                        <Button variant="outline" size="sm" onClick={() => router.push(`/billing/payments/${payment.id}/edit`)}>
+                        <Button variant="outline" size="sm" onClick={() => router.push(`/bookings/billing/payments/${payment.id}/edit`)}>
                           <Pencil className="h-4 w-4" />
                         </Button>
                       </div>

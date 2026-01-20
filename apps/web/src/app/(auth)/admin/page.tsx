@@ -64,14 +64,14 @@ const adminFeatures = [
     href: '/admin/api-keys',
     color: 'bg-orange-500'
   },
-  {
-    id: 'tenants',
-    name: 'Tenant Management',
-    description: 'Manage multi-tenant organizations and settings',
-    icon: <Globe className="h-6 w-6" />,
-    href: '/admin/tenants',
-    color: 'bg-teal-500'
-  }
+  // {
+  //   id: 'tenants',
+  //   name: 'Tenant Management',
+  //   description: 'Manage multi-tenant organizations and settings',
+  //   icon: <Globe className="h-6 w-6" />,
+  //   href: '/admin/tenants',
+  //   color: 'bg-teal-500'
+  // }
 ];
 
 export default function AuthHubPage() {
@@ -248,10 +248,10 @@ export default function AuthHubPage() {
               <Key className="h-4 w-4 mr-2" />
               API Keys
             </Button>
-            <Button variant="outline" onClick={() => router.push('/admin/tenants')}>
+            {/* <Button className="bg-white border-white text-gray-900" variant="outline" onClick={() => router.push('/admin/tenants')}>
               <Globe className="h-4 w-4 mr-2" />
               Tenants
-            </Button>
+            </Button> */}
           </div>
         </section>
       </main>

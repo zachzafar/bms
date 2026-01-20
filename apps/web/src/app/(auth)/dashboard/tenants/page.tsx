@@ -261,7 +261,7 @@ function TenantRow({id}:{id: string}) {
                     <td className="p-3 text-card-foreground">{tenant.tenant.createdAt}</td>
                     <td className="p-3">
                       <div className="flex items-center space-x-2">
-                        <Link href={`/tenants/${tenant.tenant.id}`}>
+                        <Link href={`/dashboard/tenants/${tenant.tenant.id}`}>
                           <Button
                             variant="ghost"
                             size="sm"
