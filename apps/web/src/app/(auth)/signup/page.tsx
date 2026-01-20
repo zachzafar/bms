@@ -39,14 +39,14 @@ export default function Signup() {
     }
 
     return (
-        <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800 px-4">
+        <div className="min-h-screen flex items-center justify-center bg-background px-4">
             <Card className="w-full max-w-md">
                 <CardHeader className="text-center">
-                    <div className="mx-auto mb-4 w-16 h-16 bg-blue-500 rounded-full flex items-center justify-center">
-                        <UserPlus className="h-8 w-8 text-white" />
+                    <div className="mx-auto mb-4 w-16 h-16 bg-primary rounded-full flex items-center justify-center">
+                        <UserPlus className="h-8 w-8 text-primary-foreground" />
                     </div>
                     <CardTitle className="text-2xl font-bold">Create Account</CardTitle>
-                    <p className="text-gray-600 dark:text-gray-400">
+                    <p className="text-muted-foreground">
                         Sign up for a new BookOS account
                     </p>
                 </CardHeader>
@@ -93,11 +93,11 @@ export default function Signup() {
                     </Form>
                     
                     <div className="mt-6 text-center">
-                        <p className="text-sm text-gray-600 dark:text-gray-400">
+                        <p className="text-sm text-muted-foreground">
                             Already have an account?{' '}
-                            <Link 
-                                href="/login" 
-                                className="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 font-medium"
+                            <Link
+                                href="/login"
+                                className="text-primary hover:text-primary/80 font-medium"
                             >
                                 Sign in here
                             </Link>

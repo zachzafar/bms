@@ -173,7 +173,7 @@ export class SystemAdminService {
     }
   }
 
-  async updateTenant(tenantId: string, tenantData: any) {
+  async updateTenant(tenantId: string, tenantData: schema.UpdateTenant) {
     try {
       const existingTenant = await this.db.query.Tenant.findFirst({
         where: (tenant, { eq }) => eq(tenant.id, tenantId)
@@ -182,11 +182,11 @@ export class SystemAdminService {
       if (!existingTenant) {
         throw new NotFoundException('Tenant not found');
       }
-
+      const { subdomain } = tenantData
       // Check subdomain uniqueness if updating
-      if (tenantData.subdomain && tenantData.subdomain !== existingTenant.subdomain) {
+      if (subdomain && subdomain !== existingTenant.subdomain) {
         const duplicateTenant = await this.db.query.Tenant.findFirst({
-          where: (tenant, { eq }) => eq(tenant.subdomain, tenantData.subdomain)
+          where: (tenant, { eq }) => eq(tenant.subdomain, subdomain)
         });
 
         if (duplicateTenant) {

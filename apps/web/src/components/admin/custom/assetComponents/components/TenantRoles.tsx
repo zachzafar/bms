@@ -163,11 +163,11 @@ export function TenantRoles({ tenantId }: TenantRolesProps) {
         <div className="flex items-center justify-between">
           <h2 className="text-2xl font-bold text-white">Role Management</h2>
         </div>
-        <Card className="border-slate-700 bg-slate-800">
+        <Card className="border-border bg-card">
           <CardContent className="p-6">
             <div className="animate-pulse space-y-4">
               {[1, 2, 3].map((i) => (
-                <div key={i} className="h-12 bg-slate-600 rounded"></div>
+                <div key={i} className="h-12 bg-muted rounded"></div>
               ))}
             </div>
           </CardContent>
@@ -182,12 +182,12 @@ export function TenantRoles({ tenantId }: TenantRolesProps) {
         <h2 className="text-2xl font-bold text-white">Role Management</h2>
         <Dialog open={showCreateRoleModal} onOpenChange={setShowCreateRoleModal}>
           <DialogTrigger asChild>
-            <Button className="bg-green-600 hover:bg-green-700">
+            <Button className="bg-green-500 hover:bg-green-600">
               <Plus className="h-4 w-4 mr-2" />
               Create Role
             </Button>
           </DialogTrigger>
-          <DialogContent className="bg-slate-800 border-slate-700 text-white max-w-2xl">
+          <DialogContent className="bg-card border-border text-white max-w-2xl">
             <DialogHeader>
               <DialogTitle>Create New Role</DialogTitle>
               <DialogDescription>
@@ -196,28 +196,28 @@ export function TenantRoles({ tenantId }: TenantRolesProps) {
             </DialogHeader>
             <div className="space-y-4">
               <div>
-                <Label htmlFor="role-name" className="text-slate-300">Role Name *</Label>
+                <Label htmlFor="role-name" className="text-card-foreground">Role Name *</Label>
                 <Input
                   id="role-name"
                   value={newRole.name}
                   onChange={(e) => setNewRole(prev => ({ ...prev, name: e.target.value }))}
-                  className="bg-slate-700 border-slate-600 text-white"
+                  className="bg-card border-border text-white"
                   placeholder="Enter role name (e.g., Editor, Viewer)"
                 />
               </div>
               <div>
-                <Label htmlFor="role-description" className="text-slate-300">Description</Label>
+                <Label htmlFor="role-description" className="text-card-foreground">Description</Label>
                 <Textarea
                   id="role-description"
                   value={newRole.description}
                   onChange={(e) => setNewRole(prev => ({ ...prev, description: e.target.value }))}
-                  className="bg-slate-700 border-slate-600 text-white"
+                  className="bg-card border-border text-white"
                   placeholder="Describe what this role can do"
                   rows={3}
                 />
               </div>
               <div>
-                <Label className="text-slate-300">Permissions</Label>
+                <Label className="text-card-foreground">Permissions</Label>
                 <div className="grid grid-cols-2 gap-2 mt-2 max-h-60 overflow-y-auto">
                   {permissions.map((permission) => (
                     <div key={permission} className="flex items-center space-x-2">
@@ -225,9 +225,9 @@ export function TenantRoles({ tenantId }: TenantRolesProps) {
                         id={`perm-${permission}`}
                         checked={newRole.permissions.includes(permission)}
                         onCheckedChange={() => togglePermission(permission)}
-                        className="border-slate-600"
+                        className="border-border"
                       />
-                      <Label htmlFor={`perm-${permission}`} className="text-slate-300 text-sm">
+                      <Label htmlFor={`perm-${permission}`} className="text-card-foreground text-sm">
                         {permission}
                       </Label>
                     </div>
@@ -239,14 +239,14 @@ export function TenantRoles({ tenantId }: TenantRolesProps) {
               <Button
                 variant="outline"
                 onClick={() => setShowCreateRoleModal(false)}
-                className="border-slate-600 text-slate-300 hover:bg-slate-700"
+                className="border-border text-card-foreground hover:bg-card"
               >
                 Cancel
               </Button>
               <Button
                 onClick={handleCreateRole}
                 disabled={createRoleMutation.isPending}
-                className="bg-green-600 hover:bg-green-700"
+                className="bg-green-500 hover:bg-green-600"
               >
                 {createRoleMutation.isPending ? (
                   <Loader2 className="h-4 w-4 mr-2 animate-spin" />
@@ -262,7 +262,7 @@ export function TenantRoles({ tenantId }: TenantRolesProps) {
 
       {/* Add Edit Role Modal */}
       <Dialog open={showEditRoleModal} onOpenChange={setShowEditRoleModal}>
-        <DialogContent className="bg-slate-800 border-slate-700 text-white max-w-2xl">
+        <DialogContent className="bg-card border-border text-white max-w-2xl">
           <DialogHeader>
             <DialogTitle>Edit Role</DialogTitle>
             <DialogDescription>
@@ -271,28 +271,28 @@ export function TenantRoles({ tenantId }: TenantRolesProps) {
           </DialogHeader>
           <div className="space-y-4">
             <div>
-              <Label htmlFor="edit-role-name" className="text-slate-300">Role Name *</Label>
+              <Label htmlFor="edit-role-name" className="text-card-foreground">Role Name *</Label>
               <Input
                 id="edit-role-name"
                 value={editRole.name}
                 onChange={(e) => setEditRole(prev => ({ ...prev, name: e.target.value }))}
-                className="bg-slate-700 border-slate-600 text-white"
+                className="bg-card border-border text-white"
                 placeholder="Enter role name"
               />
             </div>
             <div>
-              <Label htmlFor="edit-role-description" className="text-slate-300">Description</Label>
+              <Label htmlFor="edit-role-description" className="text-card-foreground">Description</Label>
               <Textarea
                 id="edit-role-description"
                 value={editRole.description}
                 onChange={(e) => setEditRole(prev => ({ ...prev, description: e.target.value }))}
-                className="bg-slate-700 border-slate-600 text-white"
+                className="bg-card border-border text-white"
                 placeholder="Enter role description"
                 rows={3}
               />
             </div>
             <div>
-              <Label className="text-slate-300">Permissions</Label>
+              <Label className="text-card-foreground">Permissions</Label>
               <div className="grid grid-cols-2 gap-2 mt-2 max-h-40 overflow-y-auto">
                 {permissions.map((permission) => (
                   <div key={permission} className="flex items-center space-x-2">
@@ -300,9 +300,9 @@ export function TenantRoles({ tenantId }: TenantRolesProps) {
                       id={`edit-permission-${permission}`}
                       checked={editRole.permissions.includes(permission)}
                       onCheckedChange={() => toggleEditRolePermission(permission)}
-                      className="border-slate-600"
+                      className="border-border"
                     />
-                    <Label htmlFor={`edit-permission-${permission}`} className="text-slate-300 text-sm">
+                    <Label htmlFor={`edit-permission-${permission}`} className="text-card-foreground text-sm">
                       {permission}
                     </Label>
                   </div>
@@ -314,14 +314,14 @@ export function TenantRoles({ tenantId }: TenantRolesProps) {
             <Button
               variant="outline"
               onClick={() => setShowEditRoleModal(false)}
-              className="border-slate-600 text-slate-300 hover:bg-slate-700"
+              className="border-border text-card-foreground hover:bg-card"
             >
               Cancel
             </Button>
             <Button
               onClick={handleUpdateRole}
               disabled={updateRoleMutation.isPending}
-              className="bg-green-600 hover:bg-green-700"
+              className="bg-green-500 hover:bg-green-600"
             >
               {updateRoleMutation.isPending ? (
                 <Loader2 className="h-4 w-4 mr-2 animate-spin" />
@@ -335,10 +335,10 @@ export function TenantRoles({ tenantId }: TenantRolesProps) {
       </Dialog>
 
       {/* Update the roles table actions */}
-      <Card className="border-slate-700 bg-slate-800">
+      <Card className="border-border bg-card">
         <CardHeader>
           <CardTitle className="text-white">Roles ({roles.length})</CardTitle>
-          <CardDescription className="text-slate-400">
+          <CardDescription className="text-muted-foreground">
             Manage roles and permissions within this tenant
           </CardDescription>
         </CardHeader>
@@ -346,50 +346,50 @@ export function TenantRoles({ tenantId }: TenantRolesProps) {
           <div className="overflow-x-auto">
             <table className="w-full">
               <thead>
-                <tr className="border-b border-slate-700">
-                  <th className="text-left p-3 text-slate-300 font-medium">Role</th>
-                  <th className="text-left p-3 text-slate-300 font-medium">Description</th>
-                  <th className="text-left p-3 text-slate-300 font-medium">Permissions</th>
-                  <th className="text-left p-3 text-slate-300 font-medium">Users</th>
-                  <th className="text-left p-3 text-slate-300 font-medium">Actions</th>
+                <tr className="border-b border-border">
+                  <th className="text-left p-3 text-card-foreground font-medium">Role</th>
+                  <th className="text-left p-3 text-card-foreground font-medium">Description</th>
+                  <th className="text-left p-3 text-card-foreground font-medium">Permissions</th>
+                  <th className="text-left p-3 text-card-foreground font-medium">Users</th>
+                  <th className="text-left p-3 text-card-foreground font-medium">Actions</th>
                 </tr>
               </thead>
               <tbody>
                 {roles.map((role) => (
-                  <tr key={role.id} className="border-b border-slate-700 hover:bg-slate-700">
+                  <tr key={role.id} className="border-b border-border hover:bg-card">
                     <td className="p-3 text-white">
                       <div className="flex items-center space-x-3">
-                        <div className="w-8 h-8 bg-slate-600 rounded-full flex items-center justify-center">
+                        <div className="w-8 h-8 bg-muted rounded-full flex items-center justify-center">
                           <Shield className="h-4 w-4 text-white" />
                         </div>
                         <span className="font-medium">{role.name}</span>
                       </div>
                     </td>
-                    <td className="p-3 text-slate-300 max-w-xs">
+                    <td className="p-3 text-card-foreground max-w-xs">
                       {role.description || 'No description'}
                     </td>
                     <td className="p-3">
                       <div className="flex flex-wrap gap-1 max-w-xs">
                         {role.permissions.slice(0, 3).map((permission) => (
-                          <Badge key={permission} variant="outline" className="border-slate-600 text-slate-300 text-xs">
+                          <Badge key={permission} variant="outline" className="border-border text-card-foreground text-xs">
                             {permission}
                           </Badge>
                         ))}
                         {role.permissions.length > 3 && (
-                          <Badge variant="outline" className="border-slate-600 text-slate-300 text-xs">
+                          <Badge variant="outline" className="border-border text-card-foreground text-xs">
                             +{role.permissions.length - 3} more
                           </Badge>
                         )}
                       </div>
                     </td>
-                    <td className="p-3 text-slate-300">{role.userCount}</td>
+                    <td className="p-3 text-card-foreground">{role.userCount}</td>
                     <td className="p-3">
                       <div className="flex space-x-2">
                         <Button
                           size="sm"
                           variant="outline"
                           onClick={() => handleEditRole(role)}
-                          className="border-slate-600 text-slate-300 hover:bg-slate-700"
+                          className="border-border text-card-foreground hover:bg-card"
                         >
                           <Edit className="h-3 w-3" />
                         </Button>
@@ -397,7 +397,7 @@ export function TenantRoles({ tenantId }: TenantRolesProps) {
                           size="sm"
                           variant="outline"
                           // onClick={() => handleDeleteRole(role.id)}
-                          className="border-red-600 text-red-400 hover:bg-red-900"
+                          className="border-destructive text-destructive hover:bg-destructive/90"
                         >
                           <Trash2 className="h-3 w-3" />
                         </Button>
@@ -410,8 +410,8 @@ export function TenantRoles({ tenantId }: TenantRolesProps) {
             
             {roles.length === 0 && (
               <div className="text-center py-8">
-                <Shield className="h-12 w-12 text-slate-500 mx-auto mb-4" />
-                <p className="text-slate-400">No roles found in this tenant</p>
+                <Shield className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                <p className="text-muted-foreground">No roles found in this tenant</p>
               </div>
             )}
           </div>

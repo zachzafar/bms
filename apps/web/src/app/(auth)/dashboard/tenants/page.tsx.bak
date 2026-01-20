@@ -166,7 +166,7 @@ export default function TenantsPage() {
 
       {/* Quick Actions */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        <Card className="bg-card border-border hover:border-primary/50 transition-colors">
+        <Card className="bg-card border-border hover:border-slate-600 transition-colors">
           <CardHeader>
             <CardTitle className="text-foreground">Create New Tenant</CardTitle>
             <CardDescription className="text-muted-foreground">
@@ -178,7 +178,7 @@ export default function TenantsPage() {
           </CardContent>
         </Card>
 
-        <Card className="bg-card border-border hover:border-primary/50 transition-colors">
+        <Card className="bg-card border-border hover:border-slate-600 transition-colors">
           <CardHeader>
             <CardTitle className="text-foreground">Bulk Operations</CardTitle>
             <CardDescription className="text-muted-foreground">
@@ -188,7 +188,7 @@ export default function TenantsPage() {
           <CardContent>
             <Button 
               variant="outline"
-              className="w-full border-border text-card-foreground hover:bg-muted/50 hover:text-foreground"
+              className="w-full border-slate-600 text-card-foreground hover:bg-slate-700 hover:text-foreground"
             >
               <MoreHorizontal className="mr-2 h-4 w-4" />
               Bulk Actions
@@ -196,7 +196,7 @@ export default function TenantsPage() {
           </CardContent>
         </Card>
 
-        <Card className="bg-card border-border hover:border-primary/50 transition-colors">
+        <Card className="bg-card border-border hover:border-slate-600 transition-colors">
           <CardHeader>
             <CardTitle className="text-foreground">Export Data</CardTitle>
             <CardDescription className="text-muted-foreground">
@@ -206,7 +206,7 @@ export default function TenantsPage() {
           <CardContent>
             <Button 
               variant="outline"
-              className="w-full border-border text-card-foreground hover:bg-muted/50 hover:text-foreground"
+              className="w-full border-slate-600 text-card-foreground hover:bg-slate-700 hover:text-foreground"
             >
               <Building className="mr-2 h-4 w-4" />
               Export Tenants
@@ -236,7 +236,7 @@ function TenantRow({id}:{id: string}) {
   }
 
   return (
-    <tr key={tenant.tenant.id} className="border-b border-border hover:bg-muted/50">
+    <tr key={tenant.tenant.id} className="border-b border-border hover:bg-slate-700">
                     <td className="p-3">
                       <div className="flex items-center space-x-3">
                         <div className="w-8 h-8 bg-primary rounded-full flex items-center justify-center">
@@ -265,7 +265,7 @@ function TenantRow({id}:{id: string}) {
                           <Button
                             variant="ghost"
                             size="sm"
-                            className="text-primary hover:opacity-80"
+                            className="text-primary hover:text-blue-300 hover:bg-blue-900/20"
                           >
                             <Eye className="h-4 w-4" />
                           </Button>
@@ -282,7 +282,7 @@ function TenantRow({id}:{id: string}) {
                           variant="ghost"
                           size="sm"
                           onClick={() => handleDeleteTenant(tenant.id)}
-                          className="text-destructive hover:opacity-80"
+                          className="text-red-400 hover:text-red-300 hover:bg-red-900/20"
                         >
                           <Trash2 className="h-4 w-4" />
                         </Button> */}
@@ -385,7 +385,7 @@ function CreateTenantModal() {
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button className="bg-primary hover:bg-primary/90">
+        <Button className="bg-primary hover:bg-purple-700">
           <Plus className="mr-2 h-4 w-4" />
           Create Tenant
         </Button>
@@ -416,11 +416,11 @@ function CreateTenantModal() {
                       <FormControl>
                         <Input 
                           placeholder="Enter tenant name" 
-                          className="border-border text-foreground placeholder:text-muted-foreground"
+                          className="bg-slate-700 border-slate-600 text-foreground placeholder:text-muted-foreground"
                           {...field} 
                         />
                       </FormControl>
-                      <FormMessage className="text-destructive" />
+                      <FormMessage className="text-red-400" />
                     </FormItem>
                   )}
                 />
@@ -435,7 +435,7 @@ function CreateTenantModal() {
                         <div className="relative">
                           <Input 
                             placeholder="your-tenant" 
-                            className="border-border text-foreground placeholder:text-muted-foreground pr-20"
+                            className="bg-slate-700 border-slate-600 text-foreground placeholder:text-muted-foreground pr-20"
                             {...field} 
                           />
                           <span className="absolute right-3 top-1/2 transform -translate-y-1/2 text-muted-foreground text-sm">
@@ -443,7 +443,7 @@ function CreateTenantModal() {
                           </span>
                         </div>
                       </FormControl>
-                      <FormMessage className="text-destructive" />
+                      <FormMessage className="text-red-400" />
                     </FormItem>
                   )}
                 />
@@ -466,11 +466,11 @@ function CreateTenantModal() {
                       <FormControl>
                         <Input 
                           placeholder="Enter admin name" 
-                          className="border-border text-foreground placeholder:text-muted-foreground"
+                          className="bg-slate-700 border-slate-600 text-foreground placeholder:text-muted-foreground"
                           {...field} 
                         />
                       </FormControl>
-                      <FormMessage className="text-destructive" />
+                      <FormMessage className="text-red-400" />
                     </FormItem>
                   )}
                 />
@@ -485,11 +485,11 @@ function CreateTenantModal() {
                         <Input 
                           type="email"
                           placeholder="admin@example.com" 
-                          className="border-border text-foreground placeholder:text-muted-foreground"
+                          className="bg-slate-700 border-slate-600 text-foreground placeholder:text-muted-foreground"
                           {...field} 
                         />
                       </FormControl>
-                      <FormMessage className="text-destructive" />
+                      <FormMessage className="text-red-400" />
                     </FormItem>
                   )}
                 />
@@ -505,11 +505,11 @@ function CreateTenantModal() {
                       <Input 
                         type="password"
                         placeholder="Enter password" 
-                        className="border-border text-foreground placeholder:text-muted-foreground"
+                        className="bg-slate-700 border-slate-600 text-foreground placeholder:text-muted-foreground"
                         {...field} 
                       />
                     </FormControl>
-                    <FormMessage className="text-destructive" />
+                    <FormMessage className="text-red-400" />
                   </FormItem>
                 )}
               />
@@ -529,14 +529,14 @@ function CreateTenantModal() {
                 type="button"
                 variant="outline"
                 onClick={() => setOpen(false)}
-                className="border-border text-card-foreground hover:bg-muted/50 hover:text-foreground"
+                className="border-slate-600 text-card-foreground hover:bg-slate-700 hover:text-foreground"
               >
                 Cancel
               </Button>
               <Button
                 type="submit"
                 disabled={isPending}
-                className="bg-primary hover:bg-primary/90"
+                className="bg-primary hover:bg-purple-700"
               >
                 {isPending ? 'Creating...' : 'Create Tenant'}
               </Button>

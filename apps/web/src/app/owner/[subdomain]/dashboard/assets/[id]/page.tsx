@@ -1,6 +1,7 @@
 'use client';
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { authClient } from '@/lib/api/publicClient';
 import { ArrowLeft, Home, Loader2, Calendar, FileText } from 'lucide-react';
@@ -24,7 +25,7 @@ export default function OwnerAssetDetailPage() {
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
       </div>
     );
   }
@@ -42,9 +43,9 @@ export default function OwnerAssetDetailPage() {
         </Button>
         <Card>
           <CardContent className="flex flex-col items-center justify-center py-16">
-            <Home className="h-16 w-16 text-slate-300 mb-4" />
-            <p className="text-slate-500 text-lg">Asset not found</p>
-            <p className="text-slate-400 text-sm mt-1">
+            <Home className="h-16 w-16 text-muted-foreground/30 mb-4" />
+            <p className="text-muted-foreground text-lg">Asset not found</p>
+            <p className="text-muted-foreground/70 text-sm mt-1">
               This asset does not exist or you do not have access to it
             </p>
           </CardContent>
@@ -71,9 +72,9 @@ export default function OwnerAssetDetailPage() {
 
       {/* Asset Name */}
       <div>
-        <h2 className="text-3xl font-bold text-slate-900">{asset.name}</h2>
+        <h2 className="text-3xl font-bold text-foreground">{asset.name}</h2>
         {asset.description && (
-          <p className="text-slate-600 mt-2">{asset.description}</p>
+          <p className="text-muted-foreground mt-2">{asset.description}</p>
         )}
       </div>
 
@@ -89,11 +90,11 @@ export default function OwnerAssetDetailPage() {
           <CardContent>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {asset.propertyValues.map((prop: any) => (
-                <div key={prop.assetPropertyId} className="border-b border-slate-100 pb-3 last:border-0">
-                  <dt className="text-sm font-medium text-slate-600">
+                <div key={prop.assetPropertyId} className="border-b border-border pb-3 last:border-0">
+                  <dt className="text-sm font-medium text-muted-foreground">
                     {prop.assetProperty.name}
                   </dt>
-                  <dd className="text-base text-slate-900 mt-1">
+                  <dd className="text-base text-foreground mt-1">
                     {prop.value || 'N/A'}
                   </dd>
                 </div>
@@ -112,12 +113,9 @@ export default function OwnerAssetDetailPage() {
           <CardContent>
             <div className="flex flex-wrap gap-2">
               {asset.tags.map((tag: any) => (
-                <span
-                  key={tag.id}
-                  className="px-3 py-1 bg-blue-100 text-blue-700 rounded-full text-sm font-medium"
-                >
+                <Badge key={tag.id} variant="secondary">
                   {tag.name}
-                </span>
+                </Badge>
               ))}
             </div>
           </CardContent>
@@ -129,7 +127,7 @@ export default function OwnerAssetDetailPage() {
         <Card className="hover:shadow-md transition-shadow">
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-lg">
-              <Calendar className="h-5 w-5 text-blue-600" />
+              <Calendar className="h-5 w-5 text-primary" />
               Bookings
             </CardTitle>
             <CardDescription>View bookings for this asset</CardDescription>
@@ -146,7 +144,7 @@ export default function OwnerAssetDetailPage() {
         <Card className="hover:shadow-md transition-shadow">
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-lg">
-              <FileText className="h-5 w-5 text-orange-600" />
+              <FileText className="h-5 w-5 text-primary" />
               Maintenance
             </CardTitle>
             <CardDescription>View maintenance tasks for this asset</CardDescription>
@@ -169,31 +167,29 @@ export default function OwnerAssetDetailPage() {
         <CardContent>
           <dl className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <dt className="text-sm font-medium text-slate-600">Asset ID</dt>
-              <dd className="text-base text-slate-900 mt-1 font-mono text-sm">{asset.id}</dd>
+              <dt className="text-sm font-medium text-muted-foreground">Asset ID</dt>
+              <dd className="text-base text-foreground mt-1 font-mono text-sm">{asset.id}</dd>
             </div>
             <div>
-              <dt className="text-sm font-medium text-slate-600">Created</dt>
-              <dd className="text-base text-slate-900 mt-1">
+              <dt className="text-sm font-medium text-muted-foreground">Created</dt>
+              <dd className="text-base text-foreground mt-1">
                 {new Date(asset.createdAt).toLocaleDateString()}
               </dd>
             </div>
             {asset.updatedAt && (
               <div>
-                <dt className="text-sm font-medium text-slate-600">Last Updated</dt>
-                <dd className="text-base text-slate-900 mt-1">
+                <dt className="text-sm font-medium text-muted-foreground">Last Updated</dt>
+                <dd className="text-base text-foreground mt-1">
                   {new Date(asset.updatedAt).toLocaleDateString()}
                 </dd>
               </div>
             )}
             <div>
-              <dt className="text-sm font-medium text-slate-600">Availability</dt>
-              <dd className="text-base text-slate-900 mt-1">
-                <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                  asset.available ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
-                }`}>
+              <dt className="text-sm font-medium text-muted-foreground">Availability</dt>
+              <dd className="text-base text-foreground mt-1">
+                <Badge variant={asset.available ? 'default' : 'destructive'}>
                   {asset.available ? 'Available' : 'Unavailable'}
-                </span>
+                </Badge>
               </dd>
             </div>
           </dl>
@@ -208,7 +204,7 @@ export default function OwnerAssetDetailPage() {
           <CardContent>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               {asset.images.map((image: any, index: number) => (
-                <div key={image.id} className="relative h-64 rounded-lg overflow-hidden bg-slate-200">
+                <div key={image.id} className="relative h-64 rounded-lg overflow-hidden bg-muted">
                   <Image
                     src={image.filePath}
                     alt={`${asset.name} - Image ${index + 1}`}

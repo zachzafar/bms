@@ -99,15 +99,15 @@ export default function InvoicesPage() {
   const getStatusColor = (status: string) => {
     switch (status.toLowerCase()) {
       case 'paid':
-        return 'bg-green-100 text-green-800';
+        return 'bg-primary/10 text-primary';
       case 'unpaid':
-        return 'bg-red-100 text-red-800';
+        return 'bg-destructive/10 text-destructive';
       case 'partial':
-        return 'bg-yellow-100 text-yellow-800';
+        return 'bg-secondary/10 text-secondary-foreground';
       case 'overdue':
         return 'bg-orange-100 text-orange-800';
       default:
-        return 'bg-gray-100 text-gray-800';
+        return 'bg-muted text-gray-800';
     }
   };
 
@@ -195,7 +195,7 @@ export default function InvoicesPage() {
             <div className="space-y-2">
               <Label>Search</Label>
               <div className="relative">
-                <Search className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
+                <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
                 <Input
                   placeholder="Search invoices..."
                   value={searchTerm}
@@ -251,7 +251,7 @@ export default function InvoicesPage() {
         </CardHeader>
         <CardContent>
           {filteredInvoices.length === 0 ? (
-            <div className="text-center py-8 text-gray-500">
+            <div className="text-center py-8 text-muted-foreground">
               No invoices found matching your criteria.
             </div>
           ) : (
@@ -269,7 +269,7 @@ export default function InvoicesPage() {
               </TableHeader>
               <TableBody>
                 {filteredInvoices.map((invoice) => (
-                  <TableRow key={invoice.id} className={isOverdue(invoice.dueDate, invoice.status) ? 'bg-red-50' : ''}>
+                  <TableRow key={invoice.id} className={isOverdue(invoice.dueDate, invoice.status) ? 'bg-destructive/5' : ''}>
                     <TableCell className="font-medium">{invoice.invoiceNumber}</TableCell>
                     <TableCell>{getCustomerName(String(invoice.customerId))}</TableCell>
                     <TableCell>
@@ -282,7 +282,7 @@ export default function InvoicesPage() {
                     </TableCell>
                     <TableCell>{new Date(invoice.issueDate).toLocaleDateString()}</TableCell>
                     <TableCell>
-                      <span className={isOverdue(invoice.dueDate, invoice.status) ? 'text-red-600 font-medium' : ''}>
+                      <span className={isOverdue(invoice.dueDate, invoice.status) ? 'text-destructive font-medium' : ''}>
                         {new Date(invoice.dueDate).toLocaleDateString()}
                       </span>
                     </TableCell>

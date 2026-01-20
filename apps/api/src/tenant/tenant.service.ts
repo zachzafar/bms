@@ -1,4 +1,4 @@
-import { Inject, Injectable, Logger, UnauthorizedException } from '@nestjs/common';
+import { ConflictException, Inject, Injectable, Logger, NotFoundException, UnauthorizedException } from '@nestjs/common';
 import { MySql2Database } from 'drizzle-orm/mysql2';
 import { DrizzleAsyncProvider } from 'src/drizzle/drizzle.provider';
 import * as schema from '@repo/api-contract';
@@ -82,5 +82,38 @@ export class TenantService {
             throw new UnauthorizedException(`Not authorized to access this resource`)
         }
     }
+
+    async updateTenant(tenantId: string, tenantData: schema.UpdateTenant) {
+        try {
+          const existingTenant = await this.db.query.Tenant.findFirst({
+            where: (tenant, { eq }) => eq(tenant.id, tenantId)
+          });
+    
+          if (!existingTenant) {
+            throw new NotFoundException('Tenant not found');
+          }
+          const { subdomain } = tenantData
+          // Check subdomain uniqueness if updating
+          if (subdomain && subdomain !== existingTenant.subdomain) {
+            const duplicateTenant = await this.db.query.Tenant.findFirst({
+              where: (tenant, { eq }) => eq(tenant.subdomain, subdomain)
+            });
+    
+            if (duplicateTenant) {
+              throw new ConflictException('Tenant with this subdomain already exists');
+            }
+          }
+    
+          await this.db.update(schema.Tenant)
+            .set(tenantData)
+            .where(eq(schema.Tenant.id, tenantId));
+    
+          this.logger.log(`Updated tenant: ${tenantId}`);
+          return { message: 'Tenant updated successfully' };
+        } catch (error: any) {
+          this.logger.error(`Failed to update tenant: ${error.message}`);
+          throw error;
+        }
+      }
 
 }

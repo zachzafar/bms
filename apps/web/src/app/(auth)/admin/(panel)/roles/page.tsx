@@ -146,8 +146,8 @@ export default function RolesPage() {
     <div className="space-y-8">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">Role Management</h1>
-          <p className=" mt-2 text-gray-600">
+          <h1 className="text-3xl font-bold text-foreground">Role Management</h1>
+          <p className=" mt-2 text-muted-foreground">
             Create, edit, and manage user roles and their permissions.
           </p>
         </div>
@@ -262,8 +262,8 @@ export default function RolesPage() {
 
       <Card className="bg-white border-white">
         <CardHeader>
-          <CardTitle className="font-bold text-gray-900">Roles</CardTitle>
-          <CardDescription className=" mt-2 text-gray-600">
+          <CardTitle className="font-bold text-foreground">Roles</CardTitle>
+          <CardDescription className=" mt-2 text-muted-foreground">
             Manage user roles and their permissions
           </CardDescription>
         </CardHeader>
@@ -281,20 +281,20 @@ export default function RolesPage() {
               {roles.length > 0 ? (
                 roles.map((role) => (
                   <TableRow key={role.roleId}>
-                    <TableCell className="text-gray-600">{role.roleId}</TableCell>
-                    <TableCell className="text-gray-600">{role.name}</TableCell>
-                    <TableCell className="text-gray-600">
+                    <TableCell className="text-muted-foreground">{role.roleId}</TableCell>
+                    <TableCell className="text-muted-foreground">{role.name}</TableCell>
+                    <TableCell className="text-muted-foreground">
                       <div className="flex flex-wrap gap-1">
                         {role.permissions.slice(0, 3).map((permission) => (
                           <span
                             key={permission}
-                            className="bg-slate-100 text-slate-800 text-xs px-2 py-1 rounded-full"
+                            className="bg-muted text-foreground text-xs px-2 py-1 rounded-full"
                           >
                             {permission}
                           </span>
                         ))}
                         {role.permissions.length > 3 && (
-                          <span className="bg-slate-100 text-slate-800 text-xs px-2 py-1 rounded-full">
+                          <span className="bg-muted text-foreground text-xs px-2 py-1 rounded-full">
                             +{role.permissions.length - 3} more
                           </span>
                         )}
@@ -308,7 +308,7 @@ export default function RolesPage() {
                       <Button
                         variant="ghost"
                         size="sm"
-                        className="text-red-600 hover:text-red-800"
+                        className="text-destructive hover:text-destructive"
                         onClick={() => {
                           const confirmed = confirm(
                             `Are you sure you want to delete the role "${role.name}"?`

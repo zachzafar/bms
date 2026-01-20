@@ -60,16 +60,16 @@ export default function UsersPage() {
   return (
     <div className="space-y-8">
       <div>
-        <h1 className="text-3xl font-bold text-gray-900">User Management</h1>
-        <p className=" mt-2 text-gray-600">
+        <h1 className="text-3xl font-bold text-foreground">User Management</h1>
+        <p className=" mt-2 text-muted-foreground">
           Create, edit, and manage user accounts and permissions.
         </p>
       </div>
 
       <Card className= "bg-white border-white">
         <CardHeader>
-          <CardTitle className="font-bold text-gray-900">User List</CardTitle>
-          <CardDescription className=" mt-2 text-gray-600">Manage existing users</CardDescription>
+          <CardTitle className="font-bold text-foreground">User List</CardTitle>
+          <CardDescription className=" mt-2 text-muted-foreground">Manage existing users</CardDescription>
         </CardHeader>
         <CardContent>
           <div className="flex justify-between items-center mb-4">
@@ -113,7 +113,7 @@ export default function UsersPage() {
             </Dialog>
           </div>
 
-          <Table className=" mt-2 text-gray-900">
+          <Table className=" mt-2 text-foreground">
             <TableHeader>
               <TableRow>
                 <TableHead className=" mt-2 text-gray-1200">Name</TableHead>

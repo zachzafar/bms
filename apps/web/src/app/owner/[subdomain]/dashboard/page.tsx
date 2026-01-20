@@ -1,8 +1,9 @@
 'use client';
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
 import { authClient } from '@/lib/api/publicClient';
-import { Calendar, Wrench, FileText, DollarSign, TrendingUp, AlertCircle } from 'lucide-react';
+import { Calendar, Wrench, FileText, DollarSign, AlertCircle } from 'lucide-react';
 import { Loader2 } from 'lucide-react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
@@ -36,7 +37,7 @@ export default function OwnerDashboardPage() {
   if (loadingBookings || loadingMaintenance) {
     return (
       <div className="flex items-center justify-center h-64">
-        <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
       </div>
     );
   }
@@ -45,53 +46,53 @@ export default function OwnerDashboardPage() {
     <div className="space-y-6">
       {/* Welcome Section */}
       <div>
-        <h2 className="text-3xl font-bold text-slate-900">Dashboard Overview</h2>
-        <p className="text-slate-600 mt-2">View and track your property operations</p>
+        <h2 className="text-3xl font-bold text-foreground">Dashboard Overview</h2>
+        <p className="text-muted-foreground mt-2">View and track your property operations</p>
       </div>
 
       {/* Stats Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-slate-600">Total Bookings</CardTitle>
-            <Calendar className="h-4 w-4 text-blue-600" />
+            <CardTitle className="text-sm font-medium text-muted-foreground">Total Bookings</CardTitle>
+            <Calendar className="h-4 w-4 text-primary" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-slate-900">{bookingsCount}</div>
-            <p className="text-xs text-slate-500 mt-1">All time bookings</p>
+            <div className="text-2xl font-bold text-foreground">{bookingsCount}</div>
+            <p className="text-xs text-muted-foreground mt-1">All time bookings</p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-slate-600">Maintenance Tasks</CardTitle>
-            <Wrench className="h-4 w-4 text-orange-600" />
+            <CardTitle className="text-sm font-medium text-muted-foreground">Maintenance Tasks</CardTitle>
+            <Wrench className="h-4 w-4 text-primary" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-slate-900">{maintenanceCount}</div>
-            <p className="text-xs text-slate-500 mt-1">Active and completed</p>
+            <div className="text-2xl font-bold text-foreground">{maintenanceCount}</div>
+            <p className="text-xs text-muted-foreground mt-1">Active and completed</p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-slate-600">Invoices</CardTitle>
-            <FileText className="h-4 w-4 text-green-600" />
+            <CardTitle className="text-sm font-medium text-muted-foreground">Invoices</CardTitle>
+            <FileText className="h-4 w-4 text-primary" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-slate-900">0</div>
-            <p className="text-xs text-slate-500 mt-1">Coming soon</p>
+            <div className="text-2xl font-bold text-foreground">0</div>
+            <p className="text-xs text-muted-foreground mt-1">Coming soon</p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-slate-600">Payments</CardTitle>
-            <DollarSign className="h-4 w-4 text-purple-600" />
+            <CardTitle className="text-sm font-medium text-muted-foreground">Payments</CardTitle>
+            <DollarSign className="h-4 w-4 text-primary" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-slate-900">$0</div>
-            <p className="text-xs text-slate-500 mt-1">Coming soon</p>
+            <div className="text-2xl font-bold text-foreground">$0</div>
+            <p className="text-xs text-muted-foreground mt-1">Coming soon</p>
           </CardContent>
         </Card>
       </div>
@@ -105,7 +106,7 @@ export default function OwnerDashboardPage() {
               <span>Recent Bookings</span>
               <Link
                 href={`/owner/${subdomain}/dashboard/bookings`}
-                className="text-sm font-normal text-blue-600 hover:text-blue-700"
+                className="text-sm font-normal text-primary hover:text-primary/80"
               >
                 View all
               </Link>
@@ -114,27 +115,23 @@ export default function OwnerDashboardPage() {
           </CardHeader>
           <CardContent>
             {recentBookings.length === 0 ? (
-              <div className="text-center py-8 text-slate-500">
+              <div className="text-center py-8 text-muted-foreground">
                 <Calendar className="h-12 w-12 mx-auto mb-2 opacity-20" />
                 <p>No bookings yet</p>
               </div>
             ) : (
               <div className="space-y-4">
                 {recentBookings.map((booking: any) => (
-                  <div key={booking.id} className="flex items-start justify-between border-b border-slate-100 pb-3 last:border-0">
+                  <div key={booking.id} className="flex items-start justify-between border-b border-border pb-3 last:border-0">
                     <div className="flex-1">
-                      <p className="font-medium text-slate-900">{booking.asset?.name || 'Asset'}</p>
-                      <p className="text-sm text-slate-500">
+                      <p className="font-medium text-foreground">{booking.asset?.name || 'Asset'}</p>
+                      <p className="text-sm text-muted-foreground">
                         {new Date(booking.startDate).toLocaleDateString()} - {new Date(booking.endDate).toLocaleDateString()}
                       </p>
                     </div>
-                    <span className={`text-xs px-2 py-1 rounded-full ${
-                      booking.status === 'confirmed' ? 'bg-green-100 text-green-700' :
-                      booking.status === 'pending' ? 'bg-yellow-100 text-yellow-700' :
-                      'bg-slate-100 text-slate-700'
-                    }`}>
+                    <Badge variant={booking.status === 'confirmed' ? 'default' : booking.status === 'pending' ? 'secondary' : 'outline'}>
                       {booking.status}
-                    </span>
+                    </Badge>
                   </div>
                 ))}
               </div>
@@ -149,7 +146,7 @@ export default function OwnerDashboardPage() {
               <span>Recent Maintenance</span>
               <Link
                 href={`/owner/${subdomain}/dashboard/maintenance`}
-                className="text-sm font-normal text-blue-600 hover:text-blue-700"
+                className="text-sm font-normal text-primary hover:text-primary/80"
               >
                 View all
               </Link>
@@ -158,25 +155,21 @@ export default function OwnerDashboardPage() {
           </CardHeader>
           <CardContent>
             {recentMaintenance.length === 0 ? (
-              <div className="text-center py-8 text-slate-500">
+              <div className="text-center py-8 text-muted-foreground">
                 <Wrench className="h-12 w-12 mx-auto mb-2 opacity-20" />
                 <p>No maintenance tasks yet</p>
               </div>
             ) : (
               <div className="space-y-4">
                 {recentMaintenance.map((task: any) => (
-                  <div key={task.id} className="flex items-start justify-between border-b border-slate-100 pb-3 last:border-0">
+                  <div key={task.id} className="flex items-start justify-between border-b border-border pb-3 last:border-0">
                     <div className="flex-1">
-                      <p className="font-medium text-slate-900">{task.title}</p>
-                      <p className="text-sm text-slate-500 line-clamp-1">{task.description || 'No description'}</p>
+                      <p className="font-medium text-foreground">{task.title}</p>
+                      <p className="text-sm text-muted-foreground line-clamp-1">{task.description || 'No description'}</p>
                     </div>
-                    <span className={`text-xs px-2 py-1 rounded-full ${
-                      task.status === 'completed' ? 'bg-green-100 text-green-700' :
-                      task.status === 'in_progress' ? 'bg-blue-100 text-blue-700' :
-                      'bg-slate-100 text-slate-700'
-                    }`}>
-                      {task.status}
-                    </span>
+                    <Badge variant={task.status === 'completed' ? 'default' : task.status === 'in_progress' ? 'secondary' : 'outline'}>
+                      {task.status.replace('_', ' ')}
+                    </Badge>
                   </div>
                 ))}
               </div>
@@ -186,12 +179,12 @@ export default function OwnerDashboardPage() {
       </div>
 
       {/* Info Banner */}
-      <Card className="border-blue-200 bg-blue-50">
+      <Card className="border-primary/20 bg-primary/5">
         <CardContent className="flex items-start space-x-3 pt-6">
-          <AlertCircle className="h-5 w-5 text-blue-600 mt-0.5" />
+          <AlertCircle className="h-5 w-5 text-primary mt-0.5" />
           <div>
-            <h3 className="font-medium text-blue-900">Read-Only Access</h3>
-            <p className="text-sm text-blue-700 mt-1">
+            <h3 className="font-medium text-foreground">Read-Only Access</h3>
+            <p className="text-sm text-muted-foreground mt-1">
               This portal provides view-only access to your property information. For any changes or updates, please contact your property manager.
             </p>
           </div>

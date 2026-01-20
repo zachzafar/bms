@@ -154,7 +154,7 @@ export default function Teams() {
                       size='icon'
                       onClick={() => handleDeleteTeam(team.id)}
                     >
-                      <Trash2 className='h-4 w-4 text-red-600' />
+                      <Trash2 className='h-4 w-4 text-destructive' />
                     </Button>
                   </TableCell>
                 </TableRow>
@@ -190,7 +190,7 @@ export default function Teams() {
                             updatedTeam.members.find((m) => m.id === member.id)!.roles.splice(index, 1);
                             handleUpdateTeam(updatedTeam);
                           }}>
-                            <X className='ml-1 h-4 w-4 text-red-600' />
+                            <X className='ml-1 h-4 w-4 text-destructive' />
                           </button>
                         </span>
                       ))}

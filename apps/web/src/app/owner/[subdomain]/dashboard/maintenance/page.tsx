@@ -42,39 +42,39 @@ export default function OwnerMaintenancePage() {
   const maintenanceTasks = maintenanceResponse?.status === 200 ? maintenanceResponse.body.data : [];
   const pagination = maintenanceResponse?.status === 200 ? maintenanceResponse.body.pagination : null;
 
-  const getStatusColor = (status: string) => {
+  const getStatusVariant = (status: string): 'default' | 'secondary' | 'destructive' | 'outline' => {
     switch (status) {
       case 'completed':
-        return 'bg-green-100 text-green-700';
+        return 'default';
       case 'in_progress':
-        return 'bg-blue-100 text-blue-700';
+        return 'secondary';
       case 'pending':
-        return 'bg-yellow-100 text-yellow-700';
+        return 'outline';
       case 'cancelled':
-        return 'bg-red-100 text-red-700';
+        return 'destructive';
       default:
-        return 'bg-slate-100 text-slate-700';
+        return 'outline';
     }
   };
 
-  const getPriorityColor = (priority: string) => {
+  const getPriorityVariant = (priority: string): 'default' | 'secondary' | 'destructive' | 'outline' => {
     switch (priority) {
       case 'high':
-        return 'bg-red-100 text-red-700';
+        return 'destructive';
       case 'medium':
-        return 'bg-orange-100 text-orange-700';
+        return 'secondary';
       case 'low':
-        return 'bg-green-100 text-green-700';
+        return 'outline';
       default:
-        return 'bg-slate-100 text-slate-700';
+        return 'outline';
     }
   };
 
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="text-3xl font-bold text-slate-900">Maintenance</h2>
-        <p className="text-slate-600 mt-2">View all maintenance tasks for your properties</p>
+        <h2 className="text-3xl font-bold text-foreground">Maintenance</h2>
+        <p className="text-muted-foreground mt-2">View all maintenance tasks for your properties</p>
       </div>
 
       <Card>
@@ -87,7 +87,7 @@ export default function OwnerMaintenancePage() {
               </CardDescription>
             </div>
             <div className="relative w-64">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-slate-400" />
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
                 placeholder="Search tasks..."
                 value={search}
@@ -103,13 +103,13 @@ export default function OwnerMaintenancePage() {
         <CardContent>
           {isLoading ? (
             <div className="flex items-center justify-center h-64">
-              <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
+              <Loader2 className="h-8 w-8 animate-spin text-primary" />
             </div>
           ) : maintenanceTasks.length === 0 ? (
             <div className="text-center py-12">
               <Wrench className="h-16 w-16 mx-auto mb-4 opacity-20" />
-              <h3 className="text-lg font-medium text-slate-900 mb-2">No maintenance tasks found</h3>
-              <p className="text-slate-500">
+              <h3 className="text-lg font-medium text-foreground mb-2">No maintenance tasks found</h3>
+              <p className="text-muted-foreground">
                 {search ? 'Try adjusting your search criteria' : 'No maintenance tasks have been created yet'}
               </p>
             </div>
@@ -140,13 +140,13 @@ export default function OwnerMaintenancePage() {
                         </TableCell>
                         <TableCell>{task.assetId || 'N/A'}</TableCell>
                         <TableCell>
-                          <Badge className={getPriorityColor(task.priority || 'low')}>
+                          <Badge variant={getPriorityVariant(task.priority || 'low')}>
                             {task.priority || 'low'}
                           </Badge>
                         </TableCell>
                         <TableCell>
-                          <Badge className={getStatusColor(task.status || 'pending')}>
-                            {task.status || 'pending'}
+                          <Badge variant={getStatusVariant(task.status || 'pending')}>
+                            {(task.status || 'pending').replace('_', ' ')}
                           </Badge>
                         </TableCell>
                         <TableCell>

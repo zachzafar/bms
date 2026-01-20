@@ -46,19 +46,19 @@ export function TaskDetail({ task, onClose }: TaskDetailProps) {
   const getStatusBadge = (status: string) => {
     const colors = {
       Pending: "bg-yellow-100 text-yellow-800",
-      Completed: "bg-green-100 text-green-800",
-      Overdue: "bg-red-100 text-red-800",
+      Completed: "bg-green-500/10 text-green-600",
+      Overdue: "bg-destructive/10 text-destructive",
     }
-    return colors[status as keyof typeof colors] || "bg-gray-100 text-gray-800"
+    return colors[status as keyof typeof colors] || "bg-muted text-foreground"
   }
 
   const getPriorityBadge = (priority: string) => {
     const colors = {
-      High: "bg-red-100 text-red-800",
+      High: "bg-destructive/10 text-destructive",
       Medium: "bg-orange-100 text-orange-800",
-      Low: "bg-gray-100 text-gray-800",
+      Low: "bg-muted text-foreground",
     }
-    return colors[priority as keyof typeof colors] || "bg-gray-100 text-gray-800"
+    return colors[priority as keyof typeof colors] || "bg-muted text-foreground"
   }
 
   const isOverdue = (dueDate: string, status: string) => {
@@ -95,15 +95,15 @@ export function TaskDetail({ task, onClose }: TaskDetailProps) {
       {/* Task Header */}
       <div className="flex items-start justify-between">
         <div className="flex-1">
-          <h2 className="text-2xl font-bold text-gray-900">Task #{task.id}</h2>
-          <p className="text-gray-600 mt-1">{task.description}</p>
+          <h2 className="text-2xl font-bold text-foreground">Task #{task.id}</h2>
+          <p className="text-muted-foreground mt-1">{task.description}</p>
         </div>
         <div className="flex space-x-2">
           <Badge className={getStatusBadge(task.status)}>{task.status}</Badge>
           <Badge className={getPriorityBadge(task.priority)}>{task.priority}</Badge>
           <Badge variant="secondary">{task.category}</Badge>
           {isOverdue(task.dueDate, task.status) && (
-            <Badge className="bg-red-100 text-red-800">
+            <Badge className="bg-destructive/10 text-destructive">
               <AlertTriangle className="h-3 w-3 mr-1" />
               Overdue
             </Badge>
@@ -122,17 +122,17 @@ export function TaskDetail({ task, onClose }: TaskDetailProps) {
             <CardContent className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <h4 className="font-medium text-gray-900 mb-2">Assignment</h4>
+                  <h4 className="font-medium text-foreground mb-2">Assignment</h4>
                   <div className="flex items-center text-sm">
-                    <User className="h-4 w-4 mr-2 text-gray-400" />
+                    <User className="h-4 w-4 mr-2 text-muted-foreground" />
                     {task.assignedTo}
                   </div>
                 </div>
                 <div>
-                  <h4 className="font-medium text-gray-900 mb-2">Due Date</h4>
+                  <h4 className="font-medium text-foreground mb-2">Due Date</h4>
                   <div className="flex items-center text-sm">
-                    <Calendar className="h-4 w-4 mr-2 text-gray-400" />
-                    <span className={isOverdue(task.dueDate, task.status) ? "text-red-600 font-medium" : ""}>
+                    <Calendar className="h-4 w-4 mr-2 text-muted-foreground" />
+                    <span className={isOverdue(task.dueDate, task.status) ? "text-destructive font-medium" : ""}>
                       {task.dueDate}
                     </span>
                   </div>
@@ -141,29 +141,29 @@ export function TaskDetail({ task, onClose }: TaskDetailProps) {
               <Separator />
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <h4 className="font-medium text-gray-900 mb-2">Estimated Time</h4>
+                  <h4 className="font-medium text-foreground mb-2">Estimated Time</h4>
                   <div className="flex items-center text-sm">
-                    <Clock className="h-4 w-4 mr-2 text-gray-400" />
+                    <Clock className="h-4 w-4 mr-2 text-muted-foreground" />
                     {task.estimatedHours} hours
                   </div>
                 </div>
                 {task.clientName && (
                   <div>
-                    <h4 className="font-medium text-gray-900 mb-2">Related Client</h4>
+                    <h4 className="font-medium text-foreground mb-2">Related Client</h4>
                     <div className="text-sm">{task.clientName}</div>
                   </div>
                 )}
               </div>
               <Separator />
               <div>
-                <h4 className="font-medium text-gray-900 mb-2">Created</h4>
-                <div className="text-sm text-gray-600">{task.createdAt}</div>
+                <h4 className="font-medium text-foreground mb-2">Created</h4>
+                <div className="text-sm text-muted-foreground">{task.createdAt}</div>
               </div>
               {task.completedAt && (
                 <>
                   <Separator />
                   <div>
-                    <h4 className="font-medium text-gray-900 mb-2">Completed</h4>
+                    <h4 className="font-medium text-foreground mb-2">Completed</h4>
                     <div className="flex items-center text-sm text-green-600">
                       <CheckCircle2 className="h-4 w-4 mr-2" />
                       {task.completedAt}
@@ -188,13 +188,13 @@ export function TaskDetail({ task, onClose }: TaskDetailProps) {
                       <div className="flex-shrink-0 mt-1">{getActivityIcon(activity.type)}</div>
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center justify-between">
-                          <p className="text-sm font-medium text-gray-900">{activity.title}</p>
-                          <span className="text-xs text-gray-500">
+                          <p className="text-sm font-medium text-foreground">{activity.title}</p>
+                          <span className="text-xs text-muted-foreground">
                             {activity.date} at {activity.time}
                           </span>
                         </div>
-                        <p className="text-sm text-gray-600 mt-1">{activity.description}</p>
-                        <p className="text-xs text-gray-500 mt-1">by {activity.user}</p>
+                        <p className="text-sm text-muted-foreground mt-1">{activity.description}</p>
+                        <p className="text-xs text-muted-foreground mt-1">by {activity.user}</p>
                       </div>
                     </div>
                     {index < mockActivity.length - 1 && <Separator className="mt-4" />}
@@ -215,10 +215,10 @@ export function TaskDetail({ task, onClose }: TaskDetailProps) {
             <CardContent className="space-y-4">
               {daysRemaining !== null && (
                 <div className="flex justify-between items-center">
-                  <span className="text-sm text-gray-600">Days Remaining</span>
+                  <span className="text-sm text-muted-foreground">Days Remaining</span>
                   <span
                     className={`font-semibold ${
-                      daysRemaining < 0 ? "text-red-600" : daysRemaining <= 1 ? "text-orange-600" : "text-green-600"
+                      daysRemaining < 0 ? "text-destructive" : daysRemaining <= 1 ? "text-orange-500" : "text-green-600"
                     }`}
                   >
                     {daysRemaining < 0 ? `${Math.abs(daysRemaining)} overdue` : `${daysRemaining} days`}
@@ -226,11 +226,11 @@ export function TaskDetail({ task, onClose }: TaskDetailProps) {
                 </div>
               )}
               <div className="flex justify-between items-center">
-                <span className="text-sm text-gray-600">Estimated Hours</span>
+                <span className="text-sm text-muted-foreground">Estimated Hours</span>
                 <span className="font-semibold">{task.estimatedHours}h</span>
               </div>
               <div className="flex justify-between items-center">
-                <span className="text-sm text-gray-600">Time Logged</span>
+                <span className="text-sm text-muted-foreground">Time Logged</span>
                 <span className="font-semibold">0h</span>
               </div>
             </CardContent>
@@ -271,17 +271,17 @@ export function TaskDetail({ task, onClose }: TaskDetailProps) {
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="flex justify-between items-center">
-                <span className="text-sm text-gray-600">Days Open</span>
+                <span className="text-sm text-muted-foreground">Days Open</span>
                 <span className="font-semibold">
                   {Math.ceil((new Date().getTime() - new Date(task.createdAt).getTime()) / (1000 * 3600 * 24))}
                 </span>
               </div>
               <div className="flex justify-between items-center">
-                <span className="text-sm text-gray-600">Comments</span>
+                <span className="text-sm text-muted-foreground">Comments</span>
                 <span className="font-semibold">{mockActivity.filter((a) => a.type === "comment").length}</span>
               </div>
               <div className="flex justify-between items-center">
-                <span className="text-sm text-gray-600">Updates</span>
+                <span className="text-sm text-muted-foreground">Updates</span>
                 <span className="font-semibold">{mockActivity.length}</span>
               </div>
             </CardContent>

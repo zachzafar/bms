@@ -41,7 +41,7 @@ export default function AdminLayout({
   children: React.ReactNode;
 }) {
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-background">
       {/* Header */}
       <header className="bg-white shadow-sm border-b">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -53,7 +53,7 @@ export default function AdminLayout({
                   Back to Hub
                 </Button>
               </Link>
-              <h1 className="text-2xl font-bold text-gray-900">BookOS Admin</h1>
+              <h1 className="text-2xl font-bold text-foreground">BookOS Admin</h1>
             </div>
           </div>
         </div>
@@ -62,7 +62,7 @@ export default function AdminLayout({
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Admin Navigation */}
         <div className="mb-8">
-          <h2 className="text-xl font-semibold text-gray-900 mb-4">Administrative Tools</h2>
+          <h2 className="text-xl font-semibold text-foreground mb-4">Administrative Tools</h2>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
             {adminNavItems.map((item) => (
               <Link key={item.href} href={item.href}>
@@ -71,8 +71,8 @@ export default function AdminLayout({
                     <div className={`${item.color} p-3 rounded-lg w-fit`}>
                       {item.icon}
                     </div>
-                    <CardTitle className="text-base text-gray-900">{item.title}</CardTitle>
-                    <CardDescription className="text-sm text-gray-600">{item.description}</CardDescription>
+                    <CardTitle className="text-base text-foreground">{item.title}</CardTitle>
+                    <CardDescription className="text-sm text-muted-foreground">{item.description}</CardDescription>
                   </CardHeader>
                 </Card>
               </Link>

@@ -21,9 +21,11 @@ export const Tenant = mysqlTable("tenants", {
 
 export const InsertTenantSchema = createInsertSchema(Tenant);
 export const SelectTenantSchema = createSelectSchema(Tenant);
+export const UpdateTenantSchema = InsertTenantSchema.partial()
 
 export type InsertTenant = z.infer<typeof InsertTenantSchema>
 export type SelectTenant = z.infer<typeof SelectTenantSchema>
+export type UpdateTenant = z.infer<typeof UpdateTenantSchema>
 
 export const TenantRelations = relations(Tenant, ({ one, many }) => ({
     forms: many(BookingForm),

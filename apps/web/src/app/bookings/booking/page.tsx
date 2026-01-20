@@ -61,7 +61,7 @@ function CopyableId({ id }: { id: string }) {
         title="Copy full ID"
       >
         {copied ? (
-          <Check className="h-3 w-3 text-green-600" />
+          <Check className="h-3 w-3 text-primary" />
         ) : (
           <Copy className="h-3 w-3" />
         )}
@@ -93,13 +93,13 @@ function calculateNights(start: Date | string, end: Date | string) {
 function getStatusBadge(status: string) {
   switch (status) {
     case 'Confirmed':
-      return { variant: 'default' as const, color: 'bg-green-100 text-green-800', icon: CheckCircle };
+      return { variant: 'default' as const, color: 'bg-primary/10 text-primary', icon: CheckCircle };
     case 'Pending':
-      return { variant: 'secondary' as const, color: 'bg-yellow-100 text-yellow-800', icon: Clock };
+      return { variant: 'secondary' as const, color: 'bg-secondary/10 text-secondary-foreground', icon: Clock };
     case 'Cancelled':
-      return { variant: 'destructive' as const, color: 'bg-red-100 text-red-800', icon: XCircle };
+      return { variant: 'destructive' as const, color: 'bg-destructive/10 text-destructive', icon: XCircle };
     default:
-      return { variant: 'outline' as const, color: 'bg-gray-100 text-gray-800', icon: Clock };
+      return { variant: 'outline' as const, color: 'bg-muted text-gray-800', icon: Clock };
   }
 }
 
@@ -519,11 +519,11 @@ export default function Component() {
                         </div>
 
                         {invalidStartOrEnd.length > 0 && (
-                          <div className="mt-2 p-2 border border-red-300 bg-red-50 rounded">
-                            <p className="font-semibold text-red-700">
+                          <div className="mt-2 p-2 border border-red-300 bg-destructive/5 rounded">
+                            <p className="font-semibold text-destructive">
                               The start or end date cannot be on these blocked dates:
                             </p>
-                            <ul className="list-disc ml-5 text-red-600 text-sm">
+                            <ul className="list-disc ml-5 text-destructive text-sm">
                               {invalidStartOrEnd.map(b => {
                                 const start = new Date(b.startDate);
                                 const end = new Date(b.endDate);
@@ -795,21 +795,21 @@ export default function Component() {
                               onClick={() => handleStatusChange(booking.id, 'Confirmed')}
                               disabled={booking.status === 'Confirmed'}
                             >
-                              <CheckCircle className="h-4 w-4 mr-2 text-green-600" />
+                              <CheckCircle className="h-4 w-4 mr-2 text-primary" />
                               Confirm
                             </DropdownMenuItem>
                             <DropdownMenuItem
                               onClick={() => handleStatusChange(booking.id, 'Pending')}
                               disabled={booking.status === 'Pending'}
                             >
-                              <Clock className="h-4 w-4 mr-2 text-yellow-600" />
+                              <Clock className="h-4 w-4 mr-2 text-secondary-foreground" />
                               Set Pending
                             </DropdownMenuItem>
                             <DropdownMenuItem
                               onClick={() => handleStatusChange(booking.id, 'Cancelled')}
                               disabled={booking.status === 'Cancelled'}
                             >
-                              <XCircle className="h-4 w-4 mr-2 text-red-600" />
+                              <XCircle className="h-4 w-4 mr-2 text-destructive" />
                               Cancel
                             </DropdownMenuItem>
                           </DropdownMenuContent>

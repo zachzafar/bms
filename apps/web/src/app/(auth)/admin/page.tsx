@@ -27,7 +27,7 @@ const appOptions: AppOption[] = [
     description: 'Manage property bookings, availability, and reservations',
     icon: <Building className="h-8 w-8" />,
     url: '/bookings',
-    color: 'bg-blue-500'
+    color: 'bg-primary/50'
   },
   {
     id: 'crm',
@@ -35,7 +35,7 @@ const appOptions: AppOption[] = [
     description: 'Customer relationship management and lead tracking',
     icon: <Users className="h-8 w-8" />,
     url: '/crm',
-    color: 'bg-green-500'
+    color: 'bg-primary/50'
   }
 ];
 
@@ -140,30 +140,30 @@ export default function AuthHubPage() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-blue-500"></div>
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-primary"></div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-background">
       {/* Header */}
-      <header className="bg-white shadow-sm border-b">
+      <header className="bg-card shadow-sm border-b border-border">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
             <div className="flex items-center">
-              <Globe className="h-8 w-8 text-blue-600 mr-3" />
-              <h1 className="text-2xl font-bold text-gray-900">BookOS Auth Hub</h1>
+              <Globe className="h-8 w-8 text-primary mr-3" />
+              <h1 className="text-2xl font-bold text-foreground">BookOS Auth Hub</h1>
             </div>
             <div className="flex items-center gap-4">
               <div className="flex items-center space-x-2">
-                <div className="h-8 w-8 rounded-full bg-blue-500 flex items-center justify-center">
-                  <span className="text-sm font-medium text-white">
+                <div className="h-8 w-8 rounded-full bg-primary flex items-center justify-center">
+                  <span className="text-sm font-medium text-primary-foreground">
                     {user?.name?.charAt(0) || 'U'}
                   </span>
                 </div>
-                <span className="text-sm font-medium text-gray-700">{user?.name || 'User'}</span>
+                <span className="text-sm font-medium text-foreground">{user?.name || 'User'}</span>
               </div>
               <Button variant="outline" size="sm" onClick={handleLogout}>
                 <LogOut className="h-4 w-4 mr-2" />
@@ -177,34 +177,33 @@ export default function AuthHubPage() {
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Welcome Section */}
         <div className="mb-8">
-          <h2 className="text-3xl font-bold text-gray-900 mb-2">Welcome to BookOS</h2>
-          <p className="text-lg text-gray-600">
+          <h2 className="text-3xl font-bold text-foreground mb-2">Welcome to BookOS</h2>
+          <p className="text-lg text-muted-foreground">
             Manage your account and access your applications from one central location.
           </p>
         </div>
 
         {/* Application Access Section */}
         <section className="mb-12">
-          <h3 className="text-xl font-semibold text-gray-900 mb-6">Access Your Applications</h3>
+          <h3 className="text-xl font-semibold text-foreground mb-6">Access Your Applications</h3>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {appOptions.map((app) => (
-              <Card key={app.id} className="hover:shadow-lg transition-shadow cursor-pointer bg-white border-white">
+              <Card key={app.id} className="hover:shadow-lg transition-shadow cursor-pointer">
                 <CardHeader>
                   <div className="flex items-center justify-between">
                     <div className={`${app.color} p-3 rounded-lg`}>
                       {app.icon}
                     </div>
                     <Button
-                    className="text-gray-900 bg-white" 
-                      variant="outline" 
+                      variant="outline"
                       size="sm"
                       onClick={() => handleAppRedirect(app)}
                     >
                       Launch App
                     </Button>
                   </div>
-                  <CardTitle className="text-lg text-gray-900">{app.name}</CardTitle>
-                  <CardDescription className="text-gray-600">{app.description}</CardDescription>
+                  <CardTitle className="text-lg">{app.name}</CardTitle>
+                  <CardDescription>{app.description}</CardDescription>
                 </CardHeader>
               </Card>
             ))}
@@ -213,20 +212,20 @@ export default function AuthHubPage() {
 
         {/* Admin Features Section */}
         <section className="mb-12">
-          <h3 className="text-xl font-semibold text-gray-900 mb-6">Administrative Tools</h3>
+          <h3 className="text-xl font-semibold text-foreground mb-6">Administrative Tools</h3>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
             {adminFeatures.map((feature) => (
-              <Card 
-                key={feature.id} 
-                className="hover:shadow-lg transition-shadow cursor-pointer bg-white border-white"
+              <Card
+                key={feature.id}
+                className="hover:shadow-lg transition-shadow cursor-pointer"
                 onClick={() => handleAdminFeature(feature)}
               >
                 <CardHeader className="pb-3">
                   <div className={`${feature.color} p-3 rounded-lg w-fit`}>
                     {feature.icon}
                   </div>
-                  <CardTitle className="text-base text-gray-900">{feature.name}</CardTitle>
-                  <CardDescription className="text-sm text-gray-600">{feature.description}</CardDescription>
+                  <CardTitle className="text-base">{feature.name}</CardTitle>
+                  <CardDescription className="text-sm">{feature.description}</CardDescription>
                 </CardHeader>
               </Card>
             ))}
@@ -235,21 +234,21 @@ export default function AuthHubPage() {
 
         {/* Quick Actions */}
         <section>
-          <h3 className="text-xl font-semibold text-gray-900 mb-6">Quick Actions</h3>
+          <h3 className="text-xl font-semibold text-foreground mb-6">Quick Actions</h3>
           <div className="flex flex-wrap gap-4">
-            <Button className="bg-white border-white text-gray-900" variant="outline" onClick={() => router.push('/admin/users')}>
+            <Button variant="outline" onClick={() => router.push('/admin/users')}>
               <User className="h-4 w-4 mr-2" />
               Manage Users
             </Button>
-            <Button className="bg-white border-white text-gray-900" variant="outline" onClick={() => router.push('/admin/roles')}>
+            <Button variant="outline" onClick={() => router.push('/admin/roles')}>
               <Shield className="h-4 w-4 mr-2" />
               Manage Roles
             </Button>
-            <Button className="bg-white border-white text-gray-900" variant="outline" onClick={() => router.push('/admin/api-keys')}>
+            <Button variant="outline" onClick={() => router.push('/admin/api-keys')}>
               <Key className="h-4 w-4 mr-2" />
               API Keys
             </Button>
-            <Button className="bg-white border-white text-gray-900" variant="outline" onClick={() => router.push('/admin/tenants')}>
+            <Button variant="outline" onClick={() => router.push('/admin/tenants')}>
               <Globe className="h-4 w-4 mr-2" />
               Tenants
             </Button>

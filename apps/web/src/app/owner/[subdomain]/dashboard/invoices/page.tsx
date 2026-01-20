@@ -7,8 +7,8 @@ export default function OwnerInvoicesPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="text-3xl font-bold text-slate-900">Invoices</h2>
-        <p className="text-slate-600 mt-2">View all invoices for your properties</p>
+        <h2 className="text-3xl font-bold text-foreground">Invoices</h2>
+        <p className="text-muted-foreground mt-2">View all invoices for your properties</p>
       </div>
 
       <Card>
@@ -19,8 +19,8 @@ export default function OwnerInvoicesPage() {
         <CardContent>
           <div className="text-center py-16">
             <FileText className="h-20 w-20 mx-auto mb-4 opacity-20" />
-            <h3 className="text-xl font-medium text-slate-900 mb-2">Coming Soon</h3>
-            <p className="text-slate-500 max-w-md mx-auto">
+            <h3 className="text-xl font-medium text-foreground mb-2">Coming Soon</h3>
+            <p className="text-muted-foreground max-w-md mx-auto">
               Invoice management features are currently under development. You'll be able to view and download invoices for your properties once this feature is available.
             </p>
           </div>

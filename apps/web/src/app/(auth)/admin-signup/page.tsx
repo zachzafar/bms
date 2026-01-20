@@ -63,34 +63,34 @@ export default function AdminRegistration() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 to-slate-800 px-4 py-8">
+    <div className="min-h-screen bg-background px-4 py-8">
       <div className="max-w-4xl mx-auto">
         {/* Header */}
         <div className="mb-8">
-          <h1 className="text-3xl font-bold text-white">Admin Registration</h1>
-          <p className="text-slate-300 mt-2">
+          <h1 className="text-3xl font-bold text-foreground">Admin Registration</h1>
+          <p className="text-muted-foreground mt-2">
             Register new system administrators
           </p>
         </div>
 
-        <Card className="border-slate-700 bg-slate-800 text-white">
+        <Card className="bg-card">
           <CardHeader>
             <div className="flex items-center space-x-3">
-              <div className="w-12 h-12 bg-purple-600 rounded-full flex items-center justify-center">
-                <UserPlus className="h-6 w-6 text-white" />
+              <div className="w-12 h-12 bg-primary rounded-full flex items-center justify-center">
+                <UserPlus className="h-6 w-6 text-primary-foreground" />
               </div>
               <div>
                 <CardTitle className="text-xl font-bold">Register New Admin</CardTitle>
-                <p className="text-slate-300 text-sm">
+                <p className="text-muted-foreground text-sm">
                   Create a new administrator account
                 </p>
               </div>
             </div>
           </CardHeader>
           <CardContent>
-            <div className="mb-6 p-4 bg-blue-900/20 rounded-lg border border-blue-700/30">
-              <p className="text-sm text-blue-300">
-                <strong>Important:</strong> Only @tradewindstudio.dev emails are authorized for admin access. 
+            <div className="mb-6 p-4 bg-primary/10 rounded-lg border border-primary/30">
+              <p className="text-sm text-foreground">
+                <strong>Important:</strong> Only @tradewindstudio.dev emails are authorized for admin access.
                 New admins will receive an email to set their password.
               </p>
             </div>
@@ -103,12 +103,11 @@ export default function AdminRegistration() {
                     name="name"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel className="text-slate-200">Full Name</FormLabel>
-                        <Input 
-                          type="text" 
+                        <FormLabel>Full Name</FormLabel>
+                        <Input
+                          type="text"
                           placeholder="Enter full name"
-                          className="bg-slate-700 border-slate-600 text-white placeholder:text-slate-400"
-                          {...field} 
+                          {...field}
                         />
                         <FormMessage />
                       </FormItem>
@@ -119,12 +118,11 @@ export default function AdminRegistration() {
                     name="email"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel className="text-slate-200">Email Address</FormLabel>
-                        <Input 
-                          type="email" 
+                        <FormLabel>Email Address</FormLabel>
+                        <Input
+                          type="email"
                           placeholder="admin@tradewindstudio.dev"
-                          className="bg-slate-700 border-slate-600 text-white placeholder:text-slate-400"
-                          {...field} 
+                          {...field}
                         />
                         <FormMessage />
                       </FormItem>
@@ -137,18 +135,16 @@ export default function AdminRegistration() {
                     type="button"
                     variant="outline"
                     onClick={() => router.push('/admin')}
-                    className="border-slate-600 text-slate-300 hover:bg-slate-700"
                   >
                     Cancel
                   </Button>
-                  <Button 
-                    type="submit" 
-                    className="bg-purple-600 hover:bg-purple-700 text-white" 
+                  <Button
+                    type="submit"
                     disabled={isPending}
                   >
                     {isPending ? (
                       <>
-                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary-foreground mr-2"></div>
                         Registering...
                       </>
                     ) : (
@@ -166,37 +162,37 @@ export default function AdminRegistration() {
 
         {/* Additional Info */}
         <div className="mt-8 grid grid-cols-1 md:grid-cols-3 gap-6">
-          <Card className="border-slate-700 bg-slate-800 text-white">
+          <Card className="bg-card">
             <CardContent className="p-6">
-              <div className="w-10 h-10 bg-green-600 rounded-full flex items-center justify-center mb-4">
+              <div className="w-10 h-10 bg-green-500 rounded-full flex items-center justify-center mb-4">
                 <Shield className="h-5 w-5 text-white" />
               </div>
-              <h3 className="font-semibold text-white mb-2">Secure Access</h3>
-              <p className="text-sm text-slate-300">
+              <h3 className="font-semibold text-foreground mb-2">Secure Access</h3>
+              <p className="text-sm text-muted-foreground">
                 New admins get secure, time-limited password setup links
               </p>
             </CardContent>
           </Card>
 
-          <Card className="border-slate-700 bg-slate-800 text-white">
+          <Card className="bg-card">
             <CardContent className="p-6">
-              <div className="w-10 h-10 bg-blue-600 rounded-full flex items-center justify-center mb-4">
-                <UserPlus className="h-5 w-5 text-white" />
+              <div className="w-10 h-10 bg-primary rounded-full flex items-center justify-center mb-4">
+                <UserPlus className="h-5 w-5 text-primary-foreground" />
               </div>
-              <h3 className="font-semibold text-white mb-2">Domain Restricted</h3>
-              <p className="text-sm text-slate-300">
+              <h3 className="font-semibold text-foreground mb-2">Domain Restricted</h3>
+              <p className="text-sm text-muted-foreground">
                 Only @tradewindstudio.dev emails can be registered as admins
               </p>
             </CardContent>
           </Card>
 
-          <Card className="border-slate-700 bg-slate-800 text-white">
+          <Card className="bg-card">
             <CardContent className="p-6">
-              <div className="w-10 h-10 bg-purple-600 rounded-full flex items-center justify-center mb-4">
+              <div className="w-10 h-10 bg-purple-500 rounded-full flex items-center justify-center mb-4">
                 <Shield className="h-5 w-5 text-white" />
               </div>
-              <h3 className="font-semibold text-white mb-2">Full Privileges</h3>
-              <p className="text-sm text-slate-300">
+              <h3 className="font-semibold text-foreground mb-2">Full Privileges</h3>
+              <p className="text-sm text-muted-foreground">
                 New admins get complete system access and management capabilities
               </p>
             </CardContent>

@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { authClient } from '@/lib/api/publicClient';
@@ -40,15 +41,15 @@ export default function OwnerAssetsPage() {
     <div className="space-y-6">
       {/* Header */}
       <div>
-        <h2 className="text-3xl font-bold text-slate-900">My Assets</h2>
-        <p className="text-slate-600 mt-2">View your property assets</p>
+        <h2 className="text-3xl font-bold text-foreground">My Assets</h2>
+        <p className="text-muted-foreground mt-2">View your property assets</p>
       </div>
 
       {/* Search */}
       <Card>
         <CardContent className="pt-6">
           <div className="relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400 h-4 w-4" />
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
             <Input
               placeholder="Search assets..."
               value={search}
@@ -65,14 +66,14 @@ export default function OwnerAssetsPage() {
       {/* Assets Grid */}
       {isLoading ? (
         <div className="flex items-center justify-center h-64">
-          <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
         </div>
       ) : assets.length === 0 ? (
         <Card>
           <CardContent className="flex flex-col items-center justify-center py-16">
-            <Home className="h-16 w-16 text-slate-300 mb-4" />
-            <p className="text-slate-500 text-lg">No assets found</p>
-            <p className="text-slate-400 text-sm mt-1">
+            <Home className="h-16 w-16 text-muted-foreground/30 mb-4" />
+            <p className="text-muted-foreground text-lg">No assets found</p>
+            <p className="text-muted-foreground/70 text-sm mt-1">
               {search ? 'Try adjusting your search' : 'You have no assets assigned'}
             </p>
           </CardContent>
@@ -83,7 +84,7 @@ export default function OwnerAssetsPage() {
             {assets.map((asset: any) => (
               <Card key={asset.id} className="overflow-hidden hover:shadow-lg transition-shadow">
                 {/* Asset Image */}
-                <div className="relative h-48 bg-slate-200">
+                <div className="relative h-48 bg-muted">
                   {asset.images && asset.images.length > 0 ? (
                     <Image
                       src={asset.images[0].filePath}
@@ -93,7 +94,7 @@ export default function OwnerAssetsPage() {
                     />
                   ) : (
                     <div className="flex items-center justify-center h-full">
-                      <Home className="h-16 w-16 text-slate-400" />
+                      <Home className="h-16 w-16 text-muted-foreground" />
                     </div>
                   )}
                 </div>
@@ -113,17 +114,14 @@ export default function OwnerAssetsPage() {
                   {asset.tags && asset.tags.length > 0 && (
                     <div className="flex flex-wrap gap-2 mb-4">
                       {asset.tags.slice(0, 3).map((tag: any) => (
-                        <span
-                          key={tag.id}
-                          className="text-xs px-2 py-1 bg-blue-100 text-blue-700 rounded-full"
-                        >
+                        <Badge key={tag.id} variant="secondary">
                           {tag.name}
-                        </span>
+                        </Badge>
                       ))}
                       {asset.tags.length > 3 && (
-                        <span className="text-xs px-2 py-1 bg-slate-100 text-slate-600 rounded-full">
+                        <Badge variant="outline">
                           +{asset.tags.length - 3} more
-                        </span>
+                        </Badge>
                       )}
                     </div>
                   )}
@@ -146,7 +144,7 @@ export default function OwnerAssetsPage() {
           {pagination && pagination.totalPages > 1 && (
             <Card>
               <CardContent className="flex items-center justify-between py-4">
-                <div className="text-sm text-slate-600">
+                <div className="text-sm text-muted-foreground">
                   Showing {((pagination.page - 1) * pagination.pageSize) + 1} to{' '}
                   {Math.min(pagination.page * pagination.pageSize, pagination.totalCount)} of{' '}
                   {pagination.totalCount} assets

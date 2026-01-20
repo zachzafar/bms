@@ -131,11 +131,11 @@ export default function BookingSettingsPage() {
                 )}
               />
 
-              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+              <div className="bg-primary/5 border border-primary/20 rounded-lg p-4">
                 <p className="text-sm text-blue-900">
                   <strong>Note:</strong> When automatic confirmation is disabled:
                 </p>
-                <ul className="list-disc list-inside text-sm text-blue-800 mt-2 space-y-1">
+                <ul className="list-disc list-inside text-sm text-primary mt-2 space-y-1">
                   <li>New bookings will have a "Pending" status</li>
                   <li>Customers will receive an email indicating their booking is awaiting confirmation</li>
                   <li>Admins will be notified to review and confirm the booking</li>

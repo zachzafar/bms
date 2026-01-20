@@ -171,7 +171,7 @@ export const Row = ({
       onClick={handleDelete}
       disabled={isPending}
     >
-      <TrashIcon className="h-4 w-4 text-red-500" />
+      <TrashIcon className="h-4 w-4 text-destructive" />
     </Button>
   </td>
 </tr>

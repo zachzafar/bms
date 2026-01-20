@@ -40,13 +40,13 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-background">
       {/* Mobile sidebar */}
       <Sheet open={sidebarOpen} onOpenChange={setSidebarOpen}>
         <SheetContent side="left" className="w-64 p-0">
           <div className="flex h-full flex-col">
             <div className="flex h-16 shrink-0 items-center px-6 border-b">
-              <h1 className="text-xl font-bold text-gray-900">CRM System</h1>
+              <h1 className="text-xl font-bold text-foreground">CRM System</h1>
             </div>
             <nav className="flex-1 space-y-1 px-3 py-4">
               {navigation.map((item) => {
@@ -57,14 +57,14 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
                     href={item.href}
                     className={cn(
                       isCurrent
-                        ? "bg-blue-50 border-blue-500 text-blue-700"
-                        : "border-transparent text-gray-600 hover:bg-gray-50 hover:text-gray-900",
+                        ? "bg-primary/10 border-blue-500 text-primary"
+                        : "border-transparent text-muted-foreground hover:bg-background hover:text-foreground",
                       "group flex items-center px-3 py-2 text-sm font-medium border-l-4 rounded-r-md",
                     )}
                   >
                     <item.icon
                       className={cn(
-                        isCurrent ? "text-blue-500" : "text-gray-400 group-hover:text-gray-500",
+                        isCurrent ? "text-primary" : "text-muted-foreground group-hover:text-muted-foreground",
                         "mr-3 h-5 w-5",
                       )}
                     />
@@ -79,9 +79,9 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
 
       {/* Desktop sidebar */}
       <div className="hidden lg:fixed lg:inset-y-0 lg:flex lg:w-64 lg:flex-col">
-        <div className="flex min-h-0 flex-1 flex-col bg-white border-r border-gray-200">
-          <div className="flex h-16 shrink-0 items-center px-6 border-b border-gray-200">
-            <h1 className="text-xl font-bold text-gray-900">CRM System</h1>
+        <div className="flex min-h-0 flex-1 flex-col bg-white border-r border-border">
+          <div className="flex h-16 shrink-0 items-center px-6 border-b border-border">
+            <h1 className="text-xl font-bold text-foreground">CRM System</h1>
           </div>
           <div className="flex flex-1 flex-col overflow-y-auto">
             <nav className="flex-1 space-y-1 px-3 py-4">
@@ -91,14 +91,14 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
                   href={item.href}
                   className={cn(
                     isCurrentPath(item.href)
-                      ? "bg-blue-50 border-blue-500 text-blue-700"
-                      : "border-transparent text-gray-600 hover:bg-gray-50 hover:text-gray-900",
+                      ? "bg-primary/10 border-blue-500 text-primary"
+                      : "border-transparent text-muted-foreground hover:bg-background hover:text-foreground",
                     "group flex items-center px-3 py-2 text-sm font-medium border-l-4 rounded-r-md",
                   )}
                 >
                   <item.icon
                     className={cn(
-                      isCurrentPath(item.href) ? "text-blue-500" : "text-gray-400 group-hover:text-gray-500",
+                      isCurrentPath(item.href) ? "text-primary" : "text-muted-foreground group-hover:text-muted-foreground",
                       "mr-3 h-5 w-5",
                     )}
                   />
@@ -113,7 +113,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
       {/* Main content */}
       <div className="lg:pl-64">
         {/* Top bar */}
-        <div className="sticky top-0 z-40 flex h-16 shrink-0 items-center gap-x-4 border-b border-gray-200 bg-white px-4 shadow-sm sm:gap-x-6 sm:px-6 lg:px-8">
+        <div className="sticky top-0 z-40 flex h-16 shrink-0 items-center gap-x-4 border-b border-border bg-white px-4 shadow-sm sm:gap-x-6 sm:px-6 lg:px-8">
           <Button variant="ghost" size="sm" className="lg:hidden" onClick={() => setSidebarOpen(true)}>
             <Menu className="h-5 w-5" />
           </Button>

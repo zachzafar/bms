@@ -45,22 +45,22 @@ export function CommunicationDetail({ communication, onClose }: CommunicationDet
 
   const getTypeBadge = (type: string) => {
     const colors = {
-      "Phone Call": "bg-blue-100 text-blue-800",
-      Email: "bg-green-100 text-green-800",
-      Meeting: "bg-purple-100 text-purple-800",
+      "Phone Call": "bg-primary/20 text-primary",
+      Email: "bg-green-500/10 text-green-600",
+      Meeting: "bg-purple-500/10 text-purple-500",
       "Text Message": "bg-orange-100 text-orange-800",
       "Video Call": "bg-indigo-100 text-indigo-800",
     }
-    return colors[type as keyof typeof colors] || "bg-gray-100 text-gray-800"
+    return colors[type as keyof typeof colors] || "bg-muted text-foreground"
   }
 
   const getOutcomeBadge = (outcome: string) => {
     const colors = {
-      Positive: "bg-green-100 text-green-800",
+      Positive: "bg-green-500/10 text-green-600",
       Neutral: "bg-yellow-100 text-yellow-800",
-      Negative: "bg-red-100 text-red-800",
+      Negative: "bg-destructive/10 text-destructive",
     }
-    return colors[outcome as keyof typeof colors] || "bg-gray-100 text-gray-800"
+    return colors[outcome as keyof typeof colors] || "bg-muted text-foreground"
   }
 
   return (
@@ -68,10 +68,10 @@ export function CommunicationDetail({ communication, onClose }: CommunicationDet
       {/* Communication Header */}
       <div className="flex items-start justify-between">
         <div className="flex items-center space-x-3">
-          <div className="p-2 bg-gray-100 rounded-lg">{getTypeIcon(communication.type)}</div>
+          <div className="p-2 bg-muted rounded-lg">{getTypeIcon(communication.type)}</div>
           <div>
-            <h2 className="text-2xl font-bold text-gray-900">{communication.type}</h2>
-            <p className="text-gray-600">
+            <h2 className="text-2xl font-bold text-foreground">{communication.type}</h2>
+            <p className="text-muted-foreground">
               {communication.date} at {communication.time}
             </p>
           </div>
@@ -97,7 +97,7 @@ export function CommunicationDetail({ communication, onClose }: CommunicationDet
               <CardTitle className="text-lg">Communication Summary</CardTitle>
             </CardHeader>
             <CardContent>
-              <p className="text-gray-700 leading-relaxed">{communication.summary}</p>
+              <p className="text-foreground leading-relaxed">{communication.summary}</p>
             </CardContent>
           </Card>
 
@@ -109,22 +109,22 @@ export function CommunicationDetail({ communication, onClose }: CommunicationDet
             <CardContent className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <h4 className="font-medium text-gray-900 mb-2">Client</h4>
+                  <h4 className="font-medium text-foreground mb-2">Client</h4>
                   <div className="space-y-1">
                     <div className="flex items-center text-sm">
-                      <User className="h-4 w-4 mr-2 text-gray-400" />
+                      <User className="h-4 w-4 mr-2 text-muted-foreground" />
                       {communication.clientName}
                     </div>
-                    <div className="flex items-center text-sm text-gray-600">
-                      <Mail className="h-4 w-4 mr-2 text-gray-400" />
+                    <div className="flex items-center text-sm text-muted-foreground">
+                      <Mail className="h-4 w-4 mr-2 text-muted-foreground" />
                       {communication.clientEmail}
                     </div>
                   </div>
                 </div>
                 <div>
-                  <h4 className="font-medium text-gray-900 mb-2">Team Member</h4>
+                  <h4 className="font-medium text-foreground mb-2">Team Member</h4>
                   <div className="flex items-center text-sm">
-                    <User className="h-4 w-4 mr-2 text-gray-400" />
+                    <User className="h-4 w-4 mr-2 text-muted-foreground" />
                     {communication.userName}
                   </div>
                 </div>
@@ -164,8 +164,8 @@ export function CommunicationDetail({ communication, onClose }: CommunicationDet
                       <div className="flex items-start space-x-3">
                         <div className="flex-shrink-0 mt-1">{getTypeIcon(relComm.type)}</div>
                         <div className="flex-1">
-                          <p className="text-sm font-medium text-gray-900">{relComm.summary}</p>
-                          <p className="text-xs text-gray-500 mt-1">{relComm.date}</p>
+                          <p className="text-sm font-medium text-foreground">{relComm.summary}</p>
+                          <p className="text-xs text-muted-foreground mt-1">{relComm.date}</p>
                         </div>
                       </div>
                       <Badge className={getOutcomeBadge(relComm.outcome)} variant="secondary">
@@ -189,25 +189,25 @@ export function CommunicationDetail({ communication, onClose }: CommunicationDet
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="flex items-center space-x-3">
-                <Calendar className="h-4 w-4 text-gray-400" />
+                <Calendar className="h-4 w-4 text-muted-foreground" />
                 <div>
                   <p className="text-sm font-medium">Date & Time</p>
-                  <p className="text-sm text-gray-600">
+                  <p className="text-sm text-muted-foreground">
                     {communication.date} at {communication.time}
                   </p>
                 </div>
               </div>
               {communication.duration && (
                 <div className="flex items-center space-x-3">
-                  <Clock className="h-4 w-4 text-gray-400" />
+                  <Clock className="h-4 w-4 text-muted-foreground" />
                   <div>
                     <p className="text-sm font-medium">Duration</p>
-                    <p className="text-sm text-gray-600">{communication.duration} minutes</p>
+                    <p className="text-sm text-muted-foreground">{communication.duration} minutes</p>
                   </div>
                 </div>
               )}
               <div className="flex items-center space-x-3">
-                <MessageSquare className="h-4 w-4 text-gray-400" />
+                <MessageSquare className="h-4 w-4 text-muted-foreground" />
                 <div>
                   <p className="text-sm font-medium">Outcome</p>
                   <Badge className={getOutcomeBadge(communication.outcome)}>{communication.outcome}</Badge>
@@ -227,7 +227,7 @@ export function CommunicationDetail({ communication, onClose }: CommunicationDet
                   <AlertCircle className="h-4 w-4 text-orange-500" />
                   <div>
                     <p className="text-sm font-medium">Follow-up Date</p>
-                    <p className="text-sm text-gray-600">{communication.followUpDate}</p>
+                    <p className="text-sm text-muted-foreground">{communication.followUpDate}</p>
                   </div>
                 </div>
               </CardContent>
@@ -268,19 +268,19 @@ export function CommunicationDetail({ communication, onClose }: CommunicationDet
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="flex justify-between items-center">
-                <span className="text-sm text-gray-600">Total Communications</span>
+                <span className="text-sm text-muted-foreground">Total Communications</span>
                 <span className="font-semibold">8</span>
               </div>
               <div className="flex justify-between items-center">
-                <span className="text-sm text-gray-600">This Month</span>
+                <span className="text-sm text-muted-foreground">This Month</span>
                 <span className="font-semibold">3</span>
               </div>
               <div className="flex justify-between items-center">
-                <span className="text-sm text-gray-600">Avg Response Time</span>
+                <span className="text-sm text-muted-foreground">Avg Response Time</span>
                 <span className="font-semibold">2.5h</span>
               </div>
               <div className="flex justify-between items-center">
-                <span className="text-sm text-gray-600">Last Contact</span>
+                <span className="text-sm text-muted-foreground">Last Contact</span>
                 <span className="font-semibold">{communication.date}</span>
               </div>
             </CardContent>

@@ -43,14 +43,14 @@ export default function ForgotPassword() {
     }
 
     return (
-        <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800 px-4">
+        <div className="min-h-screen flex items-center justify-center bg-background px-4">
             <Card className="w-full max-w-md">
                 <CardHeader className="text-center">
-                    <div className="mx-auto mb-4 w-16 h-16 bg-blue-500 rounded-full flex items-center justify-center">
-                        <span className="text-2xl font-bold text-white">B</span>
+                    <div className="mx-auto mb-4 w-16 h-16 bg-primary rounded-full flex items-center justify-center">
+                        <span className="text-2xl font-bold text-primary-foreground">B</span>
                     </div>
                     <CardTitle className="text-2xl font-bold">Forgot Password</CardTitle>
-                    <p className="text-gray-600 dark:text-gray-400">
+                    <p className="text-muted-foreground">
                         Enter your email to receive a password reset link
                     </p>
                 </CardHeader>
@@ -75,11 +75,11 @@ export default function ForgotPassword() {
                     </Form>
                     
                     <div className="mt-6 text-center">
-                        <p className="text-sm text-gray-600 dark:text-gray-400">
+                        <p className="text-sm text-muted-foreground">
                             Remember your password?{' '}
-                            <Link 
-                                href="/login" 
-                                className="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 font-medium"
+                            <Link
+                                href="/login"
+                                className="text-primary hover:text-primary/80 font-medium"
                             >
                                 Sign in here
                             </Link>

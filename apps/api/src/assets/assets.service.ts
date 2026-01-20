@@ -574,22 +574,26 @@ export class AssetsService {
   async getOwnerAssets(ownerId: string, page: number = 1, pageSize: number = 10) {
     const offset = (page - 1) * pageSize;
 
-    // Get total count of assets for this owner
+    // Get total count of assets for this owner using UserHasAssets junction table
     const totalCountResult = await this.db
       .select({ count: sql<number>`COUNT(*)` })
-      .from(schema.Asset)
-      .where(eq(schema.Asset.userId, ownerId))
+      .from(schema.UserHasAssets)
+      .innerJoin(schema.Asset, eq(schema.UserHasAssets.assetId, schema.Asset.id))
+      .where(eq(schema.UserHasAssets.userId, ownerId))
       .execute();
     const totalCount = totalCountResult[0]?.count || 0;
 
-    // Get paginated assets for this owner with join
-    const assets = await this.db
+    // Get paginated assets for this owner using UserHasAssets junction table
+    const rows = await this.db
       .select()
-      .from(schema.Asset)
-      .where(eq(schema.Asset.userId, ownerId))
+      .from(schema.UserHasAssets)
+      .innerJoin(schema.Asset, eq(schema.UserHasAssets.assetId, schema.Asset.id))
+      .where(eq(schema.UserHasAssets.userId, ownerId))
       .limit(pageSize)
       .offset(offset)
       .execute();
+
+    const assets = rows.map(row => row.assets);
 
     // Fetch tags, images, and property values for each asset
     const assetsWithDetails = await Promise.all(
@@ -629,17 +633,22 @@ export class AssetsService {
   }
 
   async getOwnerAsset(ownerId: string, assetId: string) {
-    // Verify owner owns the asset by checking UserHasAssets
-    const ownerAssetLink = await this.db.query.Asset.findFirst({
+    // Verify owner owns the asset by checking UserHasAssets junction table
+    const ownerAssetLink = await this.db.query.UserHasAssets.findFirst({
       where: (uha, { eq, and }) => and(
         eq(uha.userId, ownerId),
-        eq(uha.id, assetId)
+        eq(uha.assetId, assetId)
       ),
+      with: {
+        asset: true,
+      }
     });
 
-    if (!ownerAssetLink) {
+    if (!ownerAssetLink || !ownerAssetLink.asset) {
       return null;
     }
+
+    const asset = ownerAssetLink.asset;
 
     // Fetch tags, images, and property values
     const [tagRels, images, propertyValues] = await Promise.all([
@@ -653,7 +662,7 @@ export class AssetsService {
       .filter((tag): tag is NonNullable<typeof tag> => tag !== null);
 
     return {
-      ...ownerAssetLink,
+      ...asset,
       tags,
       images,
       propertyValues

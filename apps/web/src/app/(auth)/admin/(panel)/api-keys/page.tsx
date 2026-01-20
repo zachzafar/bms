@@ -88,7 +88,7 @@ export default function ApiKeysPage() {
       </div>
 
       {newKey && (
-        <Card className="border-yellow-500 bg-yellow-50 dark:bg-yellow-950">
+        <Card className="border-yellow-500 bg-secondary/5 dark:bg-yellow-950">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <AlertCircle className="h-5 w-5 text-yellow-500" />

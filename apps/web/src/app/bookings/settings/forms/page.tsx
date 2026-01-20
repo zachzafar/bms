@@ -325,7 +325,7 @@ export default function FormsManagementPage() {
                       {formData.fields.map((field, index) => (
                         <div
                           key={index}
-                          className="flex items-center justify-between p-3 bg-slate-50 rounded-lg"
+                          className="flex items-center justify-between p-3 bg-background rounded-lg"
                         >
                           <div>
                             <div className="font-medium">{field.name}</div>

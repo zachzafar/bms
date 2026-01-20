@@ -42,26 +42,25 @@ export default function OwnerBookingsPage() {
   const bookings = bookingsResponse?.status === 200 ? bookingsResponse.body.data : [];
   const pagination = bookingsResponse?.status === 200 ? bookingsResponse.body.pagination : null;
 
-  const getStatusColor = (status: string) => {
+  const getStatusVariant = (status: string): 'default' | 'secondary' | 'destructive' | 'outline' => {
     switch (status) {
       case 'confirmed':
-        return 'bg-green-100 text-green-700';
-      case 'pending':
-        return 'bg-yellow-100 text-yellow-700';
-      case 'cancelled':
-        return 'bg-red-100 text-red-700';
       case 'completed':
-        return 'bg-blue-100 text-blue-700';
+        return 'default';
+      case 'pending':
+        return 'secondary';
+      case 'cancelled':
+        return 'destructive';
       default:
-        return 'bg-slate-100 text-slate-700';
+        return 'outline';
     }
   };
 
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="text-3xl font-bold text-slate-900">Bookings</h2>
-        <p className="text-slate-600 mt-2">View all bookings for your properties</p>
+        <h2 className="text-3xl font-bold text-foreground">Bookings</h2>
+        <p className="text-muted-foreground mt-2">View all bookings for your properties</p>
       </div>
 
       <Card>
@@ -74,7 +73,7 @@ export default function OwnerBookingsPage() {
               </CardDescription>
             </div>
             <div className="relative w-64">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-slate-400" />
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
                 placeholder="Search bookings..."
                 value={search}
@@ -90,13 +89,13 @@ export default function OwnerBookingsPage() {
         <CardContent>
           {isLoading ? (
             <div className="flex items-center justify-center h-64">
-              <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
+              <Loader2 className="h-8 w-8 animate-spin text-primary" />
             </div>
           ) : bookings.length === 0 ? (
             <div className="text-center py-12">
               <Calendar className="h-16 w-16 mx-auto mb-4 opacity-20" />
-              <h3 className="text-lg font-medium text-slate-900 mb-2">No bookings found</h3>
-              <p className="text-slate-500">
+              <h3 className="text-lg font-medium text-foreground mb-2">No bookings found</h3>
+              <p className="text-muted-foreground">
                 {search ? 'Try adjusting your search criteria' : 'No bookings have been created yet'}
               </p>
             </div>
@@ -130,7 +129,7 @@ export default function OwnerBookingsPage() {
                           {new Date(booking.endDate).toLocaleDateString()}
                         </TableCell>
                         <TableCell>
-                          <Badge className={getStatusColor(booking.status)}>
+                          <Badge variant={getStatusVariant(booking.status)}>
                             {booking.status}
                           </Badge>
                         </TableCell>

@@ -20,11 +20,11 @@ export function TenantOverview({tenantId}: {tenantId: string}) {
     return (
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         {[1, 2, 3].map((i) => (
-          <Card key={i} className="border-slate-700 bg-slate-800">
+          <Card key={i} className="border-border bg-card">
             <CardContent className="p-6">
               <div className="animate-pulse">
-                <div className="h-4 bg-slate-600 rounded w-3/4 mb-2"></div>
-                <div className="h-8 bg-slate-600 rounded w-1/2"></div>
+                <div className="h-4 bg-muted rounded w-3/4 mb-2"></div>
+                <div className="h-8 bg-muted rounded w-1/2"></div>
               </div>
             </CardContent>
           </Card>
@@ -36,7 +36,7 @@ export function TenantOverview({tenantId}: {tenantId: string}) {
   if (!tenantDetails) {
     return (
       <div className="text-center py-8">
-        <p className="text-slate-400">Unable to load tenant details</p>
+        <p className="text-muted-foreground">Unable to load tenant details</p>
       </div>
     );
   }
@@ -46,15 +46,15 @@ export function TenantOverview({tenantId}: {tenantId: string}) {
       title: 'Total Users',
       value: tenantDetails.userCount,
       icon: Users,
-      color: 'text-blue-400',
-      bgColor: 'bg-blue-600'
+      color: 'text-primary',
+      bgColor: 'bg-primary'
     },
     {
       title: 'Roles',
       value: tenantDetails.roleCount,
       icon: Shield,
-      color: 'text-green-400',
-      bgColor: 'bg-green-600'
+      color: 'text-green-500',
+      bgColor: 'bg-green-500'
     },
     {
       title: 'API Keys',
@@ -69,7 +69,7 @@ export function TenantOverview({tenantId}: {tenantId: string}) {
     <div className="space-y-6">
       <div>
         <h2 className="text-2xl font-bold text-white mb-2">Overview</h2>
-        <p className="text-slate-400">
+        <p className="text-muted-foreground">
           Tenant created on {tenantDetails.tenant.createdAt ? new Date(tenantDetails.tenant.createdAt).toLocaleDateString() : 'Unknown'}
         </p>
       </div>
@@ -78,9 +78,9 @@ export function TenantOverview({tenantId}: {tenantId: string}) {
         {stats.map((stat) => {
           const Icon = stat.icon;
           return (
-            <Card key={stat.title} className="border-slate-700 bg-slate-800">
+            <Card key={stat.title} className="border-border bg-card">
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium text-slate-300">
+                <CardTitle className="text-sm font-medium text-card-foreground">
                   {stat.title}
                 </CardTitle>
                 <div className={`w-8 h-8 ${stat.bgColor} rounded-full flex items-center justify-center`}>

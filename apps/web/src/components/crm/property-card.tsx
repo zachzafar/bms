@@ -16,20 +16,20 @@ interface PropertyCardProps {
 export function PropertyCard({ property, onView, onEdit, onDelete }: PropertyCardProps) {
   const getStatusBadge = (status: string) => {
     const colors = {
-      Available: "bg-green-100 text-green-800",
-      Rented: "bg-blue-100 text-blue-800",
-      Sold: "bg-gray-100 text-gray-800",
+      Available: "bg-green-500/10 text-green-600",
+      Rented: "bg-primary/20 text-primary",
+      Sold: "bg-muted text-foreground",
       "Under Review": "bg-yellow-100 text-yellow-800",
     }
-    return colors[status as keyof typeof colors] || "bg-gray-100 text-gray-800"
+    return colors[status as keyof typeof colors] || "bg-muted text-foreground"
   }
 
   const getTypeBadge = (type: string) => {
     const colors = {
-      Sale: "bg-purple-100 text-purple-800",
+      Sale: "bg-purple-500/10 text-purple-500",
       Rental: "bg-orange-100 text-orange-800",
     }
-    return colors[type as keyof typeof colors] || "bg-gray-100 text-gray-800"
+    return colors[type as keyof typeof colors] || "bg-muted text-foreground"
   }
 
   return (
@@ -60,7 +60,7 @@ export function PropertyCard({ property, onView, onEdit, onDelete }: PropertyCar
                 <Edit className="h-4 w-4 mr-2" />
                 Edit
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={onDelete} className="text-red-600">
+              <DropdownMenuItem onClick={onDelete} className="text-destructive">
                 <Trash2 className="h-4 w-4 mr-2" />
                 Delete
               </DropdownMenuItem>
@@ -70,14 +70,14 @@ export function PropertyCard({ property, onView, onEdit, onDelete }: PropertyCar
       </div>
       <CardContent className="p-4">
         <div className="space-y-2">
-          <h3 className="text-lg font-semibold text-gray-900 line-clamp-1">{property.title}</h3>
-          <p className="text-sm text-gray-600 flex items-center">
+          <h3 className="text-lg font-semibold text-foreground line-clamp-1">{property.title}</h3>
+          <p className="text-sm text-muted-foreground flex items-center">
             <MapPin className="h-3 w-3 mr-1" />
             {property.location}
           </p>
-          <p className="text-sm text-gray-600 line-clamp-2">{property.description}</p>
+          <p className="text-sm text-muted-foreground line-clamp-2">{property.description}</p>
           <div className="flex items-center justify-between pt-2">
-            <div className="flex items-center space-x-3 text-sm text-gray-600">
+            <div className="flex items-center space-x-3 text-sm text-muted-foreground">
               <div className="flex items-center">
                 <Bed className="h-4 w-4 mr-1" />
                 {property.bedrooms}
@@ -87,7 +87,7 @@ export function PropertyCard({ property, onView, onEdit, onDelete }: PropertyCar
                 {property.bathrooms}
               </div>
             </div>
-            <div className="flex items-center text-lg font-bold text-gray-900">
+            <div className="flex items-center text-lg font-bold text-foreground">
               <DollarSign className="h-4 w-4" />
               {property.type === "Sale" ? `${property.price.toLocaleString()}` : `${property.price}/mo`}
             </div>

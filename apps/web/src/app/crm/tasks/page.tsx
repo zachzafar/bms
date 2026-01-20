@@ -109,10 +109,10 @@ export default function TaskManagement() {
   const handleDeleteTask = useCallback((id: number) => deleteTask({ params: { id: id }, body: {} }), [deleteTask])
   const handleToggleComplete = useCallback((id: number) => completeTask({ params: { id: id }, body: {} }), [completeTask])
 
-  const getStatusBadge = (status: string) => ({ Pending: 'bg-yellow-100 text-yellow-800', Completed: 'bg-green-100 text-green-800', Overdue: 'bg-red-100 text-red-800' }[status] ?? 'bg-gray-100 text-gray-800')
-  const getPriorityBadge = (priority: string) => ({ High: 'bg-red-100 text-red-800', Medium: 'bg-orange-100 text-orange-800', Low: 'bg-gray-100 text-gray-800' }[priority] ?? 'bg-gray-100 text-gray-800')
+  const getStatusBadge = (status: string) => ({ Pending: 'bg-secondary/10 text-secondary-foreground', Completed: 'bg-primary/10 text-primary', Overdue: 'bg-destructive/10 text-destructive' }[status] ?? 'bg-muted text-gray-800')
+  const getPriorityBadge = (priority: string) => ({ High: 'bg-destructive/10 text-destructive', Medium: 'bg-orange-100 text-orange-800', Low: 'bg-muted text-gray-800' }[priority] ?? 'bg-muted text-gray-800')
   const isOverdue = (due: string, status: string) => status !== 'Completed' && new Date(due) < new Date()
-  const getTaskIcon = (status: string, overdue: boolean) => status === 'Completed' ? <CheckCircle2 className="h-4 w-4 text-green-600" /> : overdue ? <AlertTriangle className="h-4 w-4 text-red-600" /> : <Clock className="h-4 w-4 text-yellow-600" />
+  const getTaskIcon = (status: string, overdue: boolean) => status === 'Completed' ? <CheckCircle2 className="h-4 w-4 text-primary" /> : overdue ? <AlertTriangle className="h-4 w-4 text-destructive" /> : <Clock className="h-4 w-4 text-secondary-foreground" />
 
   if (tasksLoading) return <div>Loading tasks…</div>
 
@@ -146,8 +146,8 @@ export default function TaskManagement() {
       <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
         <Card><CardHeader className="pb-2"><CardTitle className="text-sm font-medium text-muted-foreground">Total Tasks</CardTitle></CardHeader><CardContent><div className="text-2xl font-bold">{tasks.length}</div></CardContent></Card>
         <Card><CardHeader className="pb-2"><CardTitle className="text-sm font-medium text-muted-foreground">Pending</CardTitle></CardHeader><CardContent><div className="text-2xl font-bold">{tasks.filter((t: any) => t.status === 'Pending').length}</div></CardContent></Card>
-        <Card><CardHeader className="pb-2"><CardTitle className="text-sm font-medium text-muted-foreground">Overdue</CardTitle></CardHeader><CardContent><div className="text-2xl font-bold text-red-600">{tasks.filter((t: any) => isOverdue(t.dueDate, t.status)).length}</div></CardContent></Card>
-        <Card><CardHeader className="pb-2"><CardTitle className="text-sm font-medium text-muted-foreground">Completed</CardTitle></CardHeader><CardContent><div className="text-2xl font-bold text-green-600">{tasks.filter((t: any) => t.status === 'Completed').length}</div></CardContent></Card>
+        <Card><CardHeader className="pb-2"><CardTitle className="text-sm font-medium text-muted-foreground">Overdue</CardTitle></CardHeader><CardContent><div className="text-2xl font-bold text-destructive">{tasks.filter((t: any) => isOverdue(t.dueDate, t.status)).length}</div></CardContent></Card>
+        <Card><CardHeader className="pb-2"><CardTitle className="text-sm font-medium text-muted-foreground">Completed</CardTitle></CardHeader><CardContent><div className="text-2xl font-bold text-primary">{tasks.filter((t: any) => t.status === 'Completed').length}</div></CardContent></Card>
       </div>
 
       {/* Filters + List */}
@@ -168,7 +168,7 @@ export default function TaskManagement() {
         <CardContent>
           <div className="space-y-3">
             {filteredTasks.map((task: any) => (
-              <Card key={task.id} className={`transition-shadow hover:shadow-md ${isOverdue(task.dueDate, task.status) ? 'border-red-200 bg-red-50' : ''} ${task.status === 'Completed' ? 'opacity-75' : ''}`}>
+              <Card key={task.id} className={`transition-shadow hover:shadow-md ${isOverdue(task.dueDate, task.status) ? 'border-destructive/20 bg-destructive/5' : ''} ${task.status === 'Completed' ? 'opacity-75' : ''}`}>
                 <CardContent className="p-4">
                   <div className="flex items-start justify-between">
                     <div className="flex flex-1 items-start space-x-3">
@@ -198,7 +198,7 @@ export default function TaskManagement() {
                       <DropdownMenuContent align="end">
                         <DropdownMenuItem onClick={() => { setSelectedTask(task); setIsDetailDialogOpen(true) }}><Eye className="mr-2 h-4 w-4" />View Details</DropdownMenuItem>
                         <DropdownMenuItem onClick={() => { setSelectedTask(task); setIsEditDialogOpen(true) }}><Edit className="mr-2 h-4 w-4" />Edit</DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => handleDeleteTask(task.id)} className="text-red-600" disabled={isDeleting}><Trash2 className="mr-2 h-4 w-4" />Delete</DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => handleDeleteTask(task.id)} className="text-destructive" disabled={isDeleting}><Trash2 className="mr-2 h-4 w-4" />Delete</DropdownMenuItem>
                       </DropdownMenuContent>
                     </DropdownMenu>
                   </div>

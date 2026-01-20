@@ -145,11 +145,11 @@ export function CreateUserForm({ roles, onClose, onSuccess }: CreateUserFormProp
                   {field.value?.map((roleId, index) => {
                     const roleName = roles.find(r => r.roleId)?.name || roleId;
                     return (
-                      <div key={index} className="bg-gray-100 px-2 py-1 rounded-md flex items-center">
+                      <div key={index} className="bg-muted px-2 py-1 rounded-md flex items-center">
                         <span>{roleName}</span>
                         <button
                           type="button"
-                          className="ml-2 text-red-500"
+                          className="ml-2 text-destructive"
                           onClick={() => {
                             const newRoles = [...field.value];
                             newRoles.splice(index, 1);

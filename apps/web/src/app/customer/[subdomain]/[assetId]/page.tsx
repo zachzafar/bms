@@ -29,10 +29,10 @@ export default function CustomerAssetDetailPage() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-slate-50">
+      <div className="min-h-screen flex items-center justify-center bg-background">
         <div className="text-center">
-          <Loader2 className="h-12 w-12 animate-spin text-blue-600 mx-auto" />
-          <p className="mt-4 text-slate-600">Loading asset details...</p>
+          <Loader2 className="h-12 w-12 animate-spin text-primary mx-auto" />
+          <p className="mt-4 text-muted-foreground">Loading asset details...</p>
         </div>
       </div>
     );
@@ -40,19 +40,19 @@ export default function CustomerAssetDetailPage() {
 
   if (error || !asset) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-slate-50">
+      <div className="min-h-screen flex items-center justify-center bg-background">
         <Card className="max-w-md">
           <CardContent className="pt-6">
             <div className="text-center">
-              <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                <svg className="w-8 h-8 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <div className="w-16 h-16 bg-destructive/10 rounded-full flex items-center justify-center mx-auto mb-4">
+                <svg className="w-8 h-8 text-destructive" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                 </svg>
               </div>
-              <h2 className="text-xl font-bold text-slate-900 mb-2">
+              <h2 className="text-xl font-bold text-foreground mb-2">
                 {response?.status !== 200 ? 'Asset not found' : 'Failed to load asset details'}
               </h2>
-              <p className="text-slate-600 mb-6">
+              <p className="text-muted-foreground mb-6">
                 {response?.status !== 200
                   ? 'The asset you\'re looking for doesn\'t exist or has been removed.'
                   : 'Please try again later.'}
@@ -70,12 +70,12 @@ export default function CustomerAssetDetailPage() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-50">
+    <div className="min-h-screen bg-background">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Back Button */}
         <Link
           href={`/customer/${subdomain}`}
-          className="inline-flex items-center text-blue-600 hover:text-blue-700 mb-6"
+          className="inline-flex items-center text-primary hover:text-primary mb-6"
         >
           <ArrowLeft className="w-5 h-5 mr-2" />
           Back to all assets
@@ -86,7 +86,7 @@ export default function CustomerAssetDetailPage() {
             {/* Left Column - Images */}
             <div>
               {/* Main Image */}
-              <div className="relative h-96 bg-gradient-to-br from-blue-400 to-blue-600 rounded-lg overflow-hidden mb-4">
+              <div className="relative h-96 bg-primary rounded-lg overflow-hidden mb-4">
                 {asset.images.length > 0 ? (
                   <Image
                     src={asset.images[selectedImageIndex].filePath}
@@ -113,7 +113,7 @@ export default function CustomerAssetDetailPage() {
                       onClick={() => setSelectedImageIndex(index)}
                       className={`relative h-20 p-0 overflow-hidden ${
                         selectedImageIndex === index
-                          ? 'ring-2 ring-blue-600 border-blue-600'
+                          ? 'ring-2 ring-primary border-primary'
                           : ''
                       }`}
                     >
@@ -150,8 +150,8 @@ export default function CustomerAssetDetailPage() {
                 {/* Description */}
                 {asset.description && (
                   <div className="mb-6">
-                    <h2 className="text-lg font-semibold text-slate-900 mb-2">Description</h2>
-                    <p className="text-slate-600 leading-relaxed">{asset.description}</p>
+                    <h2 className="text-lg font-semibold text-foreground mb-2">Description</h2>
+                    <p className="text-muted-foreground leading-relaxed">{asset.description}</p>
                   </div>
                 )}
 
@@ -160,15 +160,15 @@ export default function CustomerAssetDetailPage() {
                 {/* Properties */}
                 {asset.properties.length > 0 && (
                   <div className="mb-8">
-                    <h2 className="text-lg font-semibold text-slate-900 mb-3">Specifications</h2>
+                    <h2 className="text-lg font-semibold text-foreground mb-3">Specifications</h2>
                     <dl className="space-y-2">
                       {asset.properties.map((prop) => (
                         <div
                           key={prop.id}
-                          className="flex justify-between py-2 border-b border-slate-200"
+                          className="flex justify-between py-2 border-b border-border"
                         >
-                          <dt className="font-medium text-slate-700">{prop.assetProperty.name}:</dt>
-                          <dd className="text-slate-900">{prop.value}</dd>
+                          <dt className="font-medium text-foreground">{prop.assetProperty.name}:</dt>
+                          <dd className="text-foreground">{prop.value}</dd>
                         </div>
                       ))}
                     </dl>
@@ -183,7 +183,7 @@ export default function CustomerAssetDetailPage() {
                   </Link>
                 </Button>
 
-                <p className="mt-3 text-sm text-slate-500 text-center">
+                <p className="mt-3 text-sm text-muted-foreground text-center">
                   Check availability and make a reservation
                 </p>
               </CardContent>

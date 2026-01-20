@@ -30,14 +30,14 @@ export default function TenantDetailPage() {
 
   if (tenantLoading) {
     return (
-      <div className="min-h-screen bg-slate-900 p-6">
+      <div className="min-h-screen bg-card p-6">
         <div className="max-w-7xl mx-auto">
           <div className="animate-pulse">
-            <div className="h-8 bg-slate-700 rounded w-1/4 mb-6"></div>
-            <div className="h-12 bg-slate-700 rounded w-1/2 mb-8"></div>
+            <div className="h-8 bg-muted rounded w-1/4 mb-6"></div>
+            <div className="h-12 bg-muted rounded w-1/2 mb-8"></div>
             <div className="space-y-4">
               {[1, 2, 3].map((i) => (
-                <div key={i} className="h-20 bg-slate-700 rounded"></div>
+                <div key={i} className="h-20 bg-muted rounded"></div>
               ))}
             </div>
           </div>
@@ -48,13 +48,13 @@ export default function TenantDetailPage() {
 
   if (tenantError || !tenant) {
     return (
-      <div className="min-h-screen bg-slate-900 p-6">
+      <div className="min-h-screen bg-card p-6">
         <div className="max-w-7xl mx-auto">
           <div className="text-center py-12">
-            <h1 className="text-2xl font-bold text-white mb-4">Tenant Not Found</h1>
-            <p className="text-slate-400 mb-6">The tenant you're looking for doesn't exist or you don't have permission to view it.</p>
+            <h1 className="text-2xl font-bold text-foreground mb-4">Tenant Not Found</h1>
+            <p className="text-muted-foreground mb-6">The tenant you're looking for doesn't exist or you don't have permission to view it.</p>
             <Link href="/dashboard/tenants">
-              <Button className="bg-blue-600 hover:bg-blue-700">
+              <Button className="bg-primary hover:bg-primary/90">
                 <ArrowLeft className="h-4 w-4 mr-2" />
                 Back to Tenants
               </Button>
@@ -66,28 +66,28 @@ export default function TenantDetailPage() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-900 p-6">
+    <div className="min-h-screen bg-card p-6">
       <div className="max-w-7xl mx-auto">
         {/* Header */}
         <div className="flex items-center justify-between mb-8">
           <div className="flex items-center space-x-4">
             <Link href="/admin/tenants">
-              <Button variant="outline" size="sm" className="border-slate-600 text-slate-300 hover:bg-slate-700">
+              <Button variant="outline" size="sm" className="text-card-foreground">
                 <ArrowLeft className="h-4 w-4 mr-2" />
                 Back
               </Button>
             </Link>
             <div>
-              <h1 className="text-3xl font-bold text-white">{tenant.tenant.name}</h1>
-              <p className="text-slate-400">Tenant ID: {tenant.tenant.id}</p>
+              <h1 className="text-3xl font-bold text-foreground">{tenant.tenant.name}</h1>
+              <p className="text-muted-foreground">Tenant ID: {tenant.tenant.id}</p>
             </div>
           </div>
           <div className="flex space-x-2">
-            <Button variant="outline" className="border-slate-600 text-slate-300 hover:bg-slate-700">
+            <Button variant="outline" className="text-card-foreground">
               <Settings className="h-4 w-4 mr-2" />
               Settings
             </Button>
-            <Button variant="outline" className="border-red-600 text-red-400 hover:bg-red-900">
+            <Button variant="destructive">
               <Trash2 className="h-4 w-4 mr-2" />
               Delete Tenant
             </Button>
@@ -96,23 +96,23 @@ export default function TenantDetailPage() {
 
         {/* Tabs */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-          <TabsList className="bg-slate-800 border-slate-700">
-            <TabsTrigger value="overview" className="data-[state=active]:bg-slate-700 data-[state=active]:text-white">
+          <TabsList className="bg-card border-border">
+            <TabsTrigger value="overview" className="data-[state=active]:bg-primary data-[state=active]:text-foreground">
               Overview
             </TabsTrigger>
-            <TabsTrigger value="users" className="data-[state=active]:bg-slate-700 data-[state=active]:text-white">
+            <TabsTrigger value="users" className="data-[state=active]:bg-primary data-[state=active]:text-foreground">
               Users
             </TabsTrigger>
-            <TabsTrigger value="roles" className="data-[state=active]:bg-slate-700 data-[state=active]:text-white">
+            <TabsTrigger value="roles" className="data-[state=active]:bg-primary data-[state=active]:text-foreground">
               Roles
             </TabsTrigger>
-            <TabsTrigger value="api-keys" className="data-[state=active]:bg-slate-700 data-[state=active]:text-white">
+            <TabsTrigger value="api-keys" className="data-[state=active]:bg-primary data-[state=active]:text-foreground">
               API Keys
             </TabsTrigger>
-            <TabsTrigger value="asset-config" className="data-[state=active]:bg-slate-700 data-[state=active]:text-white">
+            <TabsTrigger value="asset-config" className="data-[state=active]:bg-primary data-[state=active]:text-foreground">
               Asset Config
             </TabsTrigger>
-            <TabsTrigger value="assets" className="data-[state=active]:bg-slate-700 data-[state=active]:text-white">
+            <TabsTrigger value="assets" className="data-[state=active]:bg-primary data-[state=active]:text-foreground">
               Assets
             </TabsTrigger>
           </TabsList>

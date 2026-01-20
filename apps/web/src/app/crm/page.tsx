@@ -52,7 +52,7 @@ export default function DashboardOverview() {
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <div className="text-lg text-gray-600">Loading dashboard data...</div>
+        <div className="text-lg text-muted-foreground">Loading dashboard data...</div>
       </div>
     )
   }
@@ -60,8 +60,8 @@ export default function DashboardOverview() {
     <div className="space-y-6">
       {/* Header */}
       <div>
-        <h1 className="text-2xl font-bold text-gray-900">Dashboard</h1>
-        <p className="mt-2 text-sm text-gray-600">Welcome back! Here's what's happening with your CRM today.</p>
+        <h1 className="text-2xl font-bold text-foreground">Dashboard</h1>
+        <p className="mt-2 text-sm text-muted-foreground">Welcome back! Here's what's happening with your CRM today.</p>
       </div>
 
       {/* Stats */}
@@ -72,15 +72,15 @@ export default function DashboardOverview() {
           return (
             <Card key={stat.name}>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium text-gray-600">{stat.name}</CardTitle>
-                <IconComponent className="h-4 w-4 text-gray-400" />
+                <CardTitle className="text-sm font-medium text-muted-foreground">{stat.name}</CardTitle>
+                <IconComponent className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold text-gray-900">{stat.value}</div>
+                <div className="text-2xl font-bold text-foreground">{stat.value}</div>
                 <p className={`text-xs ${
-                  stat.changeType === "positive" ? "text-green-600" : 
-                  stat.changeType === "negative" ? "text-red-600" : 
-                  "text-gray-600"
+                  stat.changeType === "positive" ? "text-primary" : 
+                  stat.changeType === "negative" ? "text-destructive" : 
+                  "text-muted-foreground"
                 }`}>
                   {stat.change}
                 </p>
@@ -106,11 +106,11 @@ export default function DashboardOverview() {
               {displayActivities.map((activity: any) => (
                 <div key={activity.id} className="flex items-start space-x-3">
                   <div className="flex-shrink-0">
-                    <div className="h-2 w-2 bg-blue-500 rounded-full mt-2"></div>
+                    <div className="h-2 w-2 bg-primary/50 rounded-full mt-2"></div>
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm text-gray-900">{activity.message}</p>
-                    <p className="text-xs text-gray-500">{activity.time}</p>
+                    <p className="text-sm text-foreground">{activity.message}</p>
+                    <p className="text-xs text-muted-foreground">{activity.time}</p>
                   </div>
                 </div>
               ))}
@@ -131,24 +131,24 @@ export default function DashboardOverview() {
             {dashboardData && (
               <div className="space-y-4">
                 <div className="flex items-center justify-between">
-                  <span className="text-sm text-gray-600">Total Tasks</span>
+                  <span className="text-sm text-muted-foreground">Total Tasks</span>
                   <span className="text-lg font-semibold">{dashboardData?.body?.tasks?.totalTasks || 0}</span>
                 </div>
                 <div className="flex items-center justify-between">
-                  <span className="text-sm text-gray-600">Completed</span>
-                  <span className="text-lg font-semibold text-green-600">{dashboardData?.body?.tasks?.completedTasks || 0}</span>
+                  <span className="text-sm text-muted-foreground">Completed</span>
+                  <span className="text-lg font-semibold text-primary">{dashboardData?.body?.tasks?.completedTasks || 0}</span>
                 </div>
                 <div className="flex items-center justify-between">
-                  <span className="text-sm text-gray-600">Overdue</span>
-                  <span className="text-lg font-semibold text-red-600">{dashboardData?.body?.tasks?.overdueTasks || 0}</span>
+                  <span className="text-sm text-muted-foreground">Overdue</span>
+                  <span className="text-lg font-semibold text-destructive">{dashboardData?.body?.tasks?.overdueTasks || 0}</span>
                 </div>
                 <div className="mt-4 pt-4 border-t">
                   <div className="flex items-center justify-between">
-                    <span className="text-sm text-gray-600">Completion Rate</span>
+                    <span className="text-sm text-muted-foreground">Completion Rate</span>
                     <span className={`text-lg font-semibold ${
-                      dashboardData?.body?.tasks?.completionRate > 80 ? 'text-green-600' : 
-                      dashboardData?.body?.tasks?.completionRate > 60 ? 'text-yellow-600' : 
-                      'text-red-600'
+                      dashboardData?.body?.tasks?.completionRate > 80 ? 'text-primary' : 
+                      dashboardData?.body?.tasks?.completionRate > 60 ? 'text-secondary-foreground' : 
+                      'text-destructive'
                     }`}>
                       {Math.round(dashboardData?.body?.tasks?.completionRate || 0)}%
                     </span>

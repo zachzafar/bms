@@ -113,11 +113,11 @@ export function TenantApiKeys({ tenantId }: TenantApiKeysProps) {
         <div className="flex items-center justify-between">
           <h2 className="text-2xl font-bold text-white">API Key Management</h2>
         </div>
-        <Card className="border-slate-700 bg-slate-800">
+        <Card className="border-border bg-card">
           <CardContent className="p-6">
             <div className="animate-pulse space-y-4">
               {[1, 2, 3].map((i) => (
-                <div key={i} className="h-12 bg-slate-600 rounded"></div>
+                <div key={i} className="h-12 bg-muted rounded"></div>
               ))}
             </div>
           </CardContent>
@@ -137,7 +137,7 @@ export function TenantApiKeys({ tenantId }: TenantApiKeysProps) {
               Generate API Key
             </Button>
           </DialogTrigger>
-          <DialogContent className="bg-slate-800 border-slate-700 text-white max-w-2xl">
+          <DialogContent className="bg-card border-border text-white max-w-2xl">
             <DialogHeader>
               <DialogTitle>Generate New API Key</DialogTitle>
               <DialogDescription>
@@ -146,17 +146,17 @@ export function TenantApiKeys({ tenantId }: TenantApiKeysProps) {
             </DialogHeader>
             <div className="space-y-4">
               <div>
-                <Label htmlFor="api-key-name" className="text-slate-300">API Key Name *</Label>
+                <Label htmlFor="api-key-name" className="text-card-foreground">API Key Name *</Label>
                 <Input
                   id="api-key-name"
                   value={newApiKey.name}
                   onChange={(e) => setNewApiKey(prev => ({ ...prev, name: e.target.value }))}
-                  className="bg-slate-700 border-slate-600 text-white"
+                  className="bg-card border-border text-white"
                   placeholder="Enter a descriptive name for this API key"
                 />
               </div>
               <div>
-                <Label className="text-slate-300">Scopes</Label>
+                <Label className="text-card-foreground">Scopes</Label>
                 <div className="grid grid-cols-2 gap-2 mt-2 max-h-40 overflow-y-auto">
                   {AVAILABLE_SCOPES.map((scope) => (
                     <div key={scope} className="flex items-center space-x-2">
@@ -164,9 +164,9 @@ export function TenantApiKeys({ tenantId }: TenantApiKeysProps) {
                         id={`scope-${scope}`}
                         checked={newApiKey.scopes.includes(scope)}
                         onCheckedChange={() => toggleScope(scope)}
-                        className="border-slate-600"
+                        className="border-border"
                       />
-                      <Label htmlFor={`scope-${scope}`} className="text-slate-300 text-sm">
+                      <Label htmlFor={`scope-${scope}`} className="text-card-foreground text-sm">
                         {scope}
                       </Label>
                     </div>
@@ -178,7 +178,7 @@ export function TenantApiKeys({ tenantId }: TenantApiKeysProps) {
               <Button
                 variant="outline"
                 onClick={() => setShowCreateApiKeyModal(false)}
-                className="border-slate-600 text-slate-300 hover:bg-slate-700"
+                className="border-border text-card-foreground hover:bg-card"
               >
                 Cancel
               </Button>
@@ -199,10 +199,10 @@ export function TenantApiKeys({ tenantId }: TenantApiKeysProps) {
         </Dialog>
       </div>
 
-      <Card className="border-slate-700 bg-slate-800">
+      <Card className="border-border bg-card">
         <CardHeader>
           <CardTitle className="text-white">API Keys ({apiKeys.length})</CardTitle>
-          <CardDescription className="text-slate-400">
+          <CardDescription className="text-muted-foreground">
             Manage API keys for this tenant
           </CardDescription>
         </CardHeader>
@@ -210,22 +210,22 @@ export function TenantApiKeys({ tenantId }: TenantApiKeysProps) {
           <div className="overflow-x-auto">
             <table className="w-full">
               <thead>
-                <tr className="border-b border-slate-700">
-                  <th className="text-left p-3 text-slate-300 font-medium">Name</th>
-                  <th className="text-left p-3 text-slate-300 font-medium">API Key</th>
-                  <th className="text-left p-3 text-slate-300 font-medium">Scopes</th>
-                  <th className="text-left p-3 text-slate-300 font-medium">Status</th>
-                  <th className="text-left p-3 text-slate-300 font-medium">Created</th>
-                  <th className="text-left p-3 text-slate-300 font-medium">Last Used</th>
-                  <th className="text-left p-3 text-slate-300 font-medium">Actions</th>
+                <tr className="border-b border-border">
+                  <th className="text-left p-3 text-card-foreground font-medium">Name</th>
+                  <th className="text-left p-3 text-card-foreground font-medium">API Key</th>
+                  <th className="text-left p-3 text-card-foreground font-medium">Scopes</th>
+                  <th className="text-left p-3 text-card-foreground font-medium">Status</th>
+                  <th className="text-left p-3 text-card-foreground font-medium">Created</th>
+                  <th className="text-left p-3 text-card-foreground font-medium">Last Used</th>
+                  <th className="text-left p-3 text-card-foreground font-medium">Actions</th>
                 </tr>
               </thead>
               <tbody>
                 {apiKeys.map((apiKey) => (
-                  <tr key={apiKey.id} className="border-b border-slate-700 hover:bg-slate-700">
+                  <tr key={apiKey.id} className="border-b border-border hover:bg-card">
                     <td className="p-3 text-white">
                       <div className="flex items-center space-x-3">
-                        <div className="w-8 h-8 bg-slate-600 rounded-full flex items-center justify-center">
+                        <div className="w-8 h-8 bg-muted rounded-full flex items-center justify-center">
                           <Key className="h-4 w-4 text-white" />
                         </div>
                         <span>{apiKey.name}</span>
@@ -233,14 +233,14 @@ export function TenantApiKeys({ tenantId }: TenantApiKeysProps) {
                     </td>
                     <td className="p-3">
                       <div className="flex items-center space-x-2">
-                        <code className="text-sm bg-slate-700 px-2 py-1 rounded text-slate-300">
+                        <code className="text-sm bg-card px-2 py-1 rounded text-card-foreground">
                           {showKeys[apiKey.id] ? apiKey.key : '••••••••••••••••'}
                         </code>
                         <Button
                           size="sm"
                           variant="ghost"
                           onClick={() => toggleKeyVisibility(apiKey.id)}
-                          className="text-slate-400 hover:text-white"
+                          className="text-muted-foreground hover:text-white"
                         >
                           {showKeys[apiKey.id] ? <EyeOff className="h-3 w-3" /> : <Eye className="h-3 w-3" />}
                         </Button>
@@ -248,7 +248,7 @@ export function TenantApiKeys({ tenantId }: TenantApiKeysProps) {
                           size="sm"
                           variant="ghost"
                           onClick={() => copyToClipboard(apiKey.key)}
-                          className="text-slate-400 hover:text-white"
+                          className="text-muted-foreground hover:text-white"
                         >
                           <Copy className="h-3 w-3" />
                         </Button>
@@ -257,12 +257,12 @@ export function TenantApiKeys({ tenantId }: TenantApiKeysProps) {
                     <td className="p-3">
                       <div className="flex flex-wrap gap-1 max-w-xs">
                         {apiKey.scopes.slice(0, 2).map((scope) => (
-                          <Badge key={scope} variant="outline" className="border-slate-600 text-slate-300 text-xs">
+                          <Badge key={scope} variant="outline" className="border-border text-card-foreground text-xs">
                             {scope}
                           </Badge>
                         ))}
                         {apiKey.scopes.length > 2 && (
-                          <Badge variant="outline" className="border-slate-600 text-slate-300 text-xs">
+                          <Badge variant="outline" className="border-border text-card-foreground text-xs">
                             +{apiKey.scopes.length - 2} more
                           </Badge>
                         )}
@@ -271,15 +271,15 @@ export function TenantApiKeys({ tenantId }: TenantApiKeysProps) {
                     <td className="p-3">
                       <Badge 
                         variant="default"
-                        className={apiKey.isActive ? 'bg-green-600' : 'bg-slate-600'}
+                        className={apiKey.isActive ? 'bg-green-500' : 'bg-muted'}
                       >
                         {apiKey.isActive ? 'active' : 'inactive'}
                       </Badge>
                     </td>
-                    <td className="p-3 text-slate-400 text-sm">
+                    <td className="p-3 text-muted-foreground text-sm">
                       {new Date(apiKey.createdAt).toLocaleDateString()}
                     </td>
-                    <td className="p-3 text-slate-400 text-sm">
+                    <td className="p-3 text-muted-foreground text-sm">
                       {apiKey.lastUsed ? new Date(apiKey.lastUsed).toLocaleDateString() : 'Never'}
                     </td>
                     <td className="p-3">
@@ -287,7 +287,7 @@ export function TenantApiKeys({ tenantId }: TenantApiKeysProps) {
                         <Button
                           size="sm"
                           variant="outline"
-                          className="border-slate-600 text-slate-300 hover:bg-slate-700"
+                          className="border-border text-card-foreground hover:bg-card"
                         >
                           <Edit className="h-3 w-3" />
                         </Button>
@@ -295,7 +295,7 @@ export function TenantApiKeys({ tenantId }: TenantApiKeysProps) {
                           size="sm"
                           variant="outline"
                           onClick={() => handleDeleteApiKey(apiKey.id)}
-                          className="border-red-600 text-red-400 hover:bg-red-900"
+                          className="border-destructive text-destructive hover:bg-destructive/90"
                         >
                           <Trash2 className="h-3 w-3" />
                         </Button>
@@ -308,8 +308,8 @@ export function TenantApiKeys({ tenantId }: TenantApiKeysProps) {
             
             {apiKeys.length === 0 && (
               <div className="text-center py-8">
-                <Key className="h-12 w-12 text-slate-500 mx-auto mb-4" />
-                <p className="text-slate-400">No API keys found for this tenant</p>
+                <Key className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                <p className="text-muted-foreground">No API keys found for this tenant</p>
               </div>
             )}
           </div>

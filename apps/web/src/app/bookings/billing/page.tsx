@@ -210,7 +210,7 @@ export default function BillingPage() {
               <div className="space-y-4">
                 <div className="flex justify-between items-center">
                   <div>
-                    <p className="text-sm text-gray-600">
+                    <p className="text-sm text-muted-foreground">
                       {totalInvoices} total invoices • {totalPaid} paid • {totalUnpaid} unpaid
                     </p>
                   </div>
@@ -220,12 +220,12 @@ export default function BillingPage() {
                 </div>
                 
                 {overdueInvoices.length > 0 && (
-                  <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+                  <div className="bg-destructive/5 border border-destructive/20 rounded-lg p-4">
                     <div className="flex items-center">
-                      <AlertTriangle className="h-5 w-5 text-red-600 mr-2" />
+                      <AlertTriangle className="h-5 w-5 text-destructive mr-2" />
                       <div>
-                        <h4 className="font-medium text-red-800">Overdue Invoices</h4>
-                        <p className="text-sm text-red-600">
+                        <h4 className="font-medium text-destructive">Overdue Invoices</h4>
+                        <p className="text-sm text-destructive">
                           You have {overdueInvoices.length} overdue invoice{overdueInvoices.length !== 1 ? 's' : ''} 
                           totaling ${overdueInvoices.reduce((sum, inv) => sum + parseFloat(inv.totalAmount), 0).toFixed(2)}
                         </p>
@@ -248,7 +248,7 @@ export default function BillingPage() {
               <div className="space-y-4">
                 <div className="flex justify-between items-center">
                   <div>
-                    <p className="text-sm text-gray-600">
+                    <p className="text-sm text-muted-foreground">
                       {payments.length} total payments • ${payments.reduce((sum, p) => sum + parseFloat(p.amount), 0).toFixed(2)} total amount
                     </p>
                   </div>
@@ -258,18 +258,18 @@ export default function BillingPage() {
                 </div>
                 
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <div className="text-center p-4 bg-green-50 rounded-lg">
-                    <div className="text-2xl font-bold text-green-600">
+                  <div className="text-center p-4 bg-primary/5 rounded-lg">
+                    <div className="text-2xl font-bold text-primary">
                       ${recentPayments.toFixed(2)}
                     </div>
-                    <div className="text-sm text-green-600">Recent Payments</div>
+                    <div className="text-sm text-primary">Recent Payments</div>
                   </div>
                   
-                  <div className="text-center p-4 bg-blue-50 rounded-lg">
-                    <div className="text-2xl font-bold text-blue-600">
+                  <div className="text-center p-4 bg-primary/5 rounded-lg">
+                    <div className="text-2xl font-bold text-primary">
                       {payments.filter(p => new Date(p.createdAt) >= new Date(Date.now() - 7 * 24 * 60 * 60 * 1000)).length}
                     </div>
-                    <div className="text-sm text-blue-600">This Week</div>
+                    <div className="text-sm text-primary">This Week</div>
                   </div>
                   
                   <div className="text-center p-4 bg-purple-50 rounded-lg">

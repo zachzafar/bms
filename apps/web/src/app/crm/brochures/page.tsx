@@ -101,15 +101,15 @@ export default function BrochuresPage() {
   const getBrochureTypeBadgeColor = (type: string) => {
     switch (type) {
       case "property":
-        return "bg-blue-100 text-blue-800"
+        return "bg-primary/10 text-primary"
       case "company":
-        return "bg-green-100 text-green-800"
+        return "bg-primary/10 text-primary"
       case "service":
         return "bg-purple-100 text-purple-800"
       case "marketing":
         return "bg-orange-100 text-orange-800"
       default:
-        return "bg-gray-100 text-gray-800"
+        return "bg-muted text-gray-800"
     }
   }
 

@@ -134,8 +134,8 @@ export default function FeedbackManagement() {
   )
 
   // ——— UI helpers ———
-  const ratingColor = (r: number) => (r >= 4 ? 'text-green-600' : r >= 3 ? 'text-yellow-600' : 'text-red-600')
-  const ratingBadge = (r: number) => (r >= 4 ? 'bg-green-100 text-green-800' : r >= 3 ? 'bg-yellow-100 text-yellow-800' : 'bg-red-100 text-red-800')
+  const ratingColor = (r: number) => (r >= 4 ? 'text-primary' : r >= 3 ? 'text-secondary-foreground' : 'text-destructive')
+  const ratingBadge = (r: number) => (r >= 4 ? 'bg-primary/10 text-primary' : r >= 3 ? 'bg-secondary/10 text-secondary-foreground' : 'bg-destructive/10 text-destructive')
 
   if (isLoading) {
     return (
@@ -218,8 +218,8 @@ export default function FeedbackManagement() {
           <CardContent>
             <div className="flex items-center justify-between">
               <div className="text-2xl font-bold">{stats.positiveRating ?? 0}%</div>
-              <div className="flex h-8 w-8 items-center justify-center rounded-full bg-green-100">
-                <span className="font-bold text-green-600">+</span>
+              <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary/10">
+                <span className="font-bold text-primary">+</span>
               </div>
             </div>
           </CardContent>
@@ -289,7 +289,7 @@ export default function FeedbackManagement() {
                   <Button variant="outline" size="sm" onClick={() => handleEdit(item)}>
                     <Edit className="h-4 w-4" />
                   </Button>
-                  <Button variant="outline" size="sm" className="text-red-600 hover:text-red-700" onClick={() => handleDelete(item.id)} disabled={isDeleting}>
+                  <Button variant="outline" size="sm" className="text-destructive hover:text-destructive" onClick={() => handleDelete(item.id)} disabled={isDeleting}>
                     <Trash2 className="h-4 w-4" />
                   </Button>
                 </div>

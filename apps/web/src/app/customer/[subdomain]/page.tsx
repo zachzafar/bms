@@ -102,10 +102,10 @@ export default function CustomerAssetListPage() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-slate-50">
+      <div className="min-h-screen flex items-center justify-center bg-background">
         <div className="text-center">
-          <Loader2 className="h-12 w-12 animate-spin text-blue-600 mx-auto" />
-          <p className="mt-4 text-slate-600">Loading assets...</p>
+          <Loader2 className="h-12 w-12 animate-spin text-primary mx-auto" />
+          <p className="mt-4 text-muted-foreground">Loading assets...</p>
         </div>
       </div>
     );
@@ -113,11 +113,11 @@ export default function CustomerAssetListPage() {
 
   if (error) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-slate-50">
+      <div className="min-h-screen flex items-center justify-center bg-background">
         <Card className="max-w-md">
           <CardContent className="pt-6">
             <div className="text-center">
-              <p className="text-red-600 mb-4">Failed to load assets. Please try again.</p>
+              <p className="text-destructive mb-4">Failed to load assets. Please try again.</p>
               <Button onClick={() => refetch()}>
                 Retry
               </Button>
@@ -129,12 +129,12 @@ export default function CustomerAssetListPage() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-50">
+    <div className="min-h-screen bg-background">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
         {/* Header */}
         <div className="mb-8">
-          <h1 className="text-4xl font-bold text-slate-900">Available Assets</h1>
-          <p className="mt-2 text-lg text-slate-600">
+          <h1 className="text-4xl font-bold text-foreground">Available Assets</h1>
+          <p className="mt-2 text-lg text-muted-foreground">
             Browse our selection and book what you need
           </p>
         </div>
@@ -144,7 +144,7 @@ export default function CustomerAssetListPage() {
           <Card>
             <CardContent className="py-12">
               <div className="text-center">
-                <p className="text-slate-500 text-lg">No assets available at the moment.</p>
+                <p className="text-muted-foreground text-lg">No assets available at the moment.</p>
               </div>
             </CardContent>
           </Card>
@@ -159,7 +159,7 @@ export default function CustomerAssetListPage() {
                 >
                   <Card className="h-full hover:shadow-xl transition-shadow duration-300">
                     {/* Asset Image */}
-                    <div className="relative h-48 bg-gradient-to-br from-blue-400 to-blue-600 flex items-center justify-center overflow-hidden">
+                    <div className="relative h-48 bg-gradient-to-br from-primary to-primary flex items-center justify-center overflow-hidden">
                       {asset.images.length > 0 ? (
                         <Image
                           src={asset.images[0]}
@@ -175,7 +175,7 @@ export default function CustomerAssetListPage() {
                     </div>
 
                     <CardHeader>
-                      <CardTitle className="group-hover:text-blue-600 transition-colors">
+                      <CardTitle className="group-hover:text-primary transition-colors">
                         {asset.name}
                       </CardTitle>
                       {asset.description && (
@@ -202,7 +202,7 @@ export default function CustomerAssetListPage() {
                         </div>
                       )}
 
-                      <div className="flex items-center text-sm font-medium text-blue-600 group-hover:text-blue-700">
+                      <div className="flex items-center text-sm font-medium text-primary group-hover:text-primary">
                         View Details
                         <ArrowRight className="ml-1 h-4 w-4" />
                       </div>
@@ -250,7 +250,7 @@ export default function CustomerAssetListPage() {
                 </Pagination>
 
                 {/* Results Info */}
-                <div className="mt-4 text-center text-sm text-slate-600">
+                <div className="mt-4 text-center text-sm text-muted-foreground">
                   Showing {(currentPage - 1) * pageSize + 1} to{' '}
                   {Math.min(currentPage * pageSize, pagination.totalCount)} of{' '}
                   {pagination.totalCount} assets

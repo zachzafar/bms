@@ -2,18 +2,18 @@
 
 import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
-import { 
-  DropdownMenu, 
-  DropdownMenuContent, 
-  DropdownMenuItem, 
-  DropdownMenuSeparator, 
-  DropdownMenuTrigger 
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger
 } from "@/components/ui/dropdown-menu"
-import { 
-  Building, 
-  Users, 
-  LogOut, 
-  ChevronDown, 
+import {
+  Building,
+  Users,
+  LogOut,
+  ChevronDown,
   User,
   Globe,
   Calendar
@@ -21,6 +21,7 @@ import {
 import { useStorage } from "@/hooks/useStorage"
 import { deleteSession } from "@/lib/api/session"
 import { queryClient } from "@/providers/tanstack"
+import { ModeToggle } from "@/components/mode-toggle"
 
 interface AppOption {
   id: string
@@ -38,7 +39,7 @@ const appOptions: AppOption[] = [
     description: 'Administration Dashboard',
     icon: <Building className="h-4 w-4" />,
     url: '/admin',
-    color: 'text-blue-600'
+    color: 'text-primary'
   },
   {
     id: 'booking',
@@ -46,7 +47,7 @@ const appOptions: AppOption[] = [
     description: 'Manage bookings',
     icon: <Calendar className="h-4 w-4" />,
     url: '/booking',
-    color: 'text-orange-600'
+    color: 'text-primary'
   },
   {
     id: 'crm',
@@ -54,7 +55,7 @@ const appOptions: AppOption[] = [
     description: 'Manage clients, inquiries, and business relationships',
     icon: <Users className="h-4 w-4" />,
     url: '/crm',
-    color: 'text-purple-600'
+    color: 'text-primary'
   },
   {
     id: 'auth',
@@ -62,7 +63,7 @@ const appOptions: AppOption[] = [
     description: 'Authentication',
     icon: <Globe className="h-4 w-4" />,
     url: '/auth',
-    color: 'text-green-600'
+    color: 'text-primary'
   }
 ]
 
@@ -98,6 +99,9 @@ export function AppHeader() {
 
   return (
     <div className="flex items-center gap-x-4 lg:gap-x-6">
+      {/* Dark Mode Toggle */}
+      <ModeToggle />
+
       {/* Application Switcher */}
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
@@ -108,7 +112,7 @@ export function AppHeader() {
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end" className="w-56">
-          <div className="px-2 py-1.5 text-sm font-medium text-gray-500">
+          <div className="px-2 py-1.5 text-sm font-medium text-muted-foreground">
             Switch Application
           </div>
           <DropdownMenuSeparator />
@@ -122,8 +126,8 @@ export function AppHeader() {
                 {app.icon}
               </div>
               <div className="flex flex-col items-start">
-                <span className="text-sm font-medium text-gray-900">{app.name}</span>
-                <span className="text-xs text-gray-500">{app.description}</span>
+                <span className="text-sm font-medium text-foreground">{app.name}</span>
+                <span className="text-xs text-muted-foreground">{app.description}</span>
               </div>
             </DropdownMenuItem>
           ))}
@@ -134,17 +138,17 @@ export function AppHeader() {
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
           <Button variant="ghost" size="sm" className="flex items-center gap-2">
-            <div className="h-8 w-8 rounded-full bg-blue-500 flex items-center justify-center">
-              <span className="text-sm font-medium text-white">{currentUser.initials}</span>
+            <div className="h-8 w-8 rounded-full bg-primary flex items-center justify-center">
+              <span className="text-sm font-medium text-primary-foreground">{currentUser.initials}</span>
             </div>
-            <span className="hidden sm:inline text-sm font-medium text-gray-700">
+            <span className="hidden sm:inline text-sm font-medium text-foreground">
               {currentUser.name}
             </span>
             <ChevronDown className="h-4 w-4" />
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end" className="w-48">
-          <div className="px-2 py-1.5 text-sm font-medium text-gray-500">
+          <div className="px-2 py-1.5 text-sm font-medium text-muted-foreground">
             Account
           </div>
           <DropdownMenuSeparator />
@@ -153,9 +157,9 @@ export function AppHeader() {
             <span>Profile</span>
           </DropdownMenuItem>
           <DropdownMenuSeparator />
-          <DropdownMenuItem 
+          <DropdownMenuItem
             onClick={handleLogout}
-            className="flex items-center gap-2 px-3 py-2 cursor-pointer text-red-600 hover:text-red-700"
+            className="flex items-center gap-2 px-3 py-2 cursor-pointer text-destructive hover:text-destructive/90"
           >
             <LogOut className="h-4 w-4" />
             <span>Logout</span>

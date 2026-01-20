@@ -241,10 +241,10 @@ export default function CustomerBookingPage() {
 
   if (isLoading || isLoadingForms) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-slate-50">
+      <div className="min-h-screen flex items-center justify-center bg-background">
         <div className="text-center">
-          <Loader2 className="h-12 w-12 animate-spin text-blue-600 mx-auto" />
-          <p className="mt-4 text-slate-600">Loading booking details...</p>
+          <Loader2 className="h-12 w-12 animate-spin text-primary mx-auto" />
+          <p className="mt-4 text-muted-foreground">Loading booking details...</p>
         </div>
       </div>
     );
@@ -252,17 +252,17 @@ export default function CustomerBookingPage() {
 
   if (queryError || !asset) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-slate-50">
+      <div className="min-h-screen flex items-center justify-center bg-background">
         <Card className="max-w-md">
           <CardContent className="pt-6">
             <div className="text-center">
-              <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                <svg className="w-8 h-8 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <div className="w-16 h-16 bg-destructive/10 rounded-full flex items-center justify-center mx-auto mb-4">
+                <svg className="w-8 h-8 text-destructive" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                 </svg>
               </div>
-              <h2 className="text-xl font-bold text-slate-900 mb-2">Asset Not Found</h2>
-              <p className="text-slate-600 mb-6">
+              <h2 className="text-xl font-bold text-foreground mb-2">Asset Not Found</h2>
+              <p className="text-muted-foreground mb-6">
                 We couldn't find the asset you're trying to book.
               </p>
               <Button asChild>
@@ -278,12 +278,12 @@ export default function CustomerBookingPage() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-50 py-8">
+    <div className="min-h-screen bg-background py-8">
       <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Back Button */}
         <Link
           href={`/customer/${subdomain}/${assetId}`}
-          className="inline-flex items-center text-blue-600 hover:text-blue-700 mb-6"
+          className="inline-flex items-center text-primary hover:text-primary mb-6"
         >
           <ArrowLeft className="w-5 h-5 mr-2" />
           Back to asset details
@@ -292,7 +292,7 @@ export default function CustomerBookingPage() {
         <Card>
           <CardHeader>
             <div className="flex items-center space-x-3">
-              <div className="w-12 h-12 bg-blue-600 rounded-full flex items-center justify-center">
+              <div className="w-12 h-12 bg-primary rounded-full flex items-center justify-center">
                 <Calendar className="h-6 w-6 text-white" />
               </div>
               <div>
@@ -347,7 +347,7 @@ export default function CustomerBookingPage() {
 
                 {/* Customer Information */}
                 <div className="space-y-4">
-                  <h3 className="text-lg font-semibold text-slate-900">Your Information</h3>
+                  <h3 className="text-lg font-semibold text-foreground">Your Information</h3>
 
                   <FormField
                     control={form.control}
@@ -399,12 +399,12 @@ export default function CustomerBookingPage() {
                     {forms.map((formData) => (
                       <div key={formData.form.id} className="space-y-4">
                         <div>
-                          <h3 className="text-lg font-semibold text-slate-900">{formData.form.name}</h3>
+                          <h3 className="text-lg font-semibold text-foreground">{formData.form.name}</h3>
                           {formData.form.description && (
-                            <p className="text-sm text-slate-600 mt-1">{formData.form.description}</p>
+                            <p className="text-sm text-muted-foreground mt-1">{formData.form.description}</p>
                           )}
                           {/* <div className="flex items-center gap-2 mt-2">
-                            <span className="text-xs px-2 py-1 rounded-full bg-blue-100 text-blue-700 font-medium">
+                            <span className="text-xs px-2 py-1 rounded-full bg-primary/10 text-primary font-medium">
                               {formData.assignmentType === 'direct' && 'Asset Specific'}
                               {formData.assignmentType === 'assetType' && 'Asset Type'}
                               {formData.assignmentType === 'tag' && 'Tag Based'}
@@ -480,7 +480,7 @@ export default function CustomerBookingPage() {
                   </Button>
                 </div>
 
-                <p className="text-sm text-slate-500 text-center">
+                <p className="text-sm text-muted-foreground text-center">
                   * Required fields
                 </p>
               </form>
