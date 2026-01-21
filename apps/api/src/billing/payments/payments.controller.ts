@@ -4,7 +4,6 @@ import { billingContract } from '@repo/api-contract';
 import * as schema from '@repo/api-contract';
 import { TenantService } from 'src/tenant/tenant.service';
 import { PaymentsService } from './payments.service';
-// import { RequireRead, RequireWrite } from 'src/auth/decorators/permissions.decorator';
 import { Roles } from 'src/auth/decorators/permissions.decorator';
 import { PermissionScope } from 'src/auth/permissions';
 

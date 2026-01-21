@@ -31,9 +31,10 @@ export class TenantController {
   @TsRestHandler(contract.tenants.update)
   @Roles(PermissionScope.TENANTS_READ)
   async updateTenant(@Headers() headers: any): Promise<ReturnType<typeof tsRestHandler>> {
-    return tsRestHandler(contract.tenants.update, async ({body}) => {
-      const tenantId = headers['x-tenant-id'];
-      const tenants = await this.tenantService.updateTenant(tenantId,body);
+    return tsRestHandler(contract.tenants.update, async ({body, params}) => {
+      const tenantId = params.id; // Use the path param, not the header
+      this.logger.log(`Update tenant request - tenantId: ${tenantId}, body: ${JSON.stringify(body)}`);
+      const tenants = await this.tenantService.updateTenant(tenantId, body);
       return { status: 200, body: tenants };
     });
   }
