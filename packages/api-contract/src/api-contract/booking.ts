@@ -25,6 +25,18 @@ export const ExtendedSelectBookingSchema = SelectBookingSchema.omit({ startDate:
     formResponses: z.array(BookingFormResponseSchema).optional(),
 })
 
+export const BlockedDateSchema = z.object({
+          id: z.number(),
+          tenantId: z.string(),
+          assetId: z.string(),
+          startDate: z.coerce.date(),
+          endDate: z.coerce.date(),
+          title: z.string().min(1, "Title is required"),
+          reason: z.string().optional(),
+          createdAt: z.coerce.date(),
+          updatedAt: z.coerce.date().optional(),
+        })
+
 export type ExtendedSelectBooking = z.infer<typeof ExtendedSelectBookingSchema>
 
 export const bookingContract = c.router({
@@ -142,19 +154,7 @@ export const bookingContract = c.router({
       })
       .optional(),
     responses: {
-      200: z.array(
-        z.object({
-          id: z.number(),
-          tenantId: z.string(),
-          assetId: z.string(),
-          startDate: z.coerce.date(),
-          endDate: z.coerce.date(),
-          title: z.string().min(1, "Title is required"),
-          reason: z.string().optional(),
-          createdAt: z.coerce.date(),
-          updatedAt: z.coerce.date().optional(),
-        })
-      ),
+      200: z.array(BlockedDateSchema),
     },
     summary: "Get all blocked dates, optionally filtered by asset",
   },
