@@ -199,6 +199,24 @@ export const billingContract = c.router({
     },
   },
 
+  deletePayment: {
+    method: "DELETE",
+    path: "/payment/:id",
+    summary: "Delete a payment by ID",
+    pathParams: z.object({
+      id: z.coerce.number(),
+    }),
+    body: z.object({}),
+    responses: {
+      200: z.object({
+        message: z.string(),
+      }),
+      404: z.object({
+        message: z.string(),
+      }),
+    },
+  },
+
   // Generate invoice from booking
   generateInvoiceFromBooking: {
     method: "POST",

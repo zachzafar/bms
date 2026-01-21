@@ -78,7 +78,7 @@ export default function ViewPaymentPage() {
   return (
     <div className="container mx-auto py-10">
       <div className="flex items-center mb-6">
-        <Button variant="ghost" onClick={() => router.push(`/billing/payments`)} className="mr-4">
+        <Button variant="ghost" onClick={() => router.push(`/bookings/billing/payments`)} className="mr-4">
           Back
         </Button>
         <h1 className="text-3xl font-bold">Payment #{payment.id}</h1>
@@ -151,7 +151,7 @@ export default function ViewPaymentPage() {
                       <Button
                         variant="outline"
                         size="sm"
-                        onClick={() => router.push(`/billing/invoices/${inv.invoiceId}/view`)}
+                        onClick={() => router.push(`/bookings/billing/invoices/${inv.invoiceId}/view`)}
                       >
                         View Invoice
                       </Button>

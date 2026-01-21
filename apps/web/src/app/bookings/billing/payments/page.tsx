@@ -8,7 +8,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Plus, Search, Eye, Pencil, DollarSign, Calendar } from 'lucide-react';
+import { Plus, Search, Eye, Pencil, DollarSign, Calendar, Trash2 } from 'lucide-react';
 import { authClient } from '@/lib/api/publicClient';
 import { toast } from 'sonner';
 import { Label } from '@/components/ui/label';
@@ -171,6 +171,26 @@ export default function PaymentsPage() {
       console.error(error);
     },
   });
+
+  const { mutate: deletePayment, isPending: deletingPayment } = authClient.billing.deletePayment.useMutation({
+    onSuccess: () => {
+      toast.success('Payment deleted successfully');
+      refetchPayments();
+    },
+    onError: (error) => {
+      toast.error('Failed to delete payment');
+      console.error(error);
+    },
+  });
+
+  const handleDeletePayment = (paymentId: number) => {
+    if (confirm('Are you sure you want to delete this payment? This will recalculate related invoice statuses.')) {
+      deletePayment({
+        params: { id: paymentId },
+        body: {},
+      });
+    }
+  };
 
   const submitPayment = (values: PaymentFormValues) => {
     if (!selectedCustomerId) {
@@ -351,11 +371,16 @@ export default function PaymentsPage() {
                     <TableCell>{new Date(payment.createdAt).toLocaleDateString()}</TableCell>
                     <TableCell>
                       <div className="flex items-center gap-2">
-                        <Button variant="outline" size="sm" onClick={() => router.push(`/billing/payments/${payment.id}/view`)}>
+                        <Button variant="outline" size="sm" onClick={() => router.push(`/bookings/billing/payments/${payment.id}/view`)}>
                           <Eye className="h-4 w-4" />
                         </Button>
-                        <Button variant="outline" size="sm" onClick={() => router.push(`/billing/payments/${payment.id}/edit`)}>
-                          <Pencil className="h-4 w-4" />
+                        <Button
+                          variant="destructive"
+                          size="sm"
+                          onClick={() => handleDeletePayment(payment.id)}
+                          disabled={deletingPayment}
+                        >
+                          <Trash2 className="h-4 w-4" />
                         </Button>
                       </div>
                     </TableCell>

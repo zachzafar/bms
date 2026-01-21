@@ -59,10 +59,10 @@ export default function BillingPage() {
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-3xl font-bold">Billing Management</h1>
         <div className="space-x-2">
-          <Button onClick={() => router.push('/billing/invoices/create')}>
+          <Button onClick={() => router.push('/bookings/billing/invoices/create')}>
             Create Invoice
           </Button>
-          <Button onClick={() => router.push('/billing/payments/create')}>
+          <Button onClick={() => router.push('/bookings/billing/payments/create')}>
             Record Payment
           </Button>
         </div>
@@ -148,7 +148,7 @@ export default function BillingPage() {
                   <Button 
                     variant="outline" 
                     className="w-full"
-                    onClick={() => router.push('/billing/invoices/create')}
+                    onClick={() => router.push('/bookings/billing/invoices/create')}
                   >
                     Generate Invoice
                   </Button>
@@ -169,7 +169,7 @@ export default function BillingPage() {
                   <Button 
                     variant="outline" 
                     className="w-full"
-                    onClick={() => router.push('/billing/payments/create')}
+                    onClick={() => router.push('/bookings/billing/payments/create')}
                   >
                     Record Payment
                   </Button>
@@ -190,7 +190,7 @@ export default function BillingPage() {
                   <Button 
                     variant="outline" 
                     className="w-full"
-                    onClick={() => router.push('/billing/reports')}
+                    onClick={() => router.push('/bookings/billing/reports')}
                   >
                     View Reports
                   </Button>
@@ -214,7 +214,7 @@ export default function BillingPage() {
                       {totalInvoices} total invoices • {totalPaid} paid • {totalUnpaid} unpaid
                     </p>
                   </div>
-                  <Button onClick={() => router.push('/billing/invoices')}>
+                  <Button onClick={() => router.push('/bookings/billing/invoices')}>
                     View All Invoices
                   </Button>
                 </div>
@@ -252,7 +252,7 @@ export default function BillingPage() {
                       {payments.length} total payments • ${payments.reduce((sum, p) => sum + parseFloat(p.amount), 0).toFixed(2)} total amount
                     </p>
                   </div>
-                  <Button onClick={() => router.push('/billing/payments')}>
+                  <Button onClick={() => router.push('/bookings/billing/payments')}>
                     View All Payments
                   </Button>
                 </div>

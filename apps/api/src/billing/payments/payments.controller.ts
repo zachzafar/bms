@@ -4,7 +4,6 @@ import { billingContract } from '@repo/api-contract';
 import * as schema from '@repo/api-contract';
 import { TenantService } from 'src/tenant/tenant.service';
 import { PaymentsService } from './payments.service';
-// import { RequireRead, RequireWrite } from 'src/auth/decorators/permissions.decorator';
 import { Roles } from 'src/auth/decorators/permissions.decorator';
 import { PermissionScope } from 'src/auth/permissions';
 
@@ -56,6 +55,25 @@ export class PaymentsController {
         return { status: 404, body: undefined };
       }
       return { status: 200, body: { ...row, paymentDate: row.paymentDate.toISOString() } };
+    });
+  }
+
+  @TsRestHandler(billingContract.deletePayment)
+  @Roles(PermissionScope.PAYMENTS_WRITE)
+  async delete(@Headers() headers: any): Promise<ReturnType<typeof tsRestHandler>> {
+    return tsRestHandler(billingContract.deletePayment, async ({ params }) => {
+      const tenantId = headers['x-tenant-id'];
+      await this.tenantService.validateTenantAccess(tenantId, schema.Payment, (params.id));
+
+      try {
+        const result = await this.payments.delete((params.id));
+        return { status: 200, body: result };
+      } catch (error:any) {
+        if (error.message?.includes('not found')) {
+          return { status: 404, body: { message: error.message } };
+        }
+        throw error;
+      }
     });
   }
 }

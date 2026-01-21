@@ -60,10 +60,7 @@ export default function BookingSettingsPage() {
       {
         params: { id: tenantId },
         body: {
-          tenant: {
-            ...tenant,
-            enableAutomaticConfirmation: values.enableAutomaticConfirmation,
-          },
+          enableAutomaticConfirmation: values.enableAutomaticConfirmation,
         },
       },
       {

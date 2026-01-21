@@ -138,7 +138,7 @@ export default function InvoicesPage() {
     <div className="container mx-auto py-10">
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-3xl font-bold">Invoices</h1>
-        <Button onClick={() => router.push('/billing/invoices/create')}>
+        <Button onClick={() => router.push('/bookings/billing/invoices/create')}>
           <Plus className="h-4 w-4 mr-2" />
           Create Invoice
         </Button>
@@ -292,14 +292,14 @@ export default function InvoicesPage() {
                         <Button
                           variant="outline"
                           size="sm"
-                          onClick={() => router.push(`/billing/invoices/${invoice.id}/view`)}
+                          onClick={() => router.push(`/bookings/billing/invoices/${invoice.id}/view`)}
                         >
                           <Eye className="h-4 w-4" />
                         </Button>
                         <Button
                           variant="outline"
                           size="sm"
-                          onClick={() => router.push(`/billing/invoices/${invoice.id}/edit`)}
+                          onClick={() => router.push(`/bookings/billing/invoices/${invoice.id}/edit`)}
                         >
                           <Edit className="h-4 w-4" />
                         </Button>
