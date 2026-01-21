@@ -274,4 +274,59 @@ export class PaymentsService {
       })),
     };
   }
+
+  async delete(id: number) {
+    // Check if the payment exists first
+    const payment = await this.db.query.Payment.findFirst({
+      where: (p, { eq }) => eq(p.id, id),
+    });
+
+    if (!payment) {
+      throw new BadRequestException(`Payment with ID ${id} not found`);
+    }
+
+    // Get affected invoices before deletion
+    const pivots = await this.db.query.PaymentInvoice.findMany({
+      where: (pi, { eq }) => eq(pi.paymentId, (id)),
+    });
+
+    const affectedInvoiceIds = pivots.map((p) => p.invoiceId);
+
+    // Wrap in transaction to delete payment and recalculate invoice statuses
+    await this.db.transaction(async (tx) => {
+      // Delete PaymentInvoice records first
+      await tx.delete(schema.PaymentInvoice).where(eq(schema.PaymentInvoice.paymentId, (id))).execute();
+
+      // Delete the payment itself
+      await tx.delete(schema.Payment).where(eq(schema.Payment.id, id)).execute();
+
+      // Recalculate statuses for affected invoices
+      if (affectedInvoiceIds.length > 0) {
+        const invoices = await tx.query.Invoice.findMany({
+          where: (i, { inArray }) => inArray(i.id, affectedInvoiceIds),
+        });
+
+        // Get remaining payment applications
+        const remainingPivots = await tx.query.PaymentInvoice.findMany({
+          where: (pi, { inArray }) => inArray(pi.invoiceId, affectedInvoiceIds),
+        });
+
+        const appliedByInvoice = new Map<number, number>();
+        remainingPivots.forEach((p) => {
+          appliedByInvoice.set(p.invoiceId, (appliedByInvoice.get(p.invoiceId) ?? 0) + this.toCents(String(p.amountApplied)));
+        });
+
+        for (const inv of invoices) {
+          const total = this.toCents(String(inv.totalAmount));
+          const applied = appliedByInvoice.get((inv.id)) ?? 0;
+          const status = applied >= total ? 'Paid' : applied > 0 ? 'Partial' : 'Unpaid';
+          if (status !== inv.status) {
+            await tx.update(schema.Invoice).set({ status }).where(eq(schema.Invoice.id, inv.id));
+          }
+        }
+      }
+    });
+
+    return { message: `Payment ${id} deleted successfully` };
+  }
 }
