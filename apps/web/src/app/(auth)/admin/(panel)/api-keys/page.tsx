@@ -103,7 +103,7 @@ export default function ApiKeysPage() {
               <Input
                 value={newKey}
                 readOnly
-                className="font-mono bg-white dark:bg-gray-800"
+                className="font-mono bg-background"
               />
               <Button
                 variant="outline"

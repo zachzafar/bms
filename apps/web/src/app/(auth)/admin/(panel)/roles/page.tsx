@@ -74,9 +74,9 @@ export default function RolesPage() {
   useEffect(() => {
     if (rolesData?.status === 200) {
       setRoles(
-        rolesData.body.map((role: { roleId: string; name: string; permissions: string[] }) => ({
+        rolesData.body.map((role: { roleId: number; name: string; permissions: string[] }) => ({
           ...role,
-          roleId: Number(role.roleId),
+          roleId: role.roleId,
         }))
       );
     }
@@ -260,7 +260,7 @@ export default function RolesPage() {
         </Dialog>
       </div>
 
-      <Card className="bg-white border-white">
+      <Card>
         <CardHeader>
           <CardTitle className="font-bold text-foreground">Roles</CardTitle>
           <CardDescription className=" mt-2 text-muted-foreground">
@@ -271,10 +271,10 @@ export default function RolesPage() {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead className="text-black">ID</TableHead>
-                <TableHead className=" mt-2 text-black">Name</TableHead>
-                <TableHead className=" mt-2 text-black">Permissions</TableHead>
-                <TableHead className="text-right mt-2 text-black">Actions</TableHead>
+                <TableHead>ID</TableHead>
+                <TableHead>Name</TableHead>
+                <TableHead>Permissions</TableHead>
+                <TableHead className="text-right">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -300,7 +300,7 @@ export default function RolesPage() {
                         )}
                       </div>
                     </TableCell>
-                    <TableCell className="text-right text-black">
+                    <TableCell className="text-right">
                       <Button variant="ghost" size="sm" onClick={() => handleEditRole(role)}>
                         <Pencil className="mr-2 h-4 w-4" />
                         Edit
