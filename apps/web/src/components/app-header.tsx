@@ -41,14 +41,14 @@ const appOptions: AppOption[] = [
     url: '/admin',
     color: 'text-primary'
   },
-  {
-    id: 'booking',
-    name: 'Booking',
-    description: 'Manage bookings',
-    icon: <Calendar className="h-4 w-4" />,
-    url: '/booking',
-    color: 'text-primary'
-  },
+  // {
+  //   id: 'booking',
+  //   name: 'Booking',
+  //   description: 'Manage bookings',
+  //   icon: <Calendar className="h-4 w-4" />,
+  //   url: '/booking',
+  //   color: 'text-primary'
+  // },
   {
     id: 'crm',
     name: 'CRM System',
@@ -57,14 +57,6 @@ const appOptions: AppOption[] = [
     url: '/crm',
     color: 'text-primary'
   },
-  {
-    id: 'auth',
-    name: 'Auth Hub',
-    description: 'Authentication',
-    icon: <Globe className="h-4 w-4" />,
-    url: '/auth',
-    color: 'text-primary'
-  }
 ]
 
 export function AppHeader() {

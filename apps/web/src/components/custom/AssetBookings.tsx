@@ -35,24 +35,25 @@ const bookingFormSchema = z.object({
 
 type BookingFormValues = z.infer<typeof bookingFormSchema>;
 
-export default function AssetBookings({ asset }: { asset: SelectAsset}) {
+export default function AssetBookings({ asset }: { asset: SelectAsset }) {
   const [customers, setCustomers] = useState<string[]>([]);
-const { data } = authClient.booking.getBookings.useQuery(
-  { queryKey: ['bookings', asset.id],
-    select: (res) => ({
-      ...res,
-      body: {
-        ...res.body,
-        data: z.array(ExtendedSelectBookingSchema).parse(res.body.data),
-      },
-    }),
-   },
-);
+  const { data } = authClient.booking.getBookings.useQuery(
+    {
+      queryKey: ['bookings', asset.id],
+      select: (res) => ({
+        ...res,
+        body: {
+          ...res.body,
+          data: z.array(ExtendedSelectBookingSchema).parse(res.body.data),
+        },
+      }),
+    },
+  );
   const { mutate: createBooking } = authClient.booking.createBooking.useMutation();
-  const { data: customerResponse } = authClient.users.getCustomers.useQuery({ queryKey: ['customers']})
+  const { data: customerResponse } = authClient.users.getCustomers.useQuery({ queryKey: ['customers'] })
   const customerList = customerResponse?.body.data ?? [];
   const bookings = data?.body.data ?? [];
-  
+
   const [isOpen, setIsOpen] = useState(false);
 
   // Initialize react-hook-form
@@ -63,7 +64,7 @@ const { data } = authClient.booking.getBookings.useQuery(
       assetId: asset.id,
       customers: [],
     },
-  }); 
+  });
 
   const onSubmit = (values: BookingFormValues) => {
     createBooking({
@@ -74,8 +75,8 @@ const { data } = authClient.booking.getBookings.useQuery(
           status: 'Pending',
           assetId: asset.id
         },
-          customers: customers.map((customerId) => parseInt(customerId)),
-        },
+        customers: customers.map((customerId) => parseInt(customerId)),
+      },
     });
     setIsOpen(false);
     form.reset();
@@ -129,30 +130,37 @@ const { data } = authClient.booking.getBookings.useQuery(
                     </FormItem>
                   )}
                 />
-                 <FormItem>
-                <FormLabel>Customers</FormLabel>
-                <MultiSelector
-                  values={customers}
-                  onValuesChange={setCustomers}
-                >
-                  <MultiSelectorTrigger>
-                    <MultiSelectorInput placeholder="Select Customers..." />
-                  </MultiSelectorTrigger>
-                  <MultiSelectorContent>
-                    <MultiSelectorList>
-                      {customerList.map((customer) => (
-                        <MultiSelectorItem
-                          key={customer.customer.id}
-                          value={customer.customer.id.toString()}
-                        >
-                          {customer.user.name}
-                        </MultiSelectorItem>
-                      ))}
-                    </MultiSelectorList>
-                  </MultiSelectorContent>
-                </MultiSelector>
-                <FormMessage />
-              </FormItem>
+                <FormField
+                  control={form.control}
+                  name="endDate"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Customers</FormLabel>
+                      <MultiSelector
+                        values={customers}
+                        onValuesChange={setCustomers}
+                      >
+                        <MultiSelectorTrigger>
+                          <MultiSelectorInput placeholder="Select Customers..." />
+                        </MultiSelectorTrigger>
+                        <MultiSelectorContent>
+                          <MultiSelectorList>
+                            {customerList.map((customer) => (
+                              <MultiSelectorItem
+                                key={customer.customer.id}
+                                value={customer.customer.id.toString()}
+                              >
+                                {customer.user.name}
+                              </MultiSelectorItem>
+                            ))}
+                          </MultiSelectorList>
+                        </MultiSelectorContent>
+                      </MultiSelector>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
                 <Button type="submit" className="w-full">
                   Create Booking
                 </Button>

@@ -125,7 +125,7 @@ export default function LoginPage() {
             </form>
           </Form>
 
-          <div className="mt-6 text-center">
+          {/* <div className="mt-6 text-center">
             <p className="text-sm text-muted-foreground">
               Don't have an account?{' '}
               <Link
@@ -135,7 +135,7 @@ export default function LoginPage() {
                 Create one here
               </Link>
             </p>
-          </div>
+          </div> */}
         </CardContent>
       </Card>
     </div>
