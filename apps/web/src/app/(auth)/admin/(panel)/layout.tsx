@@ -26,13 +26,13 @@ const adminNavItems = [
     href: '/admin/api-keys',
     color: 'bg-orange-500'
   },
-  {
-    title: 'Tenant Management',
-    description: 'Manage multi-tenant organizations',
-    icon: <Globe className="h-6 w-6" />,
-    href: '/admin/tenants',
-    color: 'bg-teal-500'
-  }
+  // {
+  //   title: 'Tenant Management',
+  //   description: 'Manage multi-tenant organizations',
+  //   icon: <Globe className="h-6 w-6" />,
+  //   href: '/admin/tenants',
+  //   color: 'bg-teal-500'
+  // }
 ];
 
 export default function AdminLayout({
@@ -43,7 +43,7 @@ export default function AdminLayout({
   return (
     <div className="min-h-screen bg-background">
       {/* Header */}
-      <header className="bg-white shadow-sm border-b">
+      <header className="shadow-sm border-b">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
             <div className="flex items-center">
@@ -66,7 +66,7 @@ export default function AdminLayout({
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
             {adminNavItems.map((item) => (
               <Link key={item.href} href={item.href}>
-                <Card className="hover:shadow-lg transition-shadow cursor-pointer bg-white border-white">
+                <Card className="hover:shadow-lg transition-shadow cursor-pointer">
                   <CardHeader className="pb-3">
                     <div className={`${item.color} p-3 rounded-lg w-fit`}>
                       {item.icon}

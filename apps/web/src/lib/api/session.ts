@@ -87,9 +87,6 @@ export  async function deleteSession() {
 }
 
 export async function updateTokens( refreshToken:string ,accessToken: string) {
-
-  console.log("Trying to update session")
-  
   const cookie = cookies().get("session")?.value;
   if (!cookie) return null;
 
@@ -100,7 +97,6 @@ export async function updateTokens( refreshToken:string ,accessToken: string) {
   
 
   if (!payload) throw new Error("Session not found");
-  console.log("new Session payload", payload)
 
   const newPayload: Session = {
     refreshToken,

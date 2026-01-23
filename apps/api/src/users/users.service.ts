@@ -137,12 +137,15 @@ export class UsersService {
     async findAll(tenantId: string, page: number = 1, pageSize: number = 10): Promise<{ data: SelectUser[]; pagination: any }> {
   const offset = (page - 1) * pageSize;
 
-  // Get total count
+  // Get total count (only system users)
   const totalCountResult = await this.db
     .select({ count: sql<number>`COUNT(DISTINCT ${schema.User.id})` })
     .from(schema.TenantHasUsers)
-    .where(eq(schema.TenantHasUsers.tenantId, tenantId))
     .innerJoin(schema.User, eq(schema.TenantHasUsers.userId, schema.User.id))
+    .where(and(
+      eq(schema.TenantHasUsers.tenantId, tenantId),
+      eq(schema.User.userType, 'system')
+    ))
     .execute();
   const totalCount = totalCountResult[0]?.count || 0;
 
@@ -152,9 +155,12 @@ export class UsersService {
       roles: schema.UserHasRoles
     })
     .from(schema.TenantHasUsers)
-    .where(eq(schema.TenantHasUsers.tenantId, tenantId))
     .innerJoin(schema.User, eq(schema.TenantHasUsers.userId, schema.User.id))
     .leftJoin(schema.UserHasRoles, eq(schema.UserHasRoles.userId, schema.User.id))
+    .where(and(
+      eq(schema.TenantHasUsers.tenantId, tenantId),
+      eq(schema.User.userType, 'system')
+    ))
     .limit(pageSize)
     .offset(offset);
 

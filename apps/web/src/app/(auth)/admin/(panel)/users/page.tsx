@@ -66,7 +66,7 @@ export default function UsersPage() {
         </p>
       </div>
 
-      <Card className= "bg-white border-white">
+      <Card>
         <CardHeader>
           <CardTitle className="font-bold text-foreground">User List</CardTitle>
           <CardDescription className=" mt-2 text-muted-foreground">Manage existing users</CardDescription>
@@ -76,7 +76,7 @@ export default function UsersPage() {
             <div className="relative">
               <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
               <Input
-                className="pl-8 text-black"
+                className="pl-8"
                 placeholder="Search users..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
@@ -116,10 +116,10 @@ export default function UsersPage() {
           <Table className=" mt-2 text-foreground">
             <TableHeader>
               <TableRow>
-                <TableHead className=" mt-2 text-gray-1200">Name</TableHead>
-                <TableHead className=" mt-2 text-gray-1200">Email</TableHead>
-                <TableHead className=" mt-2 text-gray-1200">Role</TableHead>
-                <TableHead className=" mt-2 text-gray-1200">Actions</TableHead>
+                <TableHead>Name</TableHead>
+                <TableHead>Email</TableHead>
+                <TableHead>Role</TableHead>
+                <TableHead>Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -140,7 +140,8 @@ export default function UsersPage() {
                         userType: "system",
                         createdAt: null,
                         updatedAt: null,
-                        roles: user.roles
+                        roles: user.roles,
+                        deletedAt: null
                       })}
                       aria-label={`Edit ${user.name}`}
                     >
