@@ -37,7 +37,6 @@ const refreshTokenFn = async () => {
   
       
     } catch (error) {
-      console.log("error refreshing token, deleting session", error)
       deleteSession();
       redirect("/login");
       return null

@@ -71,8 +71,7 @@ export default function AssetTypePropertiesForm({ asset }: { asset: SelectAsset 
   }, [asset.assetTypeId]);
 
   const processForm: SubmitHandler<DynamicFormData> = async (data: DynamicFormData) => {
-    console.log(assetType?.body.properties)
-    console.log(data)
+
   };
 
   if (!assetType?.body.properties) {

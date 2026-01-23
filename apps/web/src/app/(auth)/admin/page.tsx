@@ -85,10 +85,8 @@ export default function AuthHubPage() {
     const checkAuth = async () => {
       try {
         const session = await getSession();
-        console.log('Session check result:', session);
-        
+
         if (!session) {
-          console.log('No session found, redirecting to login');
           router.push('/login');
           return;
         }

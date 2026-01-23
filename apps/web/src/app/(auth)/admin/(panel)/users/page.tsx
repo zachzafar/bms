@@ -140,7 +140,8 @@ export default function UsersPage() {
                         userType: "system",
                         createdAt: null,
                         updatedAt: null,
-                        roles: user.roles
+                        roles: user.roles,
+                        deletedAt: null
                       })}
                       aria-label={`Edit ${user.name}`}
                     >
