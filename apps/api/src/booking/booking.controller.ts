@@ -190,6 +190,25 @@ export class BookingController {
         })
     }
 
+    @Public()
+    @TsRestHandler(contract.booking.customerCreateBookingByTag)
+    async customerCreateBookingByTag(): Promise<ReturnType<typeof tsRestHandler>> {
+        return tsRestHandler(contract.booking.customerCreateBookingByTag, async ({ params, body }) => {
+            const { tenantId } = params;
+            const { tagId, startDate, endDate, customer, formResponses } = body;
+
+            try {
+                const result = await this.bookingService.customerCreateBookingByTag(
+                    { tagId, startDate, endDate, customer, formResponses },
+                    tenantId
+                );
+                return { status: 201, body: result };
+            } catch (error: any) {
+                return { status: 404, body: { message: error.message || 'No available assets found' } };
+            }
+        });
+    }
+
     @TsRestHandler(contract.booking.updateBookingStatus)
     @Roles(PermissionScope.BOOKINGS_WRITE)
     async updateBookingStatus(): Promise<ReturnType<typeof tsRestHandler>> {
@@ -228,6 +247,38 @@ export class BookingController {
             }
 
             return { status: 403 };
+        });
+    }
+
+    @Public()
+    @TsRestHandler(contract.booking.getBlockedDatesForAssetPublic)
+    async getBlockedDatesForAssetPublic(): Promise<ReturnType<typeof tsRestHandler>> {
+        return tsRestHandler(contract.booking.getBlockedDatesForAssetPublic, async ({ params }) => {
+            const blockedDates = await this.bookingService.getBlockedDates(params.assetId);
+
+            // Return simplified format with just start and end dates
+            const formatted = blockedDates.map((b) => ({
+                startDate: b.startDate,
+                endDate: b.endDate,
+            }));
+
+            return { status: 200, body: formatted };
+        });
+    }
+
+    @Public()
+    @TsRestHandler(contract.booking.getBlockedDatesForTagPublic)
+    async getBlockedDatesForTagPublic(): Promise<ReturnType<typeof tsRestHandler>> {
+        return tsRestHandler(contract.booking.getBlockedDatesForTagPublic, async ({ params }) => {
+            const result = await this.bookingService.checkAvailabilityByTag({ tagId: params.tagId });
+
+            // Convert from/to to startDate/endDate format
+            const formatted = result.map((r) => ({
+                startDate: r.from,
+                endDate: r.to,
+            }));
+
+            return { status: 200, body: formatted };
         });
     }
 }

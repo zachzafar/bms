@@ -14,6 +14,7 @@ export const Tags = mysqlTable(
     id: bigint("id", { mode: "number", unsigned: true }).autoincrement().primaryKey(),
     name: varchar("name", { length: 255 }).notNull(),
     description: text("description"),
+    tagImage: varchar("tag_image", { length: 255 }),
     tenantId: varchar("tenant_id", { length: 255 }).references(() => Tenant.id),
     createdAt: timestamp("createdAt").notNull().defaultNow(),
     updatedAt: timestamp("updated_at", { mode: "date" }).$onUpdate(() => new Date()),

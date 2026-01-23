@@ -24,7 +24,19 @@ export class TenantService {
 
     async getTenantsDetails(tenantIds: string[]){
             return await this.db.query.Tenant.findMany({
-            where: (tenant,{inArray}) => inArray(tenant.id,tenantIds)})  
+            where: (tenant,{inArray}) => inArray(tenant.id,tenantIds)})
+    }
+
+    async getTenantBySubdomain(subdomain: string) {
+        const tenant = await this.db.query.Tenant.findFirst({
+            where: (tenant, { eq }) => eq(tenant.subdomain, subdomain)
+        });
+
+        if (!tenant) {
+            throw new NotFoundException(`Tenant with subdomain '${subdomain}' not found`);
+        }
+
+        return tenant;
     }
 
     async getTenants(page: number = 1, pageSize: number = 10){

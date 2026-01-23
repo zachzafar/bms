@@ -75,5 +75,25 @@ export const tenantsContract = c.router({
       id: z.string()
     }),
     body: UpdateTenantSchema
+  },
+  getTenantBySubdomain: {
+    method: 'GET',
+    path: '/tenant-by-sub/:subdomain',
+    pathParams: z.object({
+      subdomain: z.string()
+    }),
+    responses: {
+      200: z.object({
+        id: z.string(),
+        name: z.string(),
+        subdomain: z.string().nullable(),
+        enableAutomaticConfirmation: z.boolean(),
+        booksByTagOnCustomerPage: z.boolean(),
+      }),
+      404: z.object({
+        message: z.string()
+      })
+    },
+    summary: 'Get tenant settings by subdomain (public)'
   }
 });
