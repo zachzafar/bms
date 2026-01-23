@@ -12,14 +12,13 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
-import { ArrowLeft, Calendar, CheckCircle2, Loader2 } from 'lucide-react';
-import { DynamicFormField } from '@/components/forms/DynamicFormField';
-import { useMemo } from 'react';
+import { ArrowLeft, Calendar, CheckCircle2, Loader2, ImageIcon } from 'lucide-react';
+import Image from 'next/image';
 import { DateRangePicker, BlockedDateRange } from '@/components/ui/date-range-picker';
 import { DateRange } from 'react-day-picker';
 
-// Base schema for customer booking (without refinement)
-const BaseCustomerBookingObjectSchema = z.object({
+// Schema for customer booking by tag
+const CustomerTagBookingSchema = z.object({
   dateRange: z.object({
     from: z.date({ required_error: 'Start date is required' }),
     to: z.date({ required_error: 'End date is required' }),
@@ -31,46 +30,43 @@ const BaseCustomerBookingObjectSchema = z.object({
   customerPhone: z.string().min(10, 'Phone number must be at least 10 characters'),
 });
 
-type CustomerBookingFormData = z.infer<typeof BaseCustomerBookingObjectSchema> & Record<string, any>;
+type CustomerTagBookingFormData = z.infer<typeof CustomerTagBookingSchema>;
 
-export default function CustomerBookingPage() {
+export default function TagBookingPage() {
   const params = useParams();
   const router = useRouter();
   const subdomain = params.subdomain as string;
-  const assetId = params.assetId as string;
+  const tagId = parseInt(params.tagId as string);
 
-  const { data: response, isLoading, error: queryError } = client.assets.getAssetDetailsBySubdomain.useQuery({
-    queryKey: ['asset-details', subdomain, assetId],
+  // Fetch tenant to get tenantId
+  const { data: tenantResponse, isLoading: isTenantLoading } = client.tenants.getTenantBySubdomain.useQuery({
+    queryKey: ['tenant-settings', subdomain],
     queryData: {
-      params: { subdomain, assetId },
+      params: { subdomain },
     },
   });
 
-  const asset = response?.status === 200 ? {
-    id: response.body.id,
-    name: response.body.name,
-    description: response.body.description,
-    tenantId: response.body.tenantId,
-  } : null;
+  const tenantId = tenantResponse?.status === 200 ? tenantResponse.body.id : null;
 
-  // Fetch forms for this asset
-  const { data: formsResponse, isLoading: isLoadingForms } = client.settings.form.getFormsForAssetPublic.useQuery({
-    queryKey: ['forms-for-asset', assetId],
+  // Fetch tag details
+  const { data: tagsResponse, isLoading: isTagsLoading } = client.settings.tags.getTagsBySubdomain.useQuery({
+    queryKey: ['tags-by-subdomain', subdomain],
     queryData: {
-      params: { assetId },
+      params: { subdomain },
+      query: { page: 1, pageSize: 100 },
     },
-    enabled: !!assetId,
   });
 
-  const forms = formsResponse?.status === 200 ? formsResponse.body.forms : [];
+  const tags = tagsResponse?.status === 200 ? tagsResponse.body.data : [];
+  const tag = tags.find(t => t.id === tagId);
 
-  // Fetch blocked dates for this asset
-  const { data: blockedDatesResponse } = client.booking.getBlockedDatesForAssetPublic.useQuery({
-    queryKey: ['blocked-dates', assetId],
+  // Fetch blocked dates for this tag
+  const { data: blockedDatesResponse } = client.booking.getBlockedDatesForTagPublic.useQuery({
+    queryKey: ['blocked-dates-tag', tagId],
     queryData: {
-      params: { assetId },
+      params: { tagId },
     },
-    enabled: !!assetId,
+    enabled: !!tagId,
   });
 
   const blockedDates: BlockedDateRange[] = blockedDatesResponse?.status === 200
@@ -80,93 +76,10 @@ export default function CustomerBookingPage() {
       }))
     : [];
 
-  // Build dynamic schema based on forms
-  const dynamicSchema = useMemo(() => {
-    const dynamicFields: Record<string, z.ZodTypeAny> = {};
+  const isLoading = isTenantLoading || isTagsLoading;
 
-    forms.forEach((formData) => {
-      formData.fields.forEach((field) => {
-        const fieldKey = `form_${formData.form.id}_${field.id}`;
-
-        // Create appropriate zod validator based on field type and required status
-        let fieldSchema: z.ZodTypeAny;
-
-        switch (field.type) {
-          case 'number':
-            if (field.required) {
-              fieldSchema = z.coerce.number({
-                required_error: `${field.name} is required`,
-                invalid_type_error: `${field.name} must be a number`
-              });
-            } else {
-              fieldSchema = z.coerce.number().optional();
-            }
-            break;
-
-          case 'text':
-          case 'textarea':
-          case 'time':
-          case 'date':
-            if (field.required) {
-              fieldSchema = z.string().min(1, `${field.name} is required`);
-            } else {
-              fieldSchema = z.string().optional();
-            }
-            break;
-
-          case 'date_range':
-            if (field.required) {
-              fieldSchema = z.object({
-                start: z.string().min(1, `${field.name} start date is required`),
-                end: z.string().min(1, `${field.name} end date is required`),
-              });
-            } else {
-              fieldSchema = z.object({
-                start: z.string().optional(),
-                end: z.string().optional(),
-              }).optional();
-            }
-            break;
-
-          case 'range':
-            if (field.required) {
-              fieldSchema = z.number({
-                required_error: `${field.name} is required`,
-                invalid_type_error: `${field.name} must be a number`
-              });
-            } else {
-              fieldSchema = z.number().optional();
-            }
-            break;
-
-          case 'boolean':
-            if (field.required) {
-              fieldSchema = z.boolean().refine((val) => val === true, {
-                message: `${field.name} must be checked`,
-              });
-            } else {
-              fieldSchema = z.boolean().optional();
-            }
-            break;
-
-          default:
-            if (field.required) {
-              fieldSchema = z.string().min(1, `${field.name} is required`);
-            } else {
-              fieldSchema = z.string().optional();
-            }
-        }
-
-        dynamicFields[fieldKey] = fieldSchema;
-      });
-    });
-
-    // Extend base schema with dynamic fields
-    return BaseCustomerBookingObjectSchema.extend(dynamicFields);
-  }, [forms]);
-
-  const form = useForm<CustomerBookingFormData>({
-    resolver: zodResolver(dynamicSchema),
+  const form = useForm<CustomerTagBookingFormData>({
+    resolver: zodResolver(CustomerTagBookingSchema),
     defaultValues: {
       dateRange: { from: undefined, to: undefined },
       customerName: '',
@@ -175,70 +88,40 @@ export default function CustomerBookingPage() {
     },
   });
 
-  const { mutate: createBooking, isPending } = client.booking.customerCreateBooking.useMutation();
+  const { mutate: createBookingByTag, isPending } = client.booking.customerCreateBookingByTag.useMutation();
 
-  const onSubmit = (data: CustomerBookingFormData) => {
-    if (!asset) return;
+  const onSubmit = (data: CustomerTagBookingFormData) => {
+    if (!tenantId) {
+      toast.error('Unable to process booking. Please try again.');
+      return;
+    }
 
-    // Collect form responses from the submitted data
-    const formResponses: Array<{ formFieldId: number; value: string }> = [];
-
-    forms.forEach((formData) => {
-      formData.fields.forEach((field) => {
-        const fieldKey = `form_${formData.form.id}_${field.id}`;
-        const fieldValue = data[fieldKey];
-
-        if (fieldValue !== undefined && fieldValue !== null && fieldValue !== '') {
-          // Handle different field types
-          let stringValue: string;
-
-          if (typeof fieldValue === 'object' && fieldValue !== null) {
-            // Handle date_range type
-            if ('start' in fieldValue && 'end' in fieldValue) {
-              stringValue = JSON.stringify(fieldValue);
-            } else {
-              stringValue = JSON.stringify(fieldValue);
-            }
-          } else if (typeof fieldValue === 'boolean') {
-            stringValue = fieldValue.toString();
-          } else {
-            stringValue = String(fieldValue);
-          }
-
-          formResponses.push({
-            formFieldId: field.id,
-            value: stringValue
-          });
-        }
-      });
-    });
-
-    createBooking(
+    createBookingByTag(
       {
         params: {
-          tenantId: asset.tenantId,
+          tenantId,
         },
         body: {
-          booking: {
-            assetId: asset.id,
-            startDate: data.dateRange.from,
-            endDate: data.dateRange.to,
-          },
+          tagId,
+          startDate: data.dateRange.from,
+          endDate: data.dateRange.to,
           customer: {
             name: data.customerName,
             email: data.customerEmail,
             phone: data.customerPhone,
           },
-          formResponses: formResponses.length > 0 ? formResponses : undefined,
         },
       },
       {
         onSuccess: (response) => {
           if (response.status === 201) {
-            toast.success('Booking confirmed! Check your email for details.');
-            router.push(`/customer/${subdomain}`);
-          } else {
-            toast.error('Failed to create booking. Please try again.');
+            toast.success(`Booking confirmed! You've been assigned: ${response.body.assetName}. Check your email for details.`);
+            // Delay redirect to let user see the success message
+            setTimeout(() => {
+              router.push(`/customer/${subdomain}`);
+            }, 2000);
+          } else if (response.status === 404) {
+            toast.error(response.body.message || 'No available options for the selected dates.');
           }
         },
         onError: (err: any) => {
@@ -249,7 +132,7 @@ export default function CustomerBookingPage() {
     );
   };
 
-  if (isLoading || isLoadingForms) {
+  if (isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
         <div className="text-center">
@@ -260,7 +143,7 @@ export default function CustomerBookingPage() {
     );
   }
 
-  if (queryError || !asset) {
+  if (!tag || !tenantId) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
         <Card className="max-w-md">
@@ -271,13 +154,13 @@ export default function CustomerBookingPage() {
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                 </svg>
               </div>
-              <h2 className="text-xl font-bold text-foreground mb-2">Asset Not Found</h2>
+              <h2 className="text-xl font-bold text-foreground mb-2">Category Not Found</h2>
               <p className="text-muted-foreground mb-6">
-                We couldn't find the asset you're trying to book.
+                We couldn't find the category you're trying to book.
               </p>
               <Button asChild>
                 <Link href={`/customer/${subdomain}`}>
-                  Back to Assets
+                  Back to Categories
                 </Link>
               </Button>
             </div>
@@ -292,22 +175,32 @@ export default function CustomerBookingPage() {
       <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Back Button */}
         <Link
-          href={`/customer/${subdomain}/${assetId}`}
+          href={`/customer/${subdomain}/tag/${tagId}`}
           className="inline-flex items-center text-primary hover:text-primary mb-6"
         >
           <ArrowLeft className="w-5 h-5 mr-2" />
-          Back to asset details
+          Back to category details
         </Link>
 
         <Card>
           <CardHeader>
-            <div className="flex items-center space-x-3">
-              <div className="w-12 h-12 bg-primary rounded-full flex items-center justify-center">
-                <Calendar className="h-6 w-6 text-white" />
+            <div className="flex items-center space-x-4">
+              {/* Tag Image Thumbnail */}
+              <div className="w-16 h-16 relative rounded-lg overflow-hidden bg-muted flex items-center justify-center flex-shrink-0">
+                {tag.tagImage ? (
+                  <Image
+                    src={tag.tagImage}
+                    alt={tag.name}
+                    fill
+                    className="object-cover"
+                  />
+                ) : (
+                  <ImageIcon className="h-8 w-8 text-muted-foreground opacity-50" />
+                )}
               </div>
               <div>
-                <CardTitle className="text-2xl">Book {asset.name}</CardTitle>
-                <CardDescription>Fill out the form below to make a reservation</CardDescription>
+                <CardTitle className="text-2xl">Book {tag.name}</CardTitle>
+                <CardDescription>We'll assign the best available option for your dates</CardDescription>
               </div>
             </div>
           </CardHeader>
@@ -384,46 +277,20 @@ export default function CustomerBookingPage() {
                   />
                 </div>
 
-                {/* Dynamic Forms Section */}
-                {forms.length > 0 && (
-                  <>
-                    <Separator />
-                    {forms.map((formData) => (
-                      <div key={formData.form.id} className="space-y-4">
-                        <div>
-                          <h3 className="text-lg font-semibold text-foreground">{formData.form.name}</h3>
-                          {formData.form.description && (
-                            <p className="text-sm text-muted-foreground mt-1">{formData.form.description}</p>
-                          )}
-                          {/* <div className="flex items-center gap-2 mt-2">
-                            <span className="text-xs px-2 py-1 rounded-full bg-primary/10 text-primary font-medium">
-                              {formData.assignmentType === 'direct' && 'Asset Specific'}
-                              {formData.assignmentType === 'assetType' && 'Asset Type'}
-                              {formData.assignmentType === 'tag' && 'Tag Based'}
-                            </span>
-                          </div> */}
-                        </div>
-
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                          {formData.fields.map((field) => {
-                            const fieldKey = `form_${formData.form.id}_${field.id}` as any;
-                            return (
-                              <div key={field.id} className={field.type === 'textarea' ? 'md:col-span-2' : ''}>
-                                <DynamicFormField
-                                  control={form.control}
-                                  name={fieldKey}
-                                  label={field.name}
-                                  type={field.type as any}
-                                  required={field.required}
-                                />
-                              </div>
-                            );
-                          })}
-                        </div>
-                      </div>
-                    ))}
-                  </>
-                )}
+                {/* Info Notice */}
+                <div className="bg-muted/50 rounded-lg p-4">
+                  <div className="flex items-start">
+                    <Calendar className="w-5 h-5 text-primary mt-0.5 mr-3 flex-shrink-0" />
+                    <div className="text-sm">
+                      <p className="font-medium mb-1">How it works</p>
+                      <p className="text-muted-foreground">
+                        When you submit this form, we'll automatically assign the best available option
+                        from the "{tag.name}" category for your selected dates. You'll receive a confirmation
+                        email with the specific assignment details.
+                      </p>
+                    </div>
+                  </div>
+                </div>
 
                 {/* Important Notice */}
                 <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
@@ -435,7 +302,7 @@ export default function CustomerBookingPage() {
                       <p className="font-medium mb-1">Please note:</p>
                       <ul className="list-disc list-inside space-y-1">
                         <li>You'll receive a confirmation email with booking details</li>
-                        <li>New dates are subject to availability</li>
+                        <li>Dates are subject to availability</li>
                         <li>The email will include a link to update your booking</li>
                       </ul>
                     </div>
@@ -466,7 +333,7 @@ export default function CustomerBookingPage() {
                     variant="outline"
                     asChild
                   >
-                    <Link href={`/customer/${subdomain}/${assetId}`}>
+                    <Link href={`/customer/${subdomain}/tag/${tagId}`}>
                       Cancel
                     </Link>
                   </Button>

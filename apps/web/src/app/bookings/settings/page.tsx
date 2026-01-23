@@ -3,7 +3,6 @@
 import { useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { authClient } from '@/lib/api/publicClient';
 import { StorageService } from '@/lib/api/storage';
@@ -15,6 +14,7 @@ import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel } fr
 
 const SettingsSchema = z.object({
   enableAutomaticConfirmation: z.boolean(),
+  booksByTagOnCustomerPage: z.boolean(),
 });
 
 type SettingsFormValues = z.infer<typeof SettingsSchema>;
@@ -36,6 +36,7 @@ export default function BookingSettingsPage() {
     resolver: zodResolver(SettingsSchema),
     defaultValues: {
       enableAutomaticConfirmation: true,
+      booksByTagOnCustomerPage: false,
     },
   });
 
@@ -44,6 +45,7 @@ export default function BookingSettingsPage() {
     if (tenant) {
       form.reset({
         enableAutomaticConfirmation: tenant.enableAutomaticConfirmation ?? true,
+        booksByTagOnCustomerPage: tenant.booksByTagOnCustomerPage ?? false,
       });
     }
   }, [tenant, form]);
@@ -61,6 +63,7 @@ export default function BookingSettingsPage() {
         params: { id: tenantId },
         body: {
           enableAutomaticConfirmation: values.enableAutomaticConfirmation,
+          booksByTagOnCustomerPage: values.booksByTagOnCustomerPage,
         },
       },
       {
@@ -137,6 +140,52 @@ export default function BookingSettingsPage() {
                   <li>Customers will receive an email indicating their booking is awaiting confirmation</li>
                   <li>Admins will be notified to review and confirm the booking</li>
                   <li>You can manually confirm or cancel bookings from the bookings list</li>
+                </ul>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Customer Booking Page</CardTitle>
+              <CardDescription>
+                Configure how customers browse and book your assets
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              <FormField
+                control={form.control}
+                name="booksByTagOnCustomerPage"
+                render={({ field }) => (
+                  <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
+                    <div className="space-y-0.5">
+                      <FormLabel className="text-base">
+                        Book by Tag
+                      </FormLabel>
+                      <FormDescription>
+                        When enabled, customers will select a category (tag) instead of a specific asset.
+                        The system will automatically assign an available asset from that category.
+                      </FormDescription>
+                    </div>
+                    <FormControl>
+                      <Switch
+                        checked={field.value}
+                        onCheckedChange={field.onChange}
+                      />
+                    </FormControl>
+                  </FormItem>
+                )}
+              />
+
+              <div className="bg-primary/5 border border-primary/20 rounded-lg p-4">
+                <p className="text-sm text-blue-900">
+                  <strong>How it works:</strong>
+                </p>
+                <ul className="list-disc list-inside text-sm text-primary mt-2 space-y-1">
+                  <li>Customers see categories (tags) with images on the booking page</li>
+                  <li>They select a category and choose their dates</li>
+                  <li>The system automatically assigns the first available asset with that tag</li>
+                  <li>Great for rental businesses where customers don't need to choose specific items</li>
                 </ul>
               </div>
             </CardContent>

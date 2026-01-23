@@ -4,6 +4,7 @@ import { tsRestHandler, TsRestHandler } from '@ts-rest/nest';
 import { contract } from '@repo/api-contract';
 import { Roles } from 'src/auth/decorators/permissions.decorator';
 import { PermissionScope } from 'src/auth/permissions';
+import { Public } from 'src/auth/decorators/public.decorator';
 
 @Controller()
 export class TenantController {
@@ -36,6 +37,28 @@ export class TenantController {
       this.logger.log(`Update tenant request - tenantId: ${tenantId}, body: ${JSON.stringify(body)}`);
       const tenants = await this.tenantService.updateTenant(tenantId, body);
       return { status: 200, body: tenants };
+    });
+  }
+
+  @Public()
+  @TsRestHandler(contract.tenants.getTenantBySubdomain)
+  async getTenantBySubdomain(): Promise<ReturnType<typeof tsRestHandler>> {
+    return tsRestHandler(contract.tenants.getTenantBySubdomain, async ({ params }) => {
+      try {
+        const tenant = await this.tenantService.getTenantBySubdomain(params.subdomain);
+        return {
+          status: 200,
+          body: {
+            id: tenant.id,
+            name: tenant.name,
+            subdomain: tenant.subdomain,
+            enableAutomaticConfirmation: tenant.enableAutomaticConfirmation,
+            booksByTagOnCustomerPage: tenant.booksByTagOnCustomerPage,
+          }
+        };
+      } catch (error: any) {
+        return { status: 404, body: { message: error.message || 'Tenant not found' } };
+      }
     });
   }
 }

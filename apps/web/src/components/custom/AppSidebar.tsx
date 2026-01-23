@@ -109,12 +109,12 @@ const items: SidebarItem[] = [
       },
     ],
   },
-  {
-    title: "Reports",
-    url: "/bookings/reports",
-    icon: Clipboard,
-    feature: "reports",
-  },
+  // {
+  //   title: "Reports",
+  //   url: "/bookings/reports",
+  //   icon: Clipboard,
+  //   feature: "reports",
+  // },
   {
     title: "Users",
     icon: User2,
@@ -161,12 +161,12 @@ const items: SidebarItem[] = [
         icon: Settings,
         feature: "settings",
       },
-      {
-        title: "Booking Forms",
-        url: "/bookings/settings/forms",
-        icon: FileText,
-        feature: "settings",
-      },
+      // {
+      //   title: "Booking Forms",
+      //   url: "/bookings/settings/forms",
+      //   icon: FileText,
+      //   feature: "settings",
+      // },
     ],
   },
 ]

@@ -40,13 +40,14 @@ const appOptions: AppOption[] = [
     color: 'text-purple-500'
   },
   {
-    id: 'auth',
-    name: 'Auth Hub',
-    description: 'Central authentication and user management',
-    icon: <Globe className="h-4 w-4" />,
-    url: '/',
-    color: 'text-green-600'
-  }
+      id: 'admin',
+      name: 'Admin',
+      description: 'Administration Dashboard',
+      icon: <Building className="h-4 w-4" />,
+      url: '/admin',
+      color: 'text-primary'
+    },
+
 ]
 
 export function AppHeader() {

@@ -229,6 +229,38 @@ export const bookingContract = c.router({
     summary: 'endpoint for unauthenticated new customers to create bookings'
   },
 
+  customerCreateBookingByTag: {
+    method: "POST",
+    path: "/customer-create-booking-by-tag/:tenantId",
+    pathParams: z.object({
+      tenantId: z.string()
+    }),
+    body: z.object({
+      tagId: z.number(),
+      startDate: z.coerce.date(),
+      endDate: z.coerce.date(),
+      customer: z.object({
+        name: z.string(),
+        email: z.string(),
+        phone: z.string().optional(),
+      }),
+      formResponses: z.array(z.object({
+        formFieldId: z.number(),
+        value: z.string()
+      })).optional()
+    }),
+    responses: {
+      201: z.object({
+        message: z.string(),
+        assetName: z.string(),
+      }),
+      404: z.object({
+        message: z.string()
+      })
+    },
+    summary: 'Create booking by tag - automatically assigns an available asset with the tag'
+  },
+
   customerViewBooking: {
     method: 'GET',
     path: '/customer-view-booking/:bookingId/:token',
@@ -240,6 +272,38 @@ export const bookingContract = c.router({
       200: ExtendedSelectBookingSchema,
       403: z.undefined()
     }
+  },
+
+  // Public endpoint to get blocked dates for an asset (for customer booking page)
+  getBlockedDatesForAssetPublic: {
+    method: 'GET',
+    path: '/public/blocked-dates/:assetId',
+    pathParams: z.object({
+      assetId: z.string()
+    }),
+    responses: {
+      200: z.array(z.object({
+        startDate: z.coerce.date(),
+        endDate: z.coerce.date(),
+      }))
+    },
+    summary: 'Get blocked date ranges for an asset (public endpoint for customer booking)'
+  },
+
+  // Public endpoint to get blocked dates for a tag (for customer tag booking page)
+  getBlockedDatesForTagPublic: {
+    method: 'GET',
+    path: '/public/blocked-dates/tag/:tagId',
+    pathParams: z.object({
+      tagId: z.coerce.number()
+    }),
+    responses: {
+      200: z.array(z.object({
+        startDate: z.coerce.date(),
+        endDate: z.coerce.date(),
+      }))
+    },
+    summary: 'Get fully blocked date ranges for a tag (public endpoint for customer booking)'
   },
 
   // Update booking status

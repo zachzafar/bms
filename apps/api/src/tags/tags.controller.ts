@@ -1,15 +1,17 @@
-import { Controller, Headers } from '@nestjs/common';
+import { Controller, Headers, UploadedFile, UseInterceptors } from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
 import { contract } from '@repo/api-contract';
 import { tsRestHandler, TsRestHandler } from '@ts-rest/nest';
 import { TagsService } from './tags.service';
 import { TenantService } from 'src/tenant/tenant.service';
 import * as schema from '@repo/api-contract';
+import { Public } from 'src/auth/decorators/public.decorator';
 
 @Controller()
 export class TagsController {
   constructor(
     private readonly tagsService: TagsService,
-    private readonly tenantService: TenantService // ✅ now injected
+    private readonly tenantService: TenantService,
   ) {}
 
   @TsRestHandler(contract.settings.tags.createTag)
@@ -48,7 +50,7 @@ async createTag(@Headers() headers: any): Promise<ReturnType<typeof tsRestHandle
   async getTag(@Headers() headers: any): Promise<ReturnType<typeof tsRestHandler>> {
     return tsRestHandler(contract.settings.tags.getTag, async ({ params }) => {
       const tenantId = headers['x-tenant-id'];
-      const tag = await this.tagsService.getTag((params.id));
+      const tag = await this.tagsService.getTag(params.id, true); // Get with signed URL
 
       // Validate tenant access
       await this.tenantService.validateTenantAccess(tenantId, schema.Tags, tag.id);
@@ -68,6 +70,57 @@ async createTag(@Headers() headers: any): Promise<ReturnType<typeof tsRestHandle
 
       const result = await this.tagsService.deleteTag((params.id));
       return { status: 200, body: result };
+    });
+  }
+
+  @TsRestHandler(contract.settings.tags.updateTag)
+  async updateTag(@Headers() headers: any): Promise<ReturnType<typeof tsRestHandler>> {
+    return tsRestHandler(contract.settings.tags.updateTag, async ({ params, body }) => {
+      const tenantId = headers['x-tenant-id'];
+      const tag = await this.tagsService.getTag(params.id);
+
+      // Validate tenant access before updating
+      await this.tenantService.validateTenantAccess(tenantId, schema.Tags, tag.id);
+
+      const result = await this.tagsService.updateTag(params.id, body);
+      return { status: 200, body: result };
+    });
+  }
+
+  @UseInterceptors(FileInterceptor('image'))
+  @TsRestHandler(contract.settings.tags.uploadTagImage)
+  async uploadTagImage(
+    @Headers() headers: any,
+    @UploadedFile() file: Express.Multer.File,
+  ): Promise<ReturnType<typeof tsRestHandler>> {
+    return tsRestHandler(contract.settings.tags.uploadTagImage, async ({ params }) => {
+      const tenantId = headers['x-tenant-id'];
+      const tag = await this.tagsService.getTag(params.id);
+
+      // Validate tenant access before uploading
+      await this.tenantService.validateTenantAccess(tenantId, schema.Tags, tag.id);
+
+      if (!file) {
+        return { status: 404, body: { message: 'No image provided' } };
+      }
+
+      const imagePath = await this.tagsService.uploadTagImage(tenantId, params.id, file.buffer);
+      return { status: 200, body: { message: 'Image uploaded successfully', imagePath } };
+    });
+  }
+
+  @Public()
+  @TsRestHandler(contract.settings.tags.getTagsBySubdomain)
+  async getTagsBySubdomain(): Promise<ReturnType<typeof tsRestHandler>> {
+    return tsRestHandler(contract.settings.tags.getTagsBySubdomain, async ({ params, query }) => {
+      try {
+        const page = query.page ? Number(query.page) : 1;
+        const pageSize = query.pageSize ? Number(query.pageSize) : 10;
+        const tags = await this.tagsService.getTagsBySubdomain(params.subdomain, page, pageSize);
+        return { status: 200, body: tags };
+      } catch (error: any) {
+        return { status: 404, body: { message: error.message || 'Tags not found' } };
+      }
     });
   }
 }

@@ -270,7 +270,7 @@ export default function BookingDetailsPage() {
       )}
 
       {/* Booking Forms (Available Forms) */}
-      {forms.length > 0 && (
+      {/* {forms.length > 0 && (
         <Card>
           <CardHeader>
             <CardTitle>Available Booking Forms</CardTitle>
@@ -308,7 +308,7 @@ export default function BookingDetailsPage() {
             ))}
           </CardContent>
         </Card>
-      )}
+      )} */}
 
       {/* Edit Booking Dialog */}
       <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
