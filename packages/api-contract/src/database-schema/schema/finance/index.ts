@@ -21,12 +21,14 @@ export const Invoice = mysqlTable("invoice", {
   notes: text("notes"),
   createdAt: timestamp('createdAt').notNull().defaultNow(),
   updatedAt: timestamp('updated_at', { mode: 'date', }).$onUpdate(() => new Date()),
+  deletedAt: timestamp('deleted_at'),
   customerId:bigint("customer_id", { mode: 'number', unsigned: true }).notNull().references(() => Customer.id),
   bookingId: varchar("booking_id", { length: 255 }).notNull(),
 }, (table) => ({
   invoiceNumberUniqueIdx: uniqueIndex("invoice_number_unique").on(table.invoiceNumber),
   customerIdx: index("customer_idx").on(table.customerId),
   bookingIdx: index("booking_idx").on(table.bookingId),
+  deletedAtIdx: index("invoice_deleted_at_idx").on(table.deletedAt),
 }));
 
 export const SelectInvoiceSchema = createSelectSchema(Invoice).omit({ tenantId: true, dueDate: true }).extend({
@@ -132,12 +134,13 @@ export const Payment = mysqlTable("payment", {
 
   createdAt: timestamp('createdAt').notNull().defaultNow(),
   updatedAt: timestamp('updated_at', { mode: 'date', }).$onUpdate(() => new Date()),
+  deletedAt: timestamp('deleted_at'),
   customerId: bigint("customer_id", { mode: 'number', unsigned: true }).notNull().references(() => Customer.id),
 
 }, (table) => ({
   customerIdx: index("customer_idx").on(table.customerId),
   tenantIdx: index("tenant_idx").on(table.tenantId),
-  // Optionally: index("payment_date_idx").on(table.paymentDate),
+  deletedAtIdx: index("payment_deleted_at_idx").on(table.deletedAt),
 }));
 
 export const SelectPaymentSchema = createSelectSchema(Payment).extend({

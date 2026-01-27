@@ -463,14 +463,12 @@ export class AuthService {
   }
 
   async deleteRole(tenantId: string, roleId: number) {
-    await this.db.transaction(async (tx) => {
-    // First remove the role from the junction table
-    await tx.delete(schema.RoleHasPermissions).where(
-      eq(schema.RoleHasPermissions.roleId, (roleId))
-    );
-    await tx.delete(schema.Roles).where(eq(schema.Roles.id, (roleId)));
-})
-}
+    // Soft delete the role
+    await this.db
+      .update(schema.Roles)
+      .set({ deletedAt: new Date() })
+      .where(eq(schema.Roles.id, roleId));
+  }
 
   async getPermissions() {
     return getAllScopes();

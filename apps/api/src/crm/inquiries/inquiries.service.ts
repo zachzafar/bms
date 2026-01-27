@@ -101,7 +101,10 @@ export class InquiriesService {
   }
 
   async deleteInquiry(id: number) {
-    await this.db.delete(schema.Inquiry).where(eq(schema.Inquiry.id, id));
+    await this.db
+      .update(schema.Inquiry)
+      .set({ deletedAt: new Date() })
+      .where(eq(schema.Inquiry.id, id));
   }
 
   async assignInquiry(id: number, userId: string) {

@@ -36,7 +36,7 @@ export class TagsService {
     const totalCountResult = await this.db
       .select({ count: sql<number>`COUNT(*)` })
       .from(schema.Tags)
-      .where(eq(schema.Tags.tenantId, tenantId))
+      .where(and(eq(schema.Tags.tenantId, tenantId)isNull(schema.Tags.deletedAt)))
       .execute();
     const totalCount = totalCountResult[0]?.count || 0;
 
@@ -104,7 +104,8 @@ export class TagsService {
 
   async deleteTag(id: number) {
     await this.db
-      .delete(schema.Tags)
+      .update(schema.Tags)
+      .set({ deletedAt: new Date() })
       .where(eq(schema.Tags.id, id));
 
     return { message: 'Tag deleted' };

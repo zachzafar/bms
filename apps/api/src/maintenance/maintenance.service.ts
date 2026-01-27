@@ -4,7 +4,7 @@ import { DrizzleAsyncProvider } from 'src/drizzle/drizzle.provider';
 import * as schema from '@repo/api-contract';
 import { TenantService } from 'src/tenant/tenant.service';
 import  type { InsertMaintenanceTask, UpdateMaintenanceTask } from '@repo/api-contract';
-import { and, eq, inArray, sql } from 'drizzle-orm';
+import { and, eq, inArray, isNull, sql } from 'drizzle-orm';
 import { ObjectStorageService } from 'src/object-storage/object-storage.service';
 
 @Injectable()
@@ -73,7 +73,7 @@ export class MaintenanceService {
                 schema.Asset,
                 eq(schema.MaintenanceTask.assetId, schema.Asset.id)
             )
-            .where(eq(schema.Asset.tenantId, tenantId))
+            .where(and(eq(schema.Asset.tenantId, tenantId),isNull(schema.Asset.deletedAt),isNull(schema.MaintenanceTask.deletedAt)))
             .execute();
         const totalCount = totalCountResult[0]?.count || 0;
 
@@ -83,7 +83,7 @@ export class MaintenanceService {
                 schema.Asset,
                 eq(schema.MaintenanceTask.assetId, schema.Asset.id)
             )
-            .where(eq(schema.Asset.tenantId, tenantId))
+            .where(and(eq(schema.Asset.tenantId, tenantId),isNull(schema.Asset.deletedAt),isNull(schema.Asset.deletedAt)))
             .limit(pageSize)
             .offset(offset);
 
@@ -122,7 +122,11 @@ export class MaintenanceService {
     
     }
     async deleteMaintenance(id: string) {
-        this.db.delete(schema.MaintenanceTask).where(eq(schema.MaintenanceTask.id,id)).execute();
+        await this.db
+            .update(schema.MaintenanceTask)
+            .set({ deletedAt: new Date() })
+            .where(eq(schema.MaintenanceTask.id, id))
+            .execute();
     }
 
     async checkAvailability(assetId: string) {

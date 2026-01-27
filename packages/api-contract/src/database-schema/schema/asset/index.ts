@@ -21,9 +21,11 @@ export const Asset = mysqlTable("assets", {
     tenantId: varchar("tenant_id", { length: 255 }).notNull().references(() => Tenant.id),
     createdAt: timestamp('createdAt').notNull().defaultNow(),
     updatedAt: timestamp('updated_at', { mode: 'date', }).$onUpdate(() => new Date()),
+    deletedAt: timestamp('deleted_at'),
 }, (table) => ({
     assetTypeIdx: index("asset_type_idx").on(table.assetTypeId),
     userIdx: index("owner_idx").on(table.userId),
+    deletedAtIdx: index("deleted_at_idx").on(table.deletedAt),
 }));
 
 export const SelectAssetSchema = createSelectSchema(Asset)

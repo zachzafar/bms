@@ -216,32 +216,11 @@ export class SystemAdminService {
         throw new NotFoundException('Tenant not found');
       }
 
-      // Delete tenant and all related data in transaction
-      await this.db.transaction(async (tx) => {
-        // Delete API keys
-        await tx.delete(schema.APIKeys).where(eq(schema.APIKeys.tenantId, tenantId));
-        
-        // Delete role permissions
-        const roles = await tx.query.Roles.findMany({
-          where: (role, { eq }) => eq(role.tenantId, tenantId)
-        });
-        
-        for (const role of roles) {
-          await tx.delete(schema.RoleHasPermissions).where(eq(schema.RoleHasPermissions.roleId, role.id));
-        }
-        
-        // Delete user roles
-        await tx.delete(schema.UserHasRoles).where(eq(schema.UserHasRoles.tenantId, tenantId));
-        
-        // Delete roles
-        await tx.delete(schema.Roles).where(eq(schema.Roles.tenantId, tenantId));
-        
-        // Delete tenant users
-        await tx.delete(schema.TenantHasUsers).where(eq(schema.TenantHasUsers.tenantId, tenantId));
-        
-        // Delete tenant
-        await tx.delete(schema.Tenant).where(eq(schema.Tenant.id, tenantId));
-      });
+      // Soft delete the tenant
+      await this.db
+        .update(schema.Tenant)
+        .set({ deletedAt: new Date() })
+        .where(eq(schema.Tenant.id, tenantId));
 
       this.logger.log(`Deleted tenant: ${tenantId}`);
       return { message: 'Tenant deleted successfully' };
@@ -455,16 +434,11 @@ export class SystemAdminService {
         throw new ConflictException('Cannot delete role that is assigned to users');
       }
 
-      // Delete role and permissions in transaction
-      await this.db.transaction(async (tx) => {
-        // Delete permissions
-        await tx.delete(schema.RoleHasPermissions)
-          .where(eq(schema.RoleHasPermissions.roleId, (roleId)));
-
-        // Delete role
-        await tx.delete(schema.Roles)
-          .where(eq(schema.Roles.id, (roleId)));
-      });
+      // Soft delete the role
+      await this.db
+        .update(schema.Roles)
+        .set({ deletedAt: new Date() })
+        .where(eq(schema.Roles.id, roleId));
 
       this.logger.log(`Deleted role: ${roleId} for tenant: ${tenantId}`);
       return { message: 'Role deleted successfully' };

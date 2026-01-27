@@ -1,5 +1,5 @@
 import { relations } from "drizzle-orm";
-import { bigint, datetime, int, json, mysqlEnum, mysqlTable, serial, text, timestamp, uniqueIndex, varchar } from "drizzle-orm/mysql-core";
+import { bigint, datetime, index, int, json, mysqlEnum, mysqlTable, serial, text, timestamp, uniqueIndex, varchar } from "drizzle-orm/mysql-core";
 import { Asset } from "../asset";
 import { createInsertSchema, createSelectSchema } from "drizzle-zod";
 import { z } from "zod";
@@ -121,10 +121,12 @@ export const Owner = mysqlTable("owner_details", {
     taxId: varchar("tax_id", { length: 255 }),
     createdAt: timestamp('createdAt').notNull().defaultNow(),
     updatedAt: timestamp('updated_at', { mode: 'date', }).$onUpdate(() => new Date()),
+    deletedAt: timestamp('deleted_at'),
     tenantId: varchar("tenant_id", { length: 255 }).notNull().references(() => Tenant.id),
     userId: varchar("user_id", { length: 255 }).notNull().references(() => User.id, { onDelete: 'cascade' }),
 }, (table) => ({
     tenantUserCompoundIdx: uniqueIndex("tenant_user_compound_idx").on(table.tenantId, table.userId),
+    deletedAtIdx: index("owner_deleted_at_idx").on(table.deletedAt),
 }));
 
 export const InsertOwnerSchema = createInsertSchema(Owner);
@@ -152,8 +154,11 @@ export const Roles = mysqlTable("roles", {
     description: text("description"),
     createdAt: timestamp('createdAt').notNull().defaultNow(),
     updatedAt: timestamp('updated_at', { mode: 'date', }).$onUpdate(() => new Date()),
+    deletedAt: timestamp('deleted_at'),
     tenantId: varchar("tenant_id", { length: 255 }).references(() => Tenant.id),
-})
+}, (table) => ({
+    deletedAtIdx: index("roles_deleted_at_idx").on(table.deletedAt),
+}))
 
 export const InsertRoleSchema = createInsertSchema(Roles);
 export const SelectRoleSchema = createSelectSchema(Roles);

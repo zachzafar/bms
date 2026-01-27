@@ -86,10 +86,10 @@ export class BrochuresService {
   }
 
   async remove(id: number) {
-    await this.db.transaction(async (tx) => {
-      await tx.delete(schema.BrochureAsset).where(eq(schema.BrochureAsset.brochureId, id));
-      await tx.delete(schema.Brochure).where(eq(schema.Brochure.id, id));
-    });
+    await this.db
+      .update(schema.Brochure)
+      .set({ deletedAt: new Date() })
+      .where(eq(schema.Brochure.id, id));
   }
 
   async addAssets(brochureId: number, assetIds: string[]) {

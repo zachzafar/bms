@@ -90,6 +90,10 @@ export class CommunicationsService {
   }
 
   async remove(id: number) {
-    await this.db.delete(schema.CommunicationLog).where(eq(schema.CommunicationLog.id, id)).execute();
+    await this.db
+      .update(schema.CommunicationLog)
+      .set({ deletedAt: new Date() })
+      .where(eq(schema.CommunicationLog.id, id))
+      .execute();
   }
 }

@@ -18,9 +18,11 @@ export const Tags = mysqlTable(
     tenantId: varchar("tenant_id", { length: 255 }).references(() => Tenant.id),
     createdAt: timestamp("createdAt").notNull().defaultNow(),
     updatedAt: timestamp("updated_at", { mode: "date" }).$onUpdate(() => new Date()),
+    deletedAt: timestamp("deleted_at"),
   },
   (table) => ({
     nameUniqueIdx: uniqueIndex("name_unique").on(table.name, table.tenantId),
+    deletedAtIdx: index("tags_deleted_at_idx").on(table.deletedAt),
   })
 );
 
@@ -52,9 +54,11 @@ export const AssetType = mysqlTable("asset_type", {
     description: text("description"),
     createdAt: timestamp('createdAt').notNull().defaultNow(),
     updatedAt: timestamp('updatedAt'),
+    deletedAt: timestamp('deleted_at'),
     tenantId: varchar("tenant_id", { length: 255 }).notNull().references(() => Tenant.id),
 }, (table) => ({
     nameUniqueIdx: uniqueIndex("name_unique").on(table.name, table.tenantId),
+    deletedAtIdx: index("asset_type_deleted_at_idx").on(table.deletedAt),
 }));
 
 export const InsertAssetTypeSchema = createInsertSchema(AssetType);
@@ -83,9 +87,11 @@ export const assetProperty = mysqlTable("asset_properties", {
     tenantId: varchar("tenant_id", { length: 255 }).notNull().references(() => Tenant.id),
     createdAt: timestamp('createdAt').notNull().defaultNow(),
     updatedAt: timestamp('updatedAt'),
+    deletedAt: timestamp('deleted_at'),
 }, (table) => ({
     // Change the unique index to include both name and tenantId
     nameUniqueIdx: uniqueIndex("name_unique").on(table.name, table.tenantId),
+    deletedAtIdx: index("asset_property_deleted_at_idx").on(table.deletedAt),
 }));
 
 export const InsertAssetPropertySchema = createInsertSchema(assetProperty);
@@ -135,8 +141,11 @@ export const BookingForm = mysqlTable("booking_forms", {
     description: text("description"),
     createdAt: timestamp('createdAt').notNull().defaultNow(),
     updatedAt: timestamp('updated_at', { mode: 'date', }).$onUpdate(() => new Date()),
+    deletedAt: timestamp('deleted_at'),
     tenantId: varchar("tenant_id", { length: 255 }).notNull().references(() => Tenant.id),
-});
+}, (table) => ({
+    deletedAtIdx: index("booking_form_deleted_at_idx").on(table.deletedAt),
+}));
 
 export const InsertBookingFormSchema = createInsertSchema(BookingForm);
 export const SelectBookingFormSchema = createSelectSchema(BookingForm);

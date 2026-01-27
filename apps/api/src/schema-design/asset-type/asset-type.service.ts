@@ -3,7 +3,7 @@ import { MySql2Database } from 'drizzle-orm/mysql2';
 import { DrizzleAsyncProvider } from 'src/drizzle/drizzle.provider';
 import * as schema from '@repo/api-contract';
 import type { InsertAssetType, UpdateAssetType } from '@repo/api-contract';
-import { eq, sql } from 'drizzle-orm';
+import { and, eq, sql, isNull } from 'drizzle-orm';
 
 @Injectable()
 export class AssetTypeService {
@@ -19,12 +19,12 @@ export class AssetTypeService {
         const totalCountResult = await this.db
             .select({ count: sql<number>`COUNT(*)` })
             .from(schema.AssetType)
-            .where(eq(schema.AssetType.tenantId, tenantId))
+            .where(and(eq(schema.AssetType.tenantId, tenantId),isNull(schema.AssetType.deletedAt)))
             .execute();
         const totalCount = totalCountResult[0]?.count || 0;
 
         const results = await this.db.query.AssetType.findMany({
-            where: (assetType, { eq }) => eq(assetType.tenantId, tenantId),
+            where: (assetType, { eq }) => and(eq(assetType.tenantId, tenantId),isNull(assetType.deletedAt)),
             limit: pageSize,
             offset: offset,
         });
@@ -126,7 +126,10 @@ export class AssetTypeService {
     }
 
     async deleteAssetType(id: number) {
-        return this.db.delete(schema.AssetType).where(eq(schema.AssetType.id, id));
+        return this.db
+            .update(schema.AssetType)
+            .set({ deletedAt: new Date() })
+            .where(eq(schema.AssetType.id, id));
     }
 
     async updateAssetTypeProperties(id: number, properties: number[]) {

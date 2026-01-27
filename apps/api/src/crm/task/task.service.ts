@@ -87,7 +87,11 @@ export class TasksService {
   }
 
   async remove(id: number) {
-    await this.db.delete(schema.Task).where(eq(schema.Task.id, id)).execute();
+    await this.db
+      .update(schema.Task)
+      .set({ deletedAt: new Date() })
+      .where(eq(schema.Task.id, id))
+      .execute();
   }
 
   async complete(id: number) {

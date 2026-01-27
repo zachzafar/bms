@@ -91,6 +91,10 @@ export class FeedbackService {
   }
 
   async remove(id: number) {
-    await this.db.delete(schema.Feedback).where(eq(schema.Feedback.id, id)).execute();
+    await this.db
+      .update(schema.Feedback)
+      .set({ deletedAt: new Date() })
+      .where(eq(schema.Feedback.id, id))
+      .execute();
   }
 }

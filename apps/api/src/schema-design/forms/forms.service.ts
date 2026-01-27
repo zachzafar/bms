@@ -16,12 +16,12 @@ export class FormsService {
         const totalCountResult = await this.db
             .select({ count: sql<number>`COUNT(*)` })
             .from(schema.BookingForm)
-            .where(eq(schema.BookingForm.tenantId, tenantId))
+            .where(and(eq(schema.BookingForm.tenantId, tenantId),isNull(schema.BookingForm.deletedAt)))
             .execute();
         const totalCount = totalCountResult[0]?.count || 0;
 
         const results = await this.db.query.BookingForm.findMany({
-            where: (form, { eq }) => eq(form.tenantId, tenantId),
+            where: (form, { eq,and,isNull }) => and(eq(form.tenantId, tenantId),isNull(form.deletedAt)),
             with: { fields: true },
             limit: pageSize,
             offset: offset,
@@ -105,7 +105,11 @@ export class FormsService {
             throw new NotFoundException(`Form with id ${id} not found`);
         }
 
-        return await this.db.delete(schema.BookingForm).where(eq(schema.BookingForm.id, id)).execute();
+        return await this.db
+            .update(schema.BookingForm)
+            .set({ deletedAt: new Date() })
+            .where(eq(schema.BookingForm.id, id))
+            .execute();
     }
 
     // Asset assignment methods

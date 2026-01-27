@@ -66,7 +66,10 @@ export class TeamsService {
     }
 
     async remove(id: number) {
-        return await this.db.delete(schema.TenantTeams).where(eq(schema.TenantTeams.id,id));
+        return await this.db
+            .update(schema.TenantTeams)
+            .set({ deletedAt: new Date() })
+            .where(eq(schema.TenantTeams.id, id));
     }
 
     async addUserToTeam(userId: string, teamId: number) {

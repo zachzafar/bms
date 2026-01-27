@@ -90,7 +90,11 @@ export class ContactsService {
   }
 
   async deleteContact(id: number) {
-    await this.db.delete(schema.Contact).where(eq(schema.Contact.id, id)).execute();
+    await this.db
+      .update(schema.Contact)
+      .set({ deletedAt: new Date() })
+      .where(eq(schema.Contact.id, id))
+      .execute();
   }
 
   // async mergeContacts(tenantId: string, { targetId, sourceId }: { targetId: number; sourceId: number }) {
