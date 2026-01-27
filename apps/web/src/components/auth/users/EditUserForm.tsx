@@ -19,7 +19,7 @@ const UpdateUserSchema = z.object({
 type UpdateUserFormData = z.infer<typeof UpdateUserSchema>;
 
 interface EditUserFormProps {
-  user: SelectUser & { roles?: number[] };
+  user: SelectUser;
   roles: { roleId: number; name: string }[];
   onClose: () => void;
   onSuccess: () => void;
@@ -36,7 +36,7 @@ export function EditUserForm({ user, roles, onClose, onSuccess }: EditUserFormPr
         email: user.email,
         password: ''
       },
-      roles: user.roles || []
+      roles: user.roles.map(role => role.roleId) || []
     },
   });
 
@@ -149,7 +149,7 @@ export function EditUserForm({ user, roles, onClose, onSuccess }: EditUserFormPr
                 </FormControl>
                 <div className="mt-2 flex flex-wrap gap-2">
                   {field.value?.map((roleId, index) => {
-                    const roleName = roles.find(r => r.roleId)?.name || roleId;
+                    const roleName = roles.find(r => r.roleId === roleId)?.name || roleId;
                     return (
                       <div key={index} className="bg-muted px-2 py-1 rounded-md flex items-center">
                         <span>{roleName}</span>

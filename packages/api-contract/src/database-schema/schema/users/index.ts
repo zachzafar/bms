@@ -41,7 +41,7 @@ export const userRelations = relations(User, ({ one, many }) => ({
 }));
 
 export const InsertUserSchema = createInsertSchema(User)
-export const SelectUserSchema = createSelectSchema(User).extend({ roles: z.array(z.number()) });
+export const SelectUserSchema = createSelectSchema(User).extend({ roles: z.array(z.object({ roleId: z.number(), roleName: z.string() }))});
 export const UpdateUserSchema = InsertUserSchema.partial();
 
 export type InsertUser = z.infer<typeof InsertUserSchema>

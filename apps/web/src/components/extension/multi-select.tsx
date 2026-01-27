@@ -24,6 +24,7 @@ interface MultiSelectorProps
   values: string[];
   onValuesChange: (value: string[]) => void;
   loop?: boolean;
+  getDisplayValue?: (value: string) => string;
 }
  
 interface MultiSelectContextProps {
@@ -37,6 +38,7 @@ interface MultiSelectContextProps {
   setActiveIndex: React.Dispatch<React.SetStateAction<number>>;
   ref: React.RefObject<HTMLInputElement>;
   handleSelect: (e: React.SyntheticEvent<HTMLInputElement>) => void;
+  getDisplayValue?: (value: string) => string;
 }
  
 const MultiSelectContext = createContext<MultiSelectContextProps | null>(null);
@@ -62,6 +64,7 @@ const MultiSelector = ({
   className,
   children,
   dir,
+  getDisplayValue,
   ...props
 }: MultiSelectorProps) => {
   const [inputValue, setInputValue] = useState("");
@@ -198,6 +201,7 @@ const MultiSelector = ({
         setActiveIndex,
         ref: inputRef,
         handleSelect,
+        getDisplayValue,
       }}
     >
       <Command
@@ -219,7 +223,7 @@ const MultiSelectorTrigger = forwardRef<
   HTMLDivElement,
   React.HTMLAttributes<HTMLDivElement>
 >(({ className, children, ...props }, ref) => {
-  const { value, onValueChange, activeIndex } = useMultiSelect();
+  const { value, onValueChange, activeIndex, getDisplayValue } = useMultiSelect();
  
   const mousePreventDefault = useCallback((e: React.MouseEvent) => {
     e.preventDefault();
@@ -238,28 +242,31 @@ const MultiSelectorTrigger = forwardRef<
       )}
       {...props}
     >
-      {value.map((item, index) => (
-        <Badge
-          key={item}
-          className={cn(
-            "px-1 rounded-xl flex items-center gap-1",
-            activeIndex === index && "ring-2 ring-muted-foreground ",
-          )}
-          variant={"secondary"}
-        >
-          <span className="text-xs">{item}</span>
-          <button
-            aria-label={`Remove ${item} option`}
-            aria-roledescription="button to remove option"
-            type="button"
-            onMouseDown={mousePreventDefault}
-            onClick={() => onValueChange(item)}
+      {value.map((item, index) => {
+        const displayValue = getDisplayValue ? getDisplayValue(item) : item;
+        return (
+          <Badge
+            key={item}
+            className={cn(
+              "px-1 rounded-xl flex items-center gap-1",
+              activeIndex === index && "ring-2 ring-muted-foreground ",
+            )}
+            variant={"secondary"}
           >
-            <span className="sr-only">Remove {item} option</span>
-            <RemoveIcon className="h-4 w-4 hover:stroke-destructive" />
-          </button>
-        </Badge>
-      ))}
+            <span className="text-xs">{displayValue}</span>
+            <button
+              aria-label={`Remove ${displayValue} option`}
+              aria-roledescription="button to remove option"
+              type="button"
+              onMouseDown={mousePreventDefault}
+              onClick={() => onValueChange(item)}
+            >
+              <span className="sr-only">Remove {displayValue} option</span>
+              <RemoveIcon className="h-4 w-4 hover:stroke-destructive" />
+            </button>
+          </Badge>
+        );
+      })}
       {children}
     </div>
   );

@@ -41,7 +41,7 @@ export const userContract = c.router({
         path: "/users/",
         responses: {
             200: z.object({
-                data: z.array(SelectUserSchema.extend({ roles: z.array(z.number())})),
+                data: z.array(SelectUserSchema),
                 pagination
             }),
         },

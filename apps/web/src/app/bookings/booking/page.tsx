@@ -549,7 +549,14 @@ export default function Component() {
                     Customers
                   </label>
 
-                  <MultiSelector values={customers} onValuesChange={setCustomers}>
+                  <MultiSelector
+                    values={customers}
+                    onValuesChange={setCustomers}
+                    getDisplayValue={(id) => {
+                      const customer = customerList.find(c => c.customer.id.toString() === id);
+                      return customer?.user.name ?? id;
+                    }}
+                  >
                     <MultiSelectorTrigger>
                       <MultiSelectorInput placeholder="Select Customers..." />
                     </MultiSelectorTrigger>

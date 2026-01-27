@@ -50,7 +50,7 @@ export default function Component() {
   const users = usersData?.body?.data ?? usersData?.body.data ?? [];
   const rolesByUserId = useMemo(() => {
     const map = new Map<string, number[]>();
-    users.forEach((u: any) => map.set(u.id, u.roles ?? []));
+    users.forEach((u: any) => map.set(u.id, (u.roles ?? []).map((r: any) => r.roleId)));
     return map;
   }, [users]);
 

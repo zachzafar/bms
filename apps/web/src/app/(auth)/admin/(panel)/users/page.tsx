@@ -18,7 +18,7 @@ import { DataTablePagination } from '@/components/ui/data-table-pagination';
 
 // Schema extensions
 const ExtendedSelectUserSchema = SelectUserSchema.extend({
-  roles: z.array(z.number()).default([])
+  roles: z.array(z.object({ roleId: z.number(), roleName: z.string() })).default([])
 });
 type ExtendedSelectUser = z.infer<typeof ExtendedSelectUserSchema>;
 
@@ -92,7 +92,7 @@ export default function UsersPage() {
 
               {selectedUser ? (
                 <EditUserForm
-                  user={{ ...selectedUser, roles: selectedUser?.roles as number[] }}
+                  user={{ ...selectedUser, roles: selectedUser?.roles}}
                   roles={roles?.body || []}
                   onClose={handleCloseDialog}
                   onSuccess={() => {
@@ -127,7 +127,7 @@ export default function UsersPage() {
                 <TableRow key={user.id}>
                   <TableCell>{user.name}</TableCell>
                   <TableCell>{user.email}</TableCell>
-                  <TableCell>{user.roles}</TableCell>
+                  <TableCell>{user.roles.map(r => r.roleName).join(', ') || '-'}</TableCell>
                   <TableCell>
                     <Button
                       variant="ghost"
@@ -140,9 +140,9 @@ export default function UsersPage() {
                         userType: "system",
                         createdAt: null,
                         updatedAt: null,
-                        roles: user.roles,
+                        roles: user.roles.map(r => r.roleId),
                         deletedAt: null
-                      })}
+                      } as any)}
                       aria-label={`Edit ${user.name}`}
                     >
                       <Pencil className="h-4 w-4" />

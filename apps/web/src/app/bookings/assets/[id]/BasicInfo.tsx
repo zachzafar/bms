@@ -180,7 +180,7 @@ function BasicInfo({ asset, refetch }: { asset: SelectAsset; refetch: () => void
           <MultiSelector
             values={selectedForms}
             onValuesChange={setSelectedForms}
-            disabled={isSubmitting}
+            // disabled={isSubmitting}
           >
             <MultiSelectorTrigger>
               <MultiSelectorInput placeholder="Select Booking Forms..." />
