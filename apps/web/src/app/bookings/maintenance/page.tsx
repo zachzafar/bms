@@ -82,7 +82,7 @@ export default function Component() {
     }, {
       onSuccess: (response) => {
         toast.success('Task added successfully');
-        router.push(`/maintenance/${response.body.id}`)
+        router.push(`/bookings/maintenance/${response.body.id}`)
         form.reset();
         // Optionally redirect or refresh data
       },
@@ -295,7 +295,7 @@ export default function Component() {
                   </Select>
                 </TableCell> */}
                 <TableCell>
-                  <Link href={`/maintenance/${task.id}`}>
+                  <Link href={`/bookings/maintenance/${task.id}`}>
                     <Button variant='ghost' size='sm'>
                       <Pencil className='mr-2 h-4 w-4' />
                       Edit

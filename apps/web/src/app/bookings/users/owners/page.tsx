@@ -384,7 +384,7 @@ export default function Component() {
                         <Button
                           variant="ghost"
                           size="icon"
-                          onClick={() => router.push(`/users/owners/${owner.id}`)}
+                          onClick={() => router.push(`/bookings/users/owners/${owner.id}`)}
                         >
                           <Eye className="h-4 w-4" />
                         </Button>
