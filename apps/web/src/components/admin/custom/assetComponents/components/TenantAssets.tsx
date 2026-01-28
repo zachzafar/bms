@@ -99,7 +99,7 @@ export default function AssetsPage({tenantId}: {tenantId: string}) {
           </TableHeader>
           <TableBody>
             {assets?.status === 200 ? (
-              assets.body.map((asset) => (
+              assets.body.data.map((asset) => (
                 <Row key={asset.id} asset={asset} refetch={refetch} />
               ))
             ) : (
@@ -143,7 +143,7 @@ export const Row = ({
   })
 
   const assetTypeMap: Record<number, string | undefined> =
-  assetType?.body?.reduce((acc, type) => {
+  assetType?.body?.data.reduce((acc, type) => {
     acc[type.id] = type.name;
     return acc;
   }, {} as Record<number, string | undefined>) ?? {};

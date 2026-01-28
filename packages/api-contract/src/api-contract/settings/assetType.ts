@@ -52,7 +52,7 @@ export const assetTypeContract = c.router({
         path: '/asset-type/:id',
         responses: {
             200: z.object({
-                assetType: SelectAssetTypeSchema,
+                assetType: SelectAssetTypeSchema.omit({ deletedAt: true}),
                 properties: z.array(SelectAssetPropertySchema),
                 forms: z.array(SelectBookingFormSchema)
             }),

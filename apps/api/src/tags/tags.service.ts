@@ -2,7 +2,7 @@ import { Inject, Injectable, InternalServerErrorException, Logger, NotFoundExcep
 import { MySql2Database } from 'drizzle-orm/mysql2';
 import { DrizzleAsyncProvider } from 'src/drizzle/drizzle.provider';
 import * as schema from '@repo/api-contract';
-import { eq, sql } from 'drizzle-orm';
+import { and, eq, isNull, sql } from 'drizzle-orm';
 import type { InsertTag } from '@repo/api-contract';
 import { ObjectStorageService } from 'src/object-storage/object-storage.service';
 
@@ -36,7 +36,7 @@ export class TagsService {
     const totalCountResult = await this.db
       .select({ count: sql<number>`COUNT(*)` })
       .from(schema.Tags)
-      .where(and(eq(schema.Tags.tenantId, tenantId)isNull(schema.Tags.deletedAt)))
+      .where(and(eq(schema.Tags.tenantId, tenantId),isNull(schema.Tags.deletedAt)))
       .execute();
     const totalCount = totalCountResult[0]?.count || 0;
 

@@ -2,7 +2,7 @@ import { Inject, Injectable, InternalServerErrorException, NotFoundException, Co
 import { MySql2Database } from 'drizzle-orm/mysql2';
 import { DrizzleAsyncProvider } from 'src/drizzle/drizzle.provider';
 import * as schema from '@repo/api-contract';
-import { eq, sql, and } from 'drizzle-orm';
+import { eq, sql, and, isNull } from 'drizzle-orm';
 
 @Injectable()
 export class FormsService {
