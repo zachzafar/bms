@@ -1,7 +1,7 @@
 import { Injectable, Logger, NotFoundException, ConflictException, Inject } from '@nestjs/common';
 import { MySql2Database } from 'drizzle-orm/mysql2';
 import { DrizzleAsyncProvider } from 'src/drizzle/drizzle.provider';
-import { eq, and, count, countDistinct, desc, sql } from 'drizzle-orm';
+import { eq, and, count, countDistinct, desc, isNull, sql } from 'drizzle-orm';
 import { hash } from 'argon2';
 import { randomBytes } from 'crypto';
 import { UsersService } from 'src/users/users.service';
@@ -216,32 +216,11 @@ export class SystemAdminService {
         throw new NotFoundException('Tenant not found');
       }
 
-      // Delete tenant and all related data in transaction
-      await this.db.transaction(async (tx) => {
-        // Delete API keys
-        await tx.delete(schema.APIKeys).where(eq(schema.APIKeys.tenantId, tenantId));
-        
-        // Delete role permissions
-        const roles = await tx.query.Roles.findMany({
-          where: (role, { eq }) => eq(role.tenantId, tenantId)
-        });
-        
-        for (const role of roles) {
-          await tx.delete(schema.RoleHasPermissions).where(eq(schema.RoleHasPermissions.roleId, role.id));
-        }
-        
-        // Delete user roles
-        await tx.delete(schema.UserHasRoles).where(eq(schema.UserHasRoles.tenantId, tenantId));
-        
-        // Delete roles
-        await tx.delete(schema.Roles).where(eq(schema.Roles.tenantId, tenantId));
-        
-        // Delete tenant users
-        await tx.delete(schema.TenantHasUsers).where(eq(schema.TenantHasUsers.tenantId, tenantId));
-        
-        // Delete tenant
-        await tx.delete(schema.Tenant).where(eq(schema.Tenant.id, tenantId));
-      });
+      // Soft delete the tenant
+      await this.db
+        .update(schema.Tenant)
+        .set({ deletedAt: new Date() })
+        .where(eq(schema.Tenant.id, tenantId));
 
       this.logger.log(`Deleted tenant: ${tenantId}`);
       return { message: 'Tenant deleted successfully' };
@@ -256,10 +235,12 @@ export class SystemAdminService {
 
     const totalCountResult = await this.db
       .select({ count: count() })
-      .from(schema.Tenant);
+      .from(schema.Tenant)
+      .where(isNull(schema.Tenant.deletedAt));
     const totalCount = totalCountResult[0]?.count || 0;
 
     const results = await this.db.query.Tenant.findMany({
+      where: (t, { isNull }) => isNull(t.deletedAt),
       limit: pageSize,
       offset: offset,
     });
@@ -282,7 +263,7 @@ export class SystemAdminService {
   async getTenant(tenantId: string) {
     try {
       const tenant = await this.db.query.Tenant.findFirst({
-        where: (t, { eq }) => eq(t.id, tenantId)
+        where: (t, { eq, and, isNull }) => and(eq(t.id, tenantId), isNull(t.deletedAt))
       });
 
       if (!tenant) {
@@ -298,7 +279,7 @@ export class SystemAdminService {
       const [roleCountResult] = await this.db
         .select({ count: count() })
         .from(schema.Roles)
-        .where(eq(schema.Roles.tenantId, tenantId));
+        .where(and(eq(schema.Roles.tenantId, tenantId), isNull(schema.Roles.deletedAt)));
 
       const [apiKeyCountResult] = await this.db
         .select({ count: count() })
@@ -455,16 +436,11 @@ export class SystemAdminService {
         throw new ConflictException('Cannot delete role that is assigned to users');
       }
 
-      // Delete role and permissions in transaction
-      await this.db.transaction(async (tx) => {
-        // Delete permissions
-        await tx.delete(schema.RoleHasPermissions)
-          .where(eq(schema.RoleHasPermissions.roleId, (roleId)));
-
-        // Delete role
-        await tx.delete(schema.Roles)
-          .where(eq(schema.Roles.id, (roleId)));
-      });
+      // Soft delete the role
+      await this.db
+        .update(schema.Roles)
+        .set({ deletedAt: new Date() })
+        .where(eq(schema.Roles.id, roleId));
 
       this.logger.log(`Deleted role: ${roleId} for tenant: ${tenantId}`);
       return { message: 'Role deleted successfully' };

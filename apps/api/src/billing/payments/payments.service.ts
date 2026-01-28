@@ -2,7 +2,7 @@ import { Inject, Injectable, BadRequestException } from '@nestjs/common';
 import { MySql2Database } from 'drizzle-orm/mysql2';
 import * as schema from '@repo/api-contract';
 import { DrizzleAsyncProvider } from 'src/drizzle/drizzle.provider';
-import { and, eq, inArray, sql } from 'drizzle-orm';
+import { and, eq, inArray, isNull, sql } from 'drizzle-orm';
 
 type CreatePaymentInput = Omit<schema.InsertPayment, 'id'>;
 
@@ -213,6 +213,7 @@ export class PaymentsService {
 
     const conditions: any[] = [];
     conditions.push(eq(schema.Payment.tenantId, tenantId));
+    conditions.push(isNull(schema.Payment.deletedAt));
     if (query.customerId) conditions.push(eq(schema.Payment.customerId, query.customerId));
 
     const totalCountResult = await this.db
@@ -223,9 +224,10 @@ export class PaymentsService {
     const totalCount = totalCountResult[0]?.count || 0;
 
     const payments = await this.db.query.Payment.findMany({
-      where: (p, { eq, and }) =>
+      where: (p, { eq, and, isNull }) =>
         and(
           eq(p.tenantId, tenantId),
+          isNull(p.deletedAt),
           query.customerId ? eq(p.customerId, (query.customerId)) : undefined,
         ),
       orderBy: (p, { desc }) => [desc(p.createdAt)],
@@ -254,7 +256,7 @@ export class PaymentsService {
 
   async get(id: number) {
     const payment = await this.db.query.Payment.findFirst({
-      where: (p, { eq }) => eq(p.id, id),
+      where: (p, { eq, and, isNull }) => and(eq(p.id, id), isNull(p.deletedAt)),
     });
     if (!payment) return null;
 

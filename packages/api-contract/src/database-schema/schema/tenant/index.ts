@@ -1,5 +1,5 @@
 import { relations} from "drizzle-orm";
-import { mysqlTable, varchar, timestamp, uniqueIndex, serial, bigint, boolean } from "drizzle-orm/mysql-core";
+import { mysqlTable, varchar, timestamp, uniqueIndex, serial, bigint, boolean, index } from "drizzle-orm/mysql-core";
 import { Asset } from "../asset";
 import { AssetType, assetProperty, BookingForm } from "../settings";
 import { createInsertSchema, createSelectSchema } from "drizzle-zod";
@@ -15,9 +15,11 @@ export const Tenant = mysqlTable("tenants", {
     enableAutomaticConfirmation: boolean("enable_automatic_confirmation").notNull().default(true),
     booksByTagOnCustomerPage: boolean("book_by_tag_customer").notNull().default(false),
     createdAt: timestamp('createdAt',{mode: 'string'}).notNull().defaultNow(),
-    updatedAt: timestamp('updatedAt',{mode: 'string'}).defaultNow().onUpdateNow()
+    updatedAt: timestamp('updatedAt',{mode: 'string'}).defaultNow().onUpdateNow(),
+    deletedAt: timestamp('deleted_at'),
 }, (tenant) => ({
     subdomainUniqueIdx: uniqueIndex("subdomain_unique").on(tenant.subdomain),
+    deletedAtIdx: index("tenant_deleted_at_idx").on(tenant.deletedAt),
 }));
 
 export const InsertTenantSchema = createInsertSchema(Tenant);
@@ -40,7 +42,10 @@ export const TenantTeams = mysqlTable("tenant_teams",{
     id: bigint("id", { mode: "number", unsigned: true }).autoincrement().primaryKey(),
     tenantId: varchar("tenant_id", { length: 255 }).notNull().references(() => Tenant.id),
     name: varchar("name", { length: 255 }).notNull(),
-})
+    deletedAt: timestamp('deleted_at'),
+}, (table) => ({
+    deletedAtIdx: index("tenant_teams_deleted_at_idx").on(table.deletedAt),
+}))
 
 export const InsertTenantTeamSchema = createInsertSchema(TenantTeams)
 export const SelectTenantTeamSchema = createSelectSchema(TenantTeams)
@@ -106,8 +111,8 @@ export const TenantTeamHasAssetsRelations = relations(TenantTeamHasAssets, ({ on
 
 export const TenantHasUsers = mysqlTable("tenant_has_users", {
     id: bigint("id", { mode: "number", unsigned: true }).autoincrement().primaryKey(),
-    tenantId: varchar("tenant_id", { length: 255 }).notNull().references(() => Tenant.id),
-    userId: varchar("user_id", { length: 255 }).notNull().references(() => User.id),
+    tenantId: varchar("tenant_id", { length: 255 }).notNull().references(() => Tenant.id,{onDelete:'cascade'}),
+    userId: varchar("user_id", { length: 255 }).notNull().references(() => User.id,{onDelete:'cascade'}),
     isAdmin: boolean("is_admin").default(false)
 }, (table) => ({
     tenantIdx: uniqueIndex("tenant_idx").on(table.tenantId, table.userId),

@@ -2,7 +2,7 @@ import { Inject, Injectable, NotFoundException } from '@nestjs/common';
 import { MySql2Database } from 'drizzle-orm/mysql2';
 import * as schema from '@repo/api-contract';
 import { DrizzleAsyncProvider } from 'src/drizzle/drizzle.provider';
-import { and, eq, ilike, or, sql } from 'drizzle-orm';
+import { and, eq, ilike, isNull, or, sql } from 'drizzle-orm';
 
 @Injectable()
 export class ContactsService {
@@ -20,14 +20,15 @@ export class ContactsService {
     const totalCountResult = await this.db
       .select({ count: sql<number>`COUNT(*)` })
       .from(schema.Contact)
-      .where(eq(schema.Contact.tenantId, tenantId))
+      .where(and(eq(schema.Contact.tenantId, tenantId), isNull(schema.Contact.deletedAt)))
       .execute();
     const totalCount = totalCountResult[0]?.count || 0;
 
     // Base: contacts by tenant
     const contacts = await this.db.query.Contact.findMany({
-      where: (c, { eq, and, or, like }) => and(
+      where: (c, { eq, and, or, like, isNull }) => and(
         eq(c.tenantId, tenantId),
+        isNull(c.deletedAt),
         query.search
           ? or(
               like(c.firstName, `%${query.search}%`),
@@ -78,7 +79,7 @@ export class ContactsService {
   }
 
   async getContact(id: number) {
-    const contact = await this.db.query.Contact.findFirst({ where: (c, { eq }) => eq(c.id, id) });
+    const contact = await this.db.query.Contact.findFirst({ where: (c, { eq, and, isNull }) => and(eq(c.id, id), isNull(c.deletedAt)) });
     if (!contact) return null;
     const customer = await this.db.query.Customer.findFirst({ where: (t, { eq }) => eq(t.contactId, id) });
     const owner = await this.db.query.Owner.findFirst({ where: (t, { eq }) => eq(t.contactId, id) });
@@ -90,7 +91,11 @@ export class ContactsService {
   }
 
   async deleteContact(id: number) {
-    await this.db.delete(schema.Contact).where(eq(schema.Contact.id, id)).execute();
+    await this.db
+      .update(schema.Contact)
+      .set({ deletedAt: new Date() })
+      .where(eq(schema.Contact.id, id))
+      .execute();
   }
 
   // async mergeContacts(tenantId: string, { targetId, sourceId }: { targetId: number; sourceId: number }) {

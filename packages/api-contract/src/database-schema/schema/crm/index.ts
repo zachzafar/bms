@@ -46,11 +46,12 @@ export const Contact = mysqlTable(
     source: inquirySource.default("Website"),
     createdAt: timestamp("createdAt").notNull().defaultNow(),
     updatedAt: timestamp("updated_at", { mode: "date" }).$onUpdate(() => new Date()),
+    deletedAt: timestamp("deleted_at"),
   },
   (t) => ({
     emailPerTenant: uniqueIndex("contact_email_tenant_unique").on(t.tenantId, t.email),
-
     tenantIdx: index("contact_tenant_idx").on(t.tenantId),
+    deletedAtIdx: index("contact_deleted_at_idx").on(t.deletedAt),
   })
 );
 
@@ -93,6 +94,7 @@ export const Inquiry = mysqlTable(
     notes: text("notes"),
     createdAt: timestamp("createdAt").notNull().defaultNow(),
     updatedAt: timestamp("updated_at", { mode: "date" }).$onUpdate(() => new Date()),
+    deletedAt: timestamp("deleted_at"),
   },
   (t) => ({
     tenantIdx: index("inquiry_tenant_idx").on(t.tenantId),
@@ -100,6 +102,7 @@ export const Inquiry = mysqlTable(
     assetIdx: index("inquiry_asset_idx").on(t.assetId),
     assignedIdx: index("inquiry_assigned_idx").on(t.assignedTo),
     statusIdx: index("inquiry_status_idx").on(t.status),
+    deletedAtIdx: index("inquiry_deleted_at_idx").on(t.deletedAt),
   })
 );
 
@@ -142,12 +145,14 @@ export const Feedback = mysqlTable(
     rating: int("rating").notNull(), // enforce 1..5 in app
     createdAt: timestamp("createdAt").notNull().defaultNow(),
     updatedAt: timestamp("updated_at", { mode: "date" }).$onUpdate(() => new Date()),
+    deletedAt: timestamp("deleted_at"),
   },
   (t) => ({
     tenantIdx: index("feedback_tenant_idx").on(t.tenantId),
     contactIdx: index("feedback_contact_idx").on(t.contactId),
     assetIdx: index("feedback_asset_idx").on(t.assetId),
     ratingIdx: index("feedback_rating_idx").on(t.rating),
+    deletedAtIdx: index("feedback_deleted_at_idx").on(t.deletedAt),
   })
 );
 
@@ -167,9 +172,11 @@ export const Brochure = mysqlTable(
       .references(() => Tenant.id, { onDelete: "cascade" }),
     createdAt: timestamp("createdAt").notNull().defaultNow(),
     updatedAt: timestamp("updated_at", { mode: "date" }).$onUpdate(() => new Date()),
+    deletedAt: timestamp("deleted_at"),
   },
   (t) => ({
     tenantIdx: index("brochure_tenant_idx").on(t.tenantId),
+    deletedAtIdx: index("brochure_deleted_at_idx").on(t.deletedAt),
   })
 );
 
@@ -233,6 +240,7 @@ export const CommunicationLog = mysqlTable(
     summary: text("summary").notNull(),
     createdAt: timestamp("createdAt").notNull().defaultNow(),
     updatedAt: timestamp("updated_at", { mode: "date" }).$onUpdate(() => new Date()),
+    deletedAt: timestamp("deleted_at"),
   },
   (t) => ({
     tenantIdx: index("comm_tenant_idx").on(t.tenantId),
@@ -240,6 +248,7 @@ export const CommunicationLog = mysqlTable(
     userIdx: index("comm_user_idx").on(t.userId),
     typeIdx: index("comm_type_idx").on(t.type),
     dateIdx: index("comm_date_idx").on(t.date),
+    deletedAtIdx: index("comm_deleted_at_idx").on(t.deletedAt),
   })
 );
 
@@ -275,6 +284,7 @@ export const Task = mysqlTable(
     status: taskStatus.notNull().default("Pending"),
     createdAt: timestamp("createdAt").notNull().defaultNow(),
     updatedAt: timestamp("updated_at", { mode: "date" }).$onUpdate(() => new Date()),
+    deletedAt: timestamp("deleted_at"),
   },
   (t) => ({
     tenantIdx: index("task_tenant_idx").on(t.tenantId),
@@ -282,6 +292,7 @@ export const Task = mysqlTable(
     contactIdx: index("task_contact_idx").on(t.contactId),
     statusIdx: index("task_status_idx").on(t.status),
     dueIdx: index("task_due_idx").on(t.dueDate),
+    deletedAtIdx: index("task_deleted_at_idx").on(t.deletedAt),
   })
 );
 
@@ -306,12 +317,14 @@ export const Document = mysqlTable(
     uploadedAt: datetime("uploaded_at").notNull(),
     createdAt: timestamp("createdAt").notNull().defaultNow(),
     updatedAt: timestamp("updated_at", { mode: "date" }).$onUpdate(() => new Date()),
+    deletedAt: timestamp("deleted_at"),
   },
   (t) => ({
     tenantIdx: index("doc_tenant_idx").on(t.tenantId),
     contactIdx: index("doc_contact_idx").on(t.contactId),
     typeIdx: index("doc_type_idx").on(t.documentType),
     uploaderIdx: index("doc_uploader_idx").on(t.uploadedBy),
+    deletedAtIdx: index("doc_deleted_at_idx").on(t.deletedAt),
   })
 );
 

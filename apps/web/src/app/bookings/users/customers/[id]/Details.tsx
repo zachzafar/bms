@@ -42,7 +42,7 @@ export default function Details({ userId }: { userId: string }) {
 
   const selected = useMemo(() => customers.find((c: any) => c.user.id === userId), [customers, userId]);
   const selectedUserWithRoles = useMemo(() => users.find((u: any) => u.id === userId), [users, userId]);
-  const roles: number[] = selectedUserWithRoles?.roles ?? [];
+  const roles: number[] = (selectedUserWithRoles?.roles ?? []).map((r: any) => r.roleId as number);
 
   const { mutate: updateUser, isPending } = authClient.users.updateUser.useMutation();
   const queryClient = authClient.useQueryClient();

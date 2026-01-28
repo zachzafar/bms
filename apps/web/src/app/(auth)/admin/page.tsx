@@ -29,14 +29,14 @@ const appOptions: AppOption[] = [
     url: '/bookings',
     color: 'bg-primary/50'
   },
-  {
-    id: 'crm',
-    name: 'CRM System',
-    description: 'Customer relationship management and lead tracking',
-    icon: <Users className="h-8 w-8" />,
-    url: '/crm',
-    color: 'bg-primary/50'
-  }
+  // {
+  //   id: 'crm',
+  //   name: 'CRM System',
+  //   description: 'Customer relationship management and lead tracking',
+  //   icon: <Users className="h-8 w-8" />,
+  //   url: '/crm',
+  //   color: 'bg-primary/50'
+  // }
 ];
 
 const adminFeatures = [

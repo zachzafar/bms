@@ -49,14 +49,14 @@ const appOptions: AppOption[] = [
   //   url: '/booking',
   //   color: 'text-primary'
   // },
-  {
-    id: 'crm',
-    name: 'CRM System',
-    description: 'Manage clients, inquiries, and business relationships',
-    icon: <Users className="h-4 w-4" />,
-    url: '/crm',
-    color: 'text-primary'
-  },
+  // {
+  //   id: 'crm',
+  //   name: 'CRM System',
+  //   description: 'Manage clients, inquiries, and business relationships',
+  //   icon: <Users className="h-4 w-4" />,
+  //   url: '/crm',
+  //   color: 'text-primary'
+  // },
 ]
 
 export function AppHeader() {
@@ -81,11 +81,11 @@ export function AppHeader() {
       await deleteSession()
       // queryClient.clear();
       // Redirect to auth app
-      window.location.href = '/auth/login'
+      window.location.href = '/login'
     } catch (error) {
       console.error('Logout failed:', error)
       // Force redirect even if logout fails
-      window.location.href = '/auth/login'
+      window.location.href = '/login'
     }
   }
 
@@ -143,11 +143,11 @@ export function AppHeader() {
           <div className="px-2 py-1.5 text-sm font-medium text-muted-foreground">
             Account
           </div>
-          <DropdownMenuSeparator />
+          {/* <DropdownMenuSeparator />
           <DropdownMenuItem className="flex items-center gap-2 px-3 py-2 cursor-pointer">
             <User className="h-4 w-4" />
             <span>Profile</span>
-          </DropdownMenuItem>
+          </DropdownMenuItem> */}
           <DropdownMenuSeparator />
           <DropdownMenuItem
             onClick={handleLogout}

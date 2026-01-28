@@ -42,7 +42,7 @@ function AddAssetForm() {
           assetTypeId: Number(data.assetTypeId),
         },
         tenant: tenant.id,
-        tagIds: [data.tagId.toString()]  // Use only the selected tag
+        tagIds: [data.tagId]  // Use only the selected tag
       }
     }, {
       onSuccess: (response) => {
@@ -87,7 +87,7 @@ function AddAssetForm() {
                   </SelectTrigger>
                 </FormControl>
                 <SelectContent>
-                  {assetTypes?.status === 200 ? assetTypes.body.map((type) => (
+                  {assetTypes?.status === 200 ? assetTypes.body.data.map((type) => (
                     <SelectItem key={type.name} value={type.id?.toString()}>
                       {type.name}
                     </SelectItem>
@@ -115,7 +115,7 @@ function AddAssetForm() {
                 </FormControl>
                 <SelectContent>
                   {assetTags?.status === 200 ? (
-                    assetTags.body.map(tag => (
+                    assetTags.body.data.map(tag => (
                       <SelectItem key={tag.id} value={tag.id.toString()}>
                         {tag.name}
                       </SelectItem>

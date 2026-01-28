@@ -4,7 +4,7 @@ import { DrizzleAsyncProvider } from 'src/drizzle/drizzle.provider';
 import * as schema from '@repo/api-contract';
 import { TenantService } from 'src/tenant/tenant.service';
 import  type { InsertMaintenanceTask, UpdateMaintenanceTask } from '@repo/api-contract';
-import { and, eq, inArray, sql } from 'drizzle-orm';
+import { and, eq, inArray, isNull, sql } from 'drizzle-orm';
 import { ObjectStorageService } from 'src/object-storage/object-storage.service';
 
 @Injectable()
@@ -27,7 +27,7 @@ export class MaintenanceService {
     }
 
     async getMaintenance(id: string) {
-        return await this.db.query.MaintenanceTask.findFirst({ where: (maintenance, { eq }) => eq(maintenance.id, id) });
+        return await this.db.query.MaintenanceTask.findFirst({ where: (maintenance, { eq, and, isNull }) => and(eq(maintenance.id, id), isNull(maintenance.deletedAt)) });
     }
 
     async getMaintenancesByAssetId(assetId: string, page: number = 1, pageSize: number = 10) {
@@ -37,12 +37,12 @@ export class MaintenanceService {
         const totalCountResult = await this.db
             .select({ count: sql<number>`COUNT(*)` })
             .from(schema.MaintenanceTask)
-            .where(eq(schema.MaintenanceTask.assetId, assetId))
+            .where(and(eq(schema.MaintenanceTask.assetId, assetId), isNull(schema.MaintenanceTask.deletedAt)))
             .execute();
         const totalCount = totalCountResult[0]?.count || 0;
 
         const results = await this.db.query.MaintenanceTask.findMany({
-            where: (maintenance, { eq }) => eq(maintenance.assetId, assetId),
+            where: (maintenance, { eq, and, isNull }) => and(eq(maintenance.assetId, assetId), isNull(maintenance.deletedAt)),
             limit: pageSize,
             offset: offset,
         });
@@ -73,7 +73,7 @@ export class MaintenanceService {
                 schema.Asset,
                 eq(schema.MaintenanceTask.assetId, schema.Asset.id)
             )
-            .where(eq(schema.Asset.tenantId, tenantId))
+            .where(and(eq(schema.Asset.tenantId, tenantId),isNull(schema.Asset.deletedAt),isNull(schema.MaintenanceTask.deletedAt)))
             .execute();
         const totalCount = totalCountResult[0]?.count || 0;
 
@@ -83,7 +83,7 @@ export class MaintenanceService {
                 schema.Asset,
                 eq(schema.MaintenanceTask.assetId, schema.Asset.id)
             )
-            .where(eq(schema.Asset.tenantId, tenantId))
+            .where(and(eq(schema.Asset.tenantId, tenantId),isNull(schema.Asset.deletedAt),isNull(schema.MaintenanceTask.deletedAt)))
             .limit(pageSize)
             .offset(offset);
 
@@ -122,7 +122,11 @@ export class MaintenanceService {
     
     }
     async deleteMaintenance(id: string) {
-        this.db.delete(schema.MaintenanceTask).where(eq(schema.MaintenanceTask.id,id)).execute();
+        await this.db
+            .update(schema.MaintenanceTask)
+            .set({ deletedAt: new Date() })
+            .where(eq(schema.MaintenanceTask.id, id))
+            .execute();
     }
 
     async checkAvailability(assetId: string) {
@@ -228,7 +232,7 @@ export class MaintenanceService {
         const totalCountResult = await this.db
             .select({ count: sql<number>`COUNT(*)` })
             .from(schema.MaintenanceTask)
-            .where(inArray(schema.MaintenanceTask.assetId, ownerAssets))
+            .where(and(inArray(schema.MaintenanceTask.assetId, ownerAssets), isNull(schema.MaintenanceTask.deletedAt)))
             .execute();
         const totalCount = totalCountResult[0]?.count || 0;
 
@@ -238,7 +242,7 @@ export class MaintenanceService {
                 schema.Asset,
                 eq(schema.MaintenanceTask.assetId, schema.Asset.id)
             )
-            .where(inArray(schema.MaintenanceTask.assetId, ownerAssets))
+            .where(and(inArray(schema.MaintenanceTask.assetId, ownerAssets), isNull(schema.MaintenanceTask.deletedAt)))
             .limit(pageSize)
             .offset(offset);
 
@@ -266,7 +270,7 @@ export class MaintenanceService {
 
     async getOwnerMaintenance(ownerId: string, ownerAssets: string[], maintenanceId: string) {
         const maintenance = await this.db.query.MaintenanceTask.findFirst({
-            where: (m, { eq }) => eq(m.id, maintenanceId),
+            where: (m, { eq, and, isNull }) => and(eq(m.id, maintenanceId), isNull(m.deletedAt)),
         });
 
         if (!maintenance) {

@@ -2,7 +2,7 @@ import { Inject, Injectable } from '@nestjs/common';
 import { MySql2Database } from 'drizzle-orm/mysql2';
 import * as schema from '@repo/api-contract';
 import { DrizzleAsyncProvider } from 'src/drizzle/drizzle.provider';
-import { and, eq, gte, lte, sql } from 'drizzle-orm';
+import { and, eq, gte, isNull, lte, sql } from 'drizzle-orm';
 
 @Injectable()
 export class FeedbackService {
@@ -34,13 +34,14 @@ export class FeedbackService {
     const totalCountResult = await this.db
       .select({ count: sql<number>`COUNT(*)` })
       .from(schema.Feedback)
-      .where(eq(schema.Feedback.tenantId, tenantId))
+      .where(and(eq(schema.Feedback.tenantId, tenantId), isNull(schema.Feedback.deletedAt)))
       .execute();
     const totalCount = totalCountResult[0]?.count || 0;
 
     const feedbackList = await this.db.query.Feedback.findMany({
       where: and(
         eq(schema.Feedback.tenantId, tenantId),
+        isNull(schema.Feedback.deletedAt),
         query.contactId ? eq(schema.Feedback.contactId, query.contactId) : undefined,
         query.assetId ? eq(schema.Feedback.assetId, query.assetId) : undefined,
         query.minRating ? gte(schema.Feedback.rating, query.minRating) : undefined,
@@ -69,7 +70,7 @@ export class FeedbackService {
     const rows = await this.db
       .select()
       .from(schema.Feedback)
-      .where(eq(schema.Feedback.id, id))
+      .where(and(eq(schema.Feedback.id, id), isNull(schema.Feedback.deletedAt)))
       .innerJoin(schema.Contact, eq(schema.Feedback.contactId, schema.Contact.id))
       .innerJoin(schema.Asset, eq(schema.Feedback.assetId, schema.Asset.id))
       .execute();
@@ -91,6 +92,10 @@ export class FeedbackService {
   }
 
   async remove(id: number) {
-    await this.db.delete(schema.Feedback).where(eq(schema.Feedback.id, id)).execute();
+    await this.db
+      .update(schema.Feedback)
+      .set({ deletedAt: new Date() })
+      .where(eq(schema.Feedback.id, id))
+      .execute();
   }
 }

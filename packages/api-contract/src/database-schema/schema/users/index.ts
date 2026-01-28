@@ -1,5 +1,5 @@
 import { relations } from "drizzle-orm";
-import { bigint, datetime, int, json, mysqlEnum, mysqlTable, serial, text, timestamp, uniqueIndex, varchar } from "drizzle-orm/mysql-core";
+import { bigint, datetime, index, int, json, mysqlEnum, mysqlTable, serial, text, timestamp, uniqueIndex, varchar } from "drizzle-orm/mysql-core";
 import { Asset } from "../asset";
 import { createInsertSchema, createSelectSchema } from "drizzle-zod";
 import { z } from "zod";
@@ -41,7 +41,7 @@ export const userRelations = relations(User, ({ one, many }) => ({
 }));
 
 export const InsertUserSchema = createInsertSchema(User)
-export const SelectUserSchema = createSelectSchema(User).extend({ roles: z.array(z.number()) });
+export const SelectUserSchema = createSelectSchema(User).extend({ roles: z.array(z.object({ roleId: z.number(), roleName: z.string() }))});
 export const UpdateUserSchema = InsertUserSchema.partial();
 
 export type InsertUser = z.infer<typeof InsertUserSchema>
@@ -121,10 +121,12 @@ export const Owner = mysqlTable("owner_details", {
     taxId: varchar("tax_id", { length: 255 }),
     createdAt: timestamp('createdAt').notNull().defaultNow(),
     updatedAt: timestamp('updated_at', { mode: 'date', }).$onUpdate(() => new Date()),
+    deletedAt: timestamp('deleted_at'),
     tenantId: varchar("tenant_id", { length: 255 }).notNull().references(() => Tenant.id),
     userId: varchar("user_id", { length: 255 }).notNull().references(() => User.id, { onDelete: 'cascade' }),
 }, (table) => ({
     tenantUserCompoundIdx: uniqueIndex("tenant_user_compound_idx").on(table.tenantId, table.userId),
+    deletedAtIdx: index("owner_deleted_at_idx").on(table.deletedAt),
 }));
 
 export const InsertOwnerSchema = createInsertSchema(Owner);
@@ -152,8 +154,11 @@ export const Roles = mysqlTable("roles", {
     description: text("description"),
     createdAt: timestamp('createdAt').notNull().defaultNow(),
     updatedAt: timestamp('updated_at', { mode: 'date', }).$onUpdate(() => new Date()),
+    deletedAt: timestamp('deleted_at'),
     tenantId: varchar("tenant_id", { length: 255 }).references(() => Tenant.id),
-})
+}, (table) => ({
+    deletedAtIdx: index("roles_deleted_at_idx").on(table.deletedAt),
+}))
 
 export const InsertRoleSchema = createInsertSchema(Roles);
 export const SelectRoleSchema = createSelectSchema(Roles);
@@ -169,7 +174,7 @@ export const RoleRelations = relations(Roles, ({ many }) => ({
 
 export const UserHasRoles = mysqlTable("user_has_roles", {
     id: bigint("id", { mode: "number", unsigned: true }).autoincrement().primaryKey(),
-    roleId: bigint("roles_id", { mode: 'number', unsigned: true }).notNull().references(() => Roles.id),
+    roleId: bigint("roles_id", { mode: 'number', unsigned: true }).notNull().references(() => Roles.id, { onDelete: 'cascade' }),
     userId: varchar("user_id", { length: 255 }).references(() => User.id, { onDelete: 'cascade' }).notNull(),
     tenantId: varchar("tenant_id", { length: 255 }).notNull().references(() => Tenant.id), // Add tenantId here als
     createdAt: timestamp('createdAt').notNull().defaultNow(),
@@ -196,7 +201,7 @@ export const UserHasRolesRelations = relations(UserHasRoles, ({ one }) => ({
 
 export const RoleHasPermissions = mysqlTable("role_has_permissions", {
     id: bigint("id", { mode: "number", unsigned: true }).autoincrement().primaryKey(),
-    roleId: bigint("role_id", { mode: 'number', unsigned: true }).references(() => Roles.id).notNull(),
+    roleId: bigint("role_id", { mode: 'number', unsigned: true }).references(() => Roles.id, { onDelete: 'cascade' }).notNull(),
     permission: varchar("permission", { length: 255 }).notNull(),
     createdAt: timestamp('createdAt').notNull().defaultNow(),
     updatedAt: timestamp('updated_at', { mode: 'date', }).$onUpdate(() => new Date()),

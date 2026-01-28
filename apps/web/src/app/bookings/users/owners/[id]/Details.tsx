@@ -30,10 +30,10 @@ export default function Details({ userId }: { userId: string }) {
 
   const owners = ownersData?.body.data ?? [];
   const selected = useMemo(() => owners.find((o: any) => o.user.id === userId), [owners, userId]);
-  const rolesForUser = useMemo(() => {
+  const rolesForUser: number[] = useMemo(() => {
     const users = usersData?.body.data ?? [];
     const u = users.find((u: any) => u.id === userId);
-    return u?.roles ?? [];
+    return (u?.roles ?? []).map((r: any) => r.roleId as number);
   }, [usersData, userId]);
 
   const [name, setName] = useState(selected?.user?.name ?? '');

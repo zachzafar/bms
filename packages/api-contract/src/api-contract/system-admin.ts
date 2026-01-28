@@ -349,7 +349,7 @@ export const systemAdminContract = c.router({
   deleteTenantApiKey: {
     method: 'DELETE',
     path: '/system-admin/tenants/:tenantId/api-keys/:keyId',
-    body: z.undefined(),
+    body: z.object({}).optional(),
     pathParams: z.object({
       tenantId: z.string(),
       keyId: z.string(),
@@ -454,7 +454,7 @@ export const systemAdminContract = c.router({
         path: '/system-admin/asset-type/:id',
         responses: {
             200: z.object({
-                assetType: SelectAssetTypeSchema,
+                assetType: SelectAssetTypeSchema.omit({ deletedAt: true}),
                 properties: z.array(SelectAssetPropertySchema),
                 forms: z.array(SelectBookingFormSchema)
             }),
@@ -486,7 +486,7 @@ export const systemAdminContract = c.router({
     deleteAssetType: {
         method: 'DELETE',
         path: '/system-admin/asset-type/:id',
-        body: z.undefined(),
+        body: z.object({}).optional(),
         responses: {
             200: z.object({
                 message: z.string()

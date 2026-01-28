@@ -21,7 +21,7 @@ import { DataTablePagination } from '@/components/ui/data-table-pagination';
 
 // Schema extensions
 const ExtendedSelectUserSchema = SelectUserSchema.extend({
-  roles: z.array(z.number()).default([])
+  roles: z.array(z.object({ roleId: z.number(), roleName: z.string() })).default([])
 });
 type ExtendedSelectUser = z.infer<typeof ExtendedSelectUserSchema>;
 
@@ -130,9 +130,7 @@ export default function Component() {
                   <TableRow key={user.id}>
                     <TableCell>{user.name}</TableCell>
                     <TableCell>{user.email}</TableCell>
-                    <TableCell>{user.roles.toString() != null
-                      ? rolesMap?.[user.roles.toString()] ?? "-"
-                      : "-"}</TableCell>
+                    <TableCell>{user.roles.map(r => r.roleName).join(', ') || '-'}</TableCell>
                     {/* <TableCell>
                       <Button
                         variant='ghost'

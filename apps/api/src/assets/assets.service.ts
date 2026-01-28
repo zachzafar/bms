@@ -2,7 +2,7 @@ import { Inject, Injectable, InternalServerErrorException, Logger } from '@nestj
 import { MySql2Database } from 'drizzle-orm/mysql2';
 import { DrizzleAsyncProvider } from 'src/drizzle/drizzle.provider';
 import * as schema from '@repo/api-contract';
-import { and, eq, gte, inArray, lte, sql } from 'drizzle-orm';
+import { and, eq, gte, inArray, isNull, lte, sql } from 'drizzle-orm';
 import type { InsertAsset, UpdateAsset } from '@repo/api-contract';
 import { ObjectStorageService } from 'src/object-storage/object-storage.service';
 import { Readable } from 'stream';
@@ -21,7 +21,7 @@ export class AssetsService {
     const offset = (page - 1) * pageSize;
 
     // Build where conditions
-    const conditions: any[] = [eq(schema.Asset.tenantId, tenantId)];
+    const conditions: any[] = [eq(schema.Asset.tenantId, tenantId), isNull(schema.Asset.deletedAt)];
     if (query?.userId) conditions.push(eq(schema.Asset.userId, query.userId));
 
     // Get total count
@@ -34,9 +34,10 @@ export class AssetsService {
 
     // Get paginated assets
     const assets = await this.db.query.Asset.findMany({
-      where: (asset, { eq, and, like }) =>
+      where: (asset, { eq, and, like, isNull }) =>
         and(
           eq(asset.tenantId, tenantId),
+          isNull(asset.deletedAt),
           query?.userId ? eq(asset.userId, query.userId) : undefined,
           query?.search ? like(asset.name, `%${query.search}%`) : undefined
         ),
@@ -74,7 +75,7 @@ export class AssetsService {
 
   async getAssetById(id: string) {
     const asset = await this.db.query.Asset.findFirst({
-      where: (asset, { eq }) => eq(asset.id, id),
+      where: (asset, { eq, and, isNull }) => and(eq(asset.id, id), isNull(asset.deletedAt)),
     });
     if (!asset) return null;
 
@@ -180,37 +181,19 @@ export class AssetsService {
   }
 
   async deleteAsset(id: string): Promise<void> {
+    const now = new Date();
     await this.db.transaction(async (tx) => {
-      // Step 1: Get booking IDs for this asset
-      const bookings = await tx
-        .select({ id: schema.Booking.id })
-        .from(schema.Booking)
+      // Soft delete all bookings for this asset
+      await tx
+        .update(schema.Booking)
+        .set({ deletedAt: now })
         .where(eq(schema.Booking.assetId, id));
 
-      const bookingIds = bookings.map((b) => b.id);
-
-      if (bookingIds.length > 0) {
-        // Step 2: Delete from booking
-        await tx.delete(schema.Booking).where(
-          inArray(schema.Booking.id, bookingIds)
-        );
-      }
-
-      // Step 4: Delete from asset_has_tags
-      await tx.delete(schema.AssetHasTags).where(eq(schema.AssetHasTags.assetId, id));
-
-      // Step 5: Delete from asset_has_properties
+      // Soft delete the asset
       await tx
-        .delete(schema.AssetHasProperties)
-        .where(eq(schema.AssetHasProperties.assetId, id));
-
-      // Step 6: Delete from asset_has_booking_forms
-      await tx
-        .delete(schema.AssetHasBookingForms)
-        .where(eq(schema.AssetHasBookingForms.assetId, id));
-
-      // Step 7: Finally delete the asset
-      await tx.delete(schema.Asset).where(eq(schema.Asset.id, id));
+        .update(schema.Asset)
+        .set({ deletedAt: now })
+        .where(eq(schema.Asset.id, id));
     });
   }
 
@@ -299,7 +282,7 @@ export class AssetsService {
     const offset = (page - 1) * pageSize;
 
     // Build where conditions
-    const conditions: any[] = [eq(schema.Asset.tenantId, tenant)];
+    const conditions: any[] = [eq(schema.Asset.tenantId, tenant), isNull(schema.Asset.deletedAt)];
     if (assetTypes && assetTypes.length > 0) {
       conditions.push(inArray(schema.Asset.assetTypeId, assetTypes.map((id) => (id))));
     }
@@ -314,9 +297,10 @@ export class AssetsService {
 
     // Get paginated assets
     const assets = await this.db.query.Asset.findMany({
-      where: (asset, { eq, and, inArray }) =>
+      where: (asset, { eq, and, inArray, isNull }) =>
         and(
           eq(asset.tenantId, tenant),
+          isNull(asset.deletedAt),
           assetTypes ? inArray(asset.assetTypeId, assetTypes.map((id) => (id))) : undefined
         ),
       with: {
@@ -381,7 +365,7 @@ export class AssetsService {
         tenantId: schema.Asset.tenantId,
       })
       .from(schema.Asset)
-      .where(eq(schema.Asset.tenantId, tenantId));
+      .where(and(eq(schema.Asset.tenantId, tenantId),isNull(schema.Asset.deletedAt)));
 
     console.log('Fetched Assets for Tenant:', allAssets);
 
@@ -442,7 +426,7 @@ export class AssetsService {
       .select({ count: sql<number>`COUNT(*)` })
       .from(schema.Asset)
       .innerJoin(schema.Tenant, eq(schema.Asset.tenantId, schema.Tenant.id))
-      .where(eq(schema.Tenant.subdomain, subdomain))
+      .where(and(eq(schema.Tenant.subdomain, subdomain),isNull(schema.Asset.deletedAt)))
       .execute();
 
     const totalCount = totalCountResult[0]?.count || 0;
@@ -452,7 +436,7 @@ export class AssetsService {
       .select()
       .from(schema.Asset)
       .innerJoin(schema.Tenant, eq(schema.Asset.tenantId, schema.Tenant.id))
-      .where(eq(schema.Tenant.subdomain, subdomain))
+      .where(and(eq(schema.Tenant.subdomain, subdomain),isNull(schema.Asset.deletedAt)))
       .limit(pageSize)
       .offset(offset)
       .execute();
@@ -507,7 +491,7 @@ export class AssetsService {
       .select()
       .from(schema.Asset)
       .innerJoin(schema.Tenant, eq(schema.Asset.tenantId, schema.Tenant.id))
-      .where(and(eq(schema.Tenant.subdomain, subdomain), eq(schema.Asset.id, assetId)))
+      .where(and(eq(schema.Tenant.subdomain, subdomain), eq(schema.Asset.id, assetId), isNull(schema.Asset.deletedAt)))
       .execute()
       .then((rows) => rows[0]);
 
@@ -579,7 +563,7 @@ export class AssetsService {
       .select({ count: sql<number>`COUNT(*)` })
       .from(schema.UserHasAssets)
       .innerJoin(schema.Asset, eq(schema.UserHasAssets.assetId, schema.Asset.id))
-      .where(eq(schema.UserHasAssets.userId, ownerId))
+      .where(and(eq(schema.UserHasAssets.userId, ownerId),isNull(schema.Asset.deletedAt)))
       .execute();
     const totalCount = totalCountResult[0]?.count || 0;
 
@@ -588,7 +572,7 @@ export class AssetsService {
       .select()
       .from(schema.UserHasAssets)
       .innerJoin(schema.Asset, eq(schema.UserHasAssets.assetId, schema.Asset.id))
-      .where(eq(schema.UserHasAssets.userId, ownerId))
+      .where(and(eq(schema.UserHasAssets.userId, ownerId),isNull(schema.Asset.deletedAt)))
       .limit(pageSize)
       .offset(offset)
       .execute();
@@ -644,7 +628,7 @@ export class AssetsService {
       }
     });
 
-    if (!ownerAssetLink || !ownerAssetLink.asset) {
+    if (!ownerAssetLink || !ownerAssetLink.asset || ownerAssetLink.asset.deletedAt) {
       return null;
     }
 

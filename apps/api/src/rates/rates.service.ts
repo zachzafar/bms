@@ -1,6 +1,6 @@
 import { ConflictException, Inject, Injectable, NotFoundException, UnauthorizedException } from '@nestjs/common';
 import { MySql2Database } from 'drizzle-orm/mysql2';
-import { and, eq, gte, lte, sql } from 'drizzle-orm';
+import { and, eq, gte, isNull, lte, sql } from 'drizzle-orm';
 import * as schema from '@repo/api-contract';
 import { DrizzleAsyncProvider } from 'src/drizzle/drizzle.provider';
 import { InsertRate, UpdateRate } from '@repo/api-contract';
@@ -55,7 +55,7 @@ export class RatesService {
       .select({ count: sql<number>`COUNT(DISTINCT ${schema.Rate.id})` })
       .from(schema.Rate)
       .innerJoin(schema.AssetHasRates, eq(schema.Rate.id, schema.AssetHasRates.rateId))
-      .where(eq(schema.AssetHasRates.assetId, assetId))
+      .where(and(eq(schema.AssetHasRates.assetId, assetId)))
       .execute();
     const totalCount = totalCountResult[0]?.count || 0;
 

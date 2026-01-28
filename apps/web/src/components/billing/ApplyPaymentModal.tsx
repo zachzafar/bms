@@ -96,7 +96,7 @@ export default function ApplyPaymentModal({
           type: 'payment',
           status: 'completed',
           tenantId,
-          paymentDate: new Date().toISOString(),
+          paymentDate: new Date(),
           paymentMethod: values.paymentMethod,
           reference: values.reference,
           notes: values.notes,

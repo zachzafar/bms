@@ -16,8 +16,10 @@ export const MaintenanceTask = mysqlTable("maintenance_tasks", {
     assetId: varchar("asset_id", { length: 255 }).notNull().references(() => Asset.id),
     createdAt: timestamp('createdAt').notNull().defaultNow(),
     updatedAt: timestamp('updated_at', { mode: 'date', }).$onUpdate(() => new Date()),
+    deletedAt: timestamp('deleted_at'),
 }, (table) => ({
     assetIdx: index("asset_idx").on(table.assetId),
+    deletedAtIdx: index("maintenance_deleted_at_idx").on(table.deletedAt),
 }));
 
 export const InsertMaintenanceTaskSchema = createInsertSchema(MaintenanceTask);

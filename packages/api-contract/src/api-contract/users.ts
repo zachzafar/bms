@@ -41,7 +41,7 @@ export const userContract = c.router({
         path: "/users/",
         responses: {
             200: z.object({
-                data: z.array(SelectUserSchema.extend({ roles: z.array(z.number())})),
+                data: z.array(SelectUserSchema),
                 pagination
             }),
         },
@@ -78,7 +78,7 @@ export const userContract = c.router({
                 id: z.string(),
             }),
         },
-        body: z.undefined(),
+        body: z.object({}).optional(),
         pathParams: z.object({
             id: z.string(),
         }),

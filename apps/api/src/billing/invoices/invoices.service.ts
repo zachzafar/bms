@@ -2,7 +2,7 @@ import { Inject, Injectable, BadRequestException, NotFoundException } from '@nes
 import { MySql2Database } from 'drizzle-orm/mysql2';
 import * as schema from '@repo/api-contract';
 import { DrizzleAsyncProvider } from 'src/drizzle/drizzle.provider';
-import { and, eq, gte, inArray, lte, sql } from 'drizzle-orm';
+import { and, eq, gte, inArray, isNull, lte, sql } from 'drizzle-orm';
 import { SlotService } from 'src/slot/slot.service';
 
 type CreateInvoiceInput = Omit<schema.InsertInvoice, 'id'>;
@@ -62,7 +62,7 @@ export class InvoicesService {
     const offset = (page - 1) * pageSize;
 
     const conditions: any[] = [];
-    conditions.push(eq(schema.Invoice.tenantId, tenantId));
+    conditions.push(and(eq(schema.Invoice.tenantId, tenantId),isNull(schema.Invoice.deletedAt)));
     if (query.customerId) conditions.push(eq(schema.Invoice.customerId, query.customerId));
     if (query.bookingId) conditions.push(eq(schema.Invoice.bookingId, query.bookingId));
     if (query.status) conditions.push(eq(schema.Invoice.status, query.status));
@@ -75,9 +75,10 @@ export class InvoicesService {
     const totalCount = totalCountResult[0]?.count || 0;
 
     const invoices = await this.db.query.Invoice.findMany({
-      where: (i, { eq, and }) =>
+      where: (i, { eq, and, isNull }) =>
         and(
           eq(i.tenantId, tenantId),
+          isNull(i.deletedAt),
           query.customerId ? eq(i.customerId, (query.customerId)) : undefined,
           query.bookingId ? eq(i.bookingId, query.bookingId) : undefined,
           query.status ? eq(i.status, query.status) : undefined
@@ -126,7 +127,7 @@ export class InvoicesService {
 
   async get(id: number) {
     const invoice = await this.db.query.Invoice.findFirst({
-      where: (i, { eq }) => eq(i.id, id),
+      where: (i, { eq, and, isNull }) => and(eq(i.id, id), isNull(i.deletedAt)),
     });
     if (!invoice) return null;
 
@@ -205,14 +206,12 @@ export class InvoicesService {
       throw new NotFoundException(`Invoice with ID ${id} not found`);
     }
 
-    // Wrap in transaction to also delete related items
-    await this.db.transaction(async (tx) => {
-      // Delete related invoice items first
-      await tx.delete(schema.InvoiceItem).where(eq(schema.InvoiceItem.invoiceId, id)).execute();
-
-      // Delete the invoice itself
-      await tx.delete(schema.Invoice).where(eq(schema.Invoice.id, id)).execute();
-    });
+    // Soft delete the invoice
+    await this.db
+      .update(schema.Invoice)
+      .set({ deletedAt: new Date() })
+      .where(eq(schema.Invoice.id, id))
+      .execute();
 
     return { message: `Invoice ${id} deleted successfully` };
   }

@@ -134,7 +134,7 @@ export class UsersService {
         return tenantUser.userId;
     }
 
-    async findAll(tenantId: string, page: number = 1, pageSize: number = 10): Promise<{ data: SelectUser[]; pagination: any }> {
+    async findAll(tenantId: string, page: number = 1, pageSize: number = 10): Promise<{ data: (Omit<SelectUser, 'roles'> & { roles: { roleId: number; roleName: string }[] })[]; pagination: any }> {
   const offset = (page - 1) * pageSize;
 
   // Get total count (only system users)
@@ -152,11 +152,13 @@ export class UsersService {
   const usersWithRoles = await this.db
     .select({
       user: schema.User,
-      roles: schema.UserHasRoles
+      userRole: schema.UserHasRoles,
+      role: schema.Roles
     })
     .from(schema.TenantHasUsers)
     .innerJoin(schema.User, eq(schema.TenantHasUsers.userId, schema.User.id))
     .leftJoin(schema.UserHasRoles, eq(schema.UserHasRoles.userId, schema.User.id))
+    .leftJoin(schema.Roles, eq(schema.UserHasRoles.roleId, schema.Roles.id))
     .where(and(
       eq(schema.TenantHasUsers.tenantId, tenantId),
       eq(schema.User.userType, 'system')
@@ -165,18 +167,20 @@ export class UsersService {
     .offset(offset);
 
   // Group roles by user
-  const userMap = new Map<string, SelectUser & { roles: number[] }>();
+  const userMap = new Map<string, Omit<SelectUser, 'roles'> & { roles: { roleId: number; roleName: string }[] }>();
 
   usersWithRoles.forEach(row => {
     if (!userMap.has(row.user.id)) {
       userMap.set(row.user.id, {
         ...row.user,
-        roles: row.roles?.roleId ? [row.roles.roleId] : []
+        roles: row.userRole?.roleId && row.role?.name
+          ? [{ roleId: row.userRole.roleId, roleName: row.role.name }]
+          : []
       });
-    } else if (row.roles?.roleId) {
+    } else if (row.userRole?.roleId && row.role?.name) {
       const user = userMap.get(row.user.id)!;
-      if (!user.roles.includes(row.roles.roleId)) {
-        user.roles.push(row.roles.roleId);
+      if (!user.roles.some(r => r.roleId === row.userRole!.roleId)) {
+        user.roles.push({ roleId: row.userRole.roleId, roleName: row.role.name });
       }
     }
   });
@@ -196,37 +200,39 @@ export class UsersService {
   };
 }
 
-    async findOne(id: string, tenantId?: string): Promise<SelectUser | Omit<SelectUser,"roles"> |undefined> {
+    async findOne(id: string, tenantId?: string): Promise<Omit<SelectUser, 'roles'> & { roles: { roleId: number; roleName: string }[] } | Omit<SelectUser,"roles"> | undefined> {
         if (!tenantId)
             return this.db.query.User.findFirst({ where: (user, { eq }) => eq(user.id, id) });
 
         // Get user with roles using explicit join approach
         const userWithRoles = await this.db.select({
             user: schema.User,
-            roles: schema.UserHasRoles
+            userRoles: schema.UserHasRoles,
+            role: schema.Roles
         })
         .from(schema.TenantHasUsers)
         .where(and(
-            eq(schema.TenantHasUsers.tenantId, tenantId), 
+            eq(schema.TenantHasUsers.tenantId, tenantId),
             eq(schema.TenantHasUsers.userId, id)
         ))
         .innerJoin(schema.User, eq(schema.TenantHasUsers.userId, schema.User.id))
-        .leftJoin(schema.UserHasRoles, eq(schema.UserHasRoles.userId, schema.User.id));
+        .leftJoin(schema.UserHasRoles, eq(schema.UserHasRoles.userId, schema.User.id))
+        .leftJoin(schema.Roles, eq(schema.UserHasRoles.roleId, schema.Roles.id));
 
         if (userWithRoles.length === 0) return undefined;
 
-        // Process the results to include roles
-        const roleIds: number[] = [];
+        // Process the results to include roles with names
+        const roles: { roleId: number; roleName: string }[] = [];
         userWithRoles.forEach(row => {
-            if (row.roles?.roleId && !roleIds.includes(row.roles.roleId)) {
-                roleIds.push(row.roles.roleId);
+            if (row.userRoles?.roleId && row.role?.name && !roles.some(r => r.roleId === row.userRoles!.roleId)) {
+                roles.push({ roleId: row.userRoles.roleId, roleName: row.role.name });
             }
         });
 
         // Return user with roles
         return {
             ...userWithRoles[0].user,
-            roles: roleIds
+            roles
         };
     }
 
@@ -391,7 +397,8 @@ export class UsersService {
 
         // If user doesn't belong to any other tenants, remove the user profile completely
         if (otherTenants.length === 0) {
-            await this.db.delete(schema.User).where(eq(schema.User.id, id));
+            // await this.db.delete(schema.User).where(eq(schema.User.id, id));
+            await this.db.update(schema.User).set({deletedAt: new Date}).where(eq(schema.User.id, id))
             // With cascade delete in the database schema, all related records will be automatically deleted
         }
     }

@@ -81,12 +81,12 @@ export const BookingRelations = relations(Booking, ({ one,many }) => ({
 // New Slot table for granular booking
 export const Slot = mysqlTable("slots", {
     id: bigint("id", { mode: "number", unsigned: true }).autoincrement().primaryKey(),
-    assetId: varchar("asset_id", { length: 255 }).notNull().references(() => Asset.id),
+    assetId: varchar("asset_id", { length: 255 }).notNull().references(() => Asset.id, { onDelete: 'cascade' }),
     date: date("date").notNull(),
     startTime: datetime("start_time").notNull(), // Format: HH:MM:SS
     endTime: datetime("end_time").notNull(),     // Format: HH:MM:SS
     status: varchar("status", { length: 20 }).notNull().$default(() => 'available'), // available, booked, unavailable
-    bookingId: varchar("booking_id", { length: 36 }).references(() => Booking.id),
+    bookingId: varchar("booking_id", { length: 36 }).references(() => Booking.id, { onDelete: 'set null' }),
     price: decimal("price", { precision: 10, scale: 2 }),
     createdAt: timestamp('created_at').notNull().defaultNow(),
     updatedAt: timestamp('updated_at').$onUpdate(() => new Date()),

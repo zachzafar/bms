@@ -2,7 +2,7 @@ import { Inject, Injectable, NotFoundException } from '@nestjs/common';
 import { MySql2Database } from 'drizzle-orm/mysql2';
 import * as schema from '@repo/api-contract';
 import { DrizzleAsyncProvider } from 'src/drizzle/drizzle.provider';
-import { and, eq, sql } from 'drizzle-orm';
+import { and, eq, isNull, sql } from 'drizzle-orm';
 
 @Injectable()
 export class TasksService {
@@ -34,7 +34,7 @@ export class TasksService {
     const offset = (page - 1) * pageSize;
 
     // Build where conditions
-    const conditions = [eq(schema.Task.tenantId, tenantId)];
+    const conditions = [eq(schema.Task.tenantId, tenantId), isNull(schema.Task.deletedAt)];
     if (query.userId) conditions.push(eq(schema.Task.userId, query.userId));
     if (query.contactId) conditions.push(eq(schema.Task.contactId, Number(query.contactId)));
     if (query.status) conditions.push(eq(schema.Task.status, query.status));
@@ -49,7 +49,7 @@ export class TasksService {
 
     // Get paginated tasks
     const tasksList = await this.db.query.Task.findMany({
-      where: (task, { and, eq }) => and(...conditions),
+      where: () => and(...conditions),
       limit: pageSize,
       offset: offset,
     });
@@ -74,7 +74,7 @@ export class TasksService {
     const rows = await this.db
       .select()
       .from(schema.Task)
-      .where(eq(schema.Task.id, id))
+      .where(and(eq(schema.Task.id, id), isNull(schema.Task.deletedAt)))
       .leftJoin(schema.Contact, eq(schema.Task.contactId, schema.Contact.id))
       .innerJoin(schema.User, eq(schema.Task.userId, schema.User.id))
       .execute();
@@ -87,7 +87,11 @@ export class TasksService {
   }
 
   async remove(id: number) {
-    await this.db.delete(schema.Task).where(eq(schema.Task.id, id)).execute();
+    await this.db
+      .update(schema.Task)
+      .set({ deletedAt: new Date() })
+      .where(eq(schema.Task.id, id))
+      .execute();
   }
 
   async complete(id: number) {

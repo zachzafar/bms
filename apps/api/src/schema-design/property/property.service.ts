@@ -2,7 +2,7 @@ import { Inject, Injectable } from '@nestjs/common';
 import { DrizzleAsyncProvider } from 'src/drizzle/drizzle.provider';
 import { MySql2Database } from 'drizzle-orm/mysql2';
 import * as schema from '@repo/api-contract';
-import { eq, sql } from 'drizzle-orm';
+import { and, eq, isNull, sql } from 'drizzle-orm';
 @Injectable()
 export class PropertyService {
     constructor(
@@ -18,7 +18,7 @@ export class PropertyService {
     }
 
     async getProperty(id: number) {
-        return this.db.query.assetProperty.findFirst({ where: (property, { eq }) => eq(property.id, id) });
+        return this.db.query.assetProperty.findFirst({ where: (property, { eq, and, isNull }) => and(eq(property.id, id), isNull(property.deletedAt)) });
     }
 
     async getProperties(tenantId: string, page: number = 1, pageSize: number = 10) {
@@ -27,12 +27,12 @@ export class PropertyService {
         const totalCountResult = await this.db
             .select({ count: sql<number>`COUNT(*)` })
             .from(schema.assetProperty)
-            .where(eq(schema.assetProperty.tenantId, tenantId))
+            .where(and(eq(schema.assetProperty.tenantId, tenantId),isNull(schema.assetProperty.deletedAt)))
             .execute();
         const totalCount = totalCountResult[0]?.count || 0;
 
         const results = await this.db.query.assetProperty.findMany({
-            where: (property, { eq }) => eq(property.tenantId, tenantId),
+            where: (property, { eq, and, isNull }) => and(eq(property.tenantId, tenantId),isNull(property.deletedAt)),
             limit: pageSize,
             offset: offset,
         });
@@ -58,9 +58,9 @@ export class PropertyService {
     }
 
     async deleteProperty(id: number) {
-  await this.db.transaction(async (tx) => {
-    await tx.delete(schema.AssetHasProperties).where(eq(schema.AssetHasProperties.assetPropertyId, id));
-    await tx.delete(schema.assetProperty).where(eq(schema.assetProperty.id, id));
-  });
-}
+        await this.db
+            .update(schema.assetProperty)
+            .set({ deletedAt: new Date() })
+            .where(eq(schema.assetProperty.id, id));
+    }
 }

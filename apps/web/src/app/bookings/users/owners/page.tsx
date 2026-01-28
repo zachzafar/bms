@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger, } from '@/components/ui/dialog';
-import { Search, PlusCircle, ChevronLeft, ChevronRight, Eye, Pencil } from 'lucide-react';
+import { Search, PlusCircle, ChevronLeft, ChevronRight, Eye, Pencil, Trash2 } from 'lucide-react';
 import { useForm, SubmitHandler } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -43,6 +43,7 @@ export default function Component() {
     queryKey: [...OWNERS_QUERY_KEY, page, pageSize],
     queryData: { query: queryParams },
   });
+  const { mutate: deleteUser } = authClient.users.deleteUser.useMutation();
   const { mutate: createUserMutation, isPending } = authClient.users.createUser.useMutation();
   const { mutate: updateUserMutation, isPending: updating } = authClient.users.updateUser.useMutation();
   const { data: usersData } = authClient.users.getUsers.useQuery({ queryKey: ['users'] });
@@ -50,7 +51,7 @@ export default function Component() {
   const users = usersData?.body?.data ?? usersData?.body.data ?? [];
   const rolesByUserId = useMemo(() => {
     const map = new Map<string, number[]>();
-    users.forEach((u: any) => map.set(u.id, u.roles ?? []));
+    users.forEach((u: any) => map.set(u.id, (u.roles ?? []).map((r: any) => r.roleId)));
     return map;
   }, [users]);
 
@@ -76,36 +77,58 @@ export default function Component() {
   });
 
   const onEditOwnerSubmit: SubmitHandler<EditOwnerFormData> = (data) => {
-  if (!editingOwner) return;
-  const roles = rolesByUserId.get(editingOwner.id) ?? [];
-  updateUserMutation(
-    {
-      params: { id: editingOwner.id },
-      body: {
-        user: { name: data.name, email: data.email },
-        roles,
-        owner: {
-          userId: editingOwner.id,
-          companyName: data.companyName || null,
+    if (!editingOwner) return;
+    const roles = rolesByUserId.get(editingOwner.id) ?? [];
+    updateUserMutation(
+      {
+        params: { id: editingOwner.id },
+        body: {
+          user: { name: data.name, email: data.email },
+          roles,
+          owner: {
+            userId: editingOwner.id,
+            companyName: data.companyName || null,
+          },
         },
       },
-    },
-    {
-      onSuccess: () => {
-        toast.success('Owner updated successfully');
-        queryClient.invalidateQueries({ queryKey: OWNERS_QUERY_KEY });
-        queryClient.invalidateQueries({ queryKey: ['users'] });
-        setOpenEdit(false);
-        setEditingOwner(null);
-      },
-      onError: (error) => {
-        console.error('Update error:', error);
-        toast.error('Failed to update owner');
-      },
-    }
-  );
-};
+      {
+        onSuccess: () => {
+          toast.success('Owner updated successfully');
+          queryClient.invalidateQueries({ queryKey: OWNERS_QUERY_KEY });
+          queryClient.invalidateQueries({ queryKey: ['users'] });
+          setOpenEdit(false);
+          setEditingOwner(null);
+        },
+        onError: (error) => {
+          console.error('Update error:', error);
+          toast.error('Failed to update owner');
+        },
+      }
+    );
+  };
 
+  const handleDeleteUser = async (userId: string) => {
+    if (confirm('Are you sure you want to delete this user? This action cannot be undone.')) {
+      try {
+        deleteUser({
+          params: { id: userId },
+          body: undefined
+        }, {
+          onSuccess: (response) => {
+            queryClient.invalidateQueries({ queryKey: OWNERS_QUERY_KEY });
+            toast.success('User deleted successfully');
+          },
+          onError: (error) => {
+            toast.error('Failed to delete user');
+          }
+        })
+
+
+      } catch (error: any) {
+        console.error('Delete user error:', error);
+      }
+    }
+  };
 
   const handleCreateOwner: SubmitHandler<CreateOwnerFormData> = async (data) => {
     // Extract owner-specific fields
@@ -384,9 +407,17 @@ export default function Component() {
                         <Button
                           variant="ghost"
                           size="icon"
-                          onClick={() => router.push(`/users/owners/${owner.id}`)}
+                          onClick={() => router.push(`/bookings/users/owners/${owner.id}`)}
                         >
                           <Eye className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => handleDeleteUser(owner.id)}
+                          className="ml-2"
+                        >
+                          <Trash2 className="h-4 w-4" />
                         </Button>
                       </TableCell>
                     </TableRow>

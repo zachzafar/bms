@@ -2,7 +2,7 @@ import { Inject, Injectable } from '@nestjs/common';
 import { MySql2Database } from 'drizzle-orm/mysql2';
 import { DrizzleAsyncProvider } from 'src/drizzle/drizzle.provider';
 import * as schema from '@repo/api-contract';
-import { and, eq, sql } from 'drizzle-orm';
+import { and, eq, isNull, sql } from 'drizzle-orm';
 
 @Injectable()
 export class TeamsService {
@@ -14,14 +14,14 @@ export class TeamsService {
         const totalCountResult = await this.db
             .select({ count: sql<number>`COUNT(*)` })
             .from(schema.TenantTeams)
-            .where(eq(schema.TenantTeams.tenantId, tenant))
+            .where(and(eq(schema.TenantTeams.tenantId, tenant), isNull(schema.TenantTeams.deletedAt)))
             .execute();
         const totalCount = totalCountResult[0]?.count || 0;
 
         const results = await this.db
             .select()
             .from(schema.TenantTeams)
-            .where(eq(schema.TenantTeams.tenantId, tenant))
+            .where(and(eq(schema.TenantTeams.tenantId, tenant), isNull(schema.TenantTeams.deletedAt)))
             .limit(pageSize)
             .offset(offset);
 
@@ -41,7 +41,7 @@ export class TeamsService {
     }
 
     async findOne(id: number,tenant: string) {
-        return await this.db.query.TenantTeams.findFirst({where: (team, {eq, and}) => and(eq(team.id, id),eq(team.tenantId,tenant)), with: {
+        return await this.db.query.TenantTeams.findFirst({where: (team, {eq, and, isNull}) => and(eq(team.id, id),eq(team.tenantId,tenant), isNull(team.deletedAt)), with: {
                 tenantTeamToAsset: {
                     with: {
                         asset: true
@@ -66,7 +66,10 @@ export class TeamsService {
     }
 
     async remove(id: number) {
-        return await this.db.delete(schema.TenantTeams).where(eq(schema.TenantTeams.id,id));
+        return await this.db
+            .update(schema.TenantTeams)
+            .set({ deletedAt: new Date() })
+            .where(eq(schema.TenantTeams.id, id));
     }
 
     async addUserToTeam(userId: string, teamId: number) {

@@ -175,7 +175,10 @@ export default function AssetTypes() {
   };
 
   const handleDeleteAssetType = (id: number) => {
-    deleteAssetTypeMutation({ params: { id } });
+    deleteAssetTypeMutation({
+      params: { id },
+      body: undefined
+    });
   };
 
   const cancelEdit = () => {
