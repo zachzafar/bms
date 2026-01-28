@@ -18,7 +18,7 @@ export class PropertyService {
     }
 
     async getProperty(id: number) {
-        return this.db.query.assetProperty.findFirst({ where: (property, { eq }) => eq(property.id, id) });
+        return this.db.query.assetProperty.findFirst({ where: (property, { eq, and, isNull }) => and(eq(property.id, id), isNull(property.deletedAt)) });
     }
 
     async getProperties(tenantId: string, page: number = 1, pageSize: number = 10) {

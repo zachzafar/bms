@@ -174,7 +174,7 @@ export const RoleRelations = relations(Roles, ({ many }) => ({
 
 export const UserHasRoles = mysqlTable("user_has_roles", {
     id: bigint("id", { mode: "number", unsigned: true }).autoincrement().primaryKey(),
-    roleId: bigint("roles_id", { mode: 'number', unsigned: true }).notNull().references(() => Roles.id),
+    roleId: bigint("roles_id", { mode: 'number', unsigned: true }).notNull().references(() => Roles.id, { onDelete: 'cascade' }),
     userId: varchar("user_id", { length: 255 }).references(() => User.id, { onDelete: 'cascade' }).notNull(),
     tenantId: varchar("tenant_id", { length: 255 }).notNull().references(() => Tenant.id), // Add tenantId here als
     createdAt: timestamp('createdAt').notNull().defaultNow(),
@@ -201,7 +201,7 @@ export const UserHasRolesRelations = relations(UserHasRoles, ({ one }) => ({
 
 export const RoleHasPermissions = mysqlTable("role_has_permissions", {
     id: bigint("id", { mode: "number", unsigned: true }).autoincrement().primaryKey(),
-    roleId: bigint("role_id", { mode: 'number', unsigned: true }).references(() => Roles.id).notNull(),
+    roleId: bigint("role_id", { mode: 'number', unsigned: true }).references(() => Roles.id, { onDelete: 'cascade' }).notNull(),
     permission: varchar("permission", { length: 255 }).notNull(),
     createdAt: timestamp('createdAt').notNull().defaultNow(),
     updatedAt: timestamp('updated_at', { mode: 'date', }).$onUpdate(() => new Date()),

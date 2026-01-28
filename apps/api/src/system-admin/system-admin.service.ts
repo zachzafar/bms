@@ -1,7 +1,7 @@
 import { Injectable, Logger, NotFoundException, ConflictException, Inject } from '@nestjs/common';
 import { MySql2Database } from 'drizzle-orm/mysql2';
 import { DrizzleAsyncProvider } from 'src/drizzle/drizzle.provider';
-import { eq, and, count, countDistinct, desc, sql } from 'drizzle-orm';
+import { eq, and, count, countDistinct, desc, isNull, sql } from 'drizzle-orm';
 import { hash } from 'argon2';
 import { randomBytes } from 'crypto';
 import { UsersService } from 'src/users/users.service';
@@ -235,10 +235,12 @@ export class SystemAdminService {
 
     const totalCountResult = await this.db
       .select({ count: count() })
-      .from(schema.Tenant);
+      .from(schema.Tenant)
+      .where(isNull(schema.Tenant.deletedAt));
     const totalCount = totalCountResult[0]?.count || 0;
 
     const results = await this.db.query.Tenant.findMany({
+      where: (t, { isNull }) => isNull(t.deletedAt),
       limit: pageSize,
       offset: offset,
     });
@@ -261,7 +263,7 @@ export class SystemAdminService {
   async getTenant(tenantId: string) {
     try {
       const tenant = await this.db.query.Tenant.findFirst({
-        where: (t, { eq }) => eq(t.id, tenantId)
+        where: (t, { eq, and, isNull }) => and(eq(t.id, tenantId), isNull(t.deletedAt))
       });
 
       if (!tenant) {
@@ -277,7 +279,7 @@ export class SystemAdminService {
       const [roleCountResult] = await this.db
         .select({ count: count() })
         .from(schema.Roles)
-        .where(eq(schema.Roles.tenantId, tenantId));
+        .where(and(eq(schema.Roles.tenantId, tenantId), isNull(schema.Roles.deletedAt)));
 
       const [apiKeyCountResult] = await this.db
         .select({ count: count() })

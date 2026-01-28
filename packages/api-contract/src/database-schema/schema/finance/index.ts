@@ -69,7 +69,7 @@ export const InvoiceItem = mysqlTable("invoice_item", {
   totalPrice: decimal("total_price", { precision: 10, scale: 2 }).notNull(),
   createdAt: timestamp('createdAt').notNull().defaultNow(),
   updatedAt: timestamp('updated_at', { mode: 'date', }).$onUpdate(() => new Date()),
-  invoiceId: bigint("invoice_id", { mode: 'number', unsigned: true }).notNull().references(() => Invoice.id)
+  invoiceId: bigint("invoice_id", { mode: 'number', unsigned: true }).notNull().references(() => Invoice.id, { onDelete: 'cascade' })
 }, (table) => ({
   invoiceIdx: index("invoice_idx").on(table.invoiceId),
 }));
@@ -91,8 +91,8 @@ export const InvoiceItemRelations = relations(InvoiceItem, ({ one }) => ({
 
 export const PaymentInvoice = mysqlTable("payment_invoice", {
   id: bigint("id", { mode: "number", unsigned: true }).autoincrement().primaryKey(),
-  paymentId: bigint("payment_id", { mode: 'number', unsigned: true }).notNull().references(() => Payment.id),
-  invoiceId: bigint("invoice_id", { mode: 'number', unsigned: true }).notNull().references(() => Invoice.id),
+  paymentId: bigint("payment_id", { mode: 'number', unsigned: true }).notNull().references(() => Payment.id, { onDelete: 'cascade' }),
+  invoiceId: bigint("invoice_id", { mode: 'number', unsigned: true }).notNull().references(() => Invoice.id, { onDelete: 'cascade' }),
   amountApplied: decimal("amount_applied", { precision: 10, scale: 2 }).notNull(),
   createdAt: timestamp('createdAt').notNull().defaultNow(),
   updatedAt: timestamp('updated_at', { mode: 'date', }).$onUpdate(() => new Date()),

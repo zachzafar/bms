@@ -491,7 +491,7 @@ export class AssetsService {
       .select()
       .from(schema.Asset)
       .innerJoin(schema.Tenant, eq(schema.Asset.tenantId, schema.Tenant.id))
-      .where(and(eq(schema.Tenant.subdomain, subdomain), eq(schema.Asset.id, assetId)))
+      .where(and(eq(schema.Tenant.subdomain, subdomain), eq(schema.Asset.id, assetId), isNull(schema.Asset.deletedAt)))
       .execute()
       .then((rows) => rows[0]);
 
@@ -628,7 +628,7 @@ export class AssetsService {
       }
     });
 
-    if (!ownerAssetLink || !ownerAssetLink.asset) {
+    if (!ownerAssetLink || !ownerAssetLink.asset || ownerAssetLink.asset.deletedAt) {
       return null;
     }
 

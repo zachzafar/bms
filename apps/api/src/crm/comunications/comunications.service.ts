@@ -2,7 +2,7 @@ import { BadRequestException, Inject, Injectable } from '@nestjs/common';
 import { MySql2Database } from 'drizzle-orm/mysql2';
 import * as schema from '@repo/api-contract';
 import { DrizzleAsyncProvider } from 'src/drizzle/drizzle.provider';
-import { and, between, eq, gte, lte, sql } from 'drizzle-orm';
+import { and, between, eq, gte, isNull, lte, sql } from 'drizzle-orm';
 
 @Injectable()
 export class CommunicationsService {
@@ -33,13 +33,14 @@ export class CommunicationsService {
     const totalCountResult = await this.db
       .select({ count: sql<number>`COUNT(*)` })
       .from(schema.CommunicationLog)
-      .where(eq(schema.CommunicationLog.tenantId, tenantId))
+      .where(and(eq(schema.CommunicationLog.tenantId, tenantId), isNull(schema.CommunicationLog.deletedAt)))
       .execute();
     const totalCount = totalCountResult[0]?.count || 0;
 
     const comms = await this.db.query.CommunicationLog.findMany({
       where: and(
         eq(schema.CommunicationLog.tenantId, tenantId),
+        isNull(schema.CommunicationLog.deletedAt),
         query.contactId ? eq(schema.CommunicationLog.contactId, (query.contactId)) : undefined,
         query.userId ? eq(schema.CommunicationLog.userId, query.userId) : undefined,
         query.type ? eq(schema.CommunicationLog.type, query.type) : undefined,
@@ -69,7 +70,7 @@ export class CommunicationsService {
     const rows = await this.db
       .select()
       .from(schema.CommunicationLog)
-      .where(eq(schema.CommunicationLog.id, id))
+      .where(and(eq(schema.CommunicationLog.id, id), isNull(schema.CommunicationLog.deletedAt)))
       .innerJoin(schema.Contact, eq(schema.CommunicationLog.contactId, schema.Contact.id))
       .innerJoin(schema.User, eq(schema.CommunicationLog.userId, schema.User.id))
       .execute();

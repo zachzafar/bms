@@ -2,7 +2,7 @@ import { Inject, Injectable } from '@nestjs/common';
 import { MySql2Database } from 'drizzle-orm/mysql2';
 import * as schema from '@repo/api-contract';
 import { DrizzleAsyncProvider } from 'src/drizzle/drizzle.provider';
-import { and, eq, inArray, sql } from 'drizzle-orm';
+import { and, eq, inArray, isNull, sql } from 'drizzle-orm';
 
 export type BrochureWithAssets = schema.SelectBrochure & {
   assets: schema.SelectAsset[];
@@ -24,14 +24,14 @@ export class BrochuresService {
     const totalCountResult = await this.db
       .select({ count: sql<number>`COUNT(*)` })
       .from(schema.Brochure)
-      .where(eq(schema.Brochure.tenantId, tenantId))
+      .where(and(eq(schema.Brochure.tenantId, tenantId), isNull(schema.Brochure.deletedAt)))
       .execute();
     const totalCount = totalCountResult[0]?.count || 0;
 
     // Get paginated brochures
     const brochures = await this.db.query.Brochure.findMany({
-      where: (b, { eq }) =>
-        eq(b.tenantId, tenantId),
+      where: (b, { eq, and, isNull }) =>
+        and(eq(b.tenantId, tenantId), isNull(b.deletedAt)),
       limit: pageSize,
       offset: offset
     });
@@ -73,7 +73,7 @@ export class BrochuresService {
   }
 
   async get(id: number) {
-    const brochure = await this.db.query.Brochure.findFirst({ where: (b, { eq }) => eq(b.id, id) });
+    const brochure = await this.db.query.Brochure.findFirst({ where: (b, { eq, and, isNull }) => and(eq(b.id, id), isNull(b.deletedAt)) });
     if (!brochure) return null;
 
     const contactLinks = await this.db.query.BrochureContact.findMany({ where: (bp, { eq }) => eq(bp.brochureId, (id)) });

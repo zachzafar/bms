@@ -127,7 +127,7 @@ export class InvoicesService {
 
   async get(id: number) {
     const invoice = await this.db.query.Invoice.findFirst({
-      where: (i, { eq }) => eq(i.id, id),
+      where: (i, { eq, and, isNull }) => and(eq(i.id, id), isNull(i.deletedAt)),
     });
     if (!invoice) return null;
 

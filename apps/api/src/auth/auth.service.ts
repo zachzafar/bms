@@ -8,7 +8,7 @@ import { hash, verify } from 'argon2';
 import { ConfigType } from '@nestjs/config';
 import refreshConfig from './config/refresh.config';
 import { UsersService } from 'src/users/users.service';
-import { eq, desc, and, sql } from 'drizzle-orm';
+import { eq, desc, and, isNull, sql } from 'drizzle-orm';
 import { getAllScopes } from './permissions';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { randomBytes } from 'crypto';
@@ -480,12 +480,12 @@ export class AuthService {
     const totalCountResult = await this.db
       .select({ count: sql<number>`COUNT(*)` })
       .from(schema.Roles)
-      .where(eq(schema.Roles.tenantId, tenantId))
+      .where(and(eq(schema.Roles.tenantId, tenantId), isNull(schema.Roles.deletedAt)))
       .execute();
     const totalCount = totalCountResult[0]?.count || 0;
 
     const results = await this.db.query.Roles.findMany({
-      where: (role, { eq }) => eq(role.tenantId, tenantId),
+      where: (role, { eq, and, isNull }) => and(eq(role.tenantId, tenantId), isNull(role.deletedAt)),
       with: {
         rolesToPermissions: true
       },

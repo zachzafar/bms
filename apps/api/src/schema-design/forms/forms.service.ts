@@ -59,7 +59,7 @@ export class FormsService {
 
     async getForm(id: number) {
         const form = await this.db.query.BookingForm.findFirst({
-            where: (form, { eq }) => eq(form.id, id),
+            where: (form, { eq, and, isNull }) => and(eq(form.id, id), isNull(form.deletedAt)),
             with: { fields: true }
         });
 

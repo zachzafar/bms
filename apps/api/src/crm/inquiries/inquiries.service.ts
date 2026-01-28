@@ -2,7 +2,7 @@ import { Inject, Injectable } from '@nestjs/common';
 import { MySql2Database } from 'drizzle-orm/mysql2';
 import * as schema from '@repo/api-contract';
 import { DrizzleAsyncProvider } from 'src/drizzle/drizzle.provider';
-import { and, eq, ilike, or, sql } from 'drizzle-orm';
+import { and, eq, ilike, isNull, or, sql } from 'drizzle-orm';
 
 @Injectable()
 export class InquiriesService {
@@ -31,14 +31,14 @@ export class InquiriesService {
     const totalCountResult = await this.db
       .select({ count: sql<number>`COUNT(*)` })
       .from(schema.Inquiry)
-      .where(eq(schema.Inquiry.tenantId, tenantId))
+      .where(and(eq(schema.Inquiry.tenantId, tenantId), isNull(schema.Inquiry.deletedAt)))
       .execute();
     const totalCount = totalCountResult[0]?.count || 0;
 
     const rows = await this.db
       .select()
       .from(schema.Inquiry)
-      .where(eq(schema.Inquiry.tenantId, tenantId))
+      .where(and(eq(schema.Inquiry.tenantId, tenantId), isNull(schema.Inquiry.deletedAt)))
       .innerJoin(schema.Contact, eq(schema.Inquiry.contactId, schema.Contact.id))
       .innerJoin(schema.Asset, eq(schema.Inquiry.assetId, schema.Asset.id))
       .innerJoin(schema.User, eq(schema.Inquiry.assignedTo, schema.User.id))
@@ -86,7 +86,7 @@ export class InquiriesService {
     const rows = await this.db
       .select()
       .from(schema.Inquiry)
-      .where(eq(schema.Inquiry.id, id))
+      .where(and(eq(schema.Inquiry.id, id), isNull(schema.Inquiry.deletedAt)))
       .innerJoin(schema.Contact, eq(schema.Inquiry.contactId, schema.Contact.id))
       .innerJoin(schema.Asset, eq(schema.Inquiry.assetId, schema.Asset.id))
       .innerJoin(schema.User, eq(schema.Inquiry.assignedTo, schema.User.id))

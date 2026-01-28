@@ -61,7 +61,7 @@ export const AssetRelations = relations(Asset, ({ one, many }) => ({
 
 export const AssetImages = mysqlTable("asset_images",{
     id: bigint("id", { mode: "number", unsigned: true }).autoincrement().primaryKey(),
-    assetId: varchar("asset_id", { length: 255 }).notNull().references(() => Asset.id),
+    assetId: varchar("asset_id", { length: 255 }).notNull().references(() => Asset.id, { onDelete: 'cascade' }),
     filePath: varchar("file_path", { length: 255 }).notNull(),
     imageType: mysqlEnum("image_type", ["primary", "secondary","gallery"]).notNull().default("gallery"),
 })
@@ -79,8 +79,8 @@ export const AssetImagesRelations = relations(AssetImages, ({ one }) => ({
 // AssetHasProperties Model
 export const AssetHasProperties = mysqlTable("asset_has_properties", {
     id: bigint("id", { mode: "number", unsigned: true }).autoincrement().primaryKey(),
-    assetId: varchar("asset_id", { length: 255 }).notNull().references(() => Asset.id),
-    assetPropertyId: bigint("asset_property_id", { mode: 'number', unsigned: true}).notNull().references(() => assetProperty.id),
+    assetId: varchar("asset_id", { length: 255 }).notNull().references(() => Asset.id, { onDelete: 'cascade' }),
+    assetPropertyId: bigint("asset_property_id", { mode: 'number', unsigned: true}).notNull().references(() => assetProperty.id, { onDelete: 'cascade' }),
     value: text("value").notNull(),
 }, (table) => ({
     assetPropertyUniqueIdx: uniqueIndex("asset_property_unique").on(table.assetId, table.assetPropertyId),
@@ -147,10 +147,10 @@ export const AssetHasRates = mysqlTable("asset_has_rates", {
   id: bigint("id", { mode: "number", unsigned: true }).autoincrement().primaryKey(),
   rateId: bigint("rate_id", { mode: "number", unsigned: true })
     .notNull()
-    .references(() => Rate.id),
+    .references(() => Rate.id, { onDelete: 'cascade' }),
   assetId: varchar("asset_id", { length: 255 })
     .notNull()
-    .references(() => Asset.id),
+    .references(() => Asset.id, { onDelete: 'cascade' }),
 });
 
 export const AssetHasRatesRelations = relations(AssetHasRates, ({ one }) => ({

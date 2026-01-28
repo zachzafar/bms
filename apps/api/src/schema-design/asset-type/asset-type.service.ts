@@ -46,7 +46,7 @@ export class AssetTypeService {
 
     async getAssetType(id: number) {
         const assetType = await this.db.query.AssetType.findFirst({
-            where: (assetType, { eq }) => eq(assetType.id, id),
+            where: (assetType, { eq, and, isNull }) => and(eq(assetType.id, id), isNull(assetType.deletedAt)),
             with: {
                 assetTypeHasProperties: { with: { assetProperty: true}},
                 bookingForms: { with: { bookingForm: true }}
