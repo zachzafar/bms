@@ -111,8 +111,8 @@ export const TenantTeamHasAssetsRelations = relations(TenantTeamHasAssets, ({ on
 
 export const TenantHasUsers = mysqlTable("tenant_has_users", {
     id: bigint("id", { mode: "number", unsigned: true }).autoincrement().primaryKey(),
-    tenantId: varchar("tenant_id", { length: 255 }).notNull().references(() => Tenant.id),
-    userId: varchar("user_id", { length: 255 }).notNull().references(() => User.id),
+    tenantId: varchar("tenant_id", { length: 255 }).notNull().references(() => Tenant.id,{onDelete:'cascade'}),
+    userId: varchar("user_id", { length: 255 }).notNull().references(() => User.id,{onDelete:'cascade'}),
     isAdmin: boolean("is_admin").default(false)
 }, (table) => ({
     tenantIdx: uniqueIndex("tenant_idx").on(table.tenantId, table.userId),

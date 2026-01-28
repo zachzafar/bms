@@ -397,7 +397,8 @@ export class UsersService {
 
         // If user doesn't belong to any other tenants, remove the user profile completely
         if (otherTenants.length === 0) {
-            await this.db.delete(schema.User).where(eq(schema.User.id, id));
+            // await this.db.delete(schema.User).where(eq(schema.User.id, id));
+            await this.db.update(schema.User).set({deletedAt: new Date}).where(eq(schema.User.id, id))
             // With cascade delete in the database schema, all related records will be automatically deleted
         }
     }

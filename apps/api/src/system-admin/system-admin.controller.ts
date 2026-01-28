@@ -375,8 +375,8 @@ export class SystemAdminController {
     return tsRestHandler(contract.systemAdmin.deleteAssetType, async ({ params }) => {
       await this.assetTypeService.deleteAssetType((params.id));
       return {
-        status: 204 as const,
-        body: undefined
+        status: 200 as const,
+        body: { message: 'Asset type deleted successfully' }
       };
     });
   }

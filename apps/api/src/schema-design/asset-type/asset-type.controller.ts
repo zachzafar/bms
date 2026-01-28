@@ -83,9 +83,9 @@ export class AssetTypeController {
             const tenantId = headers['x-tenant-id']
             await this.TenantService.validateTenantAccess(tenantId, schema.AssetType, params.id)
             await this.assetTypeService.deleteAssetType(params.id);
-            return { 
-                status: 204 as const, 
-                body: undefined 
+            return {
+                status: 200 as const,
+                body: { message: 'Asset type deleted successfully' }
             };
         });
     }

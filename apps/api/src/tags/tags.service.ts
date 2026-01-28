@@ -104,8 +104,7 @@ export class TagsService {
 
   async deleteTag(id: number) {
     await this.db
-      .update(schema.Tags)
-      .set({ deletedAt: new Date() })
+      .delete(schema.Tags)
       .where(eq(schema.Tags.id, id));
 
     return { message: 'Tag deleted' };

@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger, } from '@/components/ui/dialog';
-import { Search, PlusCircle, Pencil, } from 'lucide-react';
+import { Search, PlusCircle, Pencil, Trash2 } from 'lucide-react';
 import { useForm, SubmitHandler } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { toast } from 'sonner';
@@ -74,6 +74,8 @@ export default function Component() {
   });
   const { mutate: createUserMutation, isPending } = authClient.users.createUser.useMutation();
 
+  const { mutate: deleteUser} = authClient.users.deleteUser.useMutation();
+
   const [open, setOpen] = useState(false);
   const [selectedCustomer, setSelectedCustomer] = useState<EditableCustomer | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
@@ -118,6 +120,29 @@ export default function Component() {
         },
       }
     );
+  };
+
+  const handleDeleteUser = async (userId: string) => {
+    if (confirm('Are you sure you want to delete this user? This action cannot be undone.')) {
+      try {
+        deleteUser({
+          params: { id: userId },
+          body: undefined
+        },{
+          onSuccess:(response) =>{
+            queryClient.invalidateQueries({ queryKey: CUSTOMERS_QUERY_KEY });
+            toast.success('User deleted successfully');
+          },
+          onError: (error) => {
+            toast.error('Failed to delete user');
+          }
+        })
+        
+        
+      } catch (error: any) {
+        console.error('Delete user error:', error);
+      }
+    }
   };
 
   const handleEditCustomer = (customer: EditableCustomer) => {
@@ -323,7 +348,7 @@ export default function Component() {
                               updatedAt: customer.user.updatedAt,
                               customerDetails: {
                                 id: customer.customer.id,
-                                userId: customer.user.id, // 👈 Include this!
+                                userId: customer.user.id, 
                                 phone: customer.customer.phone,
                                 address: customer.customer.address,
                                 dateOfBirth: customer.customer.dateOfBirth,
@@ -337,8 +362,6 @@ export default function Component() {
                         >
                           <Pencil className='h-4 w-4' />
                         </Button>
-                      </TableCell>
-                      <TableCell>
                         <Button
                           variant="ghost"
                           size="icon"
@@ -347,6 +370,15 @@ export default function Component() {
                         >
                           <Eye className="h-4 w-4" />
                         </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => handleDeleteUser(customer.user.id)}
+                          className="ml-2"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+
                       </TableCell>
                     </TableRow>
                   ))

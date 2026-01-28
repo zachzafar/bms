@@ -78,7 +78,7 @@ export const userContract = c.router({
                 id: z.string(),
             }),
         },
-        body: z.undefined(),
+        body: z.object({}).optional(),
         pathParams: z.object({
             id: z.string(),
         }),

@@ -78,7 +78,7 @@ export const formsContract = c.router({
         pathParams: z.object({
             id: z.coerce.number(),
         }),
-        body: z.undefined(),
+        body: z.object({}).optional(),
         responses: {
             204: z.undefined(),
             404: z.undefined()

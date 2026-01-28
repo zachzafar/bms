@@ -84,7 +84,7 @@ export const assetTypeContract = c.router({
     deleteAssetType: {
         method: 'DELETE',
         path: '/asset-type/:id',
-        body: z.undefined(),
+        body: z.object({}).optional(),
         responses: {
             200: z.object({
                 message: z.string()
