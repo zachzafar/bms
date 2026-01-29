@@ -61,13 +61,12 @@ export class RatesController {
     @Roles(PermissionScope.RATES_READ)
     async getRates(@Headers() headers: any): Promise<ReturnType<typeof tsRestHandler>> {
         return tsRestHandler(contract.rates.getRates, async ({ query }) => {
-            const tenantId = headers['x-tenant-id']; // Extract tenantId from request headers
-            const { assetId } = query; // Optional assetId from query params
+            const tenantId = headers['x-tenant-id'];
+            const { assetId, assetTypeId } = query;
             const page = query.page ? Number(query.page) : 1;
             const pageSize = query.pageSize ? Number(query.pageSize) : 10;
 
-            // Fetch the rates from the service
-            const result = await this.rateService.getRates(assetId, page, pageSize);
+            const result = await this.rateService.getRates(assetId, assetTypeId, page, pageSize);
 
             const authorizedRates: {
                 rate: {
@@ -75,6 +74,7 @@ export class RatesController {
                     id: number;
                     name: string;
                     startDate: Date;
+                    assetTypeId: number | null;
                     endDate: Date;
                     minNights: number | null;
                     maxNights: number | null;
@@ -82,30 +82,42 @@ export class RatesController {
                     priority: number | null;
                 };
                 assetIds: string[];
+                assetTypeIds: number[];
             }[] = [];
 
-            // Validate tenant access for each rate's associated assets
             for (const item of result.data) {
-                const { rate, assetIds } = item;
+                const { rate, assetIds, assetTypeIds } = item;
                 let isAuthorized = false;
 
+                // Check authorization via assets
                 for (const assetId of assetIds) {
                     try {
-                        // Validate tenant access to the asset
                         await this.tenantService.validateTenantAccess(tenantId, schema.Asset, assetId);
-                        isAuthorized = true; // If tenant is authorized for any asset, mark as authorized
+                        isAuthorized = true;
                         break;
                     } catch (error) {
-                        // Continue checking other assets if access is denied
                         continue;
                     }
                 }
 
-                // If tenant is authorized for at least one asset, add rate and assetIds to the response
+                // If not authorized via assets, check via asset types
+                if (!isAuthorized && assetTypeIds.length > 0) {
+                    for (const typeId of assetTypeIds) {
+                        try {
+                            await this.tenantService.validateTenantAccess(tenantId, schema.AssetType, typeId);
+                            isAuthorized = true;
+                            break;
+                        } catch (error) {
+                            continue;
+                        }
+                    }
+                }
+
                 if (isAuthorized) {
                     authorizedRates.push({
-                        rate, // The rate object itself
-                        assetIds, // The associated assetIds
+                        rate,
+                        assetIds,
+                        assetTypeIds,
                     });
                 }
             }

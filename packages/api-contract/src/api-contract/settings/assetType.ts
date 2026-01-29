@@ -98,6 +98,25 @@ export const assetTypeContract = c.router({
         }),
         summary: 'Delete asset type by id'
     },
+    uploadAssetTypeImage: {
+        method: 'POST',
+        path: '/asset-type/:id/image',
+        contentType: 'multipart/form-data',
+        body: c.type<{ image: File }>(),
+        pathParams: z.object({
+            id: z.coerce.number(),
+        }),
+        responses: {
+            200: z.object({
+                message: z.string(),
+                imagePath: z.string(),
+            }),
+            404: z.object({
+                message: z.string()
+            })
+        },
+        summary: 'Upload an image for an asset type'
+    },
     getProperties: {
         method: 'GET',
         path: '/properties',

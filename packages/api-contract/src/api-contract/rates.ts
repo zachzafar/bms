@@ -14,7 +14,7 @@ export const rateContract = c.router({
     method: "POST",
     path: "/rate",
     summary: "Create a new rate",
-    body: InsertRateSchema,
+    body: InsertRateSchema.extend({ assetIds: z.array(z.string())}),
     responses: {
       201: z.object({
         message: z.string(),
@@ -73,6 +73,7 @@ export const rateContract = c.router({
     }),
     body: UpdateRateSchema.extend({
       assetTypeIds: z.array(z.number()).optional(),
+      assetIds: z.array(z.string()).optional()
     }),
     responses: {
       200: z.object({

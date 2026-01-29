@@ -4,30 +4,47 @@ import { DrizzleAsyncProvider } from 'src/drizzle/drizzle.provider';
 import * as schema from '@repo/api-contract';
 import type { InsertAssetType, UpdateAssetType } from '@repo/api-contract';
 import { and, eq, sql, isNull } from 'drizzle-orm';
+import { ObjectStorageService } from 'src/object-storage/object-storage.service';
 
 @Injectable()
 export class AssetTypeService {
     private readonly logger = new Logger(AssetTypeService.name);
 
     constructor(
-        @Inject(DrizzleAsyncProvider) private db: MySql2Database<typeof schema>
-    ){}
-    
+        @Inject(DrizzleAsyncProvider) private db: MySql2Database<typeof schema>,
+        private readonly objectStorageService: ObjectStorageService,
+    ) { }
+
     async getAssetTypes(tenantId: string, page: number = 1, pageSize: number = 10) {
         const offset = (page - 1) * pageSize;
 
         const totalCountResult = await this.db
             .select({ count: sql<number>`COUNT(*)` })
             .from(schema.AssetType)
-            .where(and(eq(schema.AssetType.tenantId, tenantId),isNull(schema.AssetType.deletedAt)))
+            .where(and(eq(schema.AssetType.tenantId, tenantId), isNull(schema.AssetType.deletedAt)))
             .execute();
         const totalCount = totalCountResult[0]?.count || 0;
 
         const results = await this.db.query.AssetType.findMany({
-            where: (assetType, { eq }) => and(eq(assetType.tenantId, tenantId),isNull(assetType.deletedAt)),
+            where: (assetType, { eq }) => and(eq(assetType.tenantId, tenantId), isNull(assetType.deletedAt)),
             limit: pageSize,
             offset: offset,
         });
+
+        const assetTypesWithSignedUrls = await Promise.all(
+            results.map(async (assetType) => {
+                if (assetType.image) {
+                    try {
+                        const signedUrl = await this.objectStorageService.getObjectUrl(assetType.image);
+                        return { ...assetType, image: signedUrl };
+                    } catch (error) {
+                        this.logger.warn(`Failed to get signed URL for tag ${assetType.id}: ${error}`);
+                        return { ...assetType, image: null };
+                    }
+                }
+                return assetType;
+            })
+        );
 
         const paginationData = {
             page,
@@ -39,7 +56,7 @@ export class AssetTypeService {
         };
 
         return {
-            data: results,
+            data: assetTypesWithSignedUrls,
             pagination: paginationData,
         };
     }
@@ -48,9 +65,9 @@ export class AssetTypeService {
         const assetType = await this.db.query.AssetType.findFirst({
             where: (assetType, { eq, and, isNull }) => and(eq(assetType.id, id), isNull(assetType.deletedAt)),
             with: {
-                assetTypeHasProperties: { with: { assetProperty: true}},
-                bookingForms: { with: { bookingForm: true }},
-                tags: { with: { tag: true }}
+                assetTypeHasProperties: { with: { assetProperty: true } },
+                bookingForms: { with: { bookingForm: true } },
+                tags: { with: { tag: true } }
             }
         });
 
@@ -66,13 +83,15 @@ export class AssetTypeService {
             assetTypeHasProperties,
             bookingForms,
             tags,
-          } = assetType || {};
+            image
+        } = assetType || {};
 
         return {
             description,
             tenantId,
             id,
             name,
+            image,
             createdAt,
             updatedAt,
             properties: assetTypeHasProperties?.map((relation) => relation.assetProperty) ?? [],
@@ -196,5 +215,37 @@ export class AssetTypeService {
             },
         });
         return tags.map(t => t.tag);
+    }
+
+    async uploadsetTypeImage(tenantId: string, assetTypeId: number, imageBuffer: Buffer): Promise<string> {
+        const assetType = await this.getAssetType(assetTypeId);
+        if (!assetType) {
+            throw new NotFoundException('Tag not found');
+        }
+
+        // Delete old image if exists
+        if (assetType.image) {
+            try {
+                await this.objectStorageService.deleteObject(assetType.image);
+            } catch (error) {
+                this.logger.warn(`Failed to delete old tag image: ${error}`);
+            }
+        }
+
+        // Upload new image - using 'tags' as the asset folder for organization
+        const imagePath = await this.objectStorageService.uploadObject(
+            imageBuffer,
+            'image',
+            tenantId,
+            `assetType/${assetType.id}`
+        );
+
+        // Update tag with new image path
+        await this.db
+            .update(schema.AssetType)
+            .set({ image: imagePath })
+            .where(eq(schema.AssetType.id, assetType.id));
+
+        return imagePath;
     }
 }

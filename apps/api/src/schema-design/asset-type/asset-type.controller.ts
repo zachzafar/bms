@@ -1,9 +1,10 @@
-import { Controller, Logger, Headers } from '@nestjs/common';
+import { Controller, Logger, Headers, UploadedFile, UseInterceptors } from '@nestjs/common';
 import { AssetTypeService } from './asset-type.service';
 import { tsRestHandler, TsRestHandler } from '@ts-rest/nest';
 import { contract } from '@repo/api-contract';
 import { TenantService } from 'src/tenant/tenant.service';
 import * as schema from "@repo/api-contract"
+import { FileInterceptor } from '@nestjs/platform-express';
 
 @Controller()
 export class AssetTypeController {
@@ -87,6 +88,28 @@ export class AssetTypeController {
                 status: 200 as const,
                 body: { message: 'Asset type deleted successfully' }
             };
+        });
+    }
+
+    @UseInterceptors(FileInterceptor('image'))
+    @TsRestHandler(contract.settings.assetType.uploadAssetTypeImage)
+    async uploadAssetTypeImage(
+        @Headers() headers: any,
+        @UploadedFile() file: Express.Multer.File,
+    ): Promise<ReturnType<typeof tsRestHandler>> {
+        return tsRestHandler(contract.settings.assetType.uploadAssetTypeImage, async ({ params }) => {
+            const tenantId = headers['x-tenant-id'];
+            const assetType = await this.assetTypeService.getAssetType(params.id);
+
+            // Validate tenant access before uploading
+            await this.TenantService.validateTenantAccess(tenantId, schema.AssetType, assetType.id);
+
+            if (!file) {
+                return { status: 404, body: { message: 'No image provided' } };
+            }
+
+            const imagePath = await this.assetTypeService.uploadsetTypeImage(tenantId, params.id, file.buffer);
+            return { status: 200, body: { message: 'Image uploaded successfully', imagePath } };
         });
     }
 

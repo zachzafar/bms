@@ -52,6 +52,7 @@ export const AssetType = mysqlTable("asset_type", {
     id: bigint("id", { mode: "number", unsigned: true }).autoincrement().primaryKey().notNull(),
     name: varchar("name", { length: 255 }).notNull(),
     description: text("description"),
+    image: varchar("image", { length: 255 }),
     createdAt: timestamp('createdAt').notNull().defaultNow(),
     updatedAt: timestamp('updatedAt'),
     deletedAt: timestamp('deleted_at'),
