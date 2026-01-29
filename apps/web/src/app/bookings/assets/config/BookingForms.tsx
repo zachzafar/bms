@@ -310,6 +310,7 @@ function BookingForms() {
     if (deletingFormId) {
       deleteBookingForm({
         params: { id: deletingFormId },
+        body: undefined
       });
     }
   };

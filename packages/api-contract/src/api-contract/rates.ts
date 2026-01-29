@@ -29,9 +29,10 @@ export const rateContract = c.router({
   getRates: {
   method: "GET",
   path: "/rate",
-  summary: "Get all rates, optionally filtered by assetId",
+  summary: "Get all rates, optionally filtered by assetId or assetTypeId",
   query: z.object({
     assetId: z.string().optional(),
+    assetTypeId: z.coerce.number().optional(),
     page: z.coerce.number().optional(),
     pageSize: z.coerce.number().optional(),
   }),
@@ -41,6 +42,7 @@ export const rateContract = c.router({
         z.object({
           rate: SelectRateSchema,
           assetIds: z.array(z.string()),
+          assetTypeIds: z.array(z.number()).optional(),
         })
       ),
       pagination
@@ -69,7 +71,9 @@ export const rateContract = c.router({
     pathParams: z.object({
       id: z.coerce.number(),
     }),
-    body: UpdateRateSchema,
+    body: UpdateRateSchema.extend({
+      assetTypeIds: z.array(z.number()).optional(),
+    }),
     responses: {
       200: z.object({
         message: z.string(),

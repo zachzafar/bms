@@ -49,7 +49,8 @@ export class AssetTypeService {
             where: (assetType, { eq, and, isNull }) => and(eq(assetType.id, id), isNull(assetType.deletedAt)),
             with: {
                 assetTypeHasProperties: { with: { assetProperty: true}},
-                bookingForms: { with: { bookingForm: true }}
+                bookingForms: { with: { bookingForm: true }},
+                tags: { with: { tag: true }}
             }
         });
 
@@ -64,6 +65,7 @@ export class AssetTypeService {
             updatedAt,
             assetTypeHasProperties,
             bookingForms,
+            tags,
           } = assetType || {};
 
         return {
@@ -74,11 +76,12 @@ export class AssetTypeService {
             createdAt,
             updatedAt,
             properties: assetTypeHasProperties?.map((relation) => relation.assetProperty) ?? [],
-            forms: bookingForms?.map((relation) => relation.bookingForm) ?? []
+            forms: bookingForms?.map((relation) => relation.bookingForm) ?? [],
+            tags: tags?.map((relation) => relation.tag) ?? []
         }
     }
 
-    async createAssetType(data: InsertAssetType, properties: number[], forms: number[]) {
+    async createAssetType(data: InsertAssetType, properties: number[], forms: number[], tagIds?: number[]) {
         try {
             const result = await this.db.transaction(async (tx) => {
                 const [{ id }] = await tx
@@ -104,6 +107,17 @@ export class AssetTypeService {
                             forms.map(formId => ({
                                 assetTypeId: id,
                                 bookingFormId: formId
+                            }))
+                        );
+                }
+
+                if (tagIds && tagIds.length > 0) {
+                    await tx
+                        .insert(schema.AssetTypeHasTags)
+                        .values(
+                            tagIds.map(tagId => ({
+                                assetTypeId: id,
+                                tagId
                             }))
                         );
                 }
@@ -158,5 +172,29 @@ export class AssetTypeService {
                     }))
                 );
         }
+    }
+
+    async updateAssetTypeTags(id: number, tagIds: number[]) {
+        await this.db.delete(schema.AssetTypeHasTags).where(eq(schema.AssetTypeHasTags.assetTypeId, id)).execute()
+        if (tagIds.length > 0) {
+            await this.db
+                .insert(schema.AssetTypeHasTags)
+                .values(
+                    tagIds.map(tagId => ({
+                        assetTypeId: id,
+                        tagId
+                    }))
+                );
+        }
+    }
+
+    async getTagsForAssetType(assetTypeId: number) {
+        const tags = await this.db.query.AssetTypeHasTags.findMany({
+            where: (aht, { eq }) => eq(aht.assetTypeId, assetTypeId),
+            with: {
+                tag: true,
+            },
+        });
+        return tags.map(t => t.tag);
     }
 }

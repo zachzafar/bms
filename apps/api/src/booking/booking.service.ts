@@ -1000,215 +1000,215 @@ export class BookingService {
 
   // Check availability excluding a specific booking
 
-  async createBookingByTag(
-    data: {
-      tagId: number;
-      startDate: Date;
-      endDate: Date;
-      customerIds: number[];
-    },
-    tenantId: string
-  ) {
-    const { tagId, startDate, endDate, customerIds } = data;
+  // async createBookingByTag(
+  //   data: {
+  //     tagId: number;
+  //     startDate: Date;
+  //     endDate: Date;
+  //     customerIds: number[];
+  //   },
+  //   tenantId: string
+  // ) {
+  //   const { tagId, startDate, endDate, customerIds } = data;
 
-    // Step 1: Find all assets with this tag + tenant match
-    const assets = await this.db
-      .select({ id: schema.Asset.id })
-      .from(schema.Asset)
-      .innerJoin(schema.AssetHasTags, eq(schema.Asset.id, schema.AssetHasTags.assetId))
-      .where(and(
-        eq(schema.AssetHasTags.tagId, tagId),
-        eq(schema.Asset.tenantId, tenantId)
-      ));
+  //   // Step 1: Find all assets with this tag + tenant match
+  //   const assets = await this.db
+  //     .select({ id: schema.Asset.id })
+  //     .from(schema.Asset)
+  //     .innerJoin(schema.AssetHasTags, eq(schema.Asset.id, schema.AssetHasTags.assetId))
+  //     .where(and(
+  //       eq(schema.AssetHasTags.tagId, tagId),
+  //       eq(schema.Asset.tenantId, tenantId)
+  //     ));
 
-    // Step 2: Loop through assets to find first available one
-    for (const asset of assets) {
-      // Check if dates are blocked (either by booking or admin block)
-    const blockedDates = await this.db.query.BlockedDate.findMany({
-      where: (bd, { and, eq, gte, lte, or }) =>
-        and(
-          eq(bd.assetId, asset.id),
-          or(
-            and(gte(bd.startDate, startDate), lte(bd.startDate, endDate)),
-            and(gte(bd.endDate, startDate), lte(bd.endDate, endDate)),
-            and(lte(bd.startDate, startDate), gte(bd.endDate, endDate))
-          )
-        ),
-    });
+  //   // Step 2: Loop through assets to find first available one
+  //   for (const asset of assets) {
+  //     // Check if dates are blocked (either by booking or admin block)
+  //   const blockedDates = await this.db.query.BlockedDate.findMany({
+  //     where: (bd, { and, eq, gte, lte, or }) =>
+  //       and(
+  //         eq(bd.assetId, asset.id),
+  //         or(
+  //           and(gte(bd.startDate, startDate), lte(bd.startDate, endDate)),
+  //           and(gte(bd.endDate, startDate), lte(bd.endDate, endDate)),
+  //           and(lte(bd.startDate, startDate), gte(bd.endDate, endDate))
+  //         )
+  //       ),
+  //   });
 
-    if (blockedDates.length > 0) {
-      continue
-    }
+  //   if (blockedDates.length > 0) {
+  //     continue
+  //   }
 
 
-        // Step 3: Get userId from first customer
-        const firstCustomer = await this.db.query.Customer.findFirst({
-          where: (c, { eq }) => eq(c.id, customerIds[0]),
-        });
+  //       // Step 3: Get userId from first customer
+  //       const firstCustomer = await this.db.query.Customer.findFirst({
+  //         where: (c, { eq }) => eq(c.id, customerIds[0]),
+  //       });
 
-        if (!firstCustomer) {
-          throw new ConflictException('Customer not found');
-        }
+  //       if (!firstCustomer) {
+  //         throw new ConflictException('Customer not found');
+  //       }
 
-        // Step 4: Use existing booking logic
-        const bookingId = await this.createBooking(
-          {
-            assetId: asset.id,
-            startDate,
-            endDate
-          },
-          customerIds
-        );
+  //       // Step 4: Use existing booking logic
+  //       const bookingId = await this.createBooking(
+  //         {
+  //           assetId: asset.id,
+  //           startDate,
+  //           endDate
+  //         },
+  //         customerIds
+  //       );
 
-        return {
-          message: 'Booking created by tag',
-          assetId: asset.id,
-          bookingId: bookingId ?? ''
-        };
+  //       return {
+  //         message: 'Booking created by tag',
+  //         assetId: asset.id,
+  //         bookingId: bookingId ?? ''
+  //       };
 
-    }
+  //   }
 
-    throw new ConflictException('No available assets found for the selected tag and date range');
-  }
+  //   throw new ConflictException('No available assets found for the selected tag and date range');
+  // }
 
-  async customerCreateBookingByTag(
-    data: {
-      tagId: number;
-      startDate: Date;
-      endDate: Date;
-      customer: { name: string; email: string; phone?: string };
-      formResponses?: Array<{ formFieldId: number; value: string }>;
-    },
-    tenantId: string
-  ): Promise<{ message: string; assetName: string }> {
-    const { tagId, startDate, endDate, customer, formResponses } = data;
+  // async customerCreateBookingByTag(
+  //   data: {
+  //     tagId: number;
+  //     startDate: Date;
+  //     endDate: Date;
+  //     customer: { name: string; email: string; phone?: string };
+  //     formResponses?: Array<{ formFieldId: number; value: string }>;
+  //   },
+  //   tenantId: string
+  // ): Promise<{ message: string; assetName: string }> {
+  //   const { tagId, startDate, endDate, customer, formResponses } = data;
 
-    // Step 1: Find all assets with this tag + tenant match
-    const assets = await this.db
-      .select({ id: schema.Asset.id, name: schema.Asset.name })
-      .from(schema.Asset)
-      .innerJoin(schema.AssetHasTags, eq(schema.Asset.id, schema.AssetHasTags.assetId))
-      .where(and(
-        eq(schema.AssetHasTags.tagId, tagId),
-        eq(schema.Asset.tenantId, tenantId)
-      ));
+  //   // Step 1: Find all assets with this tag + tenant match
+  //   const assets = await this.db
+  //     .select({ id: schema.Asset.id, name: schema.Asset.name })
+  //     .from(schema.Asset)
+  //     .innerJoin(schema.AssetHasTags, eq(schema.Asset.id, schema.AssetHasTags.assetId))
+  //     .where(and(
+  //       eq(schema.AssetHasTags.tagId, tagId),
+  //       eq(schema.Asset.tenantId, tenantId)
+  //     ));
 
-    if (assets.length === 0) {
-      throw new NotFoundException('No assets found with the selected category');
-    }
+  //   if (assets.length === 0) {
+  //     throw new NotFoundException('No assets found with the selected category');
+  //   }
 
-    // Step 2: Loop through assets to find first available one
-    for (const asset of assets) {
-      // Check if dates are blocked (either by booking or admin block)
-      const blockedDates = await this.db.query.BlockedDate.findMany({
-        where: (bd, { and, eq, gte, lte, or }) =>
-          and(
-            eq(bd.assetId, asset.id),
-            or(
-              and(gte(bd.startDate, startDate), lte(bd.startDate, endDate)),
-              and(gte(bd.endDate, startDate), lte(bd.endDate, endDate)),
-              and(lte(bd.startDate, startDate), gte(bd.endDate, endDate))
-            )
-          ),
-      });
+  //   // Step 2: Loop through assets to find first available one
+  //   for (const asset of assets) {
+  //     // Check if dates are blocked (either by booking or admin block)
+  //     const blockedDates = await this.db.query.BlockedDate.findMany({
+  //       where: (bd, { and, eq, gte, lte, or }) =>
+  //         and(
+  //           eq(bd.assetId, asset.id),
+  //           or(
+  //             and(gte(bd.startDate, startDate), lte(bd.startDate, endDate)),
+  //             and(gte(bd.endDate, startDate), lte(bd.endDate, endDate)),
+  //             and(lte(bd.startDate, startDate), gte(bd.endDate, endDate))
+  //           )
+  //         ),
+  //     });
 
-      if (blockedDates.length > 0) {
-        continue;
-      }
+  //     if (blockedDates.length > 0) {
+  //       continue;
+  //     }
 
-      // Found an available asset - create booking with new customer
-      await this.createBooking(
-        {
-          assetId: asset.id,
-          startDate,
-          endDate,
-        },
-        [], // No existing customer IDs
-        { ...customer, tenantId }, // New customer info
-        formResponses
-      );
+  //     // Found an available asset - create booking with new customer
+  //     await this.createBooking(
+  //       {
+  //         assetId: asset.id,
+  //         startDate,
+  //         endDate,
+  //       },
+  //       [], // No existing customer IDs
+  //       { ...customer, tenantId }, // New customer info
+  //       formResponses
+  //     );
 
-      return {
-        message: 'Booking created successfully',
-        assetName: asset.name,
-      };
-    }
+  //     return {
+  //       message: 'Booking created successfully',
+  //       assetName: asset.name,
+  //     };
+  //   }
 
-    throw new ConflictException('No available assets found for the selected category and date range');
-  }
+  //   throw new ConflictException('No available assets found for the selected category and date range');
+  // }
 
-  async checkAvailabilityByTag({ tagId }: { tagId: number }) {
-    // Step 1: Get all asset IDs for this tag
-    const assets = await this.db
-      .select({ id: schema.Asset.id })
-      .from(schema.Asset)
-      .innerJoin(schema.AssetHasTags, eq(schema.Asset.id, schema.AssetHasTags.assetId))
-      .where(eq(schema.AssetHasTags.tagId, (tagId)));
+  // async checkAvailabilityByTag({ tagId }: { tagId: number }) {
+  //   // Step 1: Get all asset IDs for this tag
+  //   const assets = await this.db
+  //     .select({ id: schema.Asset.id })
+  //     .from(schema.Asset)
+  //     .innerJoin(schema.AssetHasTags, eq(schema.Asset.id, schema.AssetHasTags.assetId))
+  //     .where(eq(schema.AssetHasTags.tagId, (tagId)));
 
-    const assetIds = assets.map((a) => a.id);
-    const totalAssets = assetIds.length;
+  //   const assetIds = assets.map((a) => a.id);
+  //   const totalAssets = assetIds.length;
 
-    if (!totalAssets) return [];
+  //   if (!totalAssets) return [];
 
-    // Step 2: Get all bookings for these assets
-    const bookings = await this.db
-      .select({
-        startDate: schema.Booking.startDate,
-        endDate: schema.Booking.endDate,
-      })
-      .from(schema.Booking)
-      .where(inArray(schema.Booking.assetId, assetIds));
+  //   // Step 2: Get all bookings for these assets
+  //   const bookings = await this.db
+  //     .select({
+  //       startDate: schema.Booking.startDate,
+  //       endDate: schema.Booking.endDate,
+  //     })
+  //     .from(schema.Booking)
+  //     .where(inArray(schema.Booking.assetId, assetIds));
 
-    if (!bookings.length) return [];
+  //   if (!bookings.length) return [];
 
-    // Step 3: Map bookings to individual dates and count frequency
-    const dateMap = new Map<Date, number>(); // key: YYYY-MM-DD, value: count of booked assets
+  //   // Step 3: Map bookings to individual dates and count frequency
+  //   const dateMap = new Map<Date, number>(); // key: YYYY-MM-DD, value: count of booked assets
 
-    for (const booking of bookings) {
-      const start = booking.startDate;
-      const end = booking.endDate;
-      for (
-        let d = start;
-        d <= end;
-        d.setDate(d.getDate() + 1)
-      ) {
-        dateMap.set(d, (dateMap.get(d) ?? 0) + 1);
-      }
-    }
+  //   for (const booking of bookings) {
+  //     const start = booking.startDate;
+  //     const end = booking.endDate;
+  //     for (
+  //       let d = start;
+  //       d <= end;
+  //       d.setDate(d.getDate() + 1)
+  //     ) {
+  //       dateMap.set(d, (dateMap.get(d) ?? 0) + 1);
+  //     }
+  //   }
 
-    // Step 4: Find fully booked dates
-    const fullyBookedDates = [...dateMap.entries()]
-      .filter(([_, count]) => count >= totalAssets)
-      .map(([date]) => date)
-      .sort();
+  //   // Step 4: Find fully booked dates
+  //   const fullyBookedDates = [...dateMap.entries()]
+  //     .filter(([_, count]) => count >= totalAssets)
+  //     .map(([date]) => date)
+  //     .sort();
 
-    if (!fullyBookedDates.length) return [];
+  //   if (!fullyBookedDates.length) return [];
 
-    // Step 5: Group consecutive dates into ranges
-    const ranges: { from: Date; to: Date }[] = [];
+  //   // Step 5: Group consecutive dates into ranges
+  //   const ranges: { from: Date; to: Date }[] = [];
 
-    let rangeStart = fullyBookedDates[0];
-    let prev = new Date(rangeStart);
+  //   let rangeStart = fullyBookedDates[0];
+  //   let prev = new Date(rangeStart);
 
-    for (let i = 1; i < fullyBookedDates.length; i++) {
-      const current = new Date(fullyBookedDates[i]);
-      const prevPlusOne = new Date(prev);
-      prevPlusOne.setDate(prevPlusOne.getDate() + 1);
+  //   for (let i = 1; i < fullyBookedDates.length; i++) {
+  //     const current = new Date(fullyBookedDates[i]);
+  //     const prevPlusOne = new Date(prev);
+  //     prevPlusOne.setDate(prevPlusOne.getDate() + 1);
 
-      if (current.getTime() !== prevPlusOne.getTime()) {
-        // Range ends
-        ranges.push({ from: rangeStart, to: prev });
-        rangeStart = fullyBookedDates[i];
-      }
+  //     if (current.getTime() !== prevPlusOne.getTime()) {
+  //       // Range ends
+  //       ranges.push({ from: rangeStart, to: prev });
+  //       rangeStart = fullyBookedDates[i];
+  //     }
 
-      prev = current;
-    }
+  //     prev = current;
+  //   }
 
-    // Push the final range
-    ranges.push({ from: rangeStart, to: prev });
+  //   // Push the final range
+  //   ranges.push({ from: rangeStart, to: prev });
 
-    return ranges;
-  }
+  //   return ranges;
+  // }
 
   // -----------------------------
   // Blocked Dates Methods
@@ -1822,5 +1822,340 @@ export class BookingService {
       customer,
     };
   }
+
+//   async getFullyBlockedDaysForTag(
+//   tagId: number,
+//   from: Date,
+//   to: Date,
+// ) {
+//   // 1. Get all assets with this tag
+//   const taggedAssets = await this.db
+//     .select({ assetId: schema.Asset.id })
+//     .from(schema.Asset)
+//     .innerJoin(
+//       schema.AssetHasTags,
+//       eq(schema.AssetHasTags.assetId, schema.Asset.id)
+//     )
+//     .where(eq(schema.AssetHasTags.tagId, tagId));
+
+//   if (taggedAssets.length === 0) return [];
+
+//   const assetIds = taggedAssets.map(a => a.assetId);
+
+//   // 2. Get all blocked ranges for those assets (within window)
+//   const blockedRanges = await this.db
+//     .select({
+//       assetId: schema.BlockedDate.assetId,
+//       start: schema.BlockedDate.startDate,
+//       end: schema.BlockedDate.endDate,
+//     })
+//     .from(schema.BlockedDate)
+//     .where(
+//       and(
+//         inArray(schema.BlockedDate.assetId, assetIds),
+//         lte(schema.BlockedDate.startDate, to),
+//         gte(schema.BlockedDate.endDate, from),
+//       )
+//     );
+
+//   // 3. Group ranges by asset
+//   const byAsset = new Map<string, { start: Date; end: Date }[]>();
+
+//   for (const r of blockedRanges) {
+//     if (!byAsset.has(r.assetId)) byAsset.set(r.assetId, []);
+//     byAsset.get(r.assetId)!.push({
+//       start: new Date(r.start),
+//       end: new Date(r.end),
+//     });
+//   }
+
+//   // 4. Helper — is a day blocked for an asset?
+//   const isBlocked = (
+//     day: Date,
+//     ranges: { start: Date; end: Date }[]
+//   ) => ranges.some(r => day >= r.start && day <= r.end);
+
+//   // 5. Walk days and check if ALL assets are blocked
+//   const fullyBlockedDays: Date[] = [];
+
+//   for (
+//     let d = new Date(from);
+//     d <= to;
+//     d.setDate(d.getDate() + 1)
+//   ) {
+//     let blockedForAll = true;
+
+//     for (const ranges of byAsset.values()) {
+//       if (!isBlocked(d, ranges)) {
+//         blockedForAll = false;
+//         break;
+//       }
+//     }
+
+//     if (blockedForAll) {
+//       fullyBlockedDays.push(new Date(d));
+//     }
+//   }
+
+//   return fullyBlockedDays;
+// }
+
+  // -----------------------------
+  // Asset Type Booking Methods
+  // -----------------------------
+
+  /**
+   * Find an available asset of a given asset type for the specified date range
+   */
+  private async findAvailableAssetOfType(
+    assetTypeId: number,
+    startDate: Date,
+    endDate: Date,
+    tenantId: string
+  ): Promise<{ id: string; name: string } | null> {
+    // Get all assets of this type
+    const assets = await this.db
+      .select({ id: schema.Asset.id, name: schema.Asset.name })
+      .from(schema.Asset)
+      .where(
+        and(
+          eq(schema.Asset.assetTypeId, assetTypeId),
+          eq(schema.Asset.tenantId, tenantId),
+          eq(schema.Asset.available, true),
+          isNull(schema.Asset.deletedAt)
+        )
+      );
+
+    // Check each asset for availability
+    for (const asset of assets) {
+      const blockedDates = await this.db.query.BlockedDate.findMany({
+        where: (bd, { and, eq, gte, lte, or }) =>
+          and(
+            eq(bd.assetId, asset.id),
+            or(
+              and(gte(bd.startDate, startDate), lte(bd.startDate, endDate)),
+              and(gte(bd.endDate, startDate), lte(bd.endDate, endDate)),
+              and(lte(bd.startDate, startDate), gte(bd.endDate, endDate))
+            )
+          ),
+      });
+
+      if (blockedDates.length === 0) {
+        return asset;
+      }
+    }
+
+    return null;
+  }
+
+  /**
+   * Create a booking by asset type - automatically assigns an available asset
+   */
+  async createBookingByAssetType(
+    data: {
+      assetTypeId: number;
+      startDate: Date;
+      endDate: Date;
+      customerIds: number[];
+    },
+    tenantId: string
+  ): Promise<{ message: string; assetId: string; bookingId: string }> {
+    const { assetTypeId, startDate, endDate, customerIds } = data;
+
+    // Find available asset of this type
+    const availableAsset = await this.findAvailableAssetOfType(
+      assetTypeId,
+      startDate,
+      endDate,
+      tenantId
+    );
+
+    if (!availableAsset) {
+      throw new ConflictException('No available assets of this type for the selected dates');
+    }
+
+    // Get userId from first customer
+    const firstCustomer = await this.db.query.Customer.findFirst({
+      where: (c, { eq }) => eq(c.id, customerIds[0]),
+    });
+
+    if (!firstCustomer) {
+      throw new ConflictException('Customer not found');
+    }
+
+    // Create booking with the found asset
+    const bookingId = await this.createBooking(
+      {
+        assetId: availableAsset.id,
+        startDate,
+        endDate,
+      },
+      customerIds
+    );
+
+    // Update booking to mark it was booked by asset type
+
+    return {
+      message: 'Booking created by asset type',
+      assetId: availableAsset.id,
+      bookingId: bookingId ?? ''
+    };
+  }
+
+  /**
+   * Customer creates booking by asset type (public endpoint)
+   */
+  async customerCreateBookingByAssetType(
+    data: {
+      assetTypeId: number;
+      startDate: Date;
+      endDate: Date;
+      customer: { name: string; email: string; phone?: string };
+      formResponses?: Array<{ formFieldId: number; value: string }>;
+    },
+    tenantId: string
+  ): Promise<{ message: string; assetName: string }> {
+    const { assetTypeId, startDate, endDate, customer, formResponses } = data;
+
+    // Find available asset of this type
+    const availableAsset = await this.findAvailableAssetOfType(
+      assetTypeId,
+      startDate,
+      endDate,
+      tenantId
+    );
+
+    if (!availableAsset) {
+      throw new ConflictException('No available assets of this type for the selected dates');
+    }
+
+    // Create booking with the found asset
+    const bookingId = await this.createBooking(
+      {
+        assetId: availableAsset.id,
+        startDate,
+        endDate,
+      },
+      [], // No existing customer IDs
+      { ...customer, tenantId }, // New customer info
+      formResponses
+    );
+
+    // Update booking to mark it was booked by asset type
+
+    return {
+      message: 'Booking created successfully',
+      assetName: availableAsset.name,
+    };
+  }
+
+  /**
+   * Get fully blocked days for an asset type (when all assets of that type are booked)
+   */
+async getFullyBlockedDaysForAssetType(
+  assetTypeId: number,
+  from: Date,
+  to: Date
+): Promise<{ start: Date; end: Date }[]> {
+
+  // 1. Get all assets of this type
+  const assets = await this.db
+    .select({ id: schema.Asset.id })
+    .from(schema.Asset)
+    .where(
+      and(
+        eq(schema.Asset.assetTypeId, assetTypeId),
+        eq(schema.Asset.available, true),
+        isNull(schema.Asset.deletedAt)
+      )
+    );
+
+  if (assets.length === 0) return [];
+
+  const assetIds = assets.map(a => a.id);
+
+  // 2. Get all blocked ranges for those assets (within window)
+  const blockedRanges = await this.db
+    .select({
+      assetId: schema.BlockedDate.assetId,
+      start: schema.BlockedDate.startDate,
+      end: schema.BlockedDate.endDate,
+    })
+    .from(schema.BlockedDate)
+    .where(
+      and(
+        inArray(schema.BlockedDate.assetId, assetIds),
+        lte(schema.BlockedDate.startDate, to),
+        gte(schema.BlockedDate.endDate, from)
+      )
+    );
+
+  // 3. Group ranges by asset
+  const byAsset = new Map<string, { start: Date; end: Date }[]>();
+
+  for (const r of blockedRanges) {
+    if (!byAsset.has(r.assetId)) byAsset.set(r.assetId, []);
+    byAsset.get(r.assetId)!.push({
+      start: new Date(r.start),
+      end: new Date(r.end),
+    });
+  }
+
+  // 4. Helper — is a day blocked for an asset?
+  const isBlocked = (
+    day: Date,
+    ranges: { start: Date; end: Date }[]
+  ) => ranges.some(r => day >= r.start && day <= r.end);
+
+  // 5. Walk days and build continuous ranges
+  const fullyBlockedRanges: { start: Date; end: Date }[] = [];
+
+  let currentStart: Date | null = null;
+
+  for (
+    let d = new Date(from);
+    d <= to;
+    d.setDate(d.getDate() + 1)
+  ) {
+    let blockedForAll = true;
+
+    for (const assetId of assetIds) {
+      const ranges = byAsset.get(assetId) || [];
+
+      if (!isBlocked(d, ranges)) {
+        blockedForAll = false;
+        break;
+      }
+    }
+
+    if (blockedForAll) {
+      if (!currentStart) {
+        currentStart = new Date(d);
+      }
+    } else {
+      if (currentStart) {
+        const end = new Date(d);
+        end.setDate(end.getDate() - 1);
+
+        fullyBlockedRanges.push({
+          start: currentStart,
+          end,
+        });
+
+        currentStart = null;
+      }
+    }
+  }
+
+  // If the last range runs until `to`
+  if (currentStart) {
+    fullyBlockedRanges.push({
+      start: currentStart,
+      end: new Date(to),
+    });
+  }
+
+  return fullyBlockedRanges;
+}
 
 }

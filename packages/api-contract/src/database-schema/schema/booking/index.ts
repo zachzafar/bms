@@ -1,10 +1,10 @@
 import { relations} from "drizzle-orm";
-import { mysqlTable, varchar, datetime, decimal, text, timestamp, int, index, serial, boolean, bigint, date, mysqlEnum } from "drizzle-orm/mysql-core";
+import { mysqlTable, varchar, datetime, decimal, text, timestamp, int, index, serial, boolean, bigint, date, mysqlEnum, uniqueIndex } from "drizzle-orm/mysql-core";
 import { Customer, User } from "../users";
 import { Asset, AssetHasRates } from "../asset";
 import { createInsertSchema, createSelectSchema } from "drizzle-zod";
 import { z } from "zod";
-import { BookingFormField } from "../settings";
+import { AssetType, BookingFormField } from "../settings";
 import { v4 as uuid } from "uuid";
 import { Tenant } from "../tenant";
 
@@ -137,6 +137,7 @@ export const InsertRateSchema = createInsertSchema(Rate)
     startDate: z.coerce.date(),
     endDate: z.coerce.date(),
     assetIds: z.array(z.string()).optional(),
+    assetTypeIds: z.array(z.number()).optional(),
   });
 export const SelectRateSchema = createSelectSchema(Rate);
 export const UpdateRateSchema = InsertRateSchema.partial();
@@ -147,6 +148,37 @@ export type UpdateRate = z.infer<typeof UpdateRateSchema>;
 
 export const RatesRelations = relations(Rate, ({ many }) => ({
   assets: many(AssetHasRates),
+  assetTypes: many(AssetTypeHasRates),
+}));
+
+// AssetType has Rates junction table
+export const AssetTypeHasRates = mysqlTable("asset_type_has_rates", {
+  id: bigint("id", { mode: "number", unsigned: true }).autoincrement().primaryKey(),
+  rateId: bigint("rate_id", { mode: "number", unsigned: true })
+    .notNull()
+    .references(() => Rate.id, { onDelete: 'cascade' }),
+  assetTypeId: bigint("asset_type_id", { mode: 'number', unsigned: true })
+    .notNull()
+    .references(() => AssetType.id, { onDelete: 'cascade' }),
+}, (table) => ({
+  assetTypeRateUniqueIdx: uniqueIndex("asset_type_rate_unique").on(table.assetTypeId, table.rateId),
+}));
+
+export const InsertAssetTypeHasRatesSchema = createInsertSchema(AssetTypeHasRates);
+export const SelectAssetTypeHasRatesSchema = createSelectSchema(AssetTypeHasRates);
+
+export type InsertAssetTypeHasRates = z.infer<typeof InsertAssetTypeHasRatesSchema>;
+export type SelectAssetTypeHasRates = z.infer<typeof SelectAssetTypeHasRatesSchema>;
+
+export const AssetTypeHasRatesRelations = relations(AssetTypeHasRates, ({ one }) => ({
+  assetType: one(AssetType, {
+    fields: [AssetTypeHasRates.assetTypeId],
+    references: [AssetType.id],
+  }),
+  rate: one(Rate, {
+    fields: [AssetTypeHasRates.rateId],
+    references: [Rate.id],
+  }),
 }));
 
 // Blocked Dates table

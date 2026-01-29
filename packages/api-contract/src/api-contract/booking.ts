@@ -229,14 +229,14 @@ export const bookingContract = c.router({
     summary: 'endpoint for unauthenticated new customers to create bookings'
   },
 
-  customerCreateBookingByTag: {
+  customerCreateBookingByAssetType: {
     method: "POST",
-    path: "/customer-create-booking-by-tag/:tenantId",
+    path: "/customer-create-booking-by-asset-type/:tenantId",
     pathParams: z.object({
       tenantId: z.string()
     }),
     body: z.object({
-      tagId: z.number(),
+      assetTypeId: z.number(),
       startDate: z.coerce.date(),
       endDate: z.coerce.date(),
       customer: z.object({
@@ -291,16 +291,18 @@ export const bookingContract = c.router({
   },
 
   // Public endpoint to get blocked dates for a tag (for customer tag booking page)
-  getBlockedDatesForTagPublic: {
+  getBlockedDatesForAssetTypePublic: {
     method: 'GET',
-    path: '/public/blocked-dates/tag/:tagId',
+    path: '/public/blocked-dates/assetType/:assetTypeId',
     pathParams: z.object({
-      tagId: z.coerce.number()
+      assetTypeId: z.coerce.number(),
+      startDate: z.coerce.date(),
+      endDate: z.coerce.date()
     }),
     responses: {
       200: z.array(z.object({
-        startDate: z.coerce.date(),
-        endDate: z.coerce.date(),
+        start: z.coerce.date(),
+        end: z.coerce.date(),
       }))
     },
     summary: 'Get fully blocked date ranges for a tag (public endpoint for customer booking)'

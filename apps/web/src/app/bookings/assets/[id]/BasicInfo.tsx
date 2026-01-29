@@ -20,7 +20,7 @@ import { SelectAsset } from '@repo/api-contract';
 
 function BasicInfo({ asset, refetch }: { asset: SelectAsset; refetch: () => void }) {
   const [name, setName] = useState(asset.name ?? '');
-  const [assetTypeId, setAssetTypeId] = useState<number | undefined>(asset.assetTypeId ?? undefined);
+  const [assetTypeId, setAssetTypeId] = useState<number>(asset.assetTypeId);
   const [tagId, setTagId] = useState<number | undefined>(undefined);
   const [selectedForms, setSelectedForms] = useState<string[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -28,7 +28,7 @@ function BasicInfo({ asset, refetch }: { asset: SelectAsset; refetch: () => void
   // Initial values for comparison
   const [initialValues, setInitialValues] = useState({
     name: asset.name ?? '',
-    assetTypeId: asset.assetTypeId ?? undefined,
+    assetTypeId: asset.assetTypeId,
     tagId: undefined as number | undefined,
     forms: [] as string[]
   });
