@@ -58,7 +58,6 @@ export const AssetType = mysqlTable("asset_type", {
     deletedAt: timestamp('deleted_at'),
     tenantId: varchar("tenant_id", { length: 255 }).notNull().references(() => Tenant.id),
 }, (table) => ({
-    nameUniqueIdx: uniqueIndex("name_unique").on(table.name, table.tenantId),
     deletedAtIdx: index("asset_type_deleted_at_idx").on(table.deletedAt),
 }));
 
