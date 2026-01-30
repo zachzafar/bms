@@ -66,9 +66,10 @@ export default function Component() {
   const { page, pageSize, queryParams, goToPage, changePageSize } = usePagination(1, 10);
 
   const queryClient = authClient.useQueryClient();
+  const [searchTerm, setSearchTerm] = useState('');
   const { data: customerData } = authClient.users.getCustomers.useQuery({
-    queryKey: [...CUSTOMERS_QUERY_KEY, page, pageSize],
-    queryData: {query:queryParams},
+    queryKey: [...CUSTOMERS_QUERY_KEY, page, pageSize, searchTerm],
+    queryData: {query: { ...queryParams, search: searchTerm || undefined }},
   });
   const { mutate: createUserMutation, isPending } = authClient.users.createUser.useMutation();
 
@@ -76,7 +77,7 @@ export default function Component() {
 
   const [open, setOpen] = useState(false);
   const [selectedCustomer, setSelectedCustomer] = useState<EditableCustomer | null>(null);
-  const [searchTerm, setSearchTerm] = useState('');
+
 
   const customers = customerData?.status === 200 ? customerData.body.data : [];
   const paginationMeta = customerData?.status === 200 ? customerData.body.pagination : undefined;

@@ -40,7 +40,6 @@ export default function Details({ userId }: { userId: string }) {
   const [email, setEmail] = useState(selected?.user?.email ?? '');
   const [phone, setPhone] = useState(selected?.owner?.phone ?? '');
   const [address, setAddress] = useState(selected?.owner?.address ?? '');
-  const [companyName, setCompanyName] = useState(selected?.owner?.companyName ?? '');
   const [taxId, setTaxId] = useState(selected?.owner?.taxId ?? '');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -49,9 +48,8 @@ export default function Details({ userId }: { userId: string }) {
     setEmail(selected?.user?.email ?? '');
     setPhone(selected?.owner?.phone ?? '');
     setAddress(selected?.owner?.address ?? '');
-    setCompanyName(selected?.owner?.companyName ?? '');
     setTaxId(selected?.owner?.taxId ?? '');
-  }, [selected?.user?.name, selected?.user?.email, selected?.owner?.phone, selected?.owner?.address, selected?.owner?.companyName, selected?.owner?.taxId]);
+  }, [selected?.user?.name, selected?.user?.email, selected?.owner?.phone, selected?.owner?.address, selected?.owner?.taxId]);
 
   const { mutate: updateUser } = authClient.users.updateUser.useMutation();
 
@@ -61,10 +59,9 @@ export default function Details({ userId }: { userId: string }) {
     name !== (selected.user?.name ?? '') ||
     email !== (selected.user?.email ?? '') ||
     phone !== (selected.owner?.phone ?? '') ||
-    address !== (selected.owner?.address ?? '') ||
-    companyName !== (selected.owner?.companyName ?? '') ||
-    taxId !== (selected.owner?.taxId ?? '');
-
+    address !== (selected.owner?.address ?? '') 
+    
+    
   const handleSave = () => {
     if (!hasChanges) return;
     setIsSubmitting(true);
@@ -79,7 +76,6 @@ export default function Details({ userId }: { userId: string }) {
             userId, // required by UpdateOwnerSchema
             phone: phone || null,
             address: address || null,
-            companyName: companyName || null,
             taxId: taxId || null,
           },
         },
@@ -112,10 +108,6 @@ export default function Details({ userId }: { userId: string }) {
           <div className="space-y-2">
             <Label htmlFor="email">Email</Label>
             <Input id="email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} disabled={isSubmitting} />
-          </div>
-          <div className="space-y-2 md:col-span-2">
-            <Label htmlFor="companyName">Company Name</Label>
-            <Input id="companyName" value={companyName} onChange={(e) => setCompanyName(e.target.value)} disabled={isSubmitting} />
           </div>
           <div className="space-y-2">
             <Label htmlFor="phone">Phone</Label>

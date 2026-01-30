@@ -46,6 +46,7 @@ export const assetsContract = c.router({
       }),
     },
     query: z.object({
+      assetTypeId: z.coerce.number().optional(),
       search: z.string().optional(),
       userId: z.string().optional(),
       page: z.coerce.number().optional(),

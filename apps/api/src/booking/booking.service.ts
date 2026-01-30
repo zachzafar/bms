@@ -755,12 +755,13 @@ export class BookingService {
           }
         }
 
-        // Update booking dates and price
+        // Update booking dates, price, and asset
         await tx.update(schema.Booking)
           .set({
             startDate,
             endDate,
             totalPrice: totalPrice.toString(),
+            assetId: updateData.assetId,
           })
           .where(eq(schema.Booking.id, updateData.id))
           .execute();

@@ -3,7 +3,7 @@ import { MySql2Database } from 'drizzle-orm/mysql2';
 import { DrizzleAsyncProvider } from 'src/drizzle/drizzle.provider';
 import * as schema from '@repo/api-contract';
 import { InsertUser, SelectUser, UpdateUser } from '@repo/api-contract';
-import { eq, and, sql } from 'drizzle-orm';
+import { eq, and, sql, or, like } from 'drizzle-orm';
 import { hash } from 'argon2';
 
 const userTypes = ["customer", "owner", "system"] as const;
@@ -316,8 +316,25 @@ export class UsersService {
         });
     }
 
-    async getCustomers(tenantId: string, page: number = 1, pageSize: number = 10): Promise<{ data: { customer: schema.SelectCustomer, user: Omit<SelectUser, "roles"> }[]; pagination: any }> {
+    async getCustomers(tenantId: string, page: number = 1, pageSize: number = 10, search?: string): Promise<{ data: { customer: schema.SelectCustomer, user: Omit<SelectUser, "roles"> }[]; pagination: any }> {
         const offset = (page - 1) * pageSize;
+
+        // Build search conditions
+        const baseConditions = [
+            eq(schema.TenantHasUsers.tenantId, tenantId),
+            eq(schema.Customer.tenantId, tenantId)
+        ];
+
+        const searchCondition = search ? or(
+            like(schema.User.name, `%${search}%`),
+            like(schema.User.email, `%${search}%`),
+            like(schema.Customer.phone, `%${search}%`),
+            like(schema.Customer.address, `%${search}%`)
+        ) : undefined;
+
+        const whereConditions = searchCondition
+            ? and(...baseConditions, searchCondition)
+            : and(...baseConditions);
 
         // Get total count
         const totalCountResult = await this.db
@@ -325,10 +342,18 @@ export class UsersService {
             .from(schema.TenantHasUsers)
             .innerJoin(schema.User, eq(schema.TenantHasUsers.userId, schema.User.id))
             .innerJoin(schema.Customer, eq(schema.Customer.userId, schema.User.id))
+            .where(whereConditions)
             .execute();
         const totalCount = totalCountResult[0]?.count || 0;
 
-        const rows = await this.db.select().from(schema.TenantHasUsers).where(eq(schema.TenantHasUsers.tenantId, tenantId)).innerJoin(schema.User, eq(schema.TenantHasUsers.userId, schema.User.id)).innerJoin(schema.Customer, eq(schema.Customer.userId, schema.User.id)).limit(pageSize).offset(offset)
+        const rows = await this.db
+            .select()
+            .from(schema.TenantHasUsers)
+            .innerJoin(schema.User, eq(schema.TenantHasUsers.userId, schema.User.id))
+            .innerJoin(schema.Customer, eq(schema.Customer.userId, schema.User.id))
+            .where(whereConditions)
+            .limit(pageSize)
+            .offset(offset);
 
         const paginationData = {
             page,
@@ -345,20 +370,44 @@ export class UsersService {
         };
     }
 
-    async getOwners(tenantId: string, page: number = 1, pageSize: number = 10): Promise<{ data: { owner: schema.SelectOwner, user: Omit<SelectUser, "roles"> }[]; pagination: any }> {
+    async getOwners(tenantId: string, page: number = 1, pageSize: number = 10, search?: string): Promise<{ data: { owner: schema.SelectOwner, user: Omit<SelectUser, "roles"> }[]; pagination: any }> {
         const offset = (page - 1) * pageSize;
+
+        // Build search conditions
+        const baseConditions = [
+            eq(schema.TenantHasUsers.tenantId, tenantId),
+            eq(schema.Owner.tenantId, tenantId)
+        ];
+
+        const searchCondition = search ? or(
+            like(schema.User.name, `%${search}%`),
+            like(schema.User.email, `%${search}%`),
+            like(schema.Owner.phone, `%${search}%`),
+            like(schema.Owner.address, `%${search}%`)
+        ) : undefined;
+
+        const whereConditions = searchCondition
+            ? and(...baseConditions, searchCondition)
+            : and(...baseConditions);
 
         // Get total count
         const totalCountResult = await this.db
             .select({ count: sql<number>`COUNT(*)` })
             .from(schema.TenantHasUsers)
-            .where(eq(schema.TenantHasUsers.tenantId, tenantId))
             .innerJoin(schema.User, eq(schema.TenantHasUsers.userId, schema.User.id))
             .innerJoin(schema.Owner, eq(schema.Owner.userId, schema.User.id))
+            .where(whereConditions)
             .execute();
         const totalCount = totalCountResult[0]?.count || 0;
 
-        const rows = await this.db.select().from(schema.TenantHasUsers).where(eq(schema.TenantHasUsers.tenantId, tenantId)).innerJoin(schema.User, eq(schema.TenantHasUsers.userId, schema.User.id)).innerJoin(schema.Owner, eq(schema.Owner.userId, schema.User.id)).limit(pageSize).offset(offset)
+        const rows = await this.db
+            .select()
+            .from(schema.TenantHasUsers)
+            .innerJoin(schema.User, eq(schema.TenantHasUsers.userId, schema.User.id))
+            .innerJoin(schema.Owner, eq(schema.Owner.userId, schema.User.id))
+            .where(whereConditions)
+            .limit(pageSize)
+            .offset(offset);
 
         const paginationData = {
             page,

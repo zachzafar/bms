@@ -29,7 +29,7 @@ export class AssetsController {
             const page = query.page ? Number(query.page) : 1;
             const pageSize = query.pageSize ? Number(query.pageSize) : 10;
 
-            const assets = await this.assetService.getAssets(query, tenantId, page, pageSize);
+            const assets = await this.assetService.getAssets(tenantId,query, page, pageSize);
 
             return { status: 200, body: assets };
         });

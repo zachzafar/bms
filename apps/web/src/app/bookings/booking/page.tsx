@@ -30,8 +30,9 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { MoreHorizontal, CheckCircle, Clock, XCircle, Eye, Trash2, Copy, Check } from 'lucide-react';
 import { useRouter } from 'next/navigation';
-import { isSameDay } from "date-fns";
 import CopyableId from '@/components/custom/CopyableId';
+import { DateRangePicker, BlockedDateRange } from '@/components/ui/date-range-picker';
+import { DateRange } from 'react-day-picker';
 
 
 // Booking form schema
@@ -66,16 +67,6 @@ function getStatusBadge(status: string) {
       return { variant: 'outline' as const, color: 'bg-muted text-gray-800', icon: Clock };
   }
 }
-
-type BlockedDate = {
-  id: number;
-  asset_id: string;
-  startDate: Date; // ISO string
-  endDate: Date;   // ISO string
-  title: string;
-  reason?: string;
-};
-
 
 // Helper: find applicable rate for asset and nights
 function getApplicableRate(
@@ -124,25 +115,31 @@ export default function Component() {
   const { mutate: generateInvoiceFromBooking } = authClient.billing.generateInvoiceFromBooking.useMutation();
   const { mutate: createBookingByTag } = authClient.booking.createBookingByTag.useMutation();
 
-  const [blockedDates, setBlockedDates] = useState<BlockedDate[]>([]);
+  const [assetBlockedDates, setAssetBlockedDates] = useState<BlockedDateRange[]>([]);
+  const [dateRange, setDateRange] = useState<DateRange | undefined>(undefined);
+  const [selectedAssetId, setSelectedAssetId] = useState<string>('');
 
-  const [availableAssets, setAvailableAssets] = useState<
-    {
-      id: string;
-      name: string;
-      applicableRate?: {
-        pricePerNight?: number;
-        minNights?: number;
-        maxNights?: number;
-        priority?: number;
-      };
-    }[]
-  >([]);
+  // Asset search and filter state
+  const [assetSearch, setAssetSearch] = useState('');
+  const [assetTypeFilter, setAssetTypeFilter] = useState<number | undefined>(undefined);
 
-  const [dateRangeReady, setDateRangeReady] = useState(false);
+  // Fetch asset types for filtering
+  const { data: assetTypesResponse } = authClient.settings.assetType.getAssetTypes.useQuery({
+    queryKey: ['asset-types'],
+  });
+  const assetTypes = assetTypesResponse?.body?.data ?? [];
 
-  const { data: assets } = authClient.assets.getAssets.useQuery({ queryKey: ['assets'], enabled: !!currentTenant });
-  const assetList = assets?.body ?? [];
+  // Fetch assets with search and filter
+  const { data: assets } = authClient.assets.getAssets.useQuery({
+    queryKey: ['assets', assetSearch, assetTypeFilter],
+    queryData: {
+      query: {
+        search: assetSearch || undefined,
+        assetTypeId: assetTypeFilter,
+      },
+    },
+  });
+  const assetList = assets?.body.data || [];
 
   const { data: customerResponse } = authClient.users.getCustomers.useQuery({ queryKey: ['customers'] });
   const customerList = customerResponse?.body.data ?? [];
@@ -199,126 +196,47 @@ export default function Component() {
     },
   });
 
-  useEffect(() => {
-    authClient.booking.getBlockedDates.query({ query: {} })
-      .then(res => {
-        const blocked: BlockedDate[] = Array.isArray(res.body)
-          ? res.body.map(b => ({
-            id: b.id,
-            asset_id: b.assetId,
-            startDate: b.startDate,
-            endDate: b.endDate,
-            title: b.title,
-            reason: b.reason,
-          }))
-          : [];
-        setBlockedDates(blocked);
-      })
-      .catch(err => console.error(err));
-  }, []);
 
-  const startDate = form.watch('startDate');
-  const endDate = form.watch('endDate');
 
-  const [invalidStartOrEnd, setInvalidStartOrEnd] = useState<BlockedDate[]>([]);
 
-  useEffect(() => {
-    if (startDate && endDate) {
-      const start = new Date(startDate);
-      const end = new Date(endDate);
 
-      const conflicts = blockedDates.filter(b => {
-        const blockedStart = new Date(b.startDate);
-        const blockedEnd = new Date(b.endDate);
 
-        // Only global blocks (no specific asset)
-        const isGlobalBlock = !b.asset_id || b.asset_id === "null";
 
-        // Overlaps if same day or within range
-        const overlaps =
-          isSameDay(start, blockedStart) ||
-          isSameDay(start, blockedEnd) ||
-          isSameDay(end, blockedStart) ||
-          isSameDay(end, blockedEnd) ||
-          (start <= blockedEnd && end >= blockedStart);
+  // Fetch blocked dates for a specific asset
+  const fetchBlockedDates = async (assetId: string) => {
+    if (!assetId) {
+      setAssetBlockedDates([]);
+      return;
+    }
 
-        return overlaps && isGlobalBlock;
+    try {
+      const res = await authClient.booking.getBlockedDatesForAssetPublic.query({
+        params: { assetId },
       });
-
-      // Only show invalids for global blocks now
-      setInvalidStartOrEnd(conflicts);
-    } else {
-      setInvalidStartOrEnd([]);
+      if (res.status === 200) {
+        const blocked: BlockedDateRange[] = res.body.map((b) => ({
+          startDate: new Date(b.startDate),
+          endDate: new Date(b.endDate),
+        }));
+        setAssetBlockedDates(blocked);
+      } else {
+        setAssetBlockedDates([]);
+      }
+    } catch (err) {
+      console.error('Failed to fetch blocked dates:', err);
+      setAssetBlockedDates([]);
     }
-  }, [startDate, endDate, blockedDates]);
+  };
 
-
-
-
-
-  // When dates change, fetch available assets and assign applicable rates
+  // Sync date range with form values
   useEffect(() => {
-    if (startDate && endDate) {
-      setDateRangeReady(true);
-
-      authClient.assets
-        .getAvailableAssets.query({
-          query: { startDate, endDate },
-        })
-        .then((res) => {
-          if (res.status === 200) {
-            const nights = calculateNights(startDate, endDate);
-
-            // Exclude assets that are blocked in that date range
-            const blockedAssetIds = blockedDates
-              .filter(b => {
-                const blockedStart = new Date(b.startDate);
-                const blockedEnd = new Date(b.endDate);
-                const overlaps =
-                  (new Date(startDate) <= blockedEnd && new Date(endDate) >= blockedStart);
-                return b.asset_id && b.asset_id !== "null" && overlaps;
-              })
-              .map(b => b.asset_id);
-
-            const filteredAssets = res.body.data.filter(
-              (asset) => !blockedAssetIds.includes(asset.id)
-            );
-
-            const assetsWithRates = filteredAssets.map((asset) => {
-              const applicableRates = rates.filter(
-                (rate) =>
-                  rate.assetId === asset.id &&
-                  (!rate.minNights || rate.minNights <= nights) &&
-                  (!rate.maxNights || rate.maxNights >= nights)
-              );
-
-              const selectedRate =
-                applicableRates.length > 0
-                  ? applicableRates.reduce((prev, curr) =>
-                    (prev.priority ?? 100) < (curr.priority ?? 100) ? prev : curr
-                  )
-                  : null;
-
-              return {
-                ...asset,
-                applicableRate: selectedRate || undefined,
-              };
-            });
-
-            setAvailableAssets(assetsWithRates);
-          } else {
-            setAvailableAssets([]);
-          }
-        })
-        .catch((err) => {
-          console.error('Failed to fetch available assets:', err);
-          setAvailableAssets([]);
-        });
-    } else {
-      setDateRangeReady(false);
-      setAvailableAssets([]);
+    if (dateRange?.from) {
+      form.setValue('startDate', dateRange.from);
     }
-  }, [startDate, endDate, rates, blockedDates]);
+    if (dateRange?.to) {
+      form.setValue('endDate', dateRange.to);
+    }
+  }, [dateRange, form]);
 
 
 
@@ -432,6 +350,11 @@ export default function Component() {
               onClick={() => {
                 form.reset();
                 setCustomers([]);
+                setSelectedAssetId('');
+                setDateRange(undefined);
+                setAssetBlockedDates([]);
+                setAssetSearch('');
+                setAssetTypeFilter(undefined);
               }}
             >
               Create Booking
@@ -449,101 +372,102 @@ export default function Component() {
                 onSubmit={form.handleSubmit(onSubmit)}
                 className="space-y-4 py-4"
               >
-                <FormField
-                  control={form.control}
-                  name="startDate"
-                  render={({ field }) => {
-                    // Convert Date to YYYY-MM-DD and HH:mm for inputs
-                    const dateValue = field.value ? new Date(field.value) : null;
-                    const datePart = dateValue ? dateValue.toISOString().split('T')[0] : '';
-                    const timePart = dateValue ? dateValue.toTimeString().slice(0, 5) : '00:00';
+                {/* Asset Selection - First */}
+                <div className="space-y-3">
+                  <label className="text-sm font-medium leading-none">Asset</label>
 
-                    return (
+                  {/* Search and Filter Row */}
+                  <div className="flex gap-2">
+                    <Input
+                      placeholder="Search assets..."
+                      value={assetSearch}
+                      onChange={(e) => setAssetSearch(e.target.value)}
+                      className="flex-1"
+                    />
+                    <Select
+                      value={assetTypeFilter?.toString() ?? 'all'}
+                      onValueChange={(value) => setAssetTypeFilter(value === 'all' ? undefined : Number(value))}
+                    >
+                      <SelectTrigger className="w-[180px]">
+                        <SelectValue placeholder="All Types" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">All Types</SelectItem>
+                        {assetTypes.map((type) => (
+                          <SelectItem key={type.id} value={type.id.toString()}>
+                            {type.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  {/* Asset Selection */}
+                  <FormField
+                    control={form.control}
+                    name="assetId"
+                    render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Start Date & Time</FormLabel>
-                        <div className="flex gap-2">
-                          <Input
-                            type="date"
-                            value={datePart}
-                            onChange={(e) => {
-                              const newDate = e.target.value;
-                              const time = timePart;
-                              field.onChange(new Date(`${newDate}T${time}`));
-                            }}
-                          />
-                          <Input
-                            type="time"
-                            value={timePart}
-                            onChange={(e) => {
-                              const newTime = e.target.value;
-                              const date = datePart || new Date().toISOString().split('T')[0];
-                              field.onChange(new Date(`${date}T${newTime}`));
-                            }}
-                          />
-                        </div>
-
-                        {invalidStartOrEnd.length > 0 && (
-                          <div className="mt-2 p-2 border border-red-300 bg-destructive/5 rounded">
-                            <p className="font-semibold text-destructive">
-                              The start or end date cannot be on these blocked dates:
-                            </p>
-                            <ul className="list-disc ml-5 text-destructive text-sm">
-                              {invalidStartOrEnd.map(b => {
-                                const start = new Date(b.startDate);
-                                const end = new Date(b.endDate);
-                                return (
-                                  <li key={b.id}>
-                                    {b.title} ({start.toLocaleDateString()} → {end.toLocaleDateString()})
-                                  </li>
-                                );
-                              })}
-                            </ul>
-                          </div>
-                        )}
+                        <Select
+                          onValueChange={(value) => {
+                            field.onChange(value);
+                            setSelectedAssetId(value);
+                            // Reset date range when asset changes
+                            setDateRange(undefined);
+                            form.setValue('startDate', undefined as any);
+                            form.setValue('endDate', undefined as any);
+                            // Fetch blocked dates for the selected asset
+                            fetchBlockedDates(value);
+                          }}
+                          value={field.value}
+                        >
+                          <FormControl>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Select an asset" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            {assetList.length > 0 ? (
+                              assetList.map((asset) => (
+                                <SelectItem key={asset.id} value={asset.id.toString()}>
+                                  {asset.name}
+                                </SelectItem>
+                              ))
+                            ) : (
+                              <div className="p-2 text-sm text-muted-foreground text-center">
+                                No assets found
+                              </div>
+                            )}
+                          </SelectContent>
+                        </Select>
                         <FormMessage />
                       </FormItem>
-                    );
-                  }}
-                />
+                    )}
+                  />
+                </div>
 
-                <FormField
-                  control={form.control}
-                  name="endDate"
-                  render={({ field }) => {
-                    // Convert Date to YYYY-MM-DD and HH:mm for inputs
-                    const dateValue = field.value ? new Date(field.value) : null;
-                    const datePart = dateValue ? dateValue.toISOString().split('T')[0] : '';
-                    const timePart = dateValue ? dateValue.toTimeString().slice(0, 5) : '00:00';
+                {/* Date Range Selection - Second (only enabled after asset selected) */}
+                <div className="space-y-2">
+                  <label className="text-sm font-medium leading-none">
+                    Booking Dates
+                  </label>
+                  <DateRangePicker
+                    value={dateRange}
+                    onChange={setDateRange}
+                    blockedDates={assetBlockedDates}
+                    placeholder={selectedAssetId ? "Select booking dates" : "Select an asset first"}
+                    disabled={!selectedAssetId}
+                    minDate={new Date()}
+                    numberOfMonths={2}
+                  />
+                  {!selectedAssetId && (
+                    <p className="text-sm text-muted-foreground">
+                      Please select an asset first to see available dates
+                    </p>
+                  )}
+                </div>
 
-                    return (
-                      <FormItem>
-                        <FormLabel>End Date & Time</FormLabel>
-                        <div className="flex gap-2">
-                          <Input
-                            type="date"
-                            value={datePart}
-                            onChange={(e) => {
-                              const newDate = e.target.value;
-                              const time = timePart;
-                              field.onChange(new Date(`${newDate}T${time}`));
-                            }}
-                          />
-                          <Input
-                            type="time"
-                            value={timePart}
-                            onChange={(e) => {
-                              const newTime = e.target.value;
-                              const date = datePart || new Date().toISOString().split('T')[0];
-                              field.onChange(new Date(`${date}T${newTime}`));
-                            }}
-                          />
-                        </div>
-                        <FormMessage />
-                      </FormItem>
-                    );
-                  }}
-                />
-
+                {/* Customer Selection */}
                 <div className="space-y-2">
                   <label className="text-sm font-medium leading-none">
                     Customers
@@ -574,46 +498,12 @@ export default function Component() {
                     </MultiSelectorContent>
                   </MultiSelector>
                 </div>
-                <FormField
-                  control={form.control}
-                  name="assetId"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Asset</FormLabel>
-                      <Select
-                        disabled={!dateRangeReady}
-                        onValueChange={field.onChange}
-                        value={field.value}
-                      >
-                        <FormControl>
-                          <SelectTrigger>
-                            <SelectValue
-                              placeholder={
-                                dateRangeReady
-                                  ? 'Select an available asset'
-                                  : 'Select dates first'
-                              }
-                            />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          {availableAssets.map((asset) => (
-                            <SelectItem key={asset.id} value={asset.id.toString()}>
-                              {asset.name}
-                              {asset.applicableRate?.pricePerNight !== undefined
-                                ? ` - $${asset.applicableRate.pricePerNight.toFixed(
-                                  2
-                                )} per night`
-                                : ''}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <Button type="submit" className="w-full" disabled={invalidStartOrEnd.length > 0}>
+
+                <Button
+                  type="submit"
+                  className="w-full"
+                  disabled={!selectedAssetId || !dateRange?.from || !dateRange?.to}
+                >
                   Create Booking
                 </Button>
 
@@ -638,7 +528,7 @@ export default function Component() {
           </Button>
         </div>
         <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-          <Select value={filterType} onValueChange={setFilterType}>
+          {/* <Select value={filterType} onValueChange={setFilterType}>
             <SelectTrigger className="w-[180px]">
               <SelectValue placeholder="Filter by type" />
             </SelectTrigger>
@@ -648,7 +538,7 @@ export default function Component() {
               <SelectItem value="Room">Room</SelectItem>
               <SelectItem value="Equipment">Equipment</SelectItem>
             </SelectContent>
-          </Select>
+          </Select> */}
           <Select value={filterStatus} onValueChange={setFilterStatus}>
             <SelectTrigger className="w-[180px]">
               <SelectValue placeholder="Filter by status" />
@@ -729,7 +619,7 @@ export default function Component() {
                     </TableCell>
                     <TableCell>{booking.asset.name}</TableCell>
                     <TableCell>{booking.asset.assetTypeId}</TableCell>
-                    <TableCell>{booking.customer.id}</TableCell>
+                    <TableCell>{booking?.customer?.id}</TableCell>
                     <TableCell>{new Date(booking.startDate).toISOString().split('T')[0]}</TableCell>
                     <TableCell>{new Date(booking.endDate).toISOString().split('T')[0]}</TableCell>
                     <TableCell>

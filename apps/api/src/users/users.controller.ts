@@ -92,8 +92,9 @@ export class UsersController {
             const tenantId = headers['x-tenant-id'];
             const page = query.page ? Number(query.page) : 1;
             const pageSize = query.pageSize ? Number(query.pageSize) : 10;
+            const search = query.search;
 
-            const customers = await this.UserService.getCustomers(tenantId, page, pageSize);
+            const customers = await this.UserService.getCustomers(tenantId, page, pageSize, search);
             return { status: 200, body: customers };
         });
     }
@@ -106,8 +107,9 @@ export class UsersController {
             const tenantId = headers['x-tenant-id'];
             const page = query.page ? Number(query.page) : 1;
             const pageSize = query.pageSize ? Number(query.pageSize) : 10;
+            const search = query.search;
 
-            const owners = await this.UserService.getOwners(tenantId, page, pageSize);
+            const owners = await this.UserService.getOwners(tenantId, page, pageSize, search);
             return { status: 200, body: owners };
         })
     }

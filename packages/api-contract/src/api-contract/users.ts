@@ -96,6 +96,7 @@ export const userContract = c.router({
         query: z.object({
             page: z.coerce.number().optional(),
             pageSize: z.coerce.number().optional(),
+            search: z.string().optional(),
         }),
         summary: "Get all customers"
     },
@@ -111,6 +112,7 @@ export const userContract = c.router({
         query: z.object({
             page: z.coerce.number().optional(),
             pageSize: z.coerce.number().optional(),
+            search: z.string().optional(),
         }),
         summary: "Get all owners"
     }

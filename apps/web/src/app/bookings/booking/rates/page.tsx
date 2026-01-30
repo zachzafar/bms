@@ -69,7 +69,15 @@ export default function RatesPage() {
   const { mutate: createRate } = authClient.rates.createRate.useMutation();
   const { mutate: updateRate } = authClient.rates.updateRate.useMutation();
   const { mutate: deleteRate } = authClient.rates.deleteRate.useMutation();
-  const { data: assetsResponse } = authClient.assets.getAssets.useQuery({ queryKey: ASSETS_QUERY_KEY });
+  const [assetSearch, setAssetSearch] = useState('');
+  const { data: assetsResponse } = authClient.assets.getAssets.useQuery({
+    queryKey: [ASSETS_QUERY_KEY, assetSearch],
+    queryData: {
+      query: {
+        search: assetSearch || undefined,
+      },
+    },
+  });
   const { data: assetTypesResponse } = authClient.settings.assetType.getAssetTypes.useQuery({
     queryKey: [ASSET_TYPE_QUERY_KEY]
   });
@@ -80,6 +88,7 @@ export default function RatesPage() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingRateId, setEditingRateId] = useState<number | null>(null);
   const [selectionMode, setSelectionMode] = useState<SelectionMode>("assets");
+  
 
   const form = useForm<RateFormValues>({
     defaultValues: defaultFormValues,
@@ -129,6 +138,7 @@ export default function RatesPage() {
       setEditingRateId(null);
       form.reset(defaultFormValues);
       setSelectionMode("assets");
+      setAssetSearch('');
       setIsDialogOpen(false);
     };
 
@@ -182,6 +192,7 @@ export default function RatesPage() {
     const hasAssetType = assetTypeIds && assetTypeIds.length > 0;
     const mode: SelectionMode = hasAssetType ? "assetType" : "assets";
     setSelectionMode(mode);
+    setAssetSearch('');
 
     form.reset({
       name: rate.name,
@@ -219,6 +230,7 @@ export default function RatesPage() {
     form.reset(defaultFormValues);
     setSelectionMode("assets");
     setEditingRateId(null);
+    setAssetSearch('');
     setIsDialogOpen(true);
   };
 
@@ -277,28 +289,35 @@ export default function RatesPage() {
                       <FormItem className="md:col-span-2">
                         <FormLabel>Assets</FormLabel>
                         <FormControl>
-                          <div className="flex flex-col gap-1 border rounded p-2 max-h-40 overflow-y-auto">
-                            {assets.length > 0 ? (
-                              assets.map((asset: any) => (
-                                <label key={asset.id} className="flex items-center gap-2 cursor-pointer">
-                                  <input
-                                    type="checkbox"
-                                    value={String(asset.id)}
-                                    checked={field.value?.includes(String(asset.id)) || false}
-                                    onChange={(e) => {
-                                      const isChecked = e.target.checked;
-                                      const updated = isChecked
-                                        ? [...(field.value || []), String(asset.id)]
-                                        : (field.value || []).filter((id) => id !== String(asset.id));
-                                      field.onChange(updated);
-                                    }}
-                                  />
-                                  {asset.name}
-                                </label>
-                              ))
-                            ) : (
-                              <span className="text-muted-foreground text-sm">No assets available</span>
-                            )}
+                          <div className="space-y-2">
+                            <Input
+                              placeholder="Search assets..."
+                              value={assetSearch}
+                              onChange={(e) => setAssetSearch(e.target.value)}
+                            />
+                            <div className="flex flex-col gap-1 border rounded p-2 max-h-40 overflow-y-auto">
+                              {assets.length > 0 ? (
+                                assets.map((asset: any) => (
+                                  <label key={asset.id} className="flex items-center gap-2 cursor-pointer">
+                                    <input
+                                      type="checkbox"
+                                      value={String(asset.id)}
+                                      checked={field.value?.includes(String(asset.id)) || false}
+                                      onChange={(e) => {
+                                        const isChecked = e.target.checked;
+                                        const updated = isChecked
+                                          ? [...(field.value || []), String(asset.id)]
+                                          : (field.value || []).filter((id) => id !== String(asset.id));
+                                        field.onChange(updated);
+                                      }}
+                                    />
+                                    {asset.name}
+                                  </label>
+                                ))
+                              ) : (
+                                <span className="text-muted-foreground text-sm">No assets found</span>
+                              )}
+                            </div>
                           </div>
                         </FormControl>
                         <FormMessage />

@@ -85,8 +85,14 @@ export function DateRangePicker({
     // If we have both from and to, check if range contains blocked dates
     if (range.from && range.to) {
       if (rangeContainsBlockedDate(range.from, range.to)) {
-        // Reset to just the new "from" date if the range would include blocked dates
-        onChange?.({ from: range.to, to: undefined })
+        // Keep the original from date and clear the to date so user can pick a valid end date
+        // If the user clicked on a date before the current from, use that as the new from
+        if (range.to < range.from) {
+          onChange?.({ from: range.to, to: undefined })
+        } else {
+          // Keep the from date, reject the to date
+          onChange?.({ from: range.from, to: undefined })
+        }
         return
       }
     }

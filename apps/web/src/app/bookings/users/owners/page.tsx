@@ -39,9 +39,10 @@ export default function Component() {
   const router = useRouter();
   const { page, pageSize, queryParams, goToPage, changePageSize } = usePagination(1, 10);
   const queryClient = authClient.useQueryClient();
+  const [searchTerm, setSearchTerm] = useState('');
   const { data: owners } = authClient.users.getOwners.useQuery({
-    queryKey: [...OWNERS_QUERY_KEY, page, pageSize],
-    queryData: { query: queryParams },
+    queryKey: [...OWNERS_QUERY_KEY, page, pageSize, searchTerm],
+    queryData: { query: { ...queryParams, search: searchTerm || undefined } },
   });
   const { mutate: deleteUser } = authClient.users.deleteUser.useMutation();
   const { mutate: createUserMutation, isPending } = authClient.users.createUser.useMutation();
@@ -58,7 +59,7 @@ export default function Component() {
   const [open, setOpen] = useState(false);
   const [openEdit, setOpenEdit] = useState(false);
   const [editingOwner, setEditingOwner] = useState<{ id: string; name: string; email: string; companyName?: string } | null>(null);
-  const [searchTerm, setSearchTerm] = useState('');
+  
 
   const createForm = useForm<CreateOwnerFormData>({
     resolver: zodResolver(CreateOwnerSchema),
@@ -303,32 +304,6 @@ export default function Component() {
                             </FormItem>
                           )}
                         />
-                        <FormField
-                          control={createForm.control}
-                          name="companyName"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>Company Name</FormLabel>
-                              <FormControl>
-                                <Input {...field} />
-                              </FormControl>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-                        {/* <FormField
-                          control={createForm.control}
-                          name="taxId"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>Tax ID</FormLabel>
-                              <FormControl>
-                                <Input {...field} />
-                              </FormControl>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        /> */}
                       </div>
 
 

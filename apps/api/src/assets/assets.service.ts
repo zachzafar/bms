@@ -17,12 +17,13 @@ export class AssetsService {
     private objectStorageService: ObjectStorageService
   ) { }
 
-  async getAssets(query: any, tenantId: string, page: number = 1, pageSize: number = 10) {
+  async getAssets(tenantId: string,query: {search?:string,assetTypeId?:number}, page: number = 1, pageSize: number = 10) {
     const offset = (page - 1) * pageSize;
 
     // Build where conditions
     const conditions: any[] = [eq(schema.Asset.tenantId, tenantId), isNull(schema.Asset.deletedAt)];
-    if (query?.userId) conditions.push(eq(schema.Asset.userId, query.userId));
+    if (query?.assetTypeId) conditions.push(eq(schema.Asset.assetTypeId, query.assetTypeId));
+    if (query?.search) conditions.push(sql`${schema.Asset.name} LIKE ${`%${query.search}%`}`);
 
     // Get total count
     const totalCountResult = await this.db
@@ -38,7 +39,7 @@ export class AssetsService {
         and(
           eq(asset.tenantId, tenantId),
           isNull(asset.deletedAt),
-          query?.userId ? eq(asset.userId, query.userId) : undefined,
+          query?.assetTypeId ? eq(asset.assetTypeId, query.assetTypeId) : undefined,
           query?.search ? like(asset.name, `%${query.search}%`) : undefined
         ),
       limit: pageSize,

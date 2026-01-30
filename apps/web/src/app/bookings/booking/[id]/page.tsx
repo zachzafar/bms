@@ -35,6 +35,7 @@ type BookingFormData = {
 };
 
 const UpdateBookingSchema = z.object({
+  assetId: z.string().min(1, 'Asset is required'),
   startDate: z.string().min(1, 'Start date is required'),
   endDate: z.string().min(1, 'End date is required'),
   status: z.enum(['Pending', 'Confirmed', 'Cancelled']),
@@ -59,6 +60,28 @@ export default function BookingDetailsPage() {
     }
   });
 
+  // Asset search and filter state
+  const [assetSearch, setAssetSearch] = useState('');
+  const [assetTypeFilter, setAssetTypeFilter] = useState<number | undefined>(undefined);
+
+  // Fetch asset types for filtering
+  const { data: assetTypesResponse } = authClient.settings.assetType.getAssetTypes.useQuery({
+    queryKey: ['asset-types'],
+  });
+  const assetTypes = assetTypesResponse?.body?.data ?? [];
+
+  // Fetch all assets for the dropdown with search and filter
+  const { data: assetsData } = authClient.assets.getAssets.useQuery({
+    queryKey: ['assets', assetSearch, assetTypeFilter],
+    queryData: {
+      query: {
+        search: assetSearch || undefined,
+        assetTypeId: assetTypeFilter,
+      },
+    },
+  });
+  const assetList = assetsData?.body?.data ?? [];
+
   // Fetch forms for the asset
   const { data: formsData } = authClient.settings.form.getFormsForAsset.useQuery({
     queryKey: ['forms-for-asset', bookingData?.body?.asset?.id],
@@ -77,12 +100,14 @@ export default function BookingDetailsPage() {
   const form = useForm<UpdateBookingForm>({
     resolver: zodResolver(UpdateBookingSchema),
     defaultValues: {
+      assetId: booking?.assetId ?? '',
       startDate: booking?.startDate ? new Date(booking.startDate).toISOString().split('T')[0] : '',
       endDate: booking?.endDate ? new Date(booking.endDate).toISOString().split('T')[0] : '',
       status: booking?.status ?? 'Pending',
       totalPrice: booking?.totalPrice ?? '',
     },
     values: {
+      assetId: booking?.assetId ?? '',
       startDate: booking?.startDate ? new Date(booking.startDate).toISOString().split('T')[0] : '',
       endDate: booking?.endDate ? new Date(booking.endDate).toISOString().split('T')[0] : '',
       status: booking?.status ?? 'Pending',
@@ -102,7 +127,7 @@ export default function BookingDetailsPage() {
           endDate: new Date(values.endDate),
           status: values.status,
           totalPrice: values.totalPrice || booking.totalPrice,
-          assetId: booking.assetId,
+          assetId: values.assetId,
         },
       },
       {
@@ -318,6 +343,67 @@ export default function BookingDetailsPage() {
           </DialogHeader>
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmitUpdate)} className="space-y-4">
+              {/* Asset Selection */}
+              <div className="space-y-3">
+                <label className="text-sm font-medium leading-none">Asset</label>
+
+                {/* Search and Filter Row */}
+                <div className="flex gap-2">
+                  <Input
+                    placeholder="Search assets..."
+                    value={assetSearch}
+                    onChange={(e) => setAssetSearch(e.target.value)}
+                    className="flex-1"
+                  />
+                  <Select
+                    value={assetTypeFilter?.toString() ?? 'all'}
+                    onValueChange={(value) => setAssetTypeFilter(value === 'all' ? undefined : Number(value))}
+                  >
+                    <SelectTrigger className="w-[180px]">
+                      <SelectValue placeholder="All Types" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Types</SelectItem>
+                      {assetTypes.map((type) => (
+                        <SelectItem key={type.id} value={type.id.toString()}>
+                          {type.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {/* Asset Selection */}
+                <FormField
+                  control={form.control}
+                  name="assetId"
+                  render={({ field }) => (
+                    <FormItem>
+                      <Select onValueChange={field.onChange} value={field.value}>
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select an asset" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {assetList.length > 0 ? (
+                            assetList.map((asset) => (
+                              <SelectItem key={asset.id} value={asset.id.toString()}>
+                                {asset.name}
+                              </SelectItem>
+                            ))
+                          ) : (
+                            <div className="p-2 text-sm text-muted-foreground text-center">
+                              No assets found
+                            </div>
+                          )}
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <FormField
                   control={form.control}
