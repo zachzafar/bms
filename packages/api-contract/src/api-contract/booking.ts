@@ -2,7 +2,7 @@ import { initContract } from "@ts-rest/core";
 
 import { z } from "zod";
 
-import { InsertBlockedDateSchema, InsertBookingSchema, InsertCustomerSchema, SelectAssetSchema, SelectBookingSchema, SelectCustomerSchema, SelectUserSchema, UpdateBlockedDateSchema, UpdateBookingSchema } from "../database-schema";
+import { InsertBlockedDateSchema, InsertBookingSchema, InsertCustomerSchema, SelectAssetSchema, SelectAssetTypeSchema, SelectBookingSchema, SelectCustomerSchema, SelectUserSchema, UpdateBlockedDateSchema, UpdateBookingSchema } from "../database-schema";
 import { pagination } from './utils';
 
 
@@ -19,6 +19,7 @@ export const BookingFormResponseSchema = z.object({
 export const ExtendedSelectBookingSchema = SelectBookingSchema.omit({ startDate: true, endDate: true }).extend({
     customer: SelectCustomerSchema.nullable().optional(),
     asset: SelectAssetSchema,
+    assetType: SelectAssetTypeSchema,
     user: SelectUserSchema.omit({ roles: true }).nullable().optional(),
     startDate: z.coerce.date(),
     endDate: z.coerce.date(),

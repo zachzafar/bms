@@ -505,6 +505,7 @@ export class BookingService {
       .from(schema.Booking)
       .innerJoin(schema.User, eq(schema.Booking.userId, schema.User.id))
       .innerJoin(schema.Asset, eq(schema.Booking.assetId, schema.Asset.id))
+      .innerJoin(schema.AssetType, eq(schema.AssetType.id,schema.Asset.assetTypeId))
       .innerJoin(schema.Customer,
         and(
           eq(schema.Customer.userId, schema.User.id),
@@ -548,6 +549,7 @@ export class BookingService {
       user: booking.users,
       customer: booking.customer_details,
       asset: booking.assets,
+      assetType: booking.asset_type,
       formResponses: formFieldValues,
     };
   }
@@ -634,6 +636,7 @@ export class BookingService {
       .select()
       .from(schema.Booking)
       .innerJoin(schema.Asset, eq(schema.Booking.assetId, schema.Asset.id))
+      .innerJoin(schema.AssetType, eq(schema.AssetType.id, schema.Asset.assetTypeId))
       .innerJoin(schema.User, eq(schema.Booking.userId, schema.User.id))
       .innerJoin(schema.Customer,
         and(
@@ -665,6 +668,7 @@ export class BookingService {
       asset: row.assets,
       user: row.users,
       customer: row.customer_details,
+      assetType: row.asset_type
     }));
 
     return {
@@ -1754,6 +1758,7 @@ export class BookingService {
       .select()
       .from(schema.Booking)
       .innerJoin(schema.Asset, eq(schema.Booking.assetId, schema.Asset.id))
+      .innerJoin(schema.AssetType,eq(schema.Asset.assetTypeId,schema.AssetType.id))
       .innerJoin(schema.User, eq(schema.Booking.userId, schema.User.id))
       .innerJoin(schema.Customer,
         and(
@@ -1781,6 +1786,7 @@ export class BookingService {
       asset: row.assets,
       user: row.users,
       customer: row.customer_details,
+      assetType: row.asset_type
     }));
 
     return {

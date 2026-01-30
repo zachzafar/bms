@@ -618,8 +618,8 @@ export default function Component() {
                       <CopyableId id={booking.id} />
                     </TableCell>
                     <TableCell>{booking.asset.name}</TableCell>
-                    <TableCell>{booking.asset.assetTypeId}</TableCell>
-                    <TableCell>{booking?.customer?.id}</TableCell>
+                    <TableCell>{booking.assetType.name}</TableCell>
+                    <TableCell>{booking?.user?.name}</TableCell>
                     <TableCell>{new Date(booking.startDate).toISOString().split('T')[0]}</TableCell>
                     <TableCell>{new Date(booking.endDate).toISOString().split('T')[0]}</TableCell>
                     <TableCell>
