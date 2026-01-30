@@ -26,7 +26,6 @@ import { BOOKINGS_QUERY_KEY } from '@/lib/api/queryKeys';
 import CopyableId from '@/components/custom/CopyableId';
 
 export default function Component() {
-  const [selectedAssetType, setSelectedAssetType] = useState('all');
 
   // Fetch bookings data
   const { data: bookingsData } = authClient.booking.getBookings.useQuery({
@@ -54,7 +53,7 @@ export default function Component() {
   const assetTypes = assetTypeData?.body.data ?? [];
 
   // Calculate totals
-  const totalBookings = bookings.length;
+  const totalBookings = bookingsData?.body.pagination.totalCount;
   const totalCustomers = customers.length;
 
   // Group bookings by asset type
@@ -66,11 +65,6 @@ export default function Component() {
 
   // Get asset type names for dropdown
 
-
-  // Get bookings count for selected asset type
-  const selectedTypeBookings = selectedAssetType === 'all'
-    ? totalBookings
-    : bookingsByAssetType[selectedAssetType] || 0;
 
   return (
     <>
@@ -89,8 +83,8 @@ export default function Component() {
           </CardHeader>
           <CardContent>
             <div className='flex flex-col gap-2'>
-              <div className='text-2xl font-bold'>{selectedTypeBookings}</div>
-              <Select value={selectedAssetType} onValueChange={setSelectedAssetType}>
+              <div className='text-2xl font-bold'>{totalBookings}</div>
+              {/* <Select value={selectedAssetType} onValueChange={setSelectedAssetType}>
                 <SelectTrigger className='w-full'>
                   <SelectValue placeholder='Select asset type' />
                 </SelectTrigger>
@@ -100,7 +94,10 @@ export default function Component() {
                     <SelectItem key={assetType.id} value={assetType.id.toString()}>{assetType.name}</SelectItem>
                   ))}
                 </SelectContent>
-              </Select>
+              </Select> */}
+              <p className='text-xs text-muted-foreground'>
+              Total Bookings
+            </p>
             </div>
           </CardContent>
         </Card>

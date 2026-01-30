@@ -83,14 +83,16 @@ export default function TenantDetailPage() {
             </div>
           </div>
           <div className="flex space-x-2">
-            <Button variant="outline" className="text-card-foreground">
-              <Settings className="h-4 w-4 mr-2" />
-              Settings
-            </Button>
-            <Button variant="destructive">
+            <Link href={`/dashboard/tenants/${tenantId}/settings`}>
+              <Button variant="outline" className="text-card-foreground">
+                <Settings className="h-4 w-4 mr-2" />
+                Settings
+              </Button>
+            </Link>
+            {/* <Button variant="destructive">
               <Trash2 className="h-4 w-4 mr-2" />
               Delete Tenant
-            </Button>
+            </Button> */}
           </div>
         </div>
 

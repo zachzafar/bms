@@ -4,6 +4,7 @@ import { Tenant } from "../tenant";
 import { Customer } from "../users";
 import { createInsertSchema, createSelectSchema } from "drizzle-zod";
 import z from "zod";
+import { Booking } from "../booking";
 
 
 
@@ -23,7 +24,7 @@ export const Invoice = mysqlTable("invoice", {
   updatedAt: timestamp('updated_at', { mode: 'date', }).$onUpdate(() => new Date()),
   deletedAt: timestamp('deleted_at'),
   customerId:bigint("customer_id", { mode: 'number', unsigned: true }).references(() => Customer.id, { onDelete: 'set null' }),
-  bookingId: varchar("booking_id", { length: 255 }).notNull(),
+  bookingId: varchar("booking_id", { length: 255 }).references(()=> Booking.id,{onDelete :'cascade'}).notNull(),
 }, (table) => ({
   invoiceNumberUniqueIdx: uniqueIndex("invoice_number_unique").on(table.invoiceNumber),
   customerIdx: index("customer_idx").on(table.customerId),

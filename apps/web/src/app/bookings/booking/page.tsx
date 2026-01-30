@@ -285,8 +285,10 @@ export default function Component() {
             console.warn('No bookingId or tenantId available to generate invoice');
           }
         },
-        onError: (error) => {
-          toast.error('Failed to create booking');
+        onError: (error: any) => {
+          // Extract error message from API response
+          const errorMessage = error?.body?.message || error?.message || 'Failed to create booking';
+          toast.error(errorMessage);
           console.error(error);
         },
       }
@@ -306,13 +308,15 @@ export default function Component() {
     }
   };
 
-  const { mutate: cancelBooking } = authClient.booking.cancelBooking.useMutation({
+  // Note: cancelBooking endpoint actually DELETES the booking (deletes cancelled bookings)
+  const { mutate: deleteBookingMutation } = authClient.booking.cancelBooking.useMutation({
     onSuccess: () => {
-      toast.success('Booking canceled.');
+      toast.success('Booking deleted.');
       refetch();
     },
-    onError: () => {
-      toast.error('Failed to cancel booking.');
+    onError: (error: any) => {
+      const errorMessage = error?.body?.message || 'Failed to delete booking.';
+      toast.error(errorMessage);
     },
   });
 
@@ -326,10 +330,14 @@ export default function Component() {
     },
   });
 
-  const handleCancel = (booking: { id: string }) => {
-    const confirmed = confirm(`Cancel booking?`);
+  const handleDelete = (booking: { id: string; status?: string | null }) => {
+    if (booking.status !== 'Cancelled') {
+      toast.error('Booking must be cancelled before it can be deleted. Please cancel the booking first.');
+      return;
+    }
+    const confirmed = confirm(`Delete this cancelled booking? This action cannot be undone.`);
     if (confirmed) {
-      cancelBooking({ params: { id: booking.id }, body: {} });
+      deleteBookingMutation({ params: { id: booking.id }, body: {} });
     }
   };
 
@@ -679,9 +687,13 @@ export default function Component() {
                         <Button
                           variant="ghost"
                           size="icon"
-                          onClick={() => handleCancel(booking)}
-                          className="text-destructive hover:text-destructive"
-                          title="Delete booking"
+                          onClick={() => handleDelete(booking)}
+                          className={booking.status === 'Cancelled'
+                            ? "text-destructive hover:text-destructive"
+                            : "text-muted-foreground hover:text-muted-foreground cursor-not-allowed opacity-50"}
+                          title={booking.status === 'Cancelled'
+                            ? "Delete booking"
+                            : "Cancel booking first to delete"}
                         >
                           <Trash2 className="h-4 w-4" />
                         </Button>

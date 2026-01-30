@@ -163,57 +163,6 @@ export default function TenantsPage() {
           </div>
         </CardContent>
       </Card>
-
-      {/* Quick Actions */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        <Card className="bg-card border-border hover:border-primary/50 transition-colors">
-          <CardHeader>
-            <CardTitle className="text-foreground">Create New Tenant</CardTitle>
-            <CardDescription className="text-muted-foreground">
-              Set up a new tenant organization with admin user
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <CreateTenantModal />
-          </CardContent>
-        </Card>
-
-        <Card className="bg-card border-border hover:border-primary/50 transition-colors">
-          <CardHeader>
-            <CardTitle className="text-foreground">Bulk Operations</CardTitle>
-            <CardDescription className="text-muted-foreground">
-              Perform operations on multiple tenants
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <Button 
-              variant="outline"
-              className="w-full border-border text-card-foreground hover:bg-muted/50 hover:text-foreground"
-            >
-              <MoreHorizontal className="mr-2 h-4 w-4" />
-              Bulk Actions
-            </Button>
-          </CardContent>
-        </Card>
-
-        <Card className="bg-card border-border hover:border-primary/50 transition-colors">
-          <CardHeader>
-            <CardTitle className="text-foreground">Export Data</CardTitle>
-            <CardDescription className="text-muted-foreground">
-              Export tenant information and reports
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <Button 
-              variant="outline"
-              className="w-full border-border text-card-foreground hover:bg-muted/50 hover:text-foreground"
-            >
-              <Building className="mr-2 h-4 w-4" />
-              Export Tenants
-            </Button>
-          </CardContent>
-        </Card>
-      </div>
     </div>
   );
 }

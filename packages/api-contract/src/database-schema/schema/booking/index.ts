@@ -160,7 +160,7 @@ export const BlockedDate = mysqlTable("blocked_date", {
   endDate: date("end_date").notNull(),
   title: varchar("title", { length: 255 }).notNull(),
   reason: varchar("reason", { length: 255 }),
-  bookingId: varchar("booking_id", { length: 36 }).references(() => Booking.id), // If this block is for a booking
+  bookingId: varchar("booking_id", { length: 36 }).references(() => Booking.id, { onDelete: 'cascade' }), // If this block is for a booking - cascade delete when booking is deleted
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").$onUpdate(() => new Date()),
 }, (table) => ({

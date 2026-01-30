@@ -125,7 +125,9 @@ export default function TagBookingPage() {
           }
         },
         onError: (err: any) => {
-          toast.error(err.message || 'Failed to create booking. Please try again.');
+          // Extract error message from API response
+          const errorMessage = err?.body?.message || err?.message || 'Failed to create booking. Please try again.';
+          toast.error(errorMessage);
           console.error(err);
         },
       }
