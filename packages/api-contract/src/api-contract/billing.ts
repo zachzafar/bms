@@ -8,7 +8,7 @@ const c = initContract();
 // Extended schema for invoice with items
 const ExtendedInvoiceSchema = SelectInvoiceSchema.extend({
   id: z.number(),
-  customerId: z.number(),
+  customerId: z.number().nullable(),
   items: z.array(z.object({
     id: z.number(),
     description: z.string(),
@@ -22,7 +22,7 @@ const ExtendedInvoiceSchema = SelectInvoiceSchema.extend({
 // Extended schema for payment with invoices
 const ExtendedPaymentSchema = SelectPaymentSchema.extend({
   id: z.number(),
-  customerId: z.number(),
+  customerId: z.number().nullable(),
   invoices: z.array(z.object({
     invoiceId: z.number(),
     amountApplied: z.string(),
@@ -33,7 +33,7 @@ const ExtendedPaymentSchema = SelectPaymentSchema.extend({
 // Extended schema for payment list (without invoices)
 const ExtendedPaymentListSchema = SelectPaymentSchema.extend({
   id: z.number(),
-  customerId: z.number(),
+  customerId: z.number().nullable(),
 });
 
 export const billingContract = c.router({
@@ -232,6 +232,37 @@ export const billingContract = c.router({
         invoiceId: z.number(),
       }),
       400: z.object({
+        message: z.string(),
+      }),
+    },
+  },
+
+  // PDF Downloads
+  downloadInvoicePdf: {
+    method: "GET",
+    path: "/invoice/:id/pdf",
+    summary: "Download invoice as PDF",
+    pathParams: z.object({
+      id: z.coerce.number(),
+    }),
+    responses: {
+      200: z.any(), // PDF binary response
+      404: z.object({
+        message: z.string(),
+      }),
+    },
+  },
+
+  downloadPaymentReceiptPdf: {
+    method: "GET",
+    path: "/payment/:id/pdf",
+    summary: "Download payment receipt as PDF",
+    pathParams: z.object({
+      id: z.coerce.number(),
+    }),
+    responses: {
+      200: z.any(), // PDF binary response
+      404: z.object({
         message: z.string(),
       }),
     },

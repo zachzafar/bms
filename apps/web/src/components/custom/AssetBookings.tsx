@@ -19,11 +19,11 @@ import {
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { authClient } from '@/lib/api/publicClient';
-import { ExtendedSelectBookingSchema, InsertBookingSchema, SelectAsset} from '@repo/api-contract';
+import { InsertBookingSchema, SelectAsset} from '@repo/api-contract';
 import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import * as z from 'zod';
+import { z } from 'zod';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { MultiSelector, MultiSelectorTrigger, MultiSelectorInput, MultiSelectorContent, MultiSelectorList, MultiSelectorItem } from '../extension/multi-select';
 
@@ -39,21 +39,15 @@ export default function AssetBookings({ asset }: { asset: SelectAsset }) {
   const [customers, setCustomers] = useState<string[]>([]);
   const { data } = authClient.booking.getBookings.useQuery(
     {
+      queryData: {query: { assetId: asset.id}},
       queryKey: ['bookings', asset.id],
-      select: (res) => ({
-        ...res,
-        body: {
-          ...res.body,
-          data: z.array(ExtendedSelectBookingSchema).parse(res.body.data),
-        },
-      }),
     },
   );
   const { mutate: createBooking } = authClient.booking.createBooking.useMutation();
   const { data: customerResponse } = authClient.users.getCustomers.useQuery({ queryKey: ['customers'] })
   const customerList = customerResponse?.body.data ?? [];
   const bookings = data?.body.data ?? [];
-
+  console.log(bookings)
   const [isOpen, setIsOpen] = useState(false);
 
   // Initialize react-hook-form
@@ -87,9 +81,9 @@ export default function AssetBookings({ asset }: { asset: SelectAsset }) {
       <CardHeader className="flex flex-row items-center justify-between">
         <CardTitle>Bookings</CardTitle>
         <Dialog open={isOpen} onOpenChange={setIsOpen}>
-          <DialogTrigger asChild>
+          {/* <DialogTrigger asChild>
             <Button>Add Booking</Button>
-          </DialogTrigger>
+          </DialogTrigger> */}
           <DialogContent>
             <DialogHeader>
               <DialogTitle>Create New Booking</DialogTitle>
@@ -182,10 +176,10 @@ export default function AssetBookings({ asset }: { asset: SelectAsset }) {
           <TableBody>
             {bookings.map((booking) => (
               <TableRow key={booking.id}>
-                <TableCell>{booking.startDate.toDateString()}</TableCell>
-                <TableCell>{booking.endDate.toDateString()}</TableCell>
+                <TableCell>{new Date(booking.startDate).toDateString()}</TableCell>
+                <TableCell>{new Date(booking.endDate).toDateString()}</TableCell>
                 <TableCell>
-                  <div>{booking.user.name}</div>
+                  <div>{booking?.user?.name}</div>
                 </TableCell>
                 <TableCell>
                   <span className={`capitalize ${getStatusColor(booking.status ?? "")}`}>

@@ -79,7 +79,6 @@ export const Customer = mysqlTable("customer_details", {
     address: varchar("address", { length: 255 }),
     contactId: bigint("contact_id", { mode: 'number', unsigned: true })
       .references(() => Contact.id),
-    dateOfBirth: datetime("date_of_birth"),
     createdAt: timestamp('createdAt').notNull().defaultNow(),
     updatedAt: timestamp('updated_at', { mode: 'date', }).$onUpdate(() => new Date()),
     deletedAt: timestamp('deleted_at'),
@@ -115,7 +114,6 @@ export const Owner = mysqlTable("owner_details", {
     id: bigint("id", { mode: "number", unsigned: true }).autoincrement().primaryKey(),
     phone: varchar("phone", { length: 255 }),
     address: varchar("address", { length: 255 }),
-    companyName: varchar("company_name", { length: 255 }),
     contactId: bigint("contact_id", { mode: 'number', unsigned: true })
       .references(() => Contact.id),
     taxId: varchar("tax_id", { length: 255 }),

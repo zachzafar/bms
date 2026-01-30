@@ -18,27 +18,27 @@ import { authClient } from '@/lib/api/publicClient';
 import { toast } from 'sonner';
 import { SelectAsset } from '@repo/api-contract';
 
-function BasicInfo({ asset, refetch }: { asset: SelectAsset; refetch: () => void }) {
+type AssetWithForms = SelectAsset & {
+  bookingForms: { id: number; name: string }[];
+};
+
+function BasicInfo({ asset, refetch }: { asset: AssetWithForms; refetch: () => void }) {
   const [name, setName] = useState(asset.name ?? '');
-  const [assetTypeId, setAssetTypeId] = useState<number | undefined>(asset.assetTypeId ?? undefined);
-  const [tagId, setTagId] = useState<number | undefined>(undefined);
-  const [selectedForms, setSelectedForms] = useState<string[]>([]);
+  const [assetTypeId, setAssetTypeId] = useState<number>(asset.assetTypeId);
+  const [selectedForms, setSelectedForms] = useState<string[]>(
+    asset.bookingForms?.map((f) => f.name) ?? []
+  );
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Initial values for comparison
   const [initialValues, setInitialValues] = useState({
     name: asset.name ?? '',
-    assetTypeId: asset.assetTypeId ?? undefined,
-    tagId: undefined as number | undefined,
-    forms: [] as string[]
+    assetTypeId: asset.assetTypeId,
+    forms: asset.bookingForms?.map((f) => f.name) ?? []
   });
 
   const { data: assetTypes } = authClient.settings.assetType.getAssetTypes.useQuery({
     queryKey: ['assetType'],
-  });
-
-  const { data: assetTags } = authClient.settings.tags.getTags.useQuery({
-    queryKey: ['tags']
   });
 
   const { data: bookingForms } = authClient.settings.form.getForms.useQuery({
@@ -54,7 +54,6 @@ function BasicInfo({ asset, refetch }: { asset: SelectAsset; refetch: () => void
       setInitialValues({
         name,
         assetTypeId,
-        tagId,
         forms: formNames
       });
       setIsSubmitting(false);
@@ -69,11 +68,13 @@ function BasicInfo({ asset, refetch }: { asset: SelectAsset; refetch: () => void
     setName(asset.name ?? '');
     setAssetTypeId(asset.assetTypeId ?? undefined);
 
+    const formNames = asset.bookingForms?.map((f) => f.name) ?? [];
+    setSelectedForms(formNames);
+
     setInitialValues({
       name: asset.name ?? '',
       assetTypeId: asset.assetTypeId ?? undefined,
-      tagId: undefined,
-      forms: []
+      forms: formNames
     });
   }, [asset]);
 
@@ -81,7 +82,6 @@ function BasicInfo({ asset, refetch }: { asset: SelectAsset; refetch: () => void
     return (
       name !== initialValues.name ||
       assetTypeId !== initialValues.assetTypeId ||
-      tagId !== initialValues.tagId ||
       JSON.stringify(selectedForms) !== JSON.stringify(initialValues.forms)
     );
   };
@@ -102,7 +102,6 @@ function BasicInfo({ asset, refetch }: { asset: SelectAsset; refetch: () => void
         body: {
           name,
           assetTypeId: assetTypeId ? Number(assetTypeId) : undefined,
-          tagIds: tagId ? [tagId] : undefined,
           formIds: formIds.length > 0 ? formIds : undefined
         },
       });
@@ -146,30 +145,6 @@ function BasicInfo({ asset, refetch }: { asset: SelectAsset; refetch: () => void
                 ))
               ) : (
                 <SelectItem value="no-types">No Asset Types Found</SelectItem>
-              )}
-            </SelectContent>
-          </Select>
-        </div>
-
-        <div className="space-y-2">
-          <Label htmlFor="tag">Tag</Label>
-          <Select
-            value={tagId?.toString()}
-            onValueChange={(value) => setTagId(Number(value))}
-            disabled={isSubmitting}
-          >
-            <SelectTrigger id="tag">
-              <SelectValue placeholder="Select tag" />
-            </SelectTrigger>
-            <SelectContent>
-              {assetTags?.status === 200 ? (
-                assetTags.body.data.map((tag) => (
-                  <SelectItem key={tag.id} value={tag.id.toString()}>
-                    {tag.name}
-                  </SelectItem>
-                ))
-              ) : (
-                <SelectItem value="no-tags">No Tags Found</SelectItem>
               )}
             </SelectContent>
           </Select>

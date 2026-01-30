@@ -1,7 +1,7 @@
 import { Injectable, Logger, NotFoundException, ConflictException, Inject } from '@nestjs/common';
 import { MySql2Database } from 'drizzle-orm/mysql2';
 import { DrizzleAsyncProvider } from 'src/drizzle/drizzle.provider';
-import { eq, and, count, countDistinct, desc, isNull, sql } from 'drizzle-orm';
+import { eq, and, count, countDistinct, desc, isNull, sql, like, notInArray } from 'drizzle-orm';
 import { hash } from 'argon2';
 import { randomBytes } from 'crypto';
 import { UsersService } from 'src/users/users.service';
@@ -781,5 +781,84 @@ export class SystemAdminService {
       throw error;
     }
   }
-  
+
+  async getTenantAssets(tenantId: string, page: number = 1, pageSize: number = 10) {
+    try {
+      const offset = (page - 1) * pageSize;
+
+      // Get total count
+      const totalCountResult = await this.db
+        .select({ count: count() })
+        .from(schema.Asset)
+        .where(and(eq(schema.Asset.tenantId, tenantId), isNull(schema.Asset.deletedAt)));
+      const totalCount = totalCountResult[0]?.count || 0;
+
+      // Get assets
+      const assets = await this.db.query.Asset.findMany({
+        where: (asset, { eq, and, isNull }) => and(
+          eq(asset.tenantId, tenantId),
+          isNull(asset.deletedAt)
+        ),
+        limit: pageSize,
+        offset: offset,
+      });
+
+      const paginationData = {
+        page,
+        pageSize,
+        totalCount,
+        totalPages: Math.ceil(totalCount / pageSize),
+        hasNextPage: page * pageSize < totalCount,
+        hasPreviousPage: page > 1,
+      };
+
+      return {
+        data: assets,
+        pagination: paginationData,
+      };
+    } catch (error: any) {
+      this.logger.error(`Failed to get tenant assets: ${error.message}`);
+      throw error;
+    }
+  }
+
+  // async searchUsers(email?: string, excludeTenantId?: string) {
+  //   try {
+  //     // Get users not already assigned to the specified tenant
+  //     let usersNotInTenant: string[] = [];
+
+  //     if (excludeTenantId) {
+  //       const tenantUsers = await this.db.query.TenantHasUsers.findMany({
+  //         where: (thu, { eq }) => eq(thu.tenantId, excludeTenantId),
+  //       });
+  //       usersNotInTenant = tenantUsers.map(tu => tu.userId);
+  //     }
+
+  //     const users = await this.db.query.User.findMany({
+  //       where: (user, { and, like, notInArray }) => {
+  //         const conditions = [];
+
+  //         if (email) {
+  //           conditions.push(like(user.email, `%${email}%`));
+  //         }
+
+  //         if (usersNotInTenant.length > 0) {
+  //           conditions.push(notInArray(user.id, usersNotInTenant));
+  //         }
+
+  //         return conditions.length > 0 ? and(...conditions) : undefined;
+  //       },
+  //       columns: {
+  //         password: false,
+  //       },
+  //       limit: 20,
+  //     });
+
+  //     return { data: users };
+  //   } catch (error: any) {
+  //     this.logger.error(`Failed to search users: ${error.message}`);
+  //     throw error;
+  //   }
+  // }
+
 }

@@ -6,11 +6,11 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from '@/components/ui/table';
-import { Pencil, Trash2 } from 'lucide-react';
+import { Pencil, Trash2, Upload, ImageIcon } from 'lucide-react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Form, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
-import { authClient } from '@/lib/api/publicClient';
+import { authClient, axiosClient } from '@/lib/api/publicClient';
 import { ASSET_TYPE_QUERY_KEY, PROPERTIES_QUERY_KEY } from '@/lib/api/queryKeys';
 import {
   MultiSelector,
@@ -22,11 +22,13 @@ import {
 } from '@/components/extension/multi-select';
 import { z } from 'zod';
 import { StorageService } from '@/lib/api/storage';
+import Image from 'next/image';
 
 const AssetTypeWithPropertiesSchema = z.object({
   name: z.string(),
   properties: z.array(z.number()),
   forms: z.array(z.number()),
+  tags: z.array(z.number())
 })
 
 type AssetTypeWithProperties = z.infer<typeof AssetTypeWithPropertiesSchema>;
@@ -36,7 +38,13 @@ export default function AssetTypes() {
   const [editingAssetTypeId, setEditingAssetType] = useState<number>();
   const [selectedProperties, setSelectedProperties] = useState<string[]>([]);
   const [selectedForms, setSelectedForms] = useState<string[]>([]);
+  const [selectedTags, setSelectedTags] = useState<string[]>([]);
+  const [isUploading, setIsUploading] = useState(false);
   const queryClient = authClient.useQueryClient();
+
+  const { data: tags, isLoading } = authClient.settings.tags.getTags.useQuery({
+      queryKey: ['tags']
+    });
 
   const { data: assetTypes, isLoading: isLoadingAssetTypes } = authClient.settings.assetType.getAssetTypes.useQuery({
     queryKey: [ASSET_TYPE_QUERY_KEY]
@@ -65,6 +73,7 @@ export default function AssetTypes() {
       reset();
       setSelectedProperties([]);
       setSelectedForms([]);
+      setSelectedTags([]);
     },
     onError: (error) => {
       toast.error(`Error occurred: ${error instanceof Error ? error.message : 'Unknown error'}`);
@@ -77,7 +86,9 @@ export default function AssetTypes() {
       setEditingAssetType(undefined);
       queryClient.invalidateQueries({ queryKey: [ASSET_TYPE_QUERY_KEY] });
       reset();
+      setSelectedProperties([]);
       setSelectedForms([]);
+      setSelectedTags([]);
     },
     onError: (error) => {
       toast.error(`Error occurred: ${error instanceof Error ? error.message : 'Unknown error'}`);
@@ -99,7 +110,8 @@ export default function AssetTypes() {
     defaultValues: {
       name: '',
       properties: [],
-      forms: []
+      forms: [],
+      tags: [],
     }
   });
 
@@ -110,7 +122,8 @@ export default function AssetTypes() {
       reset({
         name: editingAssetType.body.assetType.name,
         properties: editingAssetType.body.properties.map(item => item.id),
-        forms: editingAssetType.body.forms?.map(item => item.id) || []
+        forms: editingAssetType.body.forms?.map(item => item.id) || [],
+        tags: editingAssetType.body.tags?.map(item => item.id) || []
       });
 
       // Set selected properties for MultiSelect
@@ -130,8 +143,17 @@ export default function AssetTypes() {
       }).filter(Boolean);
 
       setSelectedForms(selectedFormNames);
+
+      // Set selected tags for MultiSelect
+      const selectedTagNames = (editingAssetType.body.tags || []).map(item => {
+        const tag = tags?.status === 200 &&
+          tags.body.data.find(t => t.id === item.id);
+        return tag ? tag.name : '';
+      }).filter(Boolean);
+
+      setSelectedTags(selectedTagNames);
     }
-  }, [editingAssetType, properties, bookingForms, reset]);
+  }, [editingAssetType, properties, bookingForms, tags, reset]);
 
   const processForm = (data: AssetTypeWithProperties) => {
     // Convert selected property names to IDs
@@ -152,23 +174,32 @@ export default function AssetTypes() {
 
     const nonNullFormIds = formIds.filter(formId => formId !== null);
 
-    const formData = {
-      ...data,
-      properties: nonNullPropertyIds,
-      forms: nonNullFormIds
-    };
+    // Convert selected tag names to IDs
+    const tagIds = selectedTags.map(tagName => {
+      const tag = tags?.status === 200 &&
+        tags.body.data.find(t => t.name === tagName);
+      return tag ? tag.id : null;
+    })
+
+    const nonNullTagIds = tagIds.filter(tagId => tagId !== null);
 
     if (editingAssetType?.status === 200) {
       updateAssetTypeMutation({
         params: { id: editingAssetType.body.assetType.id },
-        body: { ...formData, assetType: { name: formData.name } }
+        body: {
+          assetType: { name: data.name },
+          properties: nonNullPropertyIds as number[],
+          forms: nonNullFormIds as number[],
+          tagIds: nonNullTagIds as number[]
+        }
       });
     } else {
       addAssetTypeMutation({
         body: {
-          assetType: { name: formData.name, tenantId: tenant?.id as string },
-          properties: formData.properties as number[],
-          forms: formData.forms as number[]
+          assetType: { name: data.name, tenantId: tenant?.id as string },
+          properties: nonNullPropertyIds as number[],
+          forms: nonNullFormIds as number[],
+          tagIds: nonNullTagIds as number[]
         }
       });
     }
@@ -184,8 +215,25 @@ export default function AssetTypes() {
   const cancelEdit = () => {
     setEditingAssetType(undefined);
     reset();
-    setSelectedForms([]);
     setSelectedProperties([]);
+    setSelectedForms([]);
+    setSelectedTags([]);
+  };
+
+  const handleImageUpload = async (assetTypeId: number, file: File) => {
+    setIsUploading(true);
+    const formData = new FormData();
+    formData.append('image', file);
+
+    try {
+      await axiosClient.post(`/asset-type/${assetTypeId}/image`, formData);
+      queryClient.invalidateQueries({ queryKey: [ASSET_TYPE_QUERY_KEY] });
+      toast.success('Image uploaded successfully');
+    } catch (error) {
+      toast.error('Failed to upload image');
+    } finally {
+      setIsUploading(false);
+    }
   };
 
   if (isLoadingAssetTypes || isLoadingProperties) {
@@ -238,6 +286,39 @@ export default function AssetTypes() {
                                 value={property.name}
                               >
                                 {property.name}
+                              </MultiSelectorItem>
+                            ))}
+                        </MultiSelectorList>
+                      </MultiSelectorContent>
+                    </MultiSelector>
+
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="tags"
+                render={() => (
+                  <FormItem>
+                    <FormLabel>Tags</FormLabel>
+
+                    <MultiSelector
+                      values={selectedTags}
+                      onValuesChange={setSelectedTags}
+                    >
+                      <MultiSelectorTrigger>
+                        <MultiSelectorInput placeholder="Select Tags..." />
+                      </MultiSelectorTrigger>
+                      <MultiSelectorContent>
+                        <MultiSelectorList>
+                          {tags?.status === 200 &&
+                            tags.body.data.map((tag) => (
+                              <MultiSelectorItem
+                                key={tag.id}
+                                value={tag.name}
+                              >
+                                {tag.name}
                               </MultiSelectorItem>
                             ))}
                         </MultiSelectorList>
@@ -304,29 +385,65 @@ export default function AssetTypes() {
           <Table>
             <TableHeader>
               <TableRow>
+                <TableHead className="w-[80px]">Image</TableHead>
                 <TableHead>Name</TableHead>
-                <TableHead>Fields</TableHead>
-                <TableHead className="w-[100px]">Actions</TableHead>
+                <TableHead className="w-[150px]">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {assetTypes?.status === 200 ? (
                 assetTypes.body.data.map((type) => (
                   <TableRow key={type.id}>
-                    <TableCell>{type.name}</TableCell>
                     <TableCell>
-                      <div className="flex space-x-2">
+                      {type.image ? (
+                        <div className="relative w-12 h-12">
+                          <Image
+                            src={type.image}
+                            alt={type.name}
+                            fill
+                            className="object-cover rounded"
+                          />
+                        </div>
+                      ) : (
+                        <div className="w-12 h-12 bg-muted rounded flex items-center justify-center">
+                          <ImageIcon className="h-6 w-6 text-muted-foreground" />
+                        </div>
+                      )}
+                    </TableCell>
+                    <TableCell className="font-medium">{type.name}</TableCell>
+                    <TableCell>
+                      <div className="flex items-center gap-1">
                         <Button
                           variant="ghost"
-                          size="icon"
+                          size="sm"
+                          onClick={() => {
+                            const input = document.createElement('input');
+                            input.type = 'file';
+                            input.accept = 'image/*';
+                            input.onchange = (e) => {
+                              const file = (e.target as HTMLInputElement).files?.[0];
+                              if (file) handleImageUpload(type.id, file);
+                            };
+                            input.click();
+                          }}
+                          disabled={isUploading}
+                          title="Upload Image"
+                        >
+                          <Upload className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
                           onClick={() => setEditingAssetType(type.id)}
+                          title="Edit Asset Type"
                         >
                           <Pencil className="h-4 w-4" />
                         </Button>
                         <Button
                           variant="ghost"
-                          size="icon"
+                          size="sm"
                           onClick={() => handleDeleteAssetType(type.id)}
+                          title="Delete Asset Type"
                         >
                           <Trash2 className="h-4 w-4" />
                         </Button>

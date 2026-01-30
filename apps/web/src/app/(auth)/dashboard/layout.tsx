@@ -3,14 +3,17 @@
 import { useRouter, usePathname } from 'next/navigation';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
-import { 
-  Shield, 
-  Users, 
-  Building, 
+import {
+  Shield,
+  Users,
+  Building,
   LogOut,
   Home
 } from 'lucide-react';
 import { toast } from 'sonner';
+import { useStorage } from '@/hooks/useStorage';
+import { authClient } from '@/lib/api/publicClient';
+import { deleteSession } from '@/lib/api/session';
 
 interface DashboardLayoutProps {
   children: React.ReactNode;
@@ -26,20 +29,27 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
     { name: 'Tenants', href: '/dashboard/tenants', icon: Building },
   ];
 
+  const { mutate, isPending } = authClient.systemAdmin.logout.useMutation();
+  const { user } = useStorage()
+
   const handleLogout = () => {
-    // Clear any stored tokens/sessions
-    localStorage.removeItem('admin_token');
-    sessionStorage.clear();
-    
-    // Clear cookies if they exist
-    document.cookie.split(";").forEach((c) => {
-      document.cookie = c
-        .replace(/^ +/, "")
-        .replace(/=.*/, "=;expires=" + new Date().toUTCString() + ";path=/");
-    });
-    
-    toast.success('Logged out successfully');
-    router.push('/login');
+    console.log(user)
+    if (user) {
+      mutate({
+        body: {
+          userId: user.id
+        }
+      }, {
+        onSuccess: async (response) => {
+          await deleteSession();
+          // Redirect to auth app instead of /login
+          const authUrl = process.env.NODE_ENV === 'production'
+            ? 'https://app.bookos.xyz'
+            : 'http://localhost:3000';
+          window.location.href = authUrl;
+        }
+      });
+    }
   };
 
   const isActiveRoute = (href: string) => {
@@ -63,7 +73,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
                 </div>
                 <span className="text-xl font-bold text-foreground">System Admin</span>
               </div>
-              
+
               {/* Navigation Links */}
               <nav className="hidden md:flex space-x-1">
                 {navigation.map((item) => {
@@ -72,11 +82,10 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
                     <Link
                       key={item.name}
                       href={item.href}
-                      className={`group flex items-center px-3 py-2 text-sm font-medium rounded-md transition-colors ${
-                        isActiveRoute(item.href)
+                      className={`group flex items-center px-3 py-2 text-sm font-medium rounded-md transition-colors ${isActiveRoute(item.href)
                           ? 'bg-primary text-foreground'
                           : 'text-card-foreground hover:bg-muted hover:text-foreground'
-                      }`}
+                        }`}
                     >
                       <Icon className="mr-2 h-4 w-4" />
                       {item.name}

@@ -46,7 +46,7 @@ type Tag = {
   id: number;
   name: string;
   description: string | null;
-  tagImage: string | null;
+  image: string | null;
 };
 
 type PaginationData = {
@@ -87,8 +87,8 @@ export default function CustomerPage() {
   });
 
   // Fetch tags (when booking by tag)
-  const { data: tagsResponse, isLoading: isTagsLoading, error: tagsError, refetch: refetchTags } = client.settings.tags.getTagsBySubdomain.useQuery({
-    queryKey: ['tags-by-subdomain', subdomain, currentPage, pageSize],
+  const { data: assetTypesResponse, isLoading: isTagsLoading, error: tagsError, refetch: refetchTags } = client.settings.assetType.customerGetAssetTypes.useQuery({
+    queryKey: ['assetTypes-by-subdomain', subdomain, currentPage, pageSize],
     queryData: {
       params: { subdomain },
       query: { page: currentPage, pageSize },
@@ -99,10 +99,10 @@ export default function CustomerPage() {
   const assets = assetsResponse?.status === 200 ? assetsResponse.body.data : [];
   const assetPagination = assets.length > 0 ? assets[0].pagination : null;
 
-  const tags = tagsResponse?.status === 200 ? tagsResponse.body.data : [];
-  const tagPagination = tagsResponse?.status === 200 ? tagsResponse.body.pagination : null;
+  const assetTypes = assetTypesResponse?.status === 200 ? assetTypesResponse.body.data : [];
+  const assetTypePagination = assetTypesResponse?.status === 200 ? assetTypesResponse.body.pagination : null;
 
-  const pagination: PaginationData | null = booksByTag ? tagPagination : assetPagination;
+  const pagination: PaginationData | null = booksByTag ? assetTypePagination : assetPagination;
   const isLoading = isTenantLoading || (booksByTag ? isTagsLoading : isAssetsLoading);
   const error = booksByTag ? tagsError : assetsError;
   const refetch = booksByTag ? refetchTags : refetchAssets;
@@ -184,7 +184,7 @@ export default function CustomerPage() {
           </div>
 
           {/* Tags Grid */}
-          {tags.length === 0 ? (
+          {assetTypes.length === 0 ? (
             <Card>
               <CardContent className="py-12">
                 <div className="text-center">
@@ -195,7 +195,7 @@ export default function CustomerPage() {
           ) : (
             <>
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-                {tags.map((tag) => (
+                {assetTypes.map((tag) => (
                   <Link
                     key={tag.id}
                     href={`/customer/${subdomain}/tag/${tag.id}`}
@@ -204,9 +204,9 @@ export default function CustomerPage() {
                     <Card className="h-full hover:shadow-xl transition-shadow duration-300">
                       {/* Tag Image */}
                       <div className="relative h-48 bg-gradient-to-br from-primary/10 to-primary/5 flex items-center justify-center overflow-hidden">
-                        {tag.tagImage ? (
+                        {tag.image ? (
                           <Image
-                            src={tag.tagImage}
+                            src={tag.image}
                             alt={tag.name}
                             fill
                             className="object-cover"
@@ -354,7 +354,7 @@ export default function CustomerPage() {
 
                     <CardContent>
                       {/* Tags */}
-                      {asset.tags && asset.tags.length > 0 && (
+                      {/* {asset.tags && asset.tags.length > 0 && (
                         <div className="flex flex-wrap gap-2 mb-4">
                           {asset.tags.slice(0, 3).map((tag) => (
                             <Badge key={tag.id} variant="secondary">
@@ -367,7 +367,7 @@ export default function CustomerPage() {
                             </Badge>
                           )}
                         </div>
-                      )}
+                      )} */}
 
                       <div className="flex items-center text-sm font-medium text-primary group-hover:text-primary">
                         View Details

@@ -29,7 +29,7 @@ export class AssetsController {
             const page = query.page ? Number(query.page) : 1;
             const pageSize = query.pageSize ? Number(query.pageSize) : 10;
 
-            const assets = await this.assetService.getAssets(query, tenantId, page, pageSize);
+            const assets = await this.assetService.getAssets(tenantId,query, page, pageSize);
 
             return { status: 200, body: assets };
         });
@@ -44,10 +44,21 @@ export class AssetsController {
             const asset = await this.assetService.getAssetById(params.id);
 
             if (!asset) {
-                return { status: 404, message: 'Asset not found' };
+                return { status: 404, body: undefined };
             }
 
-            return { status: 200, body: asset };
+            const { bookingForms, ...assetData } = asset;
+
+            return {
+                status: 200,
+                body: {
+                    ...assetData,
+                    bookingForms: bookingForms?.map((bf) => ({
+                        id: bf.bookingForm.id,
+                        name: bf.bookingForm.name,
+                    })) ?? []
+                }
+            };
         });
     }
 
@@ -60,7 +71,6 @@ export class AssetsController {
 
             const id = await this.assetService.createAsset(
                 { ...body.asset, tenantId },
-                body.tagIds, // pass tags here
                 body.formIds // pass forms here
             );
 
@@ -90,14 +100,17 @@ export class AssetsController {
     async deleteAsset(@Headers() headers: any): Promise<ReturnType<typeof tsRestHandler>> {
         return tsRestHandler(contract.assets.deleteAsset, async ({ params }) => {
             const tenantId = headers['x-tenant-id'];
-            await this.tenantService.validateTenantAccess(tenantId, schema.Asset, params.id)
-            const result = await this.assetService.deleteAsset(params.id);
+            await this.tenantService.validateTenantAccess(tenantId, schema.Asset, params.id);
 
-            // if (!result) {
-            //     return { status: 500, body: { message: 'Error deleting asset' } };
-            // }
-
-            return { status: 204, body: undefined };
+            try {
+                await this.assetService.deleteAsset(params.id);
+                return { status: 204, body: undefined };
+            } catch (error: any) {
+                if (error instanceof BadRequestException) {
+                    return { status: 400, body: { message: error.message } };
+                }
+                throw error;
+            }
         });
     }
 
@@ -186,10 +199,7 @@ export class AssetsController {
                         name: property.assetProperty.name,
                         value: property.value,
                     })),
-                    tags: asset.tags?.map((tag) => ({
-                        id: tag.id,
-                        name: tag.name,
-                    })) ?? [],
+                    tags: [],
                 };
             });
 

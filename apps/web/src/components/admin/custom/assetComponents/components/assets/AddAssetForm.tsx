@@ -16,7 +16,6 @@ import { z } from 'zod';
 const ModifiedInsertAssetSchema = z.object({
   name: z.string().min(1, 'Asset name is required'),
   assetTypeId: z.coerce.number().min(1, 'Asset type is required'),
-  tagId: z.coerce.number().min(1, 'Tag is required')
 });
 
 type ModifiedInsertAsset = z.infer<typeof ModifiedInsertAssetSchema>;
@@ -26,7 +25,6 @@ function AddAssetForm() {
   const router = useRouter();
   const { mutate, isPending } = authClient.assets.createAsset.useMutation();
   const { data: assetTypes } = authClient.settings.assetType.getAssetTypes.useQuery({ queryKey: ['assetTypes'] });
-  const { data: assetTags } = authClient.settings.tags.getTags.useQuery({ queryKey: ['assetTags'] });
 
   const form = useForm<ModifiedInsertAsset>({
     resolver: zodResolver(ModifiedInsertAssetSchema)
@@ -42,7 +40,6 @@ function AddAssetForm() {
           assetTypeId: Number(data.assetTypeId),
         },
         tenant: tenant.id,
-        tagIds: [data.tagId]  // Use only the selected tag
       }
     }, {
       onSuccess: (response) => {
@@ -97,35 +94,6 @@ function AddAssetForm() {
               <FormDescription>
                 Set the way your asset should be described
               </FormDescription>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-        <FormField
-          control={form.control}
-          name="tagId"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel htmlFor="tag">Tag</FormLabel>
-              <Select onValueChange={(value) => field.onChange(Number(value))} value={field.value?.toString()}>
-                <FormControl>
-                  <SelectTrigger id="tag">
-                    <SelectValue placeholder="Select tag" />
-                  </SelectTrigger>
-                </FormControl>
-                <SelectContent>
-                  {assetTags?.status === 200 ? (
-                    assetTags.body.data.map(tag => (
-                      <SelectItem key={tag.id} value={tag.id.toString()}>
-                        {tag.name}
-                      </SelectItem>
-                    ))
-                  ) : (
-                    <SelectItem value="no-tags">No Tags Found</SelectItem>
-                  )}
-                </SelectContent>
-              </Select>
-              <FormDescription>Select a tag for this asset</FormDescription>
               <FormMessage />
             </FormItem>
           )}

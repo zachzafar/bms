@@ -9,10 +9,9 @@ import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Plus, Search, Eye, Edit, Download } from 'lucide-react';
-import { authClient } from '@/lib/api/publicClient';
+import { authClient, axiosClient } from '@/lib/api/publicClient';
 import { toast } from 'sonner';
 import { Label } from '@/components/ui/label';
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import ApplyPaymentModal from '@/components/billing/ApplyPaymentModal';
 import { usePagination } from '@/hooks/usePagination';
 import { DataTablePagination } from '@/components/ui/data-table-pagination';
@@ -21,7 +20,7 @@ import { DataTablePagination } from '@/components/ui/data-table-pagination';
 interface Invoice {
   id: number;
   invoiceNumber: string;
-  customerId: number;
+  customerId: number | null;
   status: string;
   issueDate: Date
   dueDate: string;
@@ -121,6 +120,31 @@ export default function InvoicesPage() {
   const handleDeleteInvoice = (invoiceId: number) => {
     if (confirm('Are you sure you want to delete this invoice? This action cannot be undone.')) {
       deleteInvoice({ params: { id: invoiceId } });
+    }
+  };
+
+  const handleDownloadPdf = async (invoice: Invoice) => {
+    try {
+      toast.info('Generating PDF...');
+      const response = await axiosClient.get(`/invoice/${invoice.id}/pdf`, {
+        responseType: 'blob',
+      });
+
+      // Create blob URL and trigger download
+      const blob = new Blob([response.data], { type: 'application/pdf' });
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `invoice-${invoice.invoiceNumber}.pdf`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+
+      toast.success('PDF downloaded successfully');
+    } catch (error) {
+      console.error('Download PDF error:', error);
+      toast.error('Failed to download PDF');
     }
   };
 
@@ -306,9 +330,7 @@ export default function InvoicesPage() {
                         <Button
                           variant="outline"
                           size="sm"
-                          onClick={() => {
-                            toast.info('Download functionality coming soon');
-                          }}
+                          onClick={() => handleDownloadPdf(invoice)}
                         >
                           <Download className="h-4 w-4" />
                         </Button>

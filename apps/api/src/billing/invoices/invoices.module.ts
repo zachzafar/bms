@@ -8,13 +8,14 @@ import { AuthModule } from 'src/auth/auth.module';
 import { KeysModule } from 'src/keys/keys.module';
 import { PermissionsGuard } from 'src/auth/guards/permissions/permissions.guard';
 import { SlotService } from 'src/slot/slot.service';
+import { BillingModule } from '../billing.module';
 
 @Module({
     imports: [
-        DrizzleModule, AuthModule, KeysModule
+        DrizzleModule, AuthModule, KeysModule, BillingModule
     ],
     controllers: [InvoicesController],
-    providers: [InvoicesService, TenantService,SlotService, PermissionsGuard],
+    providers: [InvoicesService, TenantService, SlotService, PermissionsGuard],
     exports: [InvoicesService]
 })
 export class InvoicesModule { }

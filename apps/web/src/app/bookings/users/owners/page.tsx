@@ -39,9 +39,10 @@ export default function Component() {
   const router = useRouter();
   const { page, pageSize, queryParams, goToPage, changePageSize } = usePagination(1, 10);
   const queryClient = authClient.useQueryClient();
+  const [searchTerm, setSearchTerm] = useState('');
   const { data: owners } = authClient.users.getOwners.useQuery({
-    queryKey: [...OWNERS_QUERY_KEY, page, pageSize],
-    queryData: { query: queryParams },
+    queryKey: [...OWNERS_QUERY_KEY, page, pageSize, searchTerm],
+    queryData: { query: { ...queryParams, search: searchTerm || undefined } },
   });
   const { mutate: deleteUser } = authClient.users.deleteUser.useMutation();
   const { mutate: createUserMutation, isPending } = authClient.users.createUser.useMutation();
@@ -58,7 +59,7 @@ export default function Component() {
   const [open, setOpen] = useState(false);
   const [openEdit, setOpenEdit] = useState(false);
   const [editingOwner, setEditingOwner] = useState<{ id: string; name: string; email: string; companyName?: string } | null>(null);
-  const [searchTerm, setSearchTerm] = useState('');
+  
 
   const createForm = useForm<CreateOwnerFormData>({
     resolver: zodResolver(CreateOwnerSchema),
@@ -87,7 +88,6 @@ export default function Component() {
           roles,
           owner: {
             userId: editingOwner.id,
-            companyName: data.companyName || null,
           },
         },
       },
@@ -167,8 +167,7 @@ export default function Component() {
   const parsedOwners = owners?.status === 200 ? owners.body.data.map((item) => ({
     id: item.user.id,
     name: item.user.name,
-    email: item.user.email,
-    companyName: item.owner?.companyName,
+    email: item.user.email
   })) : [];
 
   const paginationMeta = owners?.status === 200 ? owners.body.pagination : undefined;
@@ -222,17 +221,6 @@ export default function Component() {
                             <FormItem>
                               <FormLabel>Email</FormLabel>
                               <FormControl><Input type="email" {...field} /></FormControl>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-                        <FormField
-                          control={editForm.control}
-                          name="companyName"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>Company Name</FormLabel>
-                              <FormControl><Input {...field} /></FormControl>
                               <FormMessage />
                             </FormItem>
                           )}
@@ -316,32 +304,6 @@ export default function Component() {
                             </FormItem>
                           )}
                         />
-                        <FormField
-                          control={createForm.control}
-                          name="companyName"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>Company Name</FormLabel>
-                              <FormControl>
-                                <Input {...field} />
-                              </FormControl>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-                        {/* <FormField
-                          control={createForm.control}
-                          name="taxId"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>Tax ID</FormLabel>
-                              <FormControl>
-                                <Input {...field} />
-                              </FormControl>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        /> */}
                       </div>
 
 
@@ -372,7 +334,6 @@ export default function Component() {
                 <TableRow>
                   <TableHead>Name</TableHead>
                   <TableHead>Email</TableHead>
-                  <TableHead>Company</TableHead>
                   <TableHead>Actions</TableHead>
                 </TableRow>
               </TableHeader>
@@ -382,7 +343,6 @@ export default function Component() {
                     <TableRow key={owner.id}>
                       <TableCell>{owner.name}</TableCell>
                       <TableCell>{owner.email}</TableCell>
-                      <TableCell>{owner.companyName || '-'}</TableCell>
                       <TableCell className="flex gap-2">
                         <Button
                           variant="ghost"
@@ -392,12 +352,10 @@ export default function Component() {
                               id: owner.id,
                               name: owner.name,
                               email: owner.email,
-                              companyName: owner.companyName ?? undefined,
                             });
                             editForm.reset({
                               name: owner.name,
                               email: owner.email,
-                              companyName: owner.companyName || '',
                             });
                             setOpenEdit(true);
                           }}

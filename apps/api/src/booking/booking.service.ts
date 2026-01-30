@@ -158,42 +158,118 @@ export class BookingService {
         // Determine booking status based on tenant settings
         const bookingStatus = tenant?.enableAutomaticConfirmation ? 'Confirmed' : 'Pending';
 
-        // Calculate total price based on asset's rate
+        // Calculate total price based on rate
         let totalPrice = booking.totalPrice ? parseFloat(booking.totalPrice.toString()) : 0;
+        let bestRate: { rateId: number; pricePerNight: string | null; startDate: Date | null; endDate: Date | null; priority: number | null } | null = null;
 
-        // If no price provided, calculate from asset's rate
+        // If no price provided, calculate from rate
         if (!booking.totalPrice || totalPrice === 0) {
-          // Get the applicable rate for this asset
-          const assetRates = await tx
-            .select({
-              rateId: schema.AssetHasRates.rateId,
-              pricePerNight: schema.Rate.pricePerNight,
-              startDate: schema.Rate.startDate,
-              endDate: schema.Rate.endDate,
-              priority: schema.Rate.priority,
-            })
-            .from(schema.AssetHasRates)
-            .innerJoin(schema.Rate, eq(schema.AssetHasRates.rateId, schema.Rate.id))
-            .where(eq(schema.AssetHasRates.assetId, booking.assetId));
-
-          // Find the best matching rate based on booking dates and priority
-          // Filter rates that overlap with the booking period, then sort by priority
           const bookingStartDate = new Date(utcStart);
           const bookingEndDate = new Date(utcEnd);
 
-          const applicableRates = assetRates.filter((rate) => {
-            if (!rate.startDate || !rate.endDate) return false;
-            const rateStart = new Date(rate.startDate);
-            const rateEnd = new Date(rate.endDate);
-            // Rate is applicable if it overlaps with the booking period
-            return rateStart <= bookingEndDate && rateEnd >= bookingStartDate;
-          });
+          // Check tenant's booksByAssetType setting to determine rate lookup strategy
+          if (tenant?.booksByAssetType) {
+            // Look up asset type rate first
+            const assetTypeRates = await tx
+              .select({
+                rateId: schema.Rate.id,
+                pricePerNight: schema.Rate.pricePerNight,
+                startDate: schema.Rate.startDate,
+                endDate: schema.Rate.endDate,
+                priority: schema.Rate.priority,
+              })
+              .from(schema.Rate)
+              .where(eq(schema.Rate.assetTypeId, asset.assetTypeId!));
 
-          // Sort by priority (lower = higher priority) and get the best rate
-          applicableRates.sort((a, b) => (a.priority ?? 100) - (b.priority ?? 100));
-          const bestRate = applicableRates[0];
+            const applicableTypeRates = assetTypeRates.filter((rate) => {
+              if (!rate.startDate || !rate.endDate) return false;
+              const rateStart = new Date(rate.startDate);
+              const rateEnd = new Date(rate.endDate);
+              return rateStart <= bookingEndDate && rateEnd >= bookingStartDate;
+            });
 
-          if (bestRate && bestRate.pricePerNight) {
+            applicableTypeRates.sort((a, b) => (a.priority ?? 100) - (b.priority ?? 100));
+            bestRate = applicableTypeRates[0] || null;
+
+            // Fallback to asset-specific rate if no asset type rate found
+            if (!bestRate) {
+              const assetRates = await tx
+                .select({
+                  rateId: schema.AssetHasRates.rateId,
+                  pricePerNight: schema.Rate.pricePerNight,
+                  startDate: schema.Rate.startDate,
+                  endDate: schema.Rate.endDate,
+                  priority: schema.Rate.priority,
+                })
+                .from(schema.AssetHasRates)
+                .innerJoin(schema.Rate, eq(schema.AssetHasRates.rateId, schema.Rate.id))
+                .where(eq(schema.AssetHasRates.assetId, booking.assetId));
+
+              const applicableRates = assetRates.filter((rate) => {
+                if (!rate.startDate || !rate.endDate) return false;
+                const rateStart = new Date(rate.startDate);
+                const rateEnd = new Date(rate.endDate);
+                return rateStart <= bookingEndDate && rateEnd >= bookingStartDate;
+              });
+
+              applicableRates.sort((a, b) => (a.priority ?? 100) - (b.priority ?? 100));
+              bestRate = applicableRates[0] || null;
+            }
+          } else {
+            // Look up asset-specific rate first
+            const assetRates = await tx
+              .select({
+                rateId: schema.AssetHasRates.rateId,
+                pricePerNight: schema.Rate.pricePerNight,
+                startDate: schema.Rate.startDate,
+                endDate: schema.Rate.endDate,
+                priority: schema.Rate.priority,
+              })
+              .from(schema.AssetHasRates)
+              .innerJoin(schema.Rate, eq(schema.AssetHasRates.rateId, schema.Rate.id))
+              .where(eq(schema.AssetHasRates.assetId, booking.assetId));
+
+            const applicableRates = assetRates.filter((rate) => {
+              if (!rate.startDate || !rate.endDate) return false;
+              const rateStart = new Date(rate.startDate);
+              const rateEnd = new Date(rate.endDate);
+              return rateStart <= bookingEndDate && rateEnd >= bookingStartDate;
+            });
+
+            applicableRates.sort((a, b) => (a.priority ?? 100) - (b.priority ?? 100));
+            bestRate = applicableRates[0] || null;
+
+            // Fallback to asset type rate if no asset-specific rate found
+            if (!bestRate && asset.assetTypeId) {
+              const assetTypeRates = await tx
+                .select({
+                  rateId: schema.Rate.id,
+                  pricePerNight: schema.Rate.pricePerNight,
+                  startDate: schema.Rate.startDate,
+                  endDate: schema.Rate.endDate,
+                  priority: schema.Rate.priority,
+                })
+                .from(schema.Rate)
+                .where(eq(schema.Rate.assetTypeId, asset.assetTypeId));
+
+              const applicableTypeRates = assetTypeRates.filter((rate) => {
+                if (!rate.startDate || !rate.endDate) return false;
+                const rateStart = new Date(rate.startDate);
+                const rateEnd = new Date(rate.endDate);
+                return rateStart <= bookingEndDate && rateEnd >= bookingStartDate;
+              });
+
+              applicableTypeRates.sort((a, b) => (a.priority ?? 100) - (b.priority ?? 100));
+              bestRate = applicableTypeRates[0] || null;
+            }
+          }
+
+          // Throw error if no rate found
+          if (!bestRate) {
+            throw new ConflictException('No rate has been set for this booking period. Please contact the administrator to set up rates before booking.');
+          }
+
+          if (bestRate.pricePerNight) {
             // Calculate number of nights
             const timeDiff = bookingEndDate.getTime() - bookingStartDate.getTime();
             const numberOfNights = Math.ceil(timeDiff / (1000 * 60 * 60 * 24));
@@ -244,6 +320,39 @@ export class BookingService {
             }))
           );
         }
+
+        // Create invoice for the booking
+        const invoiceNumber = `INV-${Date.now()}-${bookingId.slice(0, 8).toUpperCase()}`;
+        const issueDate = new Date();
+        const dueDate = new Date(utcStart); // Due by start date of booking
+
+        // Calculate number of nights for invoice line item
+        const timeDiff = utcEnd.getTime() - utcStart.getTime();
+        const numberOfNights = Math.ceil(timeDiff / (1000 * 60 * 60 * 24));
+
+        const [{ id: invoiceId }] = await tx.insert(schema.Invoice).values({
+          tenantId: asset.tenantId,
+          invoiceNumber,
+          status: 'pending',
+          issueDate,
+          dueDate,
+          subtotal: totalPrice.toFixed(2),
+          taxAmount: '0.00', // Tax can be calculated based on tenant settings later
+          totalAmount: totalPrice.toFixed(2),
+          notes: `Invoice for booking ${bookingId}`,
+          customerId: customers[0].id,
+          bookingId: bookingId,
+        }).$returningId();
+
+        // Create invoice line item for the booking
+        const pricePerNight = bestRate?.pricePerNight ? parseFloat(bestRate.pricePerNight.toString()) : totalPrice / numberOfNights;
+        await tx.insert(schema.InvoiceItem).values({
+          invoiceId,
+          description: `${asset.name} - ${numberOfNights} night${numberOfNights > 1 ? 's' : ''} (${utcStart.toLocaleDateString()} - ${utcEnd.toLocaleDateString()})`,
+          quantity: numberOfNights,
+          unitPrice: pricePerNight.toFixed(2),
+          totalPrice: totalPrice.toFixed(2),
+        });
 
       });
 
@@ -505,6 +614,7 @@ export class BookingService {
       .from(schema.Booking)
       .innerJoin(schema.User, eq(schema.Booking.userId, schema.User.id))
       .innerJoin(schema.Asset, eq(schema.Booking.assetId, schema.Asset.id))
+      .innerJoin(schema.AssetType, eq(schema.AssetType.id,schema.Asset.assetTypeId))
       .innerJoin(schema.Customer,
         and(
           eq(schema.Customer.userId, schema.User.id),
@@ -548,6 +658,7 @@ export class BookingService {
       user: booking.users,
       customer: booking.customer_details,
       asset: booking.assets,
+      assetType: booking.asset_type,
       formResponses: formFieldValues,
     };
   }
@@ -634,6 +745,7 @@ export class BookingService {
       .select()
       .from(schema.Booking)
       .innerJoin(schema.Asset, eq(schema.Booking.assetId, schema.Asset.id))
+      .innerJoin(schema.AssetType, eq(schema.AssetType.id, schema.Asset.assetTypeId))
       .innerJoin(schema.User, eq(schema.Booking.userId, schema.User.id))
       .innerJoin(schema.Customer,
         and(
@@ -665,6 +777,7 @@ export class BookingService {
       asset: row.assets,
       user: row.users,
       customer: row.customer_details,
+      assetType: row.asset_type
     }));
 
     return {
@@ -712,41 +825,125 @@ export class BookingService {
           throw new ConflictException('Asset not found');
         }
 
-        // Calculate total price based on asset's rate
+        // Get tenant settings
+        const tenant = await tx.query.Tenant.findFirst({
+          where: (t, { eq }) => eq(t.id, asset.tenantId),
+        });
+
+        // Calculate total price based on rate
         let totalPrice = updateData.totalPrice ? parseFloat(updateData.totalPrice.toString()) : 0;
 
-        // If no price provided or price is 0, calculate from asset's rate
+        // If no price provided or price is 0, calculate from rate
         if (!updateData.totalPrice || totalPrice === 0) {
-          // Get the applicable rate for this asset
-          const assetRates = await tx
-            .select({
-              rateId: schema.AssetHasRates.rateId,
-              pricePerNight: schema.Rate.pricePerNight,
-              startDate: schema.Rate.startDate,
-              endDate: schema.Rate.endDate,
-              priority: schema.Rate.priority,
-            })
-            .from(schema.AssetHasRates)
-            .innerJoin(schema.Rate, eq(schema.AssetHasRates.rateId, schema.Rate.id))
-            .where(eq(schema.AssetHasRates.assetId, updateData.assetId));
-
-          // Find the best matching rate based on booking dates and priority
           const bookingStartDate = new Date(startDate);
           const bookingEndDate = new Date(endDate);
+          let bestRate: { rateId: number; pricePerNight: string | null; startDate: Date | null; endDate: Date | null; priority: number | null } | null = null;
 
-          const applicableRates = assetRates.filter((rate) => {
-            if (!rate.startDate || !rate.endDate) return false;
-            const rateStart = new Date(rate.startDate);
-            const rateEnd = new Date(rate.endDate);
-            // Rate is applicable if it overlaps with the booking period
-            return rateStart <= bookingEndDate && rateEnd >= bookingStartDate;
-          });
+          // Check tenant's booksByAssetType setting to determine rate lookup strategy
+          if (tenant?.booksByAssetType) {
+            // Look up asset type rate first
+            if (asset.assetTypeId) {
+              const assetTypeRates = await tx
+                .select({
+                  rateId: schema.Rate.id,
+                  pricePerNight: schema.Rate.pricePerNight,
+                  startDate: schema.Rate.startDate,
+                  endDate: schema.Rate.endDate,
+                  priority: schema.Rate.priority,
+                })
+                .from(schema.Rate)
+                .where(eq(schema.Rate.assetTypeId, asset.assetTypeId));
 
-          // Sort by priority (lower = higher priority) and get the best rate
-          applicableRates.sort((a, b) => (a.priority ?? 100) - (b.priority ?? 100));
-          const bestRate = applicableRates[0];
+              const applicableTypeRates = assetTypeRates.filter((rate) => {
+                if (!rate.startDate || !rate.endDate) return false;
+                const rateStart = new Date(rate.startDate);
+                const rateEnd = new Date(rate.endDate);
+                return rateStart <= bookingEndDate && rateEnd >= bookingStartDate;
+              });
 
-          if (bestRate && bestRate.pricePerNight) {
+              applicableTypeRates.sort((a, b) => (a.priority ?? 100) - (b.priority ?? 100));
+              bestRate = applicableTypeRates[0] || null;
+            }
+
+            // Fallback to asset-specific rate if no asset type rate found
+            if (!bestRate) {
+              const assetRates = await tx
+                .select({
+                  rateId: schema.AssetHasRates.rateId,
+                  pricePerNight: schema.Rate.pricePerNight,
+                  startDate: schema.Rate.startDate,
+                  endDate: schema.Rate.endDate,
+                  priority: schema.Rate.priority,
+                })
+                .from(schema.AssetHasRates)
+                .innerJoin(schema.Rate, eq(schema.AssetHasRates.rateId, schema.Rate.id))
+                .where(eq(schema.AssetHasRates.assetId, updateData.assetId));
+
+              const applicableRates = assetRates.filter((rate) => {
+                if (!rate.startDate || !rate.endDate) return false;
+                const rateStart = new Date(rate.startDate);
+                const rateEnd = new Date(rate.endDate);
+                return rateStart <= bookingEndDate && rateEnd >= bookingStartDate;
+              });
+
+              applicableRates.sort((a, b) => (a.priority ?? 100) - (b.priority ?? 100));
+              bestRate = applicableRates[0] || null;
+            }
+          } else {
+            // Look up asset-specific rate first
+            const assetRates = await tx
+              .select({
+                rateId: schema.AssetHasRates.rateId,
+                pricePerNight: schema.Rate.pricePerNight,
+                startDate: schema.Rate.startDate,
+                endDate: schema.Rate.endDate,
+                priority: schema.Rate.priority,
+              })
+              .from(schema.AssetHasRates)
+              .innerJoin(schema.Rate, eq(schema.AssetHasRates.rateId, schema.Rate.id))
+              .where(eq(schema.AssetHasRates.assetId, updateData.assetId));
+
+            const applicableRates = assetRates.filter((rate) => {
+              if (!rate.startDate || !rate.endDate) return false;
+              const rateStart = new Date(rate.startDate);
+              const rateEnd = new Date(rate.endDate);
+              return rateStart <= bookingEndDate && rateEnd >= bookingStartDate;
+            });
+
+            applicableRates.sort((a, b) => (a.priority ?? 100) - (b.priority ?? 100));
+            bestRate = applicableRates[0] || null;
+
+            // Fallback to asset type rate if no asset-specific rate found
+            if (!bestRate && asset.assetTypeId) {
+              const assetTypeRates = await tx
+                .select({
+                  rateId: schema.Rate.id,
+                  pricePerNight: schema.Rate.pricePerNight,
+                  startDate: schema.Rate.startDate,
+                  endDate: schema.Rate.endDate,
+                  priority: schema.Rate.priority,
+                })
+                .from(schema.Rate)
+                .where(eq(schema.Rate.assetTypeId, asset.assetTypeId));
+
+              const applicableTypeRates = assetTypeRates.filter((rate) => {
+                if (!rate.startDate || !rate.endDate) return false;
+                const rateStart = new Date(rate.startDate);
+                const rateEnd = new Date(rate.endDate);
+                return rateStart <= bookingEndDate && rateEnd >= bookingStartDate;
+              });
+
+              applicableTypeRates.sort((a, b) => (a.priority ?? 100) - (b.priority ?? 100));
+              bestRate = applicableTypeRates[0] || null;
+            }
+          }
+
+          // Throw error if no rate found
+          if (!bestRate) {
+            throw new ConflictException('No rate has been set for this booking period. Please contact the administrator to set up rates before booking.');
+          }
+
+          if (bestRate.pricePerNight) {
             // Calculate number of nights
             const timeDiff = bookingEndDate.getTime() - bookingStartDate.getTime();
             const numberOfNights = Math.ceil(timeDiff / (1000 * 60 * 60 * 24));
@@ -755,12 +952,13 @@ export class BookingService {
           }
         }
 
-        // Update booking dates and price
+        // Update booking dates, price, and asset
         await tx.update(schema.Booking)
           .set({
             startDate,
             endDate,
             totalPrice: totalPrice.toString(),
+            assetId: updateData.assetId,
           })
           .where(eq(schema.Booking.id, updateData.id))
           .execute();
@@ -800,11 +998,34 @@ export class BookingService {
       throw new NotFoundException('Booking not found');
     }
 
+    const previousStatus = existingBooking.status;
+
     // Update the booking status
     await this.db.update(schema.Booking)
       .set({ status })
       .where(eq(schema.Booking.id, bookingId))
       .execute();
+
+    // Handle blocked dates based on status change
+    if (status === 'Cancelled' && previousStatus !== 'Cancelled') {
+      // Delete blocked dates when booking is cancelled
+      await this.db.delete(schema.BlockedDate)
+        .where(eq(schema.BlockedDate.bookingId, bookingId))
+        .execute();
+    } else if (previousStatus === 'Cancelled' && (status === 'Pending' || status === 'Confirmed')) {
+      // Re-create blocked dates when booking is un-cancelled
+      await this.db.insert(schema.BlockedDate)
+        .values({
+          tenantId: existingBooking.asset.tenantId,
+          assetId: existingBooking.assetId,
+          startDate: existingBooking.startDate,
+          endDate: existingBooking.endDate,
+          title: `Booking ${bookingId}`,
+          reason: `Booking restored to ${status}`,
+          bookingId: bookingId,
+        })
+        .execute();
+    }
 
     // Send email notifications for Confirmed or Cancelled status
     if (status === 'Confirmed' || status === 'Cancelled') {
@@ -969,15 +1190,19 @@ export class BookingService {
       throw new NotFoundException('Booking not found or already deleted');
     }
 
+    // Check if booking is cancelled before allowing deletion
+    if (existingBooking.status !== 'Cancelled') {
+      throw new ConflictException('Booking must be cancelled before it can be deleted. Please cancel the booking first.');
+    }
+
     // Soft delete: set deletedAt timestamp
     await this.db.update(schema.Booking)
       .set({ deletedAt: new Date() })
       .where(eq(schema.Booking.id, bookingId))
       .execute();
 
-    // Also soft delete the blocked date entry if it exists
-    await this.db.update(schema.BlockedDate)
-      .set({ updatedAt: new Date() })
+    // Also delete the blocked date entry since booking is cancelled
+    await this.db.delete(schema.BlockedDate)
       .where(eq(schema.BlockedDate.bookingId, bookingId))
       .execute();
   }
@@ -1000,215 +1225,215 @@ export class BookingService {
 
   // Check availability excluding a specific booking
 
-  async createBookingByTag(
-    data: {
-      tagId: number;
-      startDate: Date;
-      endDate: Date;
-      customerIds: number[];
-    },
-    tenantId: string
-  ) {
-    const { tagId, startDate, endDate, customerIds } = data;
+  // async createBookingByTag(
+  //   data: {
+  //     tagId: number;
+  //     startDate: Date;
+  //     endDate: Date;
+  //     customerIds: number[];
+  //   },
+  //   tenantId: string
+  // ) {
+  //   const { tagId, startDate, endDate, customerIds } = data;
 
-    // Step 1: Find all assets with this tag + tenant match
-    const assets = await this.db
-      .select({ id: schema.Asset.id })
-      .from(schema.Asset)
-      .innerJoin(schema.AssetHasTags, eq(schema.Asset.id, schema.AssetHasTags.assetId))
-      .where(and(
-        eq(schema.AssetHasTags.tagId, tagId),
-        eq(schema.Asset.tenantId, tenantId)
-      ));
+  //   // Step 1: Find all assets with this tag + tenant match
+  //   const assets = await this.db
+  //     .select({ id: schema.Asset.id })
+  //     .from(schema.Asset)
+  //     .innerJoin(schema.AssetHasTags, eq(schema.Asset.id, schema.AssetHasTags.assetId))
+  //     .where(and(
+  //       eq(schema.AssetHasTags.tagId, tagId),
+  //       eq(schema.Asset.tenantId, tenantId)
+  //     ));
 
-    // Step 2: Loop through assets to find first available one
-    for (const asset of assets) {
-      // Check if dates are blocked (either by booking or admin block)
-    const blockedDates = await this.db.query.BlockedDate.findMany({
-      where: (bd, { and, eq, gte, lte, or }) =>
-        and(
-          eq(bd.assetId, asset.id),
-          or(
-            and(gte(bd.startDate, startDate), lte(bd.startDate, endDate)),
-            and(gte(bd.endDate, startDate), lte(bd.endDate, endDate)),
-            and(lte(bd.startDate, startDate), gte(bd.endDate, endDate))
-          )
-        ),
-    });
+  //   // Step 2: Loop through assets to find first available one
+  //   for (const asset of assets) {
+  //     // Check if dates are blocked (either by booking or admin block)
+  //   const blockedDates = await this.db.query.BlockedDate.findMany({
+  //     where: (bd, { and, eq, gte, lte, or }) =>
+  //       and(
+  //         eq(bd.assetId, asset.id),
+  //         or(
+  //           and(gte(bd.startDate, startDate), lte(bd.startDate, endDate)),
+  //           and(gte(bd.endDate, startDate), lte(bd.endDate, endDate)),
+  //           and(lte(bd.startDate, startDate), gte(bd.endDate, endDate))
+  //         )
+  //       ),
+  //   });
 
-    if (blockedDates.length > 0) {
-      continue
-    }
+  //   if (blockedDates.length > 0) {
+  //     continue
+  //   }
 
 
-        // Step 3: Get userId from first customer
-        const firstCustomer = await this.db.query.Customer.findFirst({
-          where: (c, { eq }) => eq(c.id, customerIds[0]),
-        });
+  //       // Step 3: Get userId from first customer
+  //       const firstCustomer = await this.db.query.Customer.findFirst({
+  //         where: (c, { eq }) => eq(c.id, customerIds[0]),
+  //       });
 
-        if (!firstCustomer) {
-          throw new ConflictException('Customer not found');
-        }
+  //       if (!firstCustomer) {
+  //         throw new ConflictException('Customer not found');
+  //       }
 
-        // Step 4: Use existing booking logic
-        const bookingId = await this.createBooking(
-          {
-            assetId: asset.id,
-            startDate,
-            endDate
-          },
-          customerIds
-        );
+  //       // Step 4: Use existing booking logic
+  //       const bookingId = await this.createBooking(
+  //         {
+  //           assetId: asset.id,
+  //           startDate,
+  //           endDate
+  //         },
+  //         customerIds
+  //       );
 
-        return {
-          message: 'Booking created by tag',
-          assetId: asset.id,
-          bookingId: bookingId ?? ''
-        };
+  //       return {
+  //         message: 'Booking created by tag',
+  //         assetId: asset.id,
+  //         bookingId: bookingId ?? ''
+  //       };
 
-    }
+  //   }
 
-    throw new ConflictException('No available assets found for the selected tag and date range');
-  }
+  //   throw new ConflictException('No available assets found for the selected tag and date range');
+  // }
 
-  async customerCreateBookingByTag(
-    data: {
-      tagId: number;
-      startDate: Date;
-      endDate: Date;
-      customer: { name: string; email: string; phone?: string };
-      formResponses?: Array<{ formFieldId: number; value: string }>;
-    },
-    tenantId: string
-  ): Promise<{ message: string; assetName: string }> {
-    const { tagId, startDate, endDate, customer, formResponses } = data;
+  // async customerCreateBookingByTag(
+  //   data: {
+  //     tagId: number;
+  //     startDate: Date;
+  //     endDate: Date;
+  //     customer: { name: string; email: string; phone?: string };
+  //     formResponses?: Array<{ formFieldId: number; value: string }>;
+  //   },
+  //   tenantId: string
+  // ): Promise<{ message: string; assetName: string }> {
+  //   const { tagId, startDate, endDate, customer, formResponses } = data;
 
-    // Step 1: Find all assets with this tag + tenant match
-    const assets = await this.db
-      .select({ id: schema.Asset.id, name: schema.Asset.name })
-      .from(schema.Asset)
-      .innerJoin(schema.AssetHasTags, eq(schema.Asset.id, schema.AssetHasTags.assetId))
-      .where(and(
-        eq(schema.AssetHasTags.tagId, tagId),
-        eq(schema.Asset.tenantId, tenantId)
-      ));
+  //   // Step 1: Find all assets with this tag + tenant match
+  //   const assets = await this.db
+  //     .select({ id: schema.Asset.id, name: schema.Asset.name })
+  //     .from(schema.Asset)
+  //     .innerJoin(schema.AssetHasTags, eq(schema.Asset.id, schema.AssetHasTags.assetId))
+  //     .where(and(
+  //       eq(schema.AssetHasTags.tagId, tagId),
+  //       eq(schema.Asset.tenantId, tenantId)
+  //     ));
 
-    if (assets.length === 0) {
-      throw new NotFoundException('No assets found with the selected category');
-    }
+  //   if (assets.length === 0) {
+  //     throw new NotFoundException('No assets found with the selected category');
+  //   }
 
-    // Step 2: Loop through assets to find first available one
-    for (const asset of assets) {
-      // Check if dates are blocked (either by booking or admin block)
-      const blockedDates = await this.db.query.BlockedDate.findMany({
-        where: (bd, { and, eq, gte, lte, or }) =>
-          and(
-            eq(bd.assetId, asset.id),
-            or(
-              and(gte(bd.startDate, startDate), lte(bd.startDate, endDate)),
-              and(gte(bd.endDate, startDate), lte(bd.endDate, endDate)),
-              and(lte(bd.startDate, startDate), gte(bd.endDate, endDate))
-            )
-          ),
-      });
+  //   // Step 2: Loop through assets to find first available one
+  //   for (const asset of assets) {
+  //     // Check if dates are blocked (either by booking or admin block)
+  //     const blockedDates = await this.db.query.BlockedDate.findMany({
+  //       where: (bd, { and, eq, gte, lte, or }) =>
+  //         and(
+  //           eq(bd.assetId, asset.id),
+  //           or(
+  //             and(gte(bd.startDate, startDate), lte(bd.startDate, endDate)),
+  //             and(gte(bd.endDate, startDate), lte(bd.endDate, endDate)),
+  //             and(lte(bd.startDate, startDate), gte(bd.endDate, endDate))
+  //           )
+  //         ),
+  //     });
 
-      if (blockedDates.length > 0) {
-        continue;
-      }
+  //     if (blockedDates.length > 0) {
+  //       continue;
+  //     }
 
-      // Found an available asset - create booking with new customer
-      await this.createBooking(
-        {
-          assetId: asset.id,
-          startDate,
-          endDate,
-        },
-        [], // No existing customer IDs
-        { ...customer, tenantId }, // New customer info
-        formResponses
-      );
+  //     // Found an available asset - create booking with new customer
+  //     await this.createBooking(
+  //       {
+  //         assetId: asset.id,
+  //         startDate,
+  //         endDate,
+  //       },
+  //       [], // No existing customer IDs
+  //       { ...customer, tenantId }, // New customer info
+  //       formResponses
+  //     );
 
-      return {
-        message: 'Booking created successfully',
-        assetName: asset.name,
-      };
-    }
+  //     return {
+  //       message: 'Booking created successfully',
+  //       assetName: asset.name,
+  //     };
+  //   }
 
-    throw new ConflictException('No available assets found for the selected category and date range');
-  }
+  //   throw new ConflictException('No available assets found for the selected category and date range');
+  // }
 
-  async checkAvailabilityByTag({ tagId }: { tagId: number }) {
-    // Step 1: Get all asset IDs for this tag
-    const assets = await this.db
-      .select({ id: schema.Asset.id })
-      .from(schema.Asset)
-      .innerJoin(schema.AssetHasTags, eq(schema.Asset.id, schema.AssetHasTags.assetId))
-      .where(eq(schema.AssetHasTags.tagId, (tagId)));
+  // async checkAvailabilityByTag({ tagId }: { tagId: number }) {
+  //   // Step 1: Get all asset IDs for this tag
+  //   const assets = await this.db
+  //     .select({ id: schema.Asset.id })
+  //     .from(schema.Asset)
+  //     .innerJoin(schema.AssetHasTags, eq(schema.Asset.id, schema.AssetHasTags.assetId))
+  //     .where(eq(schema.AssetHasTags.tagId, (tagId)));
 
-    const assetIds = assets.map((a) => a.id);
-    const totalAssets = assetIds.length;
+  //   const assetIds = assets.map((a) => a.id);
+  //   const totalAssets = assetIds.length;
 
-    if (!totalAssets) return [];
+  //   if (!totalAssets) return [];
 
-    // Step 2: Get all bookings for these assets
-    const bookings = await this.db
-      .select({
-        startDate: schema.Booking.startDate,
-        endDate: schema.Booking.endDate,
-      })
-      .from(schema.Booking)
-      .where(inArray(schema.Booking.assetId, assetIds));
+  //   // Step 2: Get all bookings for these assets
+  //   const bookings = await this.db
+  //     .select({
+  //       startDate: schema.Booking.startDate,
+  //       endDate: schema.Booking.endDate,
+  //     })
+  //     .from(schema.Booking)
+  //     .where(inArray(schema.Booking.assetId, assetIds));
 
-    if (!bookings.length) return [];
+  //   if (!bookings.length) return [];
 
-    // Step 3: Map bookings to individual dates and count frequency
-    const dateMap = new Map<Date, number>(); // key: YYYY-MM-DD, value: count of booked assets
+  //   // Step 3: Map bookings to individual dates and count frequency
+  //   const dateMap = new Map<Date, number>(); // key: YYYY-MM-DD, value: count of booked assets
 
-    for (const booking of bookings) {
-      const start = booking.startDate;
-      const end = booking.endDate;
-      for (
-        let d = start;
-        d <= end;
-        d.setDate(d.getDate() + 1)
-      ) {
-        dateMap.set(d, (dateMap.get(d) ?? 0) + 1);
-      }
-    }
+  //   for (const booking of bookings) {
+  //     const start = booking.startDate;
+  //     const end = booking.endDate;
+  //     for (
+  //       let d = start;
+  //       d <= end;
+  //       d.setDate(d.getDate() + 1)
+  //     ) {
+  //       dateMap.set(d, (dateMap.get(d) ?? 0) + 1);
+  //     }
+  //   }
 
-    // Step 4: Find fully booked dates
-    const fullyBookedDates = [...dateMap.entries()]
-      .filter(([_, count]) => count >= totalAssets)
-      .map(([date]) => date)
-      .sort();
+  //   // Step 4: Find fully booked dates
+  //   const fullyBookedDates = [...dateMap.entries()]
+  //     .filter(([_, count]) => count >= totalAssets)
+  //     .map(([date]) => date)
+  //     .sort();
 
-    if (!fullyBookedDates.length) return [];
+  //   if (!fullyBookedDates.length) return [];
 
-    // Step 5: Group consecutive dates into ranges
-    const ranges: { from: Date; to: Date }[] = [];
+  //   // Step 5: Group consecutive dates into ranges
+  //   const ranges: { from: Date; to: Date }[] = [];
 
-    let rangeStart = fullyBookedDates[0];
-    let prev = new Date(rangeStart);
+  //   let rangeStart = fullyBookedDates[0];
+  //   let prev = new Date(rangeStart);
 
-    for (let i = 1; i < fullyBookedDates.length; i++) {
-      const current = new Date(fullyBookedDates[i]);
-      const prevPlusOne = new Date(prev);
-      prevPlusOne.setDate(prevPlusOne.getDate() + 1);
+  //   for (let i = 1; i < fullyBookedDates.length; i++) {
+  //     const current = new Date(fullyBookedDates[i]);
+  //     const prevPlusOne = new Date(prev);
+  //     prevPlusOne.setDate(prevPlusOne.getDate() + 1);
 
-      if (current.getTime() !== prevPlusOne.getTime()) {
-        // Range ends
-        ranges.push({ from: rangeStart, to: prev });
-        rangeStart = fullyBookedDates[i];
-      }
+  //     if (current.getTime() !== prevPlusOne.getTime()) {
+  //       // Range ends
+  //       ranges.push({ from: rangeStart, to: prev });
+  //       rangeStart = fullyBookedDates[i];
+  //     }
 
-      prev = current;
-    }
+  //     prev = current;
+  //   }
 
-    // Push the final range
-    ranges.push({ from: rangeStart, to: prev });
+  //   // Push the final range
+  //   ranges.push({ from: rangeStart, to: prev });
 
-    return ranges;
-  }
+  //   return ranges;
+  // }
 
   // -----------------------------
   // Blocked Dates Methods
@@ -1753,6 +1978,7 @@ export class BookingService {
       .select()
       .from(schema.Booking)
       .innerJoin(schema.Asset, eq(schema.Booking.assetId, schema.Asset.id))
+      .innerJoin(schema.AssetType,eq(schema.Asset.assetTypeId,schema.AssetType.id))
       .innerJoin(schema.User, eq(schema.Booking.userId, schema.User.id))
       .innerJoin(schema.Customer,
         and(
@@ -1780,6 +2006,7 @@ export class BookingService {
       asset: row.assets,
       user: row.users,
       customer: row.customer_details,
+      assetType: row.asset_type
     }));
 
     return {
@@ -1812,7 +2039,7 @@ export class BookingService {
     // Get customer details
     const customer = await this.db.query.Customer.findFirst({
       where: (c, { eq, and }) => and(
-        eq(c.userId, booking.userId),
+        eq(c.userId, booking.userId as string),
         eq(c.tenantId, booking.asset.tenantId)
       ),
     });
@@ -1822,5 +2049,340 @@ export class BookingService {
       customer,
     };
   }
+
+//   async getFullyBlockedDaysForTag(
+//   tagId: number,
+//   from: Date,
+//   to: Date,
+// ) {
+//   // 1. Get all assets with this tag
+//   const taggedAssets = await this.db
+//     .select({ assetId: schema.Asset.id })
+//     .from(schema.Asset)
+//     .innerJoin(
+//       schema.AssetHasTags,
+//       eq(schema.AssetHasTags.assetId, schema.Asset.id)
+//     )
+//     .where(eq(schema.AssetHasTags.tagId, tagId));
+
+//   if (taggedAssets.length === 0) return [];
+
+//   const assetIds = taggedAssets.map(a => a.assetId);
+
+//   // 2. Get all blocked ranges for those assets (within window)
+//   const blockedRanges = await this.db
+//     .select({
+//       assetId: schema.BlockedDate.assetId,
+//       start: schema.BlockedDate.startDate,
+//       end: schema.BlockedDate.endDate,
+//     })
+//     .from(schema.BlockedDate)
+//     .where(
+//       and(
+//         inArray(schema.BlockedDate.assetId, assetIds),
+//         lte(schema.BlockedDate.startDate, to),
+//         gte(schema.BlockedDate.endDate, from),
+//       )
+//     );
+
+//   // 3. Group ranges by asset
+//   const byAsset = new Map<string, { start: Date; end: Date }[]>();
+
+//   for (const r of blockedRanges) {
+//     if (!byAsset.has(r.assetId)) byAsset.set(r.assetId, []);
+//     byAsset.get(r.assetId)!.push({
+//       start: new Date(r.start),
+//       end: new Date(r.end),
+//     });
+//   }
+
+//   // 4. Helper — is a day blocked for an asset?
+//   const isBlocked = (
+//     day: Date,
+//     ranges: { start: Date; end: Date }[]
+//   ) => ranges.some(r => day >= r.start && day <= r.end);
+
+//   // 5. Walk days and check if ALL assets are blocked
+//   const fullyBlockedDays: Date[] = [];
+
+//   for (
+//     let d = new Date(from);
+//     d <= to;
+//     d.setDate(d.getDate() + 1)
+//   ) {
+//     let blockedForAll = true;
+
+//     for (const ranges of byAsset.values()) {
+//       if (!isBlocked(d, ranges)) {
+//         blockedForAll = false;
+//         break;
+//       }
+//     }
+
+//     if (blockedForAll) {
+//       fullyBlockedDays.push(new Date(d));
+//     }
+//   }
+
+//   return fullyBlockedDays;
+// }
+
+  // -----------------------------
+  // Asset Type Booking Methods
+  // -----------------------------
+
+  /**
+   * Find an available asset of a given asset type for the specified date range
+   */
+  private async findAvailableAssetOfType(
+    assetTypeId: number,
+    startDate: Date,
+    endDate: Date,
+    tenantId: string
+  ): Promise<{ id: string; name: string } | null> {
+    // Get all assets of this type
+    const assets = await this.db
+      .select({ id: schema.Asset.id, name: schema.Asset.name })
+      .from(schema.Asset)
+      .where(
+        and(
+          eq(schema.Asset.assetTypeId, assetTypeId),
+          eq(schema.Asset.tenantId, tenantId),
+          eq(schema.Asset.available, true),
+          isNull(schema.Asset.deletedAt)
+        )
+      );
+
+    // Check each asset for availability
+    for (const asset of assets) {
+      const blockedDates = await this.db.query.BlockedDate.findMany({
+        where: (bd, { and, eq, gte, lte, or }) =>
+          and(
+            eq(bd.assetId, asset.id),
+            or(
+              and(gte(bd.startDate, startDate), lte(bd.startDate, endDate)),
+              and(gte(bd.endDate, startDate), lte(bd.endDate, endDate)),
+              and(lte(bd.startDate, startDate), gte(bd.endDate, endDate))
+            )
+          ),
+      });
+
+      if (blockedDates.length === 0) {
+        return asset;
+      }
+    }
+
+    return null;
+  }
+
+  /**
+   * Create a booking by asset type - automatically assigns an available asset
+   */
+  async createBookingByAssetType(
+    data: {
+      assetTypeId: number;
+      startDate: Date;
+      endDate: Date;
+      customerIds: number[];
+    },
+    tenantId: string
+  ): Promise<{ message: string; assetId: string; bookingId: string }> {
+    const { assetTypeId, startDate, endDate, customerIds } = data;
+
+    // Find available asset of this type
+    const availableAsset = await this.findAvailableAssetOfType(
+      assetTypeId,
+      startDate,
+      endDate,
+      tenantId
+    );
+
+    if (!availableAsset) {
+      throw new ConflictException('No available assets of this type for the selected dates');
+    }
+
+    // Get userId from first customer
+    const firstCustomer = await this.db.query.Customer.findFirst({
+      where: (c, { eq }) => eq(c.id, customerIds[0]),
+    });
+
+    if (!firstCustomer) {
+      throw new ConflictException('Customer not found');
+    }
+
+    // Create booking with the found asset
+    const bookingId = await this.createBooking(
+      {
+        assetId: availableAsset.id,
+        startDate,
+        endDate,
+      },
+      customerIds
+    );
+
+    // Update booking to mark it was booked by asset type
+
+    return {
+      message: 'Booking created by asset type',
+      assetId: availableAsset.id,
+      bookingId: bookingId ?? ''
+    };
+  }
+
+  /**
+   * Customer creates booking by asset type (public endpoint)
+   */
+  async customerCreateBookingByAssetType(
+    data: {
+      assetTypeId: number;
+      startDate: Date;
+      endDate: Date;
+      customer: { name: string; email: string; phone?: string };
+      formResponses?: Array<{ formFieldId: number; value: string }>;
+    },
+    tenantId: string
+  ): Promise<{ message: string; assetName: string }> {
+    const { assetTypeId, startDate, endDate, customer, formResponses } = data;
+
+    // Find available asset of this type
+    const availableAsset = await this.findAvailableAssetOfType(
+      assetTypeId,
+      startDate,
+      endDate,
+      tenantId
+    );
+
+    if (!availableAsset) {
+      throw new ConflictException('No available assets of this type for the selected dates');
+    }
+
+    // Create booking with the found asset
+    const bookingId = await this.createBooking(
+      {
+        assetId: availableAsset.id,
+        startDate,
+        endDate,
+      },
+      [], // No existing customer IDs
+      { ...customer, tenantId }, // New customer info
+      formResponses
+    );
+
+    // Update booking to mark it was booked by asset type
+
+    return {
+      message: 'Booking created successfully',
+      assetName: availableAsset.name,
+    };
+  }
+
+  /**
+   * Get fully blocked days for an asset type (when all assets of that type are booked)
+   */
+async getFullyBlockedDaysForAssetType(
+  assetTypeId: number,
+  from: Date,
+  to: Date
+): Promise<{ start: Date; end: Date }[]> {
+
+  // 1. Get all assets of this type
+  const assets = await this.db
+    .select({ id: schema.Asset.id })
+    .from(schema.Asset)
+    .where(
+      and(
+        eq(schema.Asset.assetTypeId, assetTypeId),
+        eq(schema.Asset.available, true),
+        isNull(schema.Asset.deletedAt)
+      )
+    );
+
+  if (assets.length === 0) return [];
+
+  const assetIds = assets.map(a => a.id);
+
+  // 2. Get all blocked ranges for those assets (within window)
+  const blockedRanges = await this.db
+    .select({
+      assetId: schema.BlockedDate.assetId,
+      start: schema.BlockedDate.startDate,
+      end: schema.BlockedDate.endDate,
+    })
+    .from(schema.BlockedDate)
+    .where(
+      and(
+        inArray(schema.BlockedDate.assetId, assetIds),
+        lte(schema.BlockedDate.startDate, to),
+        gte(schema.BlockedDate.endDate, from)
+      )
+    );
+
+  // 3. Group ranges by asset
+  const byAsset = new Map<string, { start: Date; end: Date }[]>();
+
+  for (const r of blockedRanges) {
+    if (!byAsset.has(r.assetId)) byAsset.set(r.assetId, []);
+    byAsset.get(r.assetId)!.push({
+      start: new Date(r.start),
+      end: new Date(r.end),
+    });
+  }
+
+  // 4. Helper — is a day blocked for an asset?
+  const isBlocked = (
+    day: Date,
+    ranges: { start: Date; end: Date }[]
+  ) => ranges.some(r => day >= r.start && day <= r.end);
+
+  // 5. Walk days and build continuous ranges
+  const fullyBlockedRanges: { start: Date; end: Date }[] = [];
+
+  let currentStart: Date | null = null;
+
+  for (
+    let d = new Date(from);
+    d <= to;
+    d.setDate(d.getDate() + 1)
+  ) {
+    let blockedForAll = true;
+
+    for (const assetId of assetIds) {
+      const ranges = byAsset.get(assetId) || [];
+
+      if (!isBlocked(d, ranges)) {
+        blockedForAll = false;
+        break;
+      }
+    }
+
+    if (blockedForAll) {
+      if (!currentStart) {
+        currentStart = new Date(d);
+      }
+    } else {
+      if (currentStart) {
+        const end = new Date(d);
+        end.setDate(end.getDate() - 1);
+
+        fullyBlockedRanges.push({
+          start: currentStart,
+          end,
+        });
+
+        currentStart = null;
+      }
+    }
+  }
+
+  // If the last range runs until `to`
+  if (currentStart) {
+    fullyBlockedRanges.push({
+      start: currentStart,
+      end: new Date(to),
+    });
+  }
+
+  return fullyBlockedRanges;
+}
 
 }

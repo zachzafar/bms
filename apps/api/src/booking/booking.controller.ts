@@ -78,32 +78,32 @@ export class BookingController {
         });
     }
 
-    @TsRestHandler(contract.booking.createBookingByTag)
-    @Roles(PermissionScope.BOOKINGS_WRITE, PermissionScope.BOOKINGS_BY_TAG_CREATE)
-    async createBookingByTag(@Headers() headers: any): Promise<ReturnType<typeof tsRestHandler>> {
-        return tsRestHandler(contract.booking.createBookingByTag, async ({ body }) => {
-            const tenantId = headers['x-tenant-id'];
-            const result = await this.bookingService.createBookingByTag(body, tenantId);
-            return { status: 201, body: result };
-        });
-    }
+    // @TsRestHandler(contract.booking.createBookingByTag)
+    // @Roles(PermissionScope.BOOKINGS_WRITE, PermissionScope.BOOKINGS_BY_TAG_CREATE)
+    // async createBookingByTag(@Headers() headers: any): Promise<ReturnType<typeof tsRestHandler>> {
+    //     return tsRestHandler(contract.booking.createBookingByTag, async ({ body }) => {
+    //         const tenantId = headers['x-tenant-id'];
+    //         const result = await this.bookingService.createBookingByTag(body, tenantId);
+    //         return { status: 201, body: result };
+    //     });
+    // }
 
-    @TsRestHandler(contract.booking.checkTagAvailability)
-    @Roles(PermissionScope.BOOKINGS_READ)
-    async checkTagAvailability(@Headers() headers: any): Promise<ReturnType<typeof tsRestHandler>> {
-        return tsRestHandler(contract.booking.checkTagAvailability, async ({ query }) => {
-            const tenantId = headers['x-tenant-id'];
+    // @TsRestHandler(contract.booking.checkTagAvailability)
+    // @Roles(PermissionScope.BOOKINGS_READ)
+    // async checkTagAvailability(@Headers() headers: any): Promise<ReturnType<typeof tsRestHandler>> {
+    //     return tsRestHandler(contract.booking.checkTagAvailability, async ({ query }) => {
+    //         const tenantId = headers['x-tenant-id'];
 
-            const tagId = (query.tagId);
-            if (isNaN(tagId)) {
-                return { status: 400, body: { message: "Invalid tagId" } };
-            }
+    //         const tagId = (query.tagId);
+    //         if (isNaN(tagId)) {
+    //             return { status: 400, body: { message: "Invalid tagId" } };
+    //         }
 
-            const result = await this.bookingService.checkAvailabilityByTag({ tagId });
+    //         const result = await this.bookingService.checkAvailabilityByTag({ tagId });
 
-            return { status: 200, body: result };
-        });
-    }
+    //         return { status: 200, body: result };
+    //     });
+    // }
 
     // -------------------------
     // Blocked Dates endpoints
@@ -191,15 +191,15 @@ export class BookingController {
     }
 
     @Public()
-    @TsRestHandler(contract.booking.customerCreateBookingByTag)
-    async customerCreateBookingByTag(): Promise<ReturnType<typeof tsRestHandler>> {
-        return tsRestHandler(contract.booking.customerCreateBookingByTag, async ({ params, body }) => {
+    @TsRestHandler(contract.booking.customerCreateBookingByAssetType)
+    async customerCreateBookingByAssetType(): Promise<ReturnType<typeof tsRestHandler>> {
+        return tsRestHandler(contract.booking.customerCreateBookingByAssetType, async ({ params, body }) => {
             const { tenantId } = params;
-            const { tagId, startDate, endDate, customer, formResponses } = body;
+            const { assetTypeId, startDate, endDate, customer, formResponses } = body;
 
             try {
-                const result = await this.bookingService.customerCreateBookingByTag(
-                    { tagId, startDate, endDate, customer, formResponses },
+                const result = await this.bookingService.customerCreateBookingByAssetType(
+                    { assetTypeId, startDate, endDate, customer, formResponses },
                     tenantId
                 );
                 return { status: 201, body: result };
@@ -267,18 +267,19 @@ export class BookingController {
     }
 
     @Public()
-    @TsRestHandler(contract.booking.getBlockedDatesForTagPublic)
+    @TsRestHandler(contract.booking.getBlockedDatesForAssetTypePublic)
     async getBlockedDatesForTagPublic(): Promise<ReturnType<typeof tsRestHandler>> {
-        return tsRestHandler(contract.booking.getBlockedDatesForTagPublic, async ({ params }) => {
-            const result = await this.bookingService.checkAvailabilityByTag({ tagId: params.tagId });
+        return tsRestHandler(contract.booking.getBlockedDatesForAssetTypePublic, async ({ params }) => {
+            const { startDate, endDate, assetTypeId} = params
+            const result = await this.bookingService.getFullyBlockedDaysForAssetType(assetTypeId,startDate,endDate);
 
             // Convert from/to to startDate/endDate format
-            const formatted = result.map((r) => ({
-                startDate: r.from,
-                endDate: r.to,
-            }));
+            // const formatted = result.map((r) => ({
+            //     startDate: r.from,
+            //     endDate: r.to,
+            // }));
 
-            return { status: 200, body: formatted };
+            return { status: 200, body: result };
         });
     }
 }

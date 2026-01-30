@@ -20,8 +20,9 @@ export class UsersController {
         return tsRestHandler(c.users.createUser, async ({ body }) => {
             const tenantId = headers['x-tenant-id'];
 
-            const { roles } = body;
-            const userId = await this.UserService.createUser(body, tenantId, roles);
+            const { roles, customerDetails } = body;
+            this.logger.log(`Trying to see customer details ${JSON.stringify(customerDetails)}`)
+            const userId = await this.UserService.createUser(body, tenantId, roles, customerDetails);
             return { status: 200, body: { id: userId } };
         });
     }
@@ -91,8 +92,9 @@ export class UsersController {
             const tenantId = headers['x-tenant-id'];
             const page = query.page ? Number(query.page) : 1;
             const pageSize = query.pageSize ? Number(query.pageSize) : 10;
+            const search = query.search;
 
-            const customers = await this.UserService.getCustomers(tenantId, page, pageSize);
+            const customers = await this.UserService.getCustomers(tenantId, page, pageSize, search);
             return { status: 200, body: customers };
         });
     }
@@ -105,8 +107,9 @@ export class UsersController {
             const tenantId = headers['x-tenant-id'];
             const page = query.page ? Number(query.page) : 1;
             const pageSize = query.pageSize ? Number(query.pageSize) : 10;
+            const search = query.search;
 
-            const owners = await this.UserService.getOwners(tenantId, page, pageSize);
+            const owners = await this.UserService.getOwners(tenantId, page, pageSize, search);
             return { status: 200, body: owners };
         })
     }

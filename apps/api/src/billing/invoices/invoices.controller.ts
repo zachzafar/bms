@@ -1,13 +1,13 @@
-import { Controller, Headers, Logger, Req } from '@nestjs/common';
+import { Controller, Headers, Logger, Res } from '@nestjs/common';
 import { TsRestHandler, tsRestHandler } from '@ts-rest/nest';
 import { billingContract } from '@repo/api-contract';
 import * as schema from '@repo/api-contract';
 import { TenantService } from 'src/tenant/tenant.service';
 import { InvoicesService } from './invoices.service';
-// import { RequireRead, RequireWrite } from 'src/auth/decorators/permissions.decorator';
+import { PdfService } from '../pdf/pdf.service';
 import { Roles } from 'src/auth/decorators/permissions.decorator';
 import { PermissionScope } from 'src/auth/permissions';
-import { IncomingHttpHeaders } from 'http';
+import { Response } from 'express';
 
 @Controller()
 export class InvoicesController {
@@ -15,6 +15,7 @@ export class InvoicesController {
   constructor(
     private readonly invoices: InvoicesService,
     private readonly tenantService: TenantService,
+    private readonly pdfService: PdfService,
   ) { }
 
   @TsRestHandler(billingContract.createInvoice)
@@ -143,6 +144,81 @@ export class InvoicesController {
         status: 201,
         body: { message: 'invoice generated from booking', invoiceId },
       };
+    });
+  }
+
+  @TsRestHandler(billingContract.downloadInvoicePdf)
+  @Roles(PermissionScope.BILLING_READ)
+  async downloadInvoicePdf(
+    @Headers() headers: Record<string, string | string[]>,
+    @Res() res: Response
+  ) {
+    return tsRestHandler(billingContract.downloadInvoicePdf, async ({ params }) => {
+      const rawTenantId = headers['x-tenant-id'];
+      const tenantId = Array.isArray(rawTenantId) ? rawTenantId[0] : rawTenantId;
+
+      if (!tenantId) {
+        return { status: 404 as const, body: { message: 'TenantId missing' } };
+      }
+
+      // Validate tenant access
+      await this.tenantService.validateTenantAccess(tenantId, schema.Invoice, params.id);
+
+      // Get invoice with items
+      const invoice = await this.invoices.get(params.id);
+      if (!invoice) {
+        return { status: 404 as const, body: { message: 'Invoice not found' } };
+      }
+
+      // Get tenant info
+      const tenant = await this.tenantService.getTenantById(tenantId);
+      if (!tenant) {
+        return { status: 404 as const, body: { message: 'Tenant not found' } };
+      }
+
+      // Get customer info
+      const customer = invoice.customerId
+        ? await this.tenantService.getCustomerById(invoice.customerId)
+        : null;
+
+      // Generate PDF
+      const pdfBuffer = await this.pdfService.generateInvoicePdf({
+        tenant: {
+          name: tenant.name,
+          logoUrl: tenant.logoUrl,
+          address: tenant.address ?? undefined,
+          email: tenant.email ?? undefined,
+          phone: tenant.phone ?? undefined,
+        },
+        invoice: {
+          invoiceNumber: invoice.invoiceNumber,
+          issueDate: new Date(invoice.issueDate),
+          dueDate: new Date(invoice.dueDate),
+          status: invoice.status,
+          subtotal: String(invoice.subtotal),
+          taxAmount: String(invoice.taxAmount),
+          totalAmount: String(invoice.totalAmount),
+          notes: invoice.notes ?? undefined,
+        },
+        customer: {
+          name: customer?.user?.name ?? 'Unknown Customer',
+          email: customer?.user?.email ?? undefined,
+          address: customer?.address ?? undefined,
+        },
+        items: invoice.items.map(item => ({
+          description: item.description,
+          quantity: item.quantity,
+          unitPrice: item.unitPrice,
+          totalPrice: item.totalPrice,
+        })),
+      });
+
+      // Send PDF response
+      res.setHeader('Content-Type', 'application/pdf');
+      res.setHeader('Content-Disposition', `attachment; filename="invoice-${invoice.invoiceNumber}.pdf"`);
+      res.send(pdfBuffer);
+
+      return { status: 200 as const, body: pdfBuffer };
     });
   }
 }

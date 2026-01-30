@@ -45,19 +45,14 @@ import { z } from 'zod';
 import { useState, useRef } from 'react';
 import Image from 'next/image';
 
-const TagWithFormsSchema = InsertTagSchema.extend({
-  forms: z.array(z.number()).optional(),
-});
 
-type TagWithForms = z.infer<typeof TagWithFormsSchema>;
+type InserTag = z.infer<typeof InsertTagSchema>;
 
 export default function Tags() {
-  const [selectedForms, setSelectedForms] = useState<string[]>([]);
   const [editingTag, setEditingTag] = useState<SelectTag | null>(null);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const editFileInputRef = useRef<HTMLInputElement>(null);
 
   const queryClient = useQueryClient();
 
@@ -66,7 +61,6 @@ export default function Tags() {
       toast.success('Tag created successfully');
       queryClient.invalidateQueries({ queryKey: ['tags'] });
       form.reset();
-      setSelectedForms([]);
     },
     onError: (error) => {
       toast.error(`Error creating tag: ${error}`);
@@ -104,38 +98,25 @@ export default function Tags() {
     }
   });
 
-  const form = useForm<TagWithForms>({
-    resolver: zodResolver(TagWithFormsSchema),
-    defaultValues: {
-      forms: []
-    }
+  const form = useForm<InserTag>({
+    resolver: zodResolver(InsertTagSchema),
   });
 
-  const editForm = useForm<TagWithForms>({
-    resolver: zodResolver(TagWithFormsSchema),
-    defaultValues: {
-      forms: []
-    }
+  const editForm = useForm<InserTag>({
+    resolver: zodResolver(InsertTagSchema),
   });
 
-  const processForm: SubmitHandler<TagWithForms> = (data) => {
-    const formIds = selectedForms.map(formName => {
-      const formItem = bookingForms?.status === 200 &&
-        bookingForms.body.data.find(f => f.name === formName);
-      return formItem ? formItem.id : null;
-    });
-
-    const nonNullFormIds = formIds.filter(formId => formId !== null);
+  const processForm: SubmitHandler<InserTag> = (data) => {
+    
 
     const body = {
       ...data,
-      forms: nonNullFormIds as number[]
     };
 
     createTag({ body });
   };
 
-  const processEditForm: SubmitHandler<TagWithForms> = (data) => {
+  const processEditForm: SubmitHandler<InserTag> = (data) => {
     if (!editingTag) return;
 
     updateTag({
@@ -215,38 +196,6 @@ export default function Tags() {
                     <FormControl>
                       <Textarea {...field} value={field.value ?? ''} />
                     </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={form.control}
-                name="forms"
-                render={() => (
-                  <FormItem>
-                    <FormLabel>Booking Forms</FormLabel>
-                    <MultiSelector
-                      values={selectedForms}
-                      onValuesChange={setSelectedForms}
-                    >
-                      <MultiSelectorTrigger>
-                        <MultiSelectorInput placeholder="Select Booking Forms..." />
-                      </MultiSelectorTrigger>
-                      <MultiSelectorContent>
-                        <MultiSelectorList>
-                          {bookingForms?.status === 200 &&
-                            bookingForms.body.data.map((formItem) => (
-                              <MultiSelectorItem
-                                key={formItem.id}
-                                value={formItem.name}
-                              >
-                                {formItem.name}
-                              </MultiSelectorItem>
-                            ))}
-                        </MultiSelectorList>
-                      </MultiSelectorContent>
-                    </MultiSelector>
                     <FormMessage />
                   </FormItem>
                 )}

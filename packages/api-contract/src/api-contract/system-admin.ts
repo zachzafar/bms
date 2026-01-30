@@ -1,6 +1,6 @@
 import { initContract } from "@ts-rest/core";
 import { z } from "zod";
-import { InsertTenantSchema, SelectTenantSchema, InsertUserSchema, SelectUserSchema,InsertAssetTypeSchema, SelectAssetPropertySchema, SelectAssetTypeSchema, UpdateAssetTypeSchema,InsertAssetPropertySchema, UpdateAssetPropertySchema, InsertTagSchema, SelectTagSchema, InsertBookingFormSchema, SelectBookingFormSchema, InsertBookingFormFieldSchema, SelectBookingFormFieldSchema } from "../database-schema/schema";
+import { InsertTenantSchema, SelectTenantSchema, InsertUserSchema, SelectUserSchema,InsertAssetTypeSchema, SelectAssetPropertySchema, SelectAssetTypeSchema, UpdateAssetTypeSchema,InsertAssetPropertySchema, UpdateAssetPropertySchema, InsertTagSchema, SelectTagSchema, InsertBookingFormSchema, SelectBookingFormSchema, InsertBookingFormFieldSchema, SelectBookingFormFieldSchema, SelectAssetSchema } from "../database-schema/schema";
 import { pagination } from "./utils";
 
 const c = initContract();
@@ -34,6 +34,19 @@ export const systemAdminContract = c.router({
       }),
     },
     summary: 'Create a new system admin user',
+  },
+  logout: {
+    method: 'POST',
+    path: '/system-admin/logout',
+    body: z.object({
+      userId: z.string().max(255)
+    }),
+    responses: {
+      204: z.object({
+        message: z.string()
+      })
+    },
+    summary: 'Logout'
   },
 
   getSystemAdmins: {
@@ -256,6 +269,7 @@ export const systemAdminContract = c.router({
   removeUserFromTenant: {
     method: 'DELETE',
     path: '/system-admin/tenants/:tenantId/users/:userId',
+    body: z.object({}).optional(),
     pathParams: z.object({
       tenantId: z.string(),
       userId: z.string(),
@@ -304,6 +318,22 @@ export const systemAdminContract = c.router({
       }),
     },
     summary: 'Create a new user for a tenant',
+  },
+
+  searchUsers: {
+    method: 'GET',
+    path: '/system-admin/users/search',
+    pathParams: z.object({}),
+    query: z.object({
+      email: z.string().optional(),
+      tenantId: z.string().optional(),
+    }),
+    responses: {
+      200: z.object({
+        data: z.array(SelectUserSchema.omit({ password: true })),
+      }),
+    },
+    summary: 'Search for users by email, optionally excluding users already in a tenant',
   },
 
   // API Key Management
@@ -694,6 +724,24 @@ export const systemAdminContract = c.router({
             })
         },
         summary: 'Bulk upload assets'
+    },
+    getTenantAssets: {
+        method: 'GET',
+        path: '/system-admin/tenants/:tenantId/assets',
+        pathParams: z.object({
+            tenantId: z.string(),
+        }),
+        query: z.object({
+            page: z.coerce.number().optional(),
+            pageSize: z.coerce.number().optional(),
+        }),
+        responses: {
+            200: z.object({
+                data: z.array(SelectAssetSchema),
+                pagination,
+            }),
+        },
+        summary: 'Get all assets for a tenant',
     },
 });
         

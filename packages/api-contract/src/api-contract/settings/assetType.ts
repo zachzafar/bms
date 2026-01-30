@@ -1,7 +1,7 @@
 import { initContract } from "@ts-rest/core";
 
 import { z } from "zod";
-import { Asset, InsertAssetPropertySchema, InsertAssetTypeSchema, SelectAssetPropertySchema, SelectAssetTypeSchema, UpdateAssetTypeSchema, SelectBookingFormSchema } from "../../database-schema";
+import { Asset, InsertAssetPropertySchema, InsertAssetTypeSchema, SelectAssetPropertySchema, SelectAssetTypeSchema, UpdateAssetTypeSchema, SelectBookingFormSchema, SelectTagSchema } from "../../database-schema";
 import { pagination } from "../utils";
 
 const c = initContract();
@@ -9,7 +9,8 @@ const c = initContract();
 export const AssetTypeWithPropertiesSchema = z.object({
     assetType: InsertAssetTypeSchema,
     properties: z.array(z.number()),
-    forms: z.array(z.number())
+    forms: z.array(z.number()),
+    tagIds: z.array(z.number()).optional()
 })
 
 export const SelectAssetTypeWithPropertiesSchema = z.object({
@@ -54,7 +55,8 @@ export const assetTypeContract = c.router({
             200: z.object({
                 assetType: SelectAssetTypeSchema.omit({ deletedAt: true}),
                 properties: z.array(SelectAssetPropertySchema),
-                forms: z.array(SelectBookingFormSchema)
+                forms: z.array(SelectBookingFormSchema),
+                tags: z.array(SelectTagSchema).optional()
             }),
             404: z.object({
                 message: z.string()
@@ -71,7 +73,8 @@ export const assetTypeContract = c.router({
         body: z.object({
             assetType: UpdateAssetTypeSchema,
             properties: z.array(z.number()),
-            forms: z.array(z.number())
+            forms: z.array(z.number()),
+            tagIds: z.array(z.number()).optional()
     }),
         responses: {
             200: z.null()
@@ -95,6 +98,25 @@ export const assetTypeContract = c.router({
         }),
         summary: 'Delete asset type by id'
     },
+    uploadAssetTypeImage: {
+        method: 'POST',
+        path: '/asset-type/:id/image',
+        contentType: 'multipart/form-data',
+        body: c.type<{ image: File }>(),
+        pathParams: z.object({
+            id: z.coerce.number(),
+        }),
+        responses: {
+            200: z.object({
+                message: z.string(),
+                imagePath: z.string(),
+            }),
+            404: z.object({
+                message: z.string()
+            })
+        },
+        summary: 'Upload an image for an asset type'
+    },
     getProperties: {
         method: 'GET',
         path: '/properties',
@@ -110,5 +132,44 @@ export const assetTypeContract = c.router({
         }),
         summary: 'Get all asset properties'
     },
-
+    customerGetAssetTypes: {
+        method:"GET",
+        path: '/customer/:subdomain/assetTypes',
+        pathParams:z.object({
+            subdomain: z.string()
+        }),
+        query: z.object({
+                    search: z.string().optional(),
+                    assetId: z.string().optional(),
+                    page: z.coerce.number().optional(),
+                    pageSize: z.coerce.number().optional(),
+                }),
+        responses: {
+            200: z.object({
+                data: z.array(z.object({
+                    id: z.number(),
+                    name: z.string(),
+                    image: z.string(),
+                    description: z.string(),
+                })),
+                pagination
+            })
+        }
+    },
+    customerGetAssetType: {
+        method:"GET",
+        path: '/customer/:subdomain/assetType/:id',
+        pathParams:z.object({
+            subdomain: z.string(),
+            id: z.number()
+        }),
+        responses: {
+            200: z.object({
+                    id: z.number(),
+                    name: z.string(),
+                    image: z.string(),
+                    description: z.string(),
+            })
+        }
+    },
 })

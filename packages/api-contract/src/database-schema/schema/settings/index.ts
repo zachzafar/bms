@@ -4,7 +4,7 @@ import { createInsertSchema, createSelectSchema,  } from "drizzle-zod";
 import { Tenant } from "../tenant";
 
 import { z } from "zod";
-import { AssetHasBookingForms, AssetHasTags } from "../asset";
+import { AssetHasBookingForms } from "../asset";
 
 
 
@@ -38,7 +38,7 @@ export type InsertTag = z.infer<typeof InsertTagSchema>;
 export type SelectTag = z.infer<typeof SelectTagSchema>;
 
 export const TagsRelations = relations(Tags, ({ many, one }) => ({
-  asset: many(AssetHasTags),
+  assetTypes: many(AssetTypeHasTags),
   bookingForms: many(TagHasBookingForms),
   tenant: one(Tenant, {
     fields: [Tags.tenantId],
@@ -52,12 +52,12 @@ export const AssetType = mysqlTable("asset_type", {
     id: bigint("id", { mode: "number", unsigned: true }).autoincrement().primaryKey().notNull(),
     name: varchar("name", { length: 255 }).notNull(),
     description: text("description"),
+    image: varchar("image", { length: 255 }),
     createdAt: timestamp('createdAt').notNull().defaultNow(),
     updatedAt: timestamp('updatedAt'),
     deletedAt: timestamp('deleted_at'),
     tenantId: varchar("tenant_id", { length: 255 }).notNull().references(() => Tenant.id),
 }, (table) => ({
-    nameUniqueIdx: uniqueIndex("name_unique").on(table.name, table.tenantId),
     deletedAtIdx: index("asset_type_deleted_at_idx").on(table.deletedAt),
 }));
 
@@ -72,6 +72,7 @@ export type UpdateAssetType = z.infer<typeof UpdateAssetTypeSchema>;
 export const AssetTypeRelations = relations(AssetType, ({ one, many }) => ({
     assetTypeHasProperties: many(AssetTypeHasProperties),
     bookingForms: many(AssetTypeHasBookingForms),
+    tags: many(AssetTypeHasTags),
     tenant: one(Tenant,{
         fields: [AssetType.tenantId],
         references: [Tenant.id]
@@ -259,6 +260,37 @@ export const TagHasBookingFormsRelations = relations(TagHasBookingForms, ({ one 
     bookingForm: one(BookingForm, {
         fields: [TagHasBookingForms.bookingFormId],
         references: [BookingForm.id],
+    }),
+}));
+
+
+// AssetType has Tags junction table
+export const AssetTypeHasTags = mysqlTable("asset_type_has_tags", {
+    id: bigint("id", { mode: "number", unsigned: true }).autoincrement().primaryKey(),
+    tagId: bigint("tag_id", { mode: 'number', unsigned: true })
+        .notNull()
+        .references(() => Tags.id, { onDelete: 'cascade' }),
+    assetTypeId: bigint("asset_type_id", { mode: 'number', unsigned: true })
+        .notNull()
+        .references(() => AssetType.id, { onDelete: 'cascade' }),
+}, (table) => ({
+    assetTypeTagUniqueIdx: uniqueIndex("asset_type_tag_unique").on(table.assetTypeId, table.tagId),
+}));
+
+export const InsertAssetTypeHasTagsSchema = createInsertSchema(AssetTypeHasTags);
+export const SelectAssetTypeHasTagsSchema = createSelectSchema(AssetTypeHasTags);
+
+export type InsertAssetTypeHasTags = z.infer<typeof InsertAssetTypeHasTagsSchema>;
+export type SelectAssetTypeHasTags = z.infer<typeof SelectAssetTypeHasTagsSchema>;
+
+export const AssetTypeHasTagsRelations = relations(AssetTypeHasTags, ({ one }) => ({
+    assetType: one(AssetType, {
+        fields: [AssetTypeHasTags.assetTypeId],
+        references: [AssetType.id],
+    }),
+    tag: one(Tags, {
+        fields: [AssetTypeHasTags.tagId],
+        references: [Tags.id],
     }),
 }));
 

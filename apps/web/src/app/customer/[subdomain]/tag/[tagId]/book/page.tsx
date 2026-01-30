@@ -36,7 +36,7 @@ export default function TagBookingPage() {
   const params = useParams();
   const router = useRouter();
   const subdomain = params.subdomain as string;
-  const tagId = parseInt(params.tagId as string);
+  const assetTypeId = parseInt(params.tagId as string);
 
   // Fetch tenant to get tenantId
   const { data: tenantResponse, isLoading: isTenantLoading } = client.tenants.getTenantBySubdomain.useQuery({
@@ -48,35 +48,35 @@ export default function TagBookingPage() {
 
   const tenantId = tenantResponse?.status === 200 ? tenantResponse.body.id : null;
 
-  // Fetch tag details
-  const { data: tagsResponse, isLoading: isTagsLoading } = client.settings.tags.getTagsBySubdomain.useQuery({
-    queryKey: ['tags-by-subdomain', subdomain],
-    queryData: {
-      params: { subdomain },
-      query: { page: 1, pageSize: 100 },
-    },
-  });
 
-  const tags = tagsResponse?.status === 200 ? tagsResponse.body.data : [];
-  const tag = tags.find(t => t.id === tagId);
+  const { data: assetTypesResponse, isLoading: AssetTypeLoading, error: tagsError, refetch: refetchTags } = client.settings.assetType.customerGetAssetType.useQuery({
+      queryKey: ['assetTypes-by-subdomain', subdomain],
+      queryData: {
+        params: { subdomain, id: assetTypeId },
+      },
+    });
 
+  const assetType = assetTypesResponse?.status === 200 ? assetTypesResponse.body : null;
+
+  const startDate = new Date();
+  const endDate = new Date(startDate.getDate() + 60) 
   // Fetch blocked dates for this tag
-  const { data: blockedDatesResponse } = client.booking.getBlockedDatesForTagPublic.useQuery({
-    queryKey: ['blocked-dates-tag', tagId],
+  const { data: blockedDatesResponse } = client.booking.getBlockedDatesForAssetTypePublic.useQuery({
+    queryKey: ['blocked-dates-tag', assetTypeId],
     queryData: {
-      params: { tagId },
+      params: { assetTypeId: assetTypeId, startDate, endDate },
     },
-    enabled: !!tagId,
+    enabled: !!assetTypeId,
   });
 
   const blockedDates: BlockedDateRange[] = blockedDatesResponse?.status === 200
     ? blockedDatesResponse.body.map(d => ({
-        startDate: new Date(d.startDate),
-        endDate: new Date(d.endDate),
+        startDate: new Date(d.start),
+        endDate: new Date(d.end),
       }))
     : [];
 
-  const isLoading = isTenantLoading || isTagsLoading;
+  const isLoading = isTenantLoading || AssetTypeLoading;
 
   const form = useForm<CustomerTagBookingFormData>({
     resolver: zodResolver(CustomerTagBookingSchema),
@@ -88,7 +88,7 @@ export default function TagBookingPage() {
     },
   });
 
-  const { mutate: createBookingByTag, isPending } = client.booking.customerCreateBookingByTag.useMutation();
+  const { mutate: createBookingByTag, isPending } = client.booking.customerCreateBookingByAssetType.useMutation();
 
   const onSubmit = (data: CustomerTagBookingFormData) => {
     if (!tenantId) {
@@ -102,7 +102,7 @@ export default function TagBookingPage() {
           tenantId,
         },
         body: {
-          tagId,
+          assetTypeId,
           startDate: data.dateRange.from,
           endDate: data.dateRange.to,
           customer: {
@@ -113,7 +113,7 @@ export default function TagBookingPage() {
         },
       },
       {
-        onSuccess: (response) => {
+        onSuccess: (response:any) => {
           if (response.status === 201) {
             toast.success(`Booking confirmed! You've been assigned: ${response.body.assetName}. Check your email for details.`);
             // Delay redirect to let user see the success message
@@ -125,7 +125,9 @@ export default function TagBookingPage() {
           }
         },
         onError: (err: any) => {
-          toast.error(err.message || 'Failed to create booking. Please try again.');
+          // Extract error message from API response
+          const errorMessage = err?.body?.message || err?.message || 'Failed to create booking. Please try again.';
+          toast.error(errorMessage);
           console.error(err);
         },
       }
@@ -143,7 +145,7 @@ export default function TagBookingPage() {
     );
   }
 
-  if (!tag || !tenantId) {
+  if (!assetType || !tenantId) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
         <Card className="max-w-md">
@@ -175,7 +177,7 @@ export default function TagBookingPage() {
       <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Back Button */}
         <Link
-          href={`/customer/${subdomain}/tag/${tagId}`}
+          href={`/customer/${subdomain}/tag/${assetTypeId}`}
           className="inline-flex items-center text-primary hover:text-primary mb-6"
         >
           <ArrowLeft className="w-5 h-5 mr-2" />
@@ -187,10 +189,10 @@ export default function TagBookingPage() {
             <div className="flex items-center space-x-4">
               {/* Tag Image Thumbnail */}
               <div className="w-16 h-16 relative rounded-lg overflow-hidden bg-muted flex items-center justify-center flex-shrink-0">
-                {tag.tagImage ? (
+                {assetType.image ? (
                   <Image
-                    src={tag.tagImage}
-                    alt={tag.name}
+                    src={assetType.image}
+                    alt={assetType.name}
                     fill
                     className="object-cover"
                   />
@@ -199,7 +201,7 @@ export default function TagBookingPage() {
                 )}
               </div>
               <div>
-                <CardTitle className="text-2xl">Book {tag.name}</CardTitle>
+                <CardTitle className="text-2xl">Book {assetType.name}</CardTitle>
                 <CardDescription>We'll assign the best available option for your dates</CardDescription>
               </div>
             </div>
@@ -285,7 +287,7 @@ export default function TagBookingPage() {
                       <p className="font-medium mb-1">How it works</p>
                       <p className="text-muted-foreground">
                         When you submit this form, we'll automatically assign the best available option
-                        from the "{tag.name}" category for your selected dates. You'll receive a confirmation
+                        from the "{assetType.name}" category for your selected dates. You'll receive a confirmation
                         email with the specific assignment details.
                       </p>
                     </div>
@@ -333,7 +335,7 @@ export default function TagBookingPage() {
                     variant="outline"
                     asChild
                   >
-                    <Link href={`/customer/${subdomain}/tag/${tagId}`}>
+                    <Link href={`/customer/${subdomain}/tag/${assetTypeId}`}>
                       Cancel
                     </Link>
                   </Button>

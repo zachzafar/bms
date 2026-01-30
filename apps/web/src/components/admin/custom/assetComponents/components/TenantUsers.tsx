@@ -9,7 +9,7 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { Plus, Edit, Trash2, Users, User, Loader2 } from 'lucide-react';
+import { Plus, Edit, UserMinus, Users, User, Loader2, Search, UserPlus } from 'lucide-react';
 import { toast } from 'sonner';
 import { authClient } from '@/lib/api/publicClient';
 import { TENANT_ROLES_QUERY_KEY, TENANT_USERS_QUERY_KEY } from '@/lib/api/queryKeys';
@@ -21,7 +21,11 @@ interface TenantUsersProps {
 export function TenantUsers({ tenantId }: TenantUsersProps) {
   const [showAddUserModal, setShowAddUserModal] = useState(false);
   const [showEditUserModal, setShowEditUserModal] = useState(false);
+  const [showAssignUserModal, setShowAssignUserModal] = useState(false);
   const [editingUser, setEditingUser] = useState<any>(null);
+  // const [searchEmail, setSearchEmail] = useState('');
+  const [selectedUserToAssign, setSelectedUserToAssign] = useState<any>(null);
+  const [assignUserRoles, setAssignUserRoles] = useState<number[]>([]);
   const [newUser, setNewUser] = useState({
     email: '',
     name: '',
@@ -46,16 +50,45 @@ export function TenantUsers({ tenantId }: TenantUsersProps) {
 
   const roles = rolesData?.body || [];
 
+  // Search users for assignment
+  // const { data: searchUsersData, refetch: refetchSearchUsers } = authClient.systemAdmin.searchUsers.useQuery({
+  //   queryData: { query: { email: searchEmail, tenantId } },
+  //   queryKey: ['search-users', searchEmail, tenantId],
+  //   enabled: searchEmail.length >= 2,
+  // });
+
+  // const searchedUsers = searchUsersData?.body?.data || [];
+
+  // // Assign existing user mutation
+  // const assignUserMutation = authClient.systemAdmin.assignUserToTenant.useMutation({
+  //   onSuccess: () => {
+  //     toast.success('User assigned to tenant successfully');
+  //     refetchUsers();
+  //     setShowAssignUserModal(false);
+  //     setSelectedUserToAssign(null);
+  //     setAssignUserRoles([]);
+  //     setSearchEmail('');
+  //   },
+  //   onError: (error: any) => {
+  //     toast.error(error?.body?.message || 'Failed to assign user');
+  //     console.error('Assign user error:', error);
+  //   }
+  // });
 
   const createUserMutation = authClient.systemAdmin.createUserForTenant.useMutation({
-    onSuccess: () => {
-      toast.success('User added successfully');
+    onSuccess: (data) => {
+      toast.success(data.body.message || 'User added to tenant successfully');
       refetchUsers();
       setShowAddUserModal(false);
       setNewUser({ email: '', name: '', userType: 'user', roleIds: [], password: '' });
     },
     onError: (error: any) => {
-      toast.error(error?.body?.message || 'Failed to add user');
+      const message = error?.body?.message || 'Failed to add user';
+      if (message.toLowerCase().includes('already exists') || message.toLowerCase().includes('already assigned')) {
+        toast.error('This user is already assigned to this tenant');
+      } else {
+        toast.error(message);
+      }
       console.error('Add user error:', error);
     }
   });
@@ -92,17 +125,17 @@ export function TenantUsers({ tenantId }: TenantUsersProps) {
     roleIds: [] as number[]
   });
 
-  // Add mutation for removing user from tenant
-  // const removeUserMutation = authClient.systemAdmin.removeUserFromTenant.useMutation({
-  //   onSuccess: () => {
-  //     toast.success('User removed successfully');
-  //     refetchUsers();
-  //   },
-  //   onError: (error: any) => {
-  //     toast.error(error?.body?.message || 'Failed to remove user');
-  //     console.error('Remove user error:', error);
-  //   }
-  // });
+  // Add mutation for unassigning user from tenant
+  const removeUserMutation = authClient.systemAdmin.removeUserFromTenant.useMutation({
+    onSuccess: () => {
+      toast.success('User unassigned from tenant successfully');
+      refetchUsers();
+    },
+    onError: (error: any) => {
+      toast.error(error?.body?.message || 'Failed to unassign user');
+      console.error('Unassign user error:', error);
+    }
+  });
 
   // Add mutation for updating user roles (remove and re-assign)
   const updateUserRolesMutation = authClient.systemAdmin.updateUserRoles.useMutation({
@@ -162,13 +195,14 @@ export function TenantUsers({ tenantId }: TenantUsersProps) {
   //   }
   // };
 
-  // const handleRemoveUser = (userId: string) => {
-  //   if (confirm('Are you sure you want to remove this user from the tenant?')) {
-  //     removeUserMutation.mutate({
-  //       params: { tenantId, userId }
-  //     });
-  //   }
-  // };
+  const handleRemoveUser = (userId: string) => {
+    if (confirm('Are you sure you want to unassign this user from the tenant? The user account will not be deleted.')) {
+      removeUserMutation.mutate({
+        params: { tenantId, userId },
+        body: undefined
+      });
+    }
+  };
 
   const toggleEditUserRole = (roleId: number) => {
     setEditUserRoles(prev => ({
@@ -178,6 +212,30 @@ export function TenantUsers({ tenantId }: TenantUsersProps) {
         : [...prev.roleIds, roleId]
     }));
   };
+
+  const toggleAssignUserRole = (roleId: number) => {
+    setAssignUserRoles(prev =>
+      prev.includes(roleId)
+        ? prev.filter(id => id !== roleId)
+        : [...prev, roleId]
+    );
+  };
+
+  // const handleAssignUser = () => {
+  //   if (!selectedUserToAssign) {
+  //     toast.error('Please select a user to assign');
+  //     return;
+  //   }
+
+  //   assignUserMutation.mutate({
+  //     params: { tenantId },
+  //     body: {
+  //       userId: selectedUserToAssign.id,
+  //       roleIds: assignUserRoles,
+  //       isAdmin: false,
+  //     }
+  //   });
+  // };
 
   if (usersLoading) {
     return (
@@ -202,13 +260,132 @@ export function TenantUsers({ tenantId }: TenantUsersProps) {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h2 className="text-2xl font-bold text-white">User Management</h2>
-        <Dialog open={showAddUserModal} onOpenChange={setShowAddUserModal}>
-          <DialogTrigger asChild>
-            <Button className="bg-primary hover:bg-primary">
-              <Plus className="h-4 w-4 mr-2" />
-              Add User
-            </Button>
-          </DialogTrigger>
+        <div className="flex gap-2">
+          {/* <Dialog open={showAssignUserModal} onOpenChange={(open) => {
+            setShowAssignUserModal(open);
+            if (!open) {
+              setSearchEmail('');
+              setSelectedUserToAssign(null);
+              setAssignUserRoles([]);
+            }
+          }}>
+            <DialogTrigger asChild>
+              <Button variant="outline" className="border-border text-card-foreground hover:bg-card">
+                <UserPlus className="h-4 w-4 mr-2" />
+                Assign Existing User
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="bg-card border-border text-white max-w-2xl">
+              <DialogHeader>
+                <DialogTitle>Assign Existing User</DialogTitle>
+                <DialogDescription>
+                  Search for an existing user by email and assign them to this tenant.
+                </DialogDescription>
+              </DialogHeader>
+              <div className="space-y-4">
+                <div>
+                  <Label htmlFor="search-email" className="text-card-foreground">Search by Email</Label>
+                  <div className="relative">
+                    <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                    <Input
+                      id="search-email"
+                      value={searchEmail}
+                      onChange={(e) => setSearchEmail(e.target.value)}
+                      className="bg-card border-border text-white pl-8"
+                      placeholder="Enter email to search..."
+                    />
+                  </div>
+                </div>
+
+                {searchEmail.length >= 2 && (
+                  <div className="border border-border rounded-lg max-h-48 overflow-y-auto">
+                    {searchedUsers.length > 0 ? (
+                      searchedUsers.map((user) => (
+                        <div
+                          key={user.id}
+                          className={`p-3 cursor-pointer hover:bg-muted ${
+                            selectedUserToAssign?.id === user.id ? 'bg-muted' : ''
+                          }`}
+                          onClick={() => setSelectedUserToAssign(user)}
+                        >
+                          <div className="flex items-center space-x-3">
+                            <div className="w-8 h-8 bg-muted rounded-full flex items-center justify-center">
+                              <User className="h-4 w-4 text-white" />
+                            </div>
+                            <div>
+                              <p className="text-white font-medium">{user.name}</p>
+                              <p className="text-muted-foreground text-sm">{user.email}</p>
+                            </div>
+                          </div>
+                        </div>
+                      ))
+                    ) : (
+                      <div className="p-4 text-center text-muted-foreground">
+                        No users found matching this email
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {selectedUserToAssign && (
+                  <div className="border border-primary rounded-lg p-3 bg-primary/10">
+                    <p className="text-sm text-muted-foreground mb-1">Selected user:</p>
+                    <p className="text-white font-medium">{selectedUserToAssign.name} ({selectedUserToAssign.email})</p>
+                  </div>
+                )}
+
+                {selectedUserToAssign && (
+                  <div>
+                    <Label className="text-card-foreground">Assign Roles</Label>
+                    <div className="grid grid-cols-2 gap-2 mt-2 max-h-40 overflow-y-auto">
+                      {roles.map((role) => (
+                        <div key={role.id} className="flex items-center space-x-2">
+                          <Checkbox
+                            id={`assign-role-${role.id}`}
+                            checked={assignUserRoles.includes(role.id)}
+                            onCheckedChange={() => toggleAssignUserRole(role.id)}
+                            className="border-border"
+                          />
+                          <Label htmlFor={`assign-role-${role.id}`} className="text-card-foreground text-sm">
+                            {role.name}
+                          </Label>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+              <DialogFooter>
+                <Button
+                  variant="outline"
+                  onClick={() => setShowAssignUserModal(false)}
+                  className="border-border text-card-foreground hover:bg-card"
+                >
+                  Cancel
+                </Button>
+                <Button
+                  onClick={handleAssignUser}
+                  disabled={assignUserMutation.isPending || !selectedUserToAssign}
+                  className="bg-primary hover:bg-primary"
+                >
+                  {assignUserMutation.isPending ? (
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  ) : (
+                    <UserPlus className="h-4 w-4 mr-2" />
+                  )}
+                  {assignUserMutation.isPending ? 'Assigning...' : 'Assign User'}
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog> */}
+
+          <Dialog open={showAddUserModal} onOpenChange={setShowAddUserModal}>
+            <DialogTrigger asChild>
+              <Button className="bg-primary hover:bg-primary">
+                <Plus className="h-4 w-4 mr-2" />
+                Create New User
+              </Button>
+            </DialogTrigger>
           <DialogContent className="bg-card border-border text-white max-w-2xl">
             <DialogHeader>
               <DialogTitle>Add New User</DialogTitle>
@@ -305,6 +482,7 @@ export function TenantUsers({ tenantId }: TenantUsersProps) {
             </DialogFooter>
           </DialogContent>
         </Dialog>
+        </div>
       </div>
 
       {/* Add Edit User Modal */}
@@ -428,10 +606,12 @@ export function TenantUsers({ tenantId }: TenantUsersProps) {
                         <Button
                           size="sm"
                           variant="outline"
-                          // onClick={() => handleRemoveUser(user.user.id)}
-                          className="border-destructive text-destructive hover:bg-destructive/90"
+                          onClick={() => handleRemoveUser(user.user.id)}
+                          disabled={removeUserMutation.isPending}
+                          className="border-orange-500 text-orange-500 hover:bg-orange-500/10"
+                          title="Unassign from tenant"
                         >
-                          <Trash2 className="h-3 w-3" />
+                          <UserMinus className="h-3 w-3" />
                         </Button>
                       </div>
                     </td>

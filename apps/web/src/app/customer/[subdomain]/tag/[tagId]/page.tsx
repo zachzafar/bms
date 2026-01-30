@@ -15,18 +15,19 @@ export default function TagBookingPage() {
   const tagId = parseInt(params.tagId as string);
 
   // Fetch tag details
-  const { data: tagsResponse, isLoading } = client.settings.tags.getTagsBySubdomain.useQuery({
-    queryKey: ['tags-by-subdomain', subdomain],
-    queryData: {
-      params: { subdomain },
-      query: { page: 1, pageSize: 100 },
-    },
-  });
 
-  const tags = tagsResponse?.status === 200 ? tagsResponse.body.data : [];
-  const tag = tags.find(t => t.id === tagId);
 
-  if (isLoading) {
+    const { data: assetTypesResponse, isLoading, error: tagsError, refetch: refetchTags } = client.settings.assetType.customerGetAssetType.useQuery({
+      queryKey: ['assetTypes-by-subdomain', subdomain],
+      queryData: {
+        params: { subdomain, id:tagId },
+      },
+    });
+
+  const assetType  = assetTypesResponse?.status === 200 ? assetTypesResponse.body : null
+
+
+  if (isLoading || !assetType ) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
         <div className="text-center">
@@ -37,7 +38,7 @@ export default function TagBookingPage() {
     );
   }
 
-  if (!tag) {
+  if (!assetType) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
         <Card className="max-w-md">
@@ -68,11 +69,11 @@ export default function TagBookingPage() {
 
         <Card>
           {/* Tag Image */}
-          {tag.tagImage ? (
+          {assetType.image ? (
             <div className="relative h-64 w-full">
               <Image
-                src={tag.tagImage}
-                alt={tag.name}
+                src={assetType.image}
+                alt={assetType.name}
                 fill
                 className="object-cover rounded-t-lg"
               />
@@ -82,17 +83,17 @@ export default function TagBookingPage() {
               <div className="flex flex-col items-center justify-center text-muted-foreground">
                 <ImageIcon className="h-24 w-24 opacity-20" />
                 <span className="text-6xl font-bold opacity-20 mt-2">
-                  {tag.name.charAt(0)}
+                  {assetType.name.charAt(0)}
                 </span>
               </div>
             </div>
           )}
 
           <CardHeader>
-            <CardTitle className="text-3xl">{tag.name}</CardTitle>
-            {tag.description && (
+            <CardTitle className="text-3xl">{assetType.name}</CardTitle>
+            {assetType.description && (
               <CardDescription className="text-lg">
-                {tag.description}
+                {assetType.description}
               </CardDescription>
             )}
           </CardHeader>

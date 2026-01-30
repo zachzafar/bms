@@ -1,8 +1,8 @@
-import { Inject, Injectable, InternalServerErrorException, Logger } from '@nestjs/common';
+import { BadRequestException, Inject, Injectable, InternalServerErrorException, Logger } from '@nestjs/common';
 import { MySql2Database } from 'drizzle-orm/mysql2';
 import { DrizzleAsyncProvider } from 'src/drizzle/drizzle.provider';
 import * as schema from '@repo/api-contract';
-import { and, eq, gte, inArray, isNull, lte, sql } from 'drizzle-orm';
+import { and, eq, gte, inArray, isNull, lte, ne, sql } from 'drizzle-orm';
 import type { InsertAsset, UpdateAsset } from '@repo/api-contract';
 import { ObjectStorageService } from 'src/object-storage/object-storage.service';
 import { Readable } from 'stream';
@@ -17,12 +17,13 @@ export class AssetsService {
     private objectStorageService: ObjectStorageService
   ) { }
 
-  async getAssets(query: any, tenantId: string, page: number = 1, pageSize: number = 10) {
+  async getAssets(tenantId: string,query: {search?:string,assetTypeId?:number}, page: number = 1, pageSize: number = 10) {
     const offset = (page - 1) * pageSize;
 
     // Build where conditions
     const conditions: any[] = [eq(schema.Asset.tenantId, tenantId), isNull(schema.Asset.deletedAt)];
-    if (query?.userId) conditions.push(eq(schema.Asset.userId, query.userId));
+    if (query?.assetTypeId) conditions.push(eq(schema.Asset.assetTypeId, query.assetTypeId));
+    if (query?.search) conditions.push(sql`${schema.Asset.name} LIKE ${`%${query.search}%`}`);
 
     // Get total count
     const totalCountResult = await this.db
@@ -38,7 +39,7 @@ export class AssetsService {
         and(
           eq(asset.tenantId, tenantId),
           isNull(asset.deletedAt),
-          query?.userId ? eq(asset.userId, query.userId) : undefined,
+          query?.assetTypeId ? eq(asset.assetTypeId, query.assetTypeId) : undefined,
           query?.search ? like(asset.name, `%${query.search}%`) : undefined
         ),
       limit: pageSize,
@@ -55,20 +56,10 @@ export class AssetsService {
       hasPreviousPage: page > 1,
     };
 
-    const assetsWithTags = await Promise.all(
-      assets.map(async (asset) => {
-        const assetTags = await this.getTagsForAsset(asset.id);
-        return {
-          ...asset,
-          tags: assetTags
-            .map((rel) => rel.tag)
-            .filter((tag): tag is NonNullable<typeof tag> => tag !== null),
-        };
-      })
-    );
+
 
     return {
-      data: assetsWithTags,
+      data: assets,
       pagination: paginationData,
     };
   }
@@ -76,30 +67,20 @@ export class AssetsService {
   async getAssetById(id: string) {
     const asset = await this.db.query.Asset.findFirst({
       where: (asset, { eq, and, isNull }) => and(eq(asset.id, id), isNull(asset.deletedAt)),
+      with: {
+        bookingForms: {
+           with: {
+            bookingForm: true
+           }
+        }
+      }
     });
     if (!asset) return null;
 
-    const assetTags = await this.getTagsForAsset(id);
-
-    return {
-      ...asset,
-      tags: assetTags
-        .map((rel) => rel.tag)
-        .filter((tag): tag is NonNullable<typeof tag> => tag !== null),
-    };
+    return asset
   }
 
-  async getTagsForAsset(assetId: string) {
-    return this.db.query.AssetHasTags.findMany({
-      where: (aht, { eq }) => eq(aht.assetId, assetId),
-      with: {
-        tag: true,
-      },
-    });
-  }
-
-
-  async createAsset(data: InsertAsset, tagIds?: number[], formIds?: number[]) {
+  async createAsset(data: InsertAsset, formIds?: number[]) {
 
     try {
       const result = await this.db
@@ -108,15 +89,6 @@ export class AssetsService {
         .$returningId();
 
       const assetId = result[0].id;
-
-      if (tagIds && tagIds.length > 0) {
-        for (const tagId of tagIds) {
-          await this.db.insert(schema.AssetHasTags).values({
-            assetId,
-            tagId: (tagId),
-          });
-        }
-      }
 
       if (formIds && formIds.length > 0) {
         for (const formId of formIds) {
@@ -135,8 +107,8 @@ export class AssetsService {
     }
   }
 
-  async updateAsset(id: string, data: UpdateAsset & { tagIds?: number[], formIds?: number[] }) {
-    const { tagIds, formIds, ...assetData } = data;
+  async updateAsset(id: string, data: UpdateAsset & {  formIds?: number[] }) {
+    const { formIds, ...assetData } = data;
     let assetTypeId = assetData.assetTypeId ? (assetData.assetTypeId) : undefined;
 
     await this.db
@@ -144,22 +116,6 @@ export class AssetsService {
       .set({ ...assetData, assetTypeId })
       .where(eq(schema.Asset.id, id))
       .execute();
-
-    // Update tags if provided
-    if (tagIds !== undefined) {
-      // Delete existing tags
-      await this.db.delete(schema.AssetHasTags).where(eq(schema.AssetHasTags.assetId, id));
-
-      // Insert new tags
-      if (tagIds.length > 0) {
-        for (const tagId of tagIds) {
-          await this.db.insert(schema.AssetHasTags).values({
-            assetId: id,
-            tagId: tagId,
-          });
-        }
-      }
-    }
 
     // Update forms if provided
     if (formIds !== undefined) {
@@ -180,21 +136,34 @@ export class AssetsService {
     return this.getAssetById(id);
   }
 
-  async deleteAsset(id: string): Promise<void> {
-    const now = new Date();
-    await this.db.transaction(async (tx) => {
-      // Soft delete all bookings for this asset
-      await tx
-        .update(schema.Booking)
-        .set({ deletedAt: now })
-        .where(eq(schema.Booking.assetId, id));
+  async deleteAsset(id: string): Promise<{ success: boolean; message?: string }> {
+    // Check for bookings (not deleted)
+    const bookings = await this.db
+      .select({ count: sql<number>`COUNT(*)` })
+      .from(schema.Booking)
+      .where(
+        and(
+          eq(schema.Booking.assetId, id),
+          isNull(schema.Booking.deletedAt)
+        )
+      )
+      .execute();
 
-      // Soft delete the asset
-      await tx
-        .update(schema.Asset)
-        .set({ deletedAt: now })
-        .where(eq(schema.Asset.id, id));
-    });
+    const bookingCount = bookings[0]?.count || 0;
+    if (bookingCount > 0) {
+      throw new BadRequestException(
+        `Cannot delete asset. It has ${bookingCount} booking(s) associated with it.`
+      );
+    }
+
+    // If no bookings, proceed with soft delete
+    const now = new Date();
+    await this.db
+      .update(schema.Asset)
+      .set({ deletedAt: now })
+      .where(eq(schema.Asset.id, id));
+
+    return { success: true };
   }
 
   async addPropertyValues(assetId: string, propertyValues: { propertyId: number, value: string }[]) {
@@ -325,17 +294,11 @@ export class AssetsService {
       assets.map(async (asset) => {
         const propertyValues = await this.getPropertyValues(asset.id);
         const assetImages = await this.getAssetImages(asset.id);
-        const tagRels = await this.getTagsForAsset(asset.id);
-        const tags = tagRels
-          .map((rel) => rel.tag)
-          .filter((tag): tag is NonNullable<typeof tag> => tag !== null);
-
 
         return {
           ...asset,
           assetImages,
           propertyValues,
-          tags,
         };
       })
     );
@@ -454,7 +417,6 @@ export class AssetsService {
     // Fetch tags, properties, and images for each asset
     const assetsWithDetails = await Promise.all(
       results.map(async (res) => {
-        const assetTags = await this.getTagsForAsset(res.assets.id);
         const propertyValues = await this.getPropertyValues(res.assets.id);
         const assetImages = await this.getAssetImages(res.assets.id);
 
@@ -468,13 +430,6 @@ export class AssetsService {
             name: prop.assetProperty.name,
             value: prop.value,
           })),
-          tags: assetTags
-            .map((rel) => rel.tag)
-            .filter((tag): tag is NonNullable<typeof tag> => tag !== null)
-            .map((tag) => ({
-              id: tag.id,
-              name: tag.name,
-            })),
           pagination: paginationData,
         };
       })
@@ -502,17 +457,13 @@ export class AssetsService {
     const asset = result.assets;
 
     // Fetch related data
-    const [assetTags, assetImages, propertyValues] = await Promise.all([
-      this.getTagsForAsset(assetId),
+    const [ assetImages, propertyValues] = await Promise.all([
       this.getAssetImages(assetId),
       this.getPropertyValues(assetId),
     ]);
 
     return {
       ...asset,
-      tags: assetTags
-        .map((rel) => rel.tag)
-        .filter((tag): tag is NonNullable<typeof tag> => tag !== null),
       images: assetImages,
       properties: propertyValues,
     };
@@ -582,19 +533,13 @@ export class AssetsService {
     // Fetch tags, images, and property values for each asset
     const assetsWithDetails = await Promise.all(
       assets.map(async (asset) => {
-        const [tagRels, images, propertyValues] = await Promise.all([
-          this.getTagsForAsset(asset.id),
+        const [ images, propertyValues] = await Promise.all([
           this.getAssetImages(asset.id),
           this.getPropertyValues(asset.id)
         ]);
 
-        const tags = tagRels
-          .map((rel) => rel.tag)
-          .filter((tag): tag is NonNullable<typeof tag> => tag !== null);
-
         return {
           ...asset,
-          tags,
           images,
           propertyValues
         };
@@ -635,19 +580,13 @@ export class AssetsService {
     const asset = ownerAssetLink.asset;
 
     // Fetch tags, images, and property values
-    const [tagRels, images, propertyValues] = await Promise.all([
-      this.getTagsForAsset(assetId),
+    const [ images, propertyValues] = await Promise.all([
       this.getAssetImages(assetId),
       this.getPropertyValues(assetId)
     ]);
 
-    const tags = tagRels
-      .map((rel) => rel.tag)
-      .filter((tag): tag is NonNullable<typeof tag> => tag !== null);
-
     return {
       ...asset,
-      tags,
       images,
       propertyValues
     };

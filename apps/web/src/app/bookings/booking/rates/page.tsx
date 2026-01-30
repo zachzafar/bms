@@ -2,8 +2,8 @@
 
 import { useState } from "react";
 import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
 import { authClient } from "@/lib/api/publicClient";
+import { format } from "date-fns";
 
 import { z } from "zod";
 import { Button } from '@/components/ui/button';
@@ -24,20 +24,39 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import { Calendar } from "@/components/ui/calendar";
 import { toast } from "sonner";
 import { Form, FormField, FormItem, FormLabel, FormControl, FormMessage } from "@/components/ui/form";
-import { ASSETS_QUERY_KEY, RATES_QUERY_KEY } from "@/lib/api/queryKeys";
+import { ASSET_TYPE_QUERY_KEY, ASSETS_QUERY_KEY, RATES_QUERY_KEY } from "@/lib/api/queryKeys";
+import { Label } from "@/components/ui/label";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { CalendarIcon } from "lucide-react";
+import { cn } from "@/lib/utils";
+
+type SelectionMode = "assets" | "assetType";
 
 const rateSchema = z.object({
   name: z.string().min(1),
   description: z.string().optional(),
   startDate: z.date(),
   endDate: z.date(),
-  minNights: z.coerce.number().optional(),
-  maxNights: z.coerce.number().optional(),
+  minNights: z.coerce.number(),
+  maxNights: z.coerce.number(),
+  assetTypeId: z.coerce.number().optional(),
   pricePerNight: z.coerce.number().optional(),
-  // priority: z.coerce.number().default(100),
-  assetIds: z.array(z.string()).optional(), // optional bulk assign
+  assetIds: z.array(z.string()),
 });
 
 type RateFormValues = z.infer<typeof rateSchema>;
@@ -47,10 +66,10 @@ const defaultFormValues: Partial<RateFormValues> = {
   description: '',
   startDate: undefined,
   endDate: undefined,
-  minNights: undefined,
-  maxNights: undefined,
-  pricePerNight: undefined,
-  // priority: 100,
+  minNights: 0,
+  maxNights: 0,
+  pricePerNight: 0,
+  assetTypeId: undefined,
   assetIds: [],
 };
 
@@ -59,43 +78,88 @@ export default function RatesPage() {
   const { mutate: createRate } = authClient.rates.createRate.useMutation();
   const { mutate: updateRate } = authClient.rates.updateRate.useMutation();
   const { mutate: deleteRate } = authClient.rates.deleteRate.useMutation();
-  const { data: assetsResponse } = authClient.assets.getAssets.useQuery({ queryKey: ASSETS_QUERY_KEY });
-
-  const rates = rateData?.body.data ?? []
-  const assets = assetsResponse?.body.data ?? []
+  const [assetSearch, setAssetSearch] = useState('');
+  const { data: assetsResponse } = authClient.assets.getAssets.useQuery({
+    queryKey: [ASSETS_QUERY_KEY, assetSearch],
+    queryData: {
+      query: {
+        search: assetSearch || undefined,
+      },
+    },
+  });
+  const { data: assetTypesResponse } = authClient.settings.assetType.getAssetTypes.useQuery({
+    queryKey: [ASSET_TYPE_QUERY_KEY]
+  });
+  const rates = rateData?.body.data ?? [];
+  const assets = assetsResponse?.body.data ?? [];
+  const assetTypes = assetTypesResponse?.body.data ?? [];
 
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingRateId, setEditingRateId] = useState<number | null>(null);
+  const [selectionMode, setSelectionMode] = useState<SelectionMode>("assets");
+  
 
   const form = useForm<RateFormValues>({
-    resolver: zodResolver(rateSchema),
     defaultValues: defaultFormValues,
   });
 
+  const handleSelectionModeChange = (mode: SelectionMode) => {
+    setSelectionMode(mode);
+    if (mode === "assets") {
+      form.setValue("assetTypeId", undefined);
+    } else {
+      form.setValue("assetIds", []);
+    }
+  };
+
   const handleSubmit = (values: RateFormValues) => {
+    if (!values.name || values.name.trim() === "") {
+      toast.error("Name is required");
+      return;
+    }
+
     if (!values.startDate || !values.endDate) {
       toast.error("Start date and end date are required");
       return;
     }
 
-    const payload = {
-      ...values,
+    if (selectionMode === "assets" && (!values.assetIds || values.assetIds.length === 0)) {
+      toast.error("Please select at least one asset");
+      return;
+    }
+
+    if (selectionMode === "assetType" && !values.assetTypeId) {
+      toast.error("Please select an asset type");
+      return;
+    }
+
+    const basePayload = {
+      name: values.name,
+      description: values.description,
       startDate: new Date(values.startDate),
       endDate: new Date(values.endDate),
+      minNights: values.minNights,
+      maxNights: values.maxNights,
       pricePerNight: values.pricePerNight !== undefined ? String(values.pricePerNight) : undefined,
     };
 
     const resetState = () => {
       setEditingRateId(null);
       form.reset(defaultFormValues);
+      setSelectionMode("assets");
+      setAssetSearch('');
       setIsDialogOpen(false);
     };
 
     if (editingRateId) {
+      const updatePayload = selectionMode === "assetType"
+        ? { ...basePayload, assetTypeIds: values.assetTypeId ? [values.assetTypeId] : [], assetIds: [] }
+        : { ...basePayload, assetIds: values.assetIds, assetTypeIds: [] };
+
       updateRate(
         {
           params: { id: editingRateId },
-          body: { ...payload, id: editingRateId },
+          body: { ...updatePayload, id: editingRateId },
         },
         {
           onSuccess: () => {
@@ -109,8 +173,12 @@ export default function RatesPage() {
         }
       );
     } else {
+      const createPayload = selectionMode === "assetType"
+        ? { ...basePayload, assetTypeId: values.assetTypeId, assetIds: [] as string[] }
+        : { ...basePayload, assetIds: values.assetIds };
+
       createRate(
-        { body: payload },
+        { body: createPayload },
         {
           onSuccess: () => {
             toast.success('Rate created');
@@ -129,7 +197,12 @@ export default function RatesPage() {
     return dateStr ? dateStr.slice(0, 10) : '';
   }
 
-  const handleEdit = (rate: any, assetIds: string[]) => {
+  const handleEdit = (rate: any, assetIds: string[], assetTypeIds: number[]) => {
+    const hasAssetType = assetTypeIds && assetTypeIds.length > 0;
+    const mode: SelectionMode = hasAssetType ? "assetType" : "assets";
+    setSelectionMode(mode);
+    setAssetSearch('');
+
     form.reset({
       name: rate.name,
       description: rate.description ?? "",
@@ -138,8 +211,8 @@ export default function RatesPage() {
       minNights: rate.minNights ?? undefined,
       maxNights: rate.maxNights ?? undefined,
       pricePerNight: rate.pricePerNight ?? undefined,
-      // priority: rate.priority ?? 100,
-      assetIds,
+      assetTypeId: hasAssetType ? assetTypeIds[0] : undefined,
+      assetIds: hasAssetType ? [] : assetIds,
     });
     setEditingRateId(rate.id);
     setIsDialogOpen(true);
@@ -162,11 +235,17 @@ export default function RatesPage() {
     }
   };
 
-  // NEW: on create button click, reset form to default values explicitly to clear old data
   const onCreateClick = () => {
-    form.reset(defaultFormValues);  // Reset with default values
+    form.reset(defaultFormValues);
+    setSelectionMode("assets");
     setEditingRateId(null);
+    setAssetSearch('');
     setIsDialogOpen(true);
+  };
+
+  const getAssetTypeName = (id: number) => {
+    const assetType = assetTypes.find((at: any) => at.id === id);
+    return assetType?.name ?? "";
   };
 
   return (
@@ -179,7 +258,7 @@ export default function RatesPage() {
               Create Rate
             </Button>
           </DialogTrigger>
-          <DialogContent>
+          <DialogContent className="max-w-2xl">
             <DialogHeader>
               <DialogTitle>{editingRateId ? 'Edit Rate' : 'Create Rate'}</DialogTitle>
               <DialogDescription>Enter rate details below</DialogDescription>
@@ -189,71 +268,251 @@ export default function RatesPage() {
                 onSubmit={form.handleSubmit(handleSubmit)}
                 className="grid grid-cols-1 md:grid-cols-2 gap-4 py-4"
               >
+                <div className="md:col-span-2 space-y-4">
+                  <Label>Apply rate to</Label>
+                  <RadioGroup
+                    value={selectionMode}
+                    onValueChange={(value) => handleSelectionModeChange(value as SelectionMode)}
+                    className="flex gap-4"
+                  >
+                    <div className="flex items-center space-x-2">
+                      <RadioGroupItem value="assets" id="assets" />
+                      <Label htmlFor="assets" className="font-normal cursor-pointer">
+                        Specific Assets
+                      </Label>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <RadioGroupItem value="assetType" id="assetType" />
+                      <Label htmlFor="assetType" className="font-normal cursor-pointer">
+                        Asset Type
+                      </Label>
+                    </div>
+                  </RadioGroup>
+                </div>
+
+                {selectionMode === "assets" ? (
+                  <FormField
+                    control={form.control}
+                    name="assetIds"
+                    render={({ field }) => (
+                      <FormItem className="md:col-span-2">
+                        <FormLabel>Assets</FormLabel>
+                        <FormControl>
+                          <div className="space-y-2">
+                            <Input
+                              placeholder="Search assets..."
+                              value={assetSearch}
+                              onChange={(e) => setAssetSearch(e.target.value)}
+                            />
+                            <div className="flex flex-col gap-1 border rounded p-2 max-h-40 overflow-y-auto">
+                              {assets.length > 0 ? (
+                                assets.map((asset: any) => (
+                                  <label key={asset.id} className="flex items-center gap-2 cursor-pointer">
+                                    <input
+                                      type="checkbox"
+                                      value={String(asset.id)}
+                                      checked={field.value?.includes(String(asset.id)) || false}
+                                      onChange={(e) => {
+                                        const isChecked = e.target.checked;
+                                        const updated = isChecked
+                                          ? [...(field.value || []), String(asset.id)]
+                                          : (field.value || []).filter((id) => id !== String(asset.id));
+                                        field.onChange(updated);
+                                      }}
+                                    />
+                                    {asset.name}
+                                  </label>
+                                ))
+                              ) : (
+                                <span className="text-muted-foreground text-sm">No assets found</span>
+                              )}
+                            </div>
+                          </div>
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                ) : (
+                  <FormField
+                    control={form.control}
+                    name="assetTypeId"
+                    render={({ field }) => (
+                      <FormItem className="md:col-span-2">
+                        <FormLabel>Asset Type</FormLabel>
+                        <Select
+                          value={field.value?.toString() ?? ""}
+                          onValueChange={(value) => field.onChange(Number(value))}
+                        >
+                          <FormControl>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Select an asset type" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            {assetTypes.map((assetType: any) => (
+                              <SelectItem key={assetType.id} value={assetType.id.toString()}>
+                                {assetType.name}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                )}
+
                 <FormField
                   control={form.control}
-                  name="assetIds"
+                  name="name"
                   render={({ field }) => (
-                    <FormItem className="md:col-span-2">
-                      <FormLabel>Assets</FormLabel>
+                    <FormItem>
+                      <FormLabel>Name</FormLabel>
                       <FormControl>
-                        <div className="flex flex-col gap-1 border rounded p-2 max-h-40 overflow-y-auto">
-                          {assets.map((asset: any) => (
-                            <label key={asset.id} className="flex items-center gap-2">
-                              <input
-                                type="checkbox"
-                                value={String(asset.id)}
-                                checked={field.value?.includes(String(asset.id)) || false}
-                                onChange={(e) => {
-                                  const isChecked = e.target.checked;
-                                  const updated = isChecked
-                                    ? [...(field.value || []), String(asset.id)]
-                                    : (field.value || []).filter((id) => id !== String(asset.id));
-                                  field.onChange(updated);
-                                }}
-                              />
-                              {asset.name}
-                            </label>
-                          ))}
-                        </div>
+                        <Input {...field} placeholder="Rate name" />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
                   )}
                 />
-                {['name', 'description', 'startDate', 'endDate', 'minNights', 'maxNights', 'pricePerNight'].map((fieldName) => (
-                  <FormField
-                    key={fieldName}
-                    control={form.control}
-                    name={fieldName as keyof RateFormValues}
-                    render={({ field }) => {
-                      const isDateField = ['startDate', 'endDate'].includes(fieldName);
-                      const value = isDateField && field.value instanceof Date
-                        ? field.value.toISOString().split('T')[0]
-                        : field.value;
 
-                      return (
-                        <FormItem>
-                          <FormLabel>{fieldName}</FormLabel>
+                <FormField
+                  control={form.control}
+                  name="description"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Description</FormLabel>
+                      <FormControl>
+                        <Input {...field} placeholder="Rate description" />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="startDate"
+                  render={({ field }) => (
+                    <FormItem className="flex flex-col">
+                      <FormLabel>Start Date</FormLabel>
+                      <Popover>
+                        <PopoverTrigger asChild>
                           <FormControl>
-                            <Input
-                              {...field}
-                              value={value as string}
-                              type={isDateField ? 'date' : 'text'}
-                              onChange={(e) => {
-                                if (isDateField) {
-                                  field.onChange(new Date(e.target.value));
-                                } else {
-                                  field.onChange(e.target.value);
-                                }
-                              }}
-                            />
+                            <Button
+                              variant="outline"
+                              className={cn(
+                                "w-full pl-3 text-left font-normal",
+                                !field.value && "text-muted-foreground"
+                              )}
+                            >
+                              {field.value ? (
+                                format(field.value, "PPP")
+                              ) : (
+                                <span>Pick a date</span>
+                              )}
+                              <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                            </Button>
                           </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      );
-                    }}
-                  />
-                ))}
+                        </PopoverTrigger>
+                        <PopoverContent className="w-auto p-0" align="start">
+                          <Calendar
+                            mode="single"
+                            selected={field.value}
+                            onSelect={field.onChange}
+                            initialFocus
+                          />
+                        </PopoverContent>
+                      </Popover>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="endDate"
+                  render={({ field }) => (
+                    <FormItem className="flex flex-col">
+                      <FormLabel>End Date</FormLabel>
+                      <Popover>
+                        <PopoverTrigger asChild>
+                          <FormControl>
+                            <Button
+                              variant="outline"
+                              className={cn(
+                                "w-full pl-3 text-left font-normal",
+                                !field.value && "text-muted-foreground"
+                              )}
+                            >
+                              {field.value ? (
+                                format(field.value, "PPP")
+                              ) : (
+                                <span>Pick a date</span>
+                              )}
+                              <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                            </Button>
+                          </FormControl>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-auto p-0" align="start">
+                          <Calendar
+                            mode="single"
+                            selected={field.value}
+                            onSelect={field.onChange}
+                            disabled={(date) =>
+                              form.getValues("startDate") ? date < form.getValues("startDate") : false
+                            }
+                            initialFocus
+                          />
+                        </PopoverContent>
+                      </Popover>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="minNights"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Min Nights</FormLabel>
+                      <FormControl>
+                        <Input {...field} type="number" placeholder="0" />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="maxNights"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Max Nights</FormLabel>
+                      <FormControl>
+                        <Input {...field} type="number" placeholder="0" />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="pricePerNight"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Price Per Night</FormLabel>
+                      <FormControl>
+                        <Input {...field} type="number" placeholder="0.00" />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
                 <Button type="submit" className="w-full md:col-span-2">
                   {editingRateId ? 'Update Rate' : 'Create Rate'}
                 </Button>
@@ -268,11 +527,10 @@ export default function RatesPage() {
           <TableHeader>
             <TableRow>
               <TableHead>Name</TableHead>
-              <TableHead>Assets</TableHead>
+              <TableHead>Applies To</TableHead>
               <TableHead>Start Date</TableHead>
               <TableHead>End Date</TableHead>
               <TableHead>Price/Night</TableHead>
-              {/* <TableHead>Priority</TableHead> */}
               <TableHead>Actions</TableHead>
             </TableRow>
           </TableHeader>
@@ -281,26 +539,28 @@ export default function RatesPage() {
               rates.map((item: any) => {
                 const rate = item.rate;
                 const assetIds = item.assetIds || [];
+                const assetTypeIds = item.assetTypeIds || [];
+
+                const appliesTo = assetTypeIds.length > 0
+                  ? `Type: ${assetTypeIds.map((id: number) => getAssetTypeName(id)).join(", ")}`
+                  : assets
+                      .filter((a: any) => assetIds.includes(String(a.id)))
+                      .map((a: any) => a.name)
+                      .join(", ") || "—";
 
                 return (
                   <TableRow key={rate.id}>
                     <TableCell>{rate.name}</TableCell>
-                    <TableCell>
-                      {assets
-                        .filter((a) => assetIds.includes(String(a.id)))
-                        .map((a) => a.name)
-                        .join(", ")}
-                    </TableCell>
+                    <TableCell>{appliesTo}</TableCell>
                     <TableCell>{toDateInputFormat(rate.startDate)}</TableCell>
                     <TableCell>{toDateInputFormat(rate.endDate)}</TableCell>
                     <TableCell>{rate.pricePerNight}</TableCell>
-                    {/* <TableCell>{rate.priority}</TableCell> */}
                     <TableCell>
                       <div className="flex gap-2">
                         <Button
                           size="sm"
                           variant="outline"
-                          onClick={() => handleEdit(rate, assetIds)}
+                          onClick={() => handleEdit(rate, assetIds, assetTypeIds)}
                         >
                           Edit
                         </Button>
@@ -318,7 +578,7 @@ export default function RatesPage() {
               })
             ) : (
               <TableRow>
-                <TableCell colSpan={7}>No rates found.</TableCell>
+                <TableCell colSpan={6}>No rates found.</TableCell>
               </TableRow>
             )}
           </TableBody>

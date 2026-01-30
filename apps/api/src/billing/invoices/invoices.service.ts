@@ -233,7 +233,7 @@ export class InvoicesService {
   // 2) Pull customer linked to booking via userId and tenantId
   const customer = await this.db.query.Customer.findFirst({
     where: (c, { eq, and }) => and(
-      eq(c.userId, booking.userId),
+      eq(c.userId, booking.userId as string),
       eq(c.tenantId, booking.asset.tenantId)
     ),
   });

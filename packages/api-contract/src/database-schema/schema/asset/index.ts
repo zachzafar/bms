@@ -49,7 +49,6 @@ export const AssetRelations = relations(Asset, ({ one, many }) => ({
   }),
   maintenances: many(MaintenanceTask),
   user: many(UserHasAssets),
-  tags: many(AssetHasTags),
   bookingForms: many(AssetHasBookingForms),
   assetImages: many(AssetImages),
   properties: many(AssetHasProperties),
@@ -101,28 +100,6 @@ export const AssetHasPropertiesRelations = relations(AssetHasProperties, ({ one 
     }),
 }))
 
-export const AssetHasTags = mysqlTable("asset_has_tags", {
-    id: bigint("id", { mode: "number", unsigned: true }).autoincrement().primaryKey(),
-    tagId: bigint("tag_id", { mode: 'number', unsigned: true })
-        .notNull()
-        .references(() => Tags.id, { onDelete: 'cascade' }), // lowercase 'cascade'
-    assetId: varchar("asset_id", { length: 255 })
-        .notNull()
-        .references(() => Asset.id, { onDelete: 'cascade' }), // lowercase 'cascade'
-});
-
-
-
-export const AssetHasTagsRelations = relations(AssetHasTags, ({ one }) => ({
-    asset: one(Asset, {
-        fields: [AssetHasTags.assetId],
-        references: [Asset.id],
-    }),
-    tag: one(Tags, {
-        fields: [AssetHasTags.tagId],
-        references: [Tags.id],
-    }),
-}))
 
 export const AssetHasBookingForms = mysqlTable("asset_has_booking_forms", {
     id: bigint("id", { mode: "number", unsigned: true }).autoincrement().primaryKey(),

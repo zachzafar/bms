@@ -13,12 +13,10 @@ import { pagination } from './utils';
 
 const c = initContract();
 
-const SelectAssetWithTagsSchema = SelectAssetSchema.extend({
-  tags: z.array(SelectTagSchema).optional(),
-});
+ 
 
-const SelectAssetWithTagsSchemaList = z.object({
-  data: z.array(SelectAssetWithTagsSchema),
+const SelectAssetList = z.object({
+  data: z.array(SelectAssetSchema),
   pagination
 })
 
@@ -34,7 +32,6 @@ export const assetsContract = c.router({
     body: z.object({
       tenant: z.string(),
       asset: InsertAssetSchema.omit({ tenantId: true }),
-      tagIds: z.array(z.number()).optional(),
       formIds: z.array(z.number()).optional(),
     }),
     summary: 'Create a new asset',
@@ -44,11 +41,12 @@ export const assetsContract = c.router({
     path: '/asset',
     responses: {
       200: z.object({
-        data: z.array(SelectAssetWithTagsSchema),
+        data: z.array(SelectAssetSchema),
         pagination
       }),
     },
     query: z.object({
+      assetTypeId: z.coerce.number().optional(),
       search: z.string().optional(),
       userId: z.string().optional(),
       page: z.coerce.number().optional(),
@@ -60,7 +58,12 @@ export const assetsContract = c.router({
     method: 'GET',
     path: '/asset/:id',
     responses: {
-      200: SelectAssetWithTagsSchema,
+      200: SelectAssetSchema.extend({
+        bookingForms: z.array(z.object({
+          id: z.number(),
+          name: z.string(),
+        }))
+      }),
       404: z.undefined(),
     },
     pathParams: z.object({
@@ -72,13 +75,12 @@ export const assetsContract = c.router({
     method: 'PUT',
     path: '/asset/:id',
     responses: {
-      200: SelectAssetWithTagsSchema,
+      200: SelectAssetSchema,
     },
     pathParams: z.object({
       id: z.string(),
     }),
     body: InsertAssetSchema.partial().extend({
-      tagIds: z.array(z.number()).optional(),
       formIds: z.array(z.number()).optional(),
     }),
     summary: 'Update an asset by id',
@@ -88,7 +90,10 @@ export const assetsContract = c.router({
     path: '/asset/:id',
     body: z.object({}).optional(),
     responses: {
-      204: z.undefined()
+      204: z.undefined(),
+      400: z.object({
+        message: z.string()
+      })
     },
     pathParams: z.object({
       id: z.string()
@@ -156,10 +161,6 @@ export const assetsContract = c.router({
             name: z.string(),
             value: z.string()
           })),
-          tags: z.array(z.object({
-            id: z.number(),
-            name: z.string()
-          }))
         })),
         pagination
       })
@@ -244,10 +245,6 @@ export const assetsContract = c.router({
             name: z.string(),
             value: z.string()
           })),
-          tags: z.array(z.object({
-            id: z.number(),
-            name: z.string()
-          })),
           pagination
         })),
 
@@ -271,7 +268,6 @@ export const assetsContract = c.router({
         assetTypeId: z.number().nullable(),
         createdAt: z.coerce.date(),
         updatedAt: z.coerce.date().nullable(),
-        tags: z.array(SelectTagSchema),
         images: z.array(SelectAssetImagesSchema),
         properties: z.array(SelectAssetHasPropertiesSchema.omit({ assetPropertyId: true }).extend({
           assetPropertyId: z.number(),
@@ -304,7 +300,7 @@ export const assetsContract = c.router({
     path: '/owner/assets',
     responses: {
       200: z.object({
-        data: z.array(SelectAssetWithTagsSchema.extend({
+        data: z.array(SelectAssetSchema.extend({
           images: z.array(SelectAssetImagesSchema),
           propertyValues: z.array(SelectAssetHasPropertiesSchema.omit({ assetPropertyId: true }).extend({
             assetPropertyId: z.number(),
@@ -326,7 +322,7 @@ export const assetsContract = c.router({
     method: 'GET',
     path: '/owner/assets/:id',
     responses: {
-      200: SelectAssetWithTagsSchema.extend({
+      200: SelectAssetSchema.extend({
         images: z.array(SelectAssetImagesSchema),
         propertyValues: z.array(SelectAssetHasPropertiesSchema.omit({ assetPropertyId: true }).extend({
           assetPropertyId: z.number(),

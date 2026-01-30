@@ -27,6 +27,19 @@ export class TenantService {
             where: (tenant,{inArray}) => inArray(tenant.id,tenantIds)})
     }
 
+    async getTenantById(tenantId: string) {
+        return await this.db.query.Tenant.findFirst({
+            where: (tenant, { eq }) => eq(tenant.id, tenantId)
+        });
+    }
+
+    async getCustomerById(customerId: number) {
+        return await this.db.query.Customer.findFirst({
+            where: (customer, { eq }) => eq(customer.id, customerId),
+            with: { user: true }
+        });
+    }
+
     async getTenantBySubdomain(subdomain: string) {
         const tenant = await this.db.query.Tenant.findFirst({
             where: (tenant, { eq }) => eq(tenant.subdomain, subdomain)

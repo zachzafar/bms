@@ -10,7 +10,7 @@ import { UsersService } from 'src/users/users.service';
 import { AssetTypeService } from 'src/schema-design/asset-type/asset-type.service';
 import { PropertyService } from 'src/schema-design/property/property.service';
 import { TagsService } from 'src/tags/tags.service';
-
+import { AuthService } from 'src/auth/auth.service';
 
 
 @IsAdminRoute()
@@ -25,6 +25,7 @@ export class SystemAdminController {
     private assetTypeService: AssetTypeService,
     private PropertyService: PropertyService,
     private tagsService: TagsService,
+    private authService: AuthService
   ) { }
 
   // System Admin User Management
@@ -70,6 +71,15 @@ export class SystemAdminController {
       return { status: 201, body: { message: `Successfully added user to tenant ${params.tenantId}`, userId: result } };
     });
   }
+
+  // @IsAdminRoute()
+  // @TsRestHandler(contract.systemAdmin.searchUsers)
+  // async searchUsers(): Promise<ReturnType<typeof tsRestHandler>> {
+  //   return tsRestHandler(contract.systemAdmin.searchUsers, async ({ query }) => {
+  //     const result = await this.systemAdminService.searchUsers(query.email, query.tenantId);
+  //     return { status: 200, body: result };
+  //   });
+  // }
 
   @IsAdminRoute()
   @TsRestHandler(contract.systemAdmin.createTenant)
@@ -492,19 +502,39 @@ export class SystemAdminController {
     });
   }
 
-  @TsRestHandler(contract.settings.tags.deleteTag)
-  async deleteTag(): Promise<ReturnType<typeof tsRestHandler>> {
-    return tsRestHandler(contract.systemAdmin.deleteTag, async ({ params }) => {
+  @IsAdminRoute()
+  @TsRestHandler(contract.systemAdmin.logout)
+  async logout(): Promise<ReturnType<typeof tsRestHandler>> {
+          return tsRestHandler(contract.systemAdmin.logout, async ({ body }) => {
+              await this.authService.logout(body.userId);
+              this.logger.log(`User with user ID: ${body.userId} logged out`);
+              return { status: 204, body: { message: 'Logged out' } };
+          });
+  }
 
-      const tag = await this.tagsService.getTag((params.id));
+  // @TsRestHandler(contract.settings.tags.deleteTag)
+  // async deleteTag(): Promise<ReturnType<typeof tsRestHandler>> {
+  //   return tsRestHandler(contract.systemAdmin.deleteTag, async ({ params }) => {
 
-      // Validate tenant access before deleting
+  //     const tag = await this.tagsService.getTag((params.id));
 
-      const result = await this.tagsService.deleteTag((params.id));
+  //     // Validate tenant access before deleting
+
+  //     const result = await this.tagsService.deleteTag((params.id));
+  //     return { status: 200, body: result };
+  //   });
+  // }
+
+  @IsAdminRoute()
+  @TsRestHandler(contract.systemAdmin.getTenantAssets)
+  async getTenantAssets(): Promise<ReturnType<typeof tsRestHandler>> {
+    return tsRestHandler(contract.systemAdmin.getTenantAssets, async ({ params, query }) => {
+      const page = query.page ? Number(query.page) : 1;
+      const pageSize = query.pageSize ? Number(query.pageSize) : 10;
+
+      const result = await this.systemAdminService.getTenantAssets(params.tenantId, page, pageSize);
       return { status: 200, body: result };
     });
   }
-
-
 
 }
