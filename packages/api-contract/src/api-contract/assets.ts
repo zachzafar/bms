@@ -90,7 +90,10 @@ export const assetsContract = c.router({
     path: '/asset/:id',
     body: z.object({}).optional(),
     responses: {
-      204: z.undefined()
+      204: z.undefined(),
+      400: z.object({
+        message: z.string()
+      })
     },
     pathParams: z.object({
       id: z.string()

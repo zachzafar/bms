@@ -1,8 +1,8 @@
-import { Inject, Injectable, InternalServerErrorException, Logger } from '@nestjs/common';
+import { BadRequestException, Inject, Injectable, InternalServerErrorException, Logger } from '@nestjs/common';
 import { MySql2Database } from 'drizzle-orm/mysql2';
 import { DrizzleAsyncProvider } from 'src/drizzle/drizzle.provider';
 import * as schema from '@repo/api-contract';
-import { and, eq, gte, inArray, isNull, lte, sql } from 'drizzle-orm';
+import { and, eq, gte, inArray, isNull, lte, ne, sql } from 'drizzle-orm';
 import type { InsertAsset, UpdateAsset } from '@repo/api-contract';
 import { ObjectStorageService } from 'src/object-storage/object-storage.service';
 import { Readable } from 'stream';
@@ -136,21 +136,34 @@ export class AssetsService {
     return this.getAssetById(id);
   }
 
-  async deleteAsset(id: string): Promise<void> {
-    const now = new Date();
-    await this.db.transaction(async (tx) => {
-      // Soft delete all bookings for this asset
-      await tx
-        .update(schema.Booking)
-        .set({ deletedAt: now })
-        .where(eq(schema.Booking.assetId, id));
+  async deleteAsset(id: string): Promise<{ success: boolean; message?: string }> {
+    // Check for bookings (not deleted)
+    const bookings = await this.db
+      .select({ count: sql<number>`COUNT(*)` })
+      .from(schema.Booking)
+      .where(
+        and(
+          eq(schema.Booking.assetId, id),
+          isNull(schema.Booking.deletedAt)
+        )
+      )
+      .execute();
 
-      // Soft delete the asset
-      await tx
-        .update(schema.Asset)
-        .set({ deletedAt: now })
-        .where(eq(schema.Asset.id, id));
-    });
+    const bookingCount = bookings[0]?.count || 0;
+    if (bookingCount > 0) {
+      throw new BadRequestException(
+        `Cannot delete asset. It has ${bookingCount} booking(s) associated with it.`
+      );
+    }
+
+    // If no bookings, proceed with soft delete
+    const now = new Date();
+    await this.db
+      .update(schema.Asset)
+      .set({ deletedAt: now })
+      .where(eq(schema.Asset.id, id));
+
+    return { success: true };
   }
 
   async addPropertyValues(assetId: string, propertyValues: { propertyId: number, value: string }[]) {

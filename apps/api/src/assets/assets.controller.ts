@@ -100,14 +100,17 @@ export class AssetsController {
     async deleteAsset(@Headers() headers: any): Promise<ReturnType<typeof tsRestHandler>> {
         return tsRestHandler(contract.assets.deleteAsset, async ({ params }) => {
             const tenantId = headers['x-tenant-id'];
-            await this.tenantService.validateTenantAccess(tenantId, schema.Asset, params.id)
-            const result = await this.assetService.deleteAsset(params.id);
+            await this.tenantService.validateTenantAccess(tenantId, schema.Asset, params.id);
 
-            // if (!result) {
-            //     return { status: 500, body: { message: 'Error deleting asset' } };
-            // }
-
-            return { status: 204, body: undefined };
+            try {
+                await this.assetService.deleteAsset(params.id);
+                return { status: 204, body: undefined };
+            } catch (error: any) {
+                if (error instanceof BadRequestException) {
+                    return { status: 400, body: { message: error.message } };
+                }
+                throw error;
+            }
         });
     }
 

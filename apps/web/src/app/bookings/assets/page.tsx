@@ -1,6 +1,8 @@
 'use client'
 
+import { useState } from 'react'
 import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
 import {
   Table,
   TableBody,
@@ -17,7 +19,14 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@/components/ui/dialog'
-import { PlusIcon, Pencil, Trash2 as TrashIcon } from 'lucide-react'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
+import { PlusIcon, Pencil, Trash2 as TrashIcon, Search } from 'lucide-react'
 
 import AddAssetForm from './AddAssetForm'
 
@@ -32,20 +41,40 @@ import { DataTablePagination } from '@/components/ui/data-table-pagination'
 export default function AssetsPage() {
   const currentTenant = StorageService.getTenant()
   const { page, pageSize, queryParams, goToPage, changePageSize } = usePagination(1, 10)
+  const [searchTerm, setSearchTerm] = useState('')
+  const [assetTypeFilter, setAssetTypeFilter] = useState<string>('all')
 
   const { data: assets, refetch } = authClient.assets.getAssets.useQuery({
     queryKey: ['assets', page, pageSize],
     queryData: {query:queryParams},
     enabled: !!currentTenant,
   })
-  const { mutate: deleteAsset } = (authClient.assets as any).deleteAsset.useMutation();
 
-  const { data: assetType } = authClient.settings.assetType.getAssetTypes.useQuery({
+  const { mutate: deleteAsset, isPending: isDeleting } = authClient.assets.deleteAsset.useMutation({
+    onSuccess: () => {
+      toast.success('Asset deleted successfully');
+      refetch();
+    },
+    onError: (error: any) => {
+      const message = error?.body?.message || 'Failed to delete asset';
+      toast.error(message);
+    },
+  });
+
+  const { data: assetTypeData } = authClient.settings.assetType.getAssetTypes.useQuery({
     queryKey: ['assetType']
   })
 
+  const assetTypes = assetTypeData?.body?.data ?? []
   const assetList = assets?.status === 200 ? assets.body.data : []
   const paginationMeta = assets?.status === 200 ? assets.body.pagination : undefined
+
+  // Filter assets based on search term and asset type
+  const filteredAssets = assetList.filter((asset) => {
+    const matchesSearch = asset.name.toLowerCase().includes(searchTerm.toLowerCase())
+    const matchesType = assetTypeFilter === 'all' || String(asset.assetTypeId) === assetTypeFilter
+    return matchesSearch && matchesType
+  })
 
   return (
     <>
@@ -68,6 +97,33 @@ export default function AssetsPage() {
           </DialogContent>
         </Dialog>
       </div>
+
+      {/* Filters */}
+      <div className="flex flex-col sm:flex-row gap-4 mt-4">
+        <div className="relative flex-1 max-w-sm">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Input
+            placeholder="Search assets..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="pl-10"
+          />
+        </div>
+        <Select value={assetTypeFilter} onValueChange={setAssetTypeFilter}>
+          <SelectTrigger className="w-[200px]">
+            <SelectValue placeholder="All Asset Types" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Asset Types</SelectItem>
+            {assetTypes.map((type) => (
+              <SelectItem key={type.id} value={String(type.id)}>
+                {type.name}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+
       <div className="border shadow-sm rounded-lg mt-4">
         <Table>
           <TableHeader>
@@ -79,13 +135,17 @@ export default function AssetsPage() {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {assetList.length > 0 ? (
-              assetList.map((asset) => (
-                <Row key={asset.id} asset={asset} refetch={refetch} />
+            {filteredAssets.length > 0 ? (
+              filteredAssets.map((asset) => (
+                <Row key={asset.id} asset={asset} onDelete={deleteAsset} isDeleting={isDeleting} />
               ))
             ) : (
               <TableRow>
-                <TableCell colSpan={4}>No assets found</TableCell>
+                <TableCell colSpan={4}>
+                  {searchTerm || assetTypeFilter !== 'all'
+                    ? 'No assets match your filters'
+                    : 'No assets found'}
+                </TableCell>
               </TableRow>
             )}
           </TableBody>
@@ -104,25 +164,17 @@ export default function AssetsPage() {
 
 export const Row = ({
   asset,
-  refetch,
+  onDelete,
+  isDeleting,
 }: {
   asset: SelectAsset;
-  refetch: () => void;
+  onDelete: (params: { params: { id: string }; body: object }) => void;
+  isDeleting: boolean;
 }) => {
-  const { mutate: deleteAsset, isPending } = authClient.assets.deleteAsset.useMutation({
-    onSuccess: () => {
-      toast.success(`Asset "${asset.name}" deleted.`);  
-      refetch();
-    },
-    onError: () => {
-      toast.error(`Failed to delete "${asset.name}".`);
-    },
-  });
-
   const handleDelete = () => {
     const confirmed = confirm(`Delete asset "${asset.name}"?`);
     if (confirmed) {
-      deleteAsset({ params: { id: String(asset.id) }, body:{} }); // Ensure `id` is a string
+      onDelete({ params: { id: String(asset.id) }, body: {} });
     }
   };
 
@@ -157,7 +209,7 @@ export const Row = ({
             variant="ghost"
             size="sm"
             onClick={handleDelete}
-            disabled={isPending}
+            disabled={isDeleting}
           >
             <TrashIcon className="h-4 w-4 text-red-500" />
           </Button>
