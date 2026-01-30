@@ -194,10 +194,10 @@ export default function Billing({ userId }: { userId: string }) {
     <>
       <div className="flex justify-between items-center mb-2">
         <CardTitle className="text-base">Billing</CardTitle>
-        <div className="flex gap-2">
+        {/* <div className="flex gap-2">
           <Button onClick={() => setOpenInvoice(true)}><Plus className="h-4 w-4 mr-2" />Create Invoice</Button>
           <Button variant="outline" onClick={() => setOpenPayment(true)}><Plus className="h-4 w-4 mr-2" />Record Payment</Button>
-        </div>
+        </div> */}
       </div>
 
       <div className="grid gap-4 md:grid-cols-2">
@@ -215,7 +215,7 @@ export default function Billing({ userId }: { userId: string }) {
                     <TableHead>Issue Date</TableHead>
                     <TableHead>Due Date</TableHead>
                     <TableHead>Total</TableHead>
-                    <TableHead>Actions</TableHead>
+                    {/* <TableHead>Actions</TableHead> */}
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -227,7 +227,7 @@ export default function Billing({ userId }: { userId: string }) {
                         <TableCell>{new Date(inv.issueDate).toLocaleDateString()}</TableCell>
                         <TableCell>{new Date(inv.dueDate).toLocaleDateString()}</TableCell>
                         <TableCell>${Number(inv.totalAmount ?? 0).toFixed(2)}</TableCell>
-                        <TableCell>
+                        {/* <TableCell>
                           <Button
                             variant="ghost"
                             size="icon"
@@ -236,7 +236,7 @@ export default function Billing({ userId }: { userId: string }) {
                           >
                             <Trash2 className="h-4 w-4" />
                           </Button>
-                        </TableCell>
+                        </TableCell> */}
                       </TableRow>
                     ))
                   ) : (

@@ -5,19 +5,23 @@ import { useParams } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Switch } from '@/components/ui/switch';
-import { ArrowLeft } from 'lucide-react';
+import { Input } from '@/components/ui/input';
+import { ArrowLeft, ImageIcon } from 'lucide-react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { authClient } from '@/lib/api/publicClient';
 import { TENANTS_QUERY_KEY } from '@/lib/api/queryKeys';
 import { toast } from 'sonner';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel } from '@/components/ui/form';
+import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 
 const TenantSettingsSchema = z.object({
   enableAutomaticConfirmation: z.boolean(),
   booksByAssetType: z.boolean(),
+  logoUrl: z.string().optional(),
+  backgroundImage: z.string().optional(),
 });
 
 type TenantSettingsFormValues = z.infer<typeof TenantSettingsSchema>;
@@ -40,6 +44,8 @@ export default function TenantSettingsPage() {
     defaultValues: {
       enableAutomaticConfirmation: true,
       booksByAssetType: false,
+      logoUrl: '',
+      backgroundImage: '',
     },
   });
 
@@ -49,6 +55,8 @@ export default function TenantSettingsPage() {
       form.reset({
         enableAutomaticConfirmation: tenant.enableAutomaticConfirmation ?? true,
         booksByAssetType: tenant.booksByAssetType ?? false,
+        logoUrl: tenant.logoUrl ?? '',
+        backgroundImage: tenant.backgroundImage ?? '',
       });
     }
   }, [tenant, form]);
@@ -68,6 +76,8 @@ export default function TenantSettingsPage() {
           tenant: {
             enableAutomaticConfirmation: values.enableAutomaticConfirmation,
             booksByAssetType: values.booksByAssetType,
+            logoUrl: values.logoUrl || null,
+            backgroundImage: values.backgroundImage || null,
           },
         },
       },
@@ -229,6 +239,100 @@ export default function TenantSettingsPage() {
                     <li>They select a type and choose their dates</li>
                     <li>The system automatically assigns the first available asset of that type</li>
                     <li>Great for rental businesses where customers don't need to choose specific items</li>
+                  </ul>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle>Branding</CardTitle>
+                <CardDescription>
+                  Customize the look of your customer and owner portals
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                <FormField
+                  control={form.control}
+                  name="logoUrl"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Company Logo URL</FormLabel>
+                      <FormControl>
+                        <Input
+                          placeholder="https://example.com/logo.png"
+                          {...field}
+                        />
+                      </FormControl>
+                      <FormDescription>
+                        Enter the URL of your company logo. This will be displayed in the header of the customer and owner portals.
+                      </FormDescription>
+                      <FormMessage />
+                      {field.value && (
+                        <div className="mt-2 p-4 border rounded-lg bg-muted/50">
+                          <p className="text-xs text-muted-foreground mb-2">Preview:</p>
+                          <div className="relative h-16 w-40">
+                            <Image
+                              src={field.value}
+                              alt="Logo preview"
+                              fill
+                              className="object-contain"
+                              onError={(e) => {
+                                e.currentTarget.style.display = 'none';
+                              }}
+                            />
+                          </div>
+                        </div>
+                      )}
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="backgroundImage"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Background Image URL</FormLabel>
+                      <FormControl>
+                        <Input
+                          placeholder="https://example.com/background.jpg"
+                          {...field}
+                        />
+                      </FormControl>
+                      <FormDescription>
+                        Enter the URL of a background image. This will be used as the page background in the customer and owner portals.
+                      </FormDescription>
+                      <FormMessage />
+                      {field.value && (
+                        <div className="mt-2 p-4 border rounded-lg bg-muted/50">
+                          <p className="text-xs text-muted-foreground mb-2">Preview:</p>
+                          <div className="relative h-32 w-full rounded overflow-hidden">
+                            <Image
+                              src={field.value}
+                              alt="Background preview"
+                              fill
+                              className="object-cover"
+                              onError={(e) => {
+                                e.currentTarget.style.display = 'none';
+                              }}
+                            />
+                          </div>
+                        </div>
+                      )}
+                    </FormItem>
+                  )}
+                />
+
+                <div className="bg-primary/5 border border-primary/20 rounded-lg p-4">
+                  <p className="text-sm text-muted-foreground">
+                    <strong>Note:</strong> For best results:
+                  </p>
+                  <ul className="list-disc list-inside text-sm text-muted-foreground mt-2 space-y-1">
+                    <li>Use a transparent PNG for your logo</li>
+                    <li>Recommended logo size: 200x80 pixels or similar aspect ratio</li>
+                    <li>Background images should be high resolution (at least 1920x1080)</li>
+                    <li>Use images with subtle patterns or gradients for better text readability</li>
                   </ul>
                 </div>
               </CardContent>

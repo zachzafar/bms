@@ -54,6 +54,8 @@ export class TenantController {
             subdomain: tenant.subdomain,
             enableAutomaticConfirmation: tenant.enableAutomaticConfirmation,
             booksByTagOnCustomerPage: tenant.booksByAssetType,
+            logoUrl: tenant.logoUrl ?? null,
+            backgroundImage: tenant.backgroundImage ?? null,
           }
         };
       } catch (error: any) {

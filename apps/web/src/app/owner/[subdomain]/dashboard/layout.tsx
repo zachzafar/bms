@@ -2,7 +2,9 @@
 
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
+import Image from 'next/image';
 import { StorageService } from '@/lib/api/storage';
+import { client } from '@/lib/api/publicClient';
 import { useEffect, useState } from 'react';
 import { Building2, Calendar, Wrench, FileText, DollarSign, Home } from 'lucide-react';
 import { toast } from 'sonner';
@@ -15,6 +17,18 @@ export default function OwnerDashboardLayout({ children }: { children: React.Rea
   const subdomain = params.subdomain as string;
   const [tenantName, setTenantName] = useState('');
   const [userName, setUserName] = useState('');
+
+  // Fetch tenant branding data
+  const { data: tenantResponse } = client.tenants.getTenantBySubdomain.useQuery({
+    queryKey: ['tenant-branding', subdomain],
+    queryData: {
+      params: { subdomain },
+    },
+  });
+
+  const tenantBranding = tenantResponse?.status === 200 ? tenantResponse.body : null;
+  const logoUrl = tenantBranding?.logoUrl;
+  const backgroundImage = tenantBranding?.backgroundImage;
 
   useEffect(() => {
     // Check if user is authenticated
@@ -39,13 +53,37 @@ export default function OwnerDashboardLayout({ children }: { children: React.Rea
   }, [subdomain, router]);
 
   return (
-    <div className="min-h-screen bg-background">
+    <div
+      className="min-h-screen relative"
+      style={{
+        backgroundImage: backgroundImage ? `url(${backgroundImage})` : undefined,
+        backgroundSize: 'cover',
+        backgroundPosition: 'center',
+        backgroundAttachment: 'fixed',
+      }}
+    >
+      {/* Overlay for better text readability when background image is set */}
+      {backgroundImage && (
+        <div className="absolute inset-0 bg-background/80 backdrop-blur-sm" />
+      )}
       {/* Header */}
-      <header className="bg-background border-b border-border sticky top-0 z-10">
+      <header className="relative z-10 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 border-b border-border sticky top-0">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
             <div className="flex items-center space-x-3">
-              <Building2 className="h-8 w-8 text-primary" />
+              {logoUrl ? (
+                <div className="relative h-10 w-32">
+                  <Image
+                    src={logoUrl}
+                    alt={tenantName || 'Company logo'}
+                    fill
+                    className="object-contain object-left"
+                    priority
+                  />
+                </div>
+              ) : (
+                <Building2 className="h-8 w-8 text-primary" />
+              )}
               <div>
                 <h1 className="text-lg font-bold text-foreground">{tenantName}</h1>
                 <p className="text-xs text-muted-foreground">Owner Portal</p>
@@ -61,7 +99,7 @@ export default function OwnerDashboardLayout({ children }: { children: React.Rea
       </header>
 
       {/* Navigation */}
-      <nav className="bg-white border-b border-border">
+      <nav className="relative z-10 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 border-b border-border">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex space-x-8">
             <Link
@@ -111,7 +149,7 @@ export default function OwnerDashboardLayout({ children }: { children: React.Rea
       </nav>
 
       {/* Main Content */}
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <main className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {children}
       </main>
     </div>

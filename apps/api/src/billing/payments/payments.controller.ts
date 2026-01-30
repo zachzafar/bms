@@ -1,17 +1,20 @@
-import { Controller, Headers } from '@nestjs/common';
+import { Controller, Headers, Res } from '@nestjs/common';
 import { TsRestHandler, tsRestHandler } from '@ts-rest/nest';
 import { billingContract } from '@repo/api-contract';
 import * as schema from '@repo/api-contract';
 import { TenantService } from 'src/tenant/tenant.service';
 import { PaymentsService } from './payments.service';
+import { PdfService } from '../pdf/pdf.service';
 import { Roles } from 'src/auth/decorators/permissions.decorator';
 import { PermissionScope } from 'src/auth/permissions';
+import { Response } from 'express';
 
 @Controller()
 export class PaymentsController {
   constructor(
     private readonly payments: PaymentsService,
     private readonly tenantService: TenantService,
+    private readonly pdfService: PdfService,
   ) { }
 
   @TsRestHandler(billingContract.createPayment)
@@ -74,6 +77,81 @@ export class PaymentsController {
         }
         throw error;
       }
+    });
+  }
+
+  @TsRestHandler(billingContract.downloadPaymentReceiptPdf)
+  @Roles(PermissionScope.PAYMENTS_READ)
+  async downloadPaymentReceiptPdf(
+    @Headers() headers: Record<string, string | string[]>,
+    @Res() res: Response
+  ) {
+    return tsRestHandler(billingContract.downloadPaymentReceiptPdf, async ({ params }) => {
+      const rawTenantId = headers['x-tenant-id'];
+      const tenantId = Array.isArray(rawTenantId) ? rawTenantId[0] : rawTenantId;
+
+      if (!tenantId) {
+        return { status: 404 as const, body: { message: 'TenantId missing' } };
+      }
+
+      // Validate tenant access
+      await this.tenantService.validateTenantAccess(tenantId, schema.Payment, params.id);
+
+      // Get payment with invoices
+      const payment = await this.payments.get(params.id);
+      if (!payment) {
+        return { status: 404 as const, body: { message: 'Payment not found' } };
+      }
+
+      // Get tenant info
+      const tenant = await this.tenantService.getTenantById(tenantId);
+      if (!tenant) {
+        return { status: 404 as const, body: { message: 'Tenant not found' } };
+      }
+
+      // Get customer info
+      const customer = payment.customerId
+        ? await this.tenantService.getCustomerById(payment.customerId)
+        : null;
+
+      // Generate receipt number from payment ID
+      const receiptNumber = `RCP-${String(payment.id).padStart(6, '0')}`;
+
+      // Generate PDF
+      const pdfBuffer = await this.pdfService.generatePaymentReceiptPdf({
+        tenant: {
+          name: tenant.name,
+          logoUrl: tenant.logoUrl,
+          address: tenant.address ?? undefined,
+          email: tenant.email ?? undefined,
+          phone: tenant.phone ?? undefined,
+        },
+        payment: {
+          receiptNumber,
+          paymentDate: new Date(payment.paymentDate),
+          paymentMethod: payment.paymentMethod ?? 'Unknown',
+          type: payment.type ?? 'Payment',
+          amount: String(payment.amount),
+          referenceNumber: payment.reference,
+          notes: payment.notes,
+        },
+        customer: {
+          name: customer?.user?.name ?? 'Unknown Customer',
+          email: customer?.user?.email ?? undefined,
+          address: customer?.address ?? undefined,
+        },
+        appliedInvoices: payment.invoices?.map(inv => ({
+          invoiceNumber: inv.invoiceNumber,
+          amountApplied: inv.amountApplied,
+        })),
+      });
+
+      // Send PDF response
+      res.setHeader('Content-Type', 'application/pdf');
+      res.setHeader('Content-Disposition', `attachment; filename="receipt-${receiptNumber}.pdf"`);
+      res.send(pdfBuffer);
+
+      return { status: 200 as const, body: pdfBuffer };
     });
   }
 }

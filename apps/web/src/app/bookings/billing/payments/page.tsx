@@ -8,8 +8,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Plus, Search, Eye, Pencil, DollarSign, Calendar, Trash2 } from 'lucide-react';
-import { authClient } from '@/lib/api/publicClient';
+import { Plus, Search, Eye, Pencil, DollarSign, Calendar, Trash2, Download } from 'lucide-react';
+import { authClient, axiosClient } from '@/lib/api/publicClient';
 import { toast } from 'sonner';
 import { Label } from '@/components/ui/label';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
@@ -189,6 +189,31 @@ export default function PaymentsPage() {
         params: { id: paymentId },
         body: {},
       });
+    }
+  };
+
+  const handleDownloadReceiptPdf = async (paymentId: number) => {
+    try {
+      toast.info('Generating receipt PDF...');
+      const response = await axiosClient.get(`/payment/${paymentId}/pdf`, {
+        responseType: 'blob',
+      });
+
+      // Create blob URL and trigger download
+      const blob = new Blob([response.data], { type: 'application/pdf' });
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `receipt-${paymentId}.pdf`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+
+      toast.success('Receipt PDF downloaded successfully');
+    } catch (error) {
+      console.error('Download receipt PDF error:', error);
+      toast.error('Failed to download receipt PDF');
     }
   };
 
@@ -373,6 +398,13 @@ export default function PaymentsPage() {
                       <div className="flex items-center gap-2">
                         <Button variant="outline" size="sm" onClick={() => router.push(`/bookings/billing/payments/${payment.id}/view`)}>
                           <Eye className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleDownloadReceiptPdf(payment.id)}
+                        >
+                          <Download className="h-4 w-4" />
                         </Button>
                         <Button
                           variant="destructive"

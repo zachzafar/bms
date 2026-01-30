@@ -236,4 +236,35 @@ export const billingContract = c.router({
       }),
     },
   },
+
+  // PDF Downloads
+  downloadInvoicePdf: {
+    method: "GET",
+    path: "/invoice/:id/pdf",
+    summary: "Download invoice as PDF",
+    pathParams: z.object({
+      id: z.coerce.number(),
+    }),
+    responses: {
+      200: z.any(), // PDF binary response
+      404: z.object({
+        message: z.string(),
+      }),
+    },
+  },
+
+  downloadPaymentReceiptPdf: {
+    method: "GET",
+    path: "/payment/:id/pdf",
+    summary: "Download payment receipt as PDF",
+    pathParams: z.object({
+      id: z.coerce.number(),
+    }),
+    responses: {
+      200: z.any(), // PDF binary response
+      404: z.object({
+        message: z.string(),
+      }),
+    },
+  },
 });

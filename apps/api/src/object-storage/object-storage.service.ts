@@ -39,7 +39,29 @@ export class ObjectStorageService {
             this.logger.error(e)
             throw new Error("Error occured while generating signed url")
         }
-        
+
+    }
+
+    async getObjectBuffer(filePath: string): Promise<Buffer> {
+        const command = new GetObjectCommand({
+            Key: filePath,
+            Bucket: 'bookos'
+        });
+        try {
+            const response = await this.s3Client.send(command);
+            if (!response.Body) {
+                throw new Error('Empty response body from S3');
+            }
+            // Convert stream to buffer
+            const chunks: Uint8Array[] = [];
+            for await (const chunk of response.Body as Readable) {
+                chunks.push(chunk);
+            }
+            return Buffer.concat(chunks);
+        } catch (e) {
+            this.logger.error(e);
+            throw new Error('Error occurred while fetching object from S3');
+        }
     }
 
     async uploadObject(file: Buffer|Readable,uploadType: 'image'|'file',tenant:string,asset:string): Promise<string> {

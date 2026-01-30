@@ -89,6 +89,8 @@ export const tenantsContract = c.router({
         subdomain: z.string().nullable(),
         enableAutomaticConfirmation: z.boolean(),
         booksByTagOnCustomerPage: z.boolean(),
+        logoUrl: z.string().nullable(),
+        backgroundImage: z.string().nullable(),
       }),
       404: z.object({
         message: z.string()
