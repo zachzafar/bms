@@ -81,9 +81,9 @@ export default function AssetBookings({ asset }: { asset: SelectAsset }) {
       <CardHeader className="flex flex-row items-center justify-between">
         <CardTitle>Bookings</CardTitle>
         <Dialog open={isOpen} onOpenChange={setIsOpen}>
-          <DialogTrigger asChild>
+          {/* <DialogTrigger asChild>
             <Button>Add Booking</Button>
-          </DialogTrigger>
+          </DialogTrigger> */}
           <DialogContent>
             <DialogHeader>
               <DialogTitle>Create New Booking</DialogTitle>
