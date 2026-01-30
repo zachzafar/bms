@@ -20,8 +20,9 @@ export class UsersController {
         return tsRestHandler(c.users.createUser, async ({ body }) => {
             const tenantId = headers['x-tenant-id'];
 
-            const { roles } = body;
-            const userId = await this.UserService.createUser(body, tenantId, roles);
+            const { roles, customerDetails } = body;
+            this.logger.log(`Trying to see customer details ${JSON.stringify(customerDetails)}`)
+            const userId = await this.UserService.createUser(body, tenantId, roles, customerDetails);
             return { status: 200, body: { id: userId } };
         });
     }

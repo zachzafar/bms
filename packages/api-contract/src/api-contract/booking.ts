@@ -17,9 +17,9 @@ export const BookingFormResponseSchema = z.object({
 });
 
 export const ExtendedSelectBookingSchema = SelectBookingSchema.omit({ startDate: true, endDate: true }).extend({
-    customer: SelectCustomerSchema,
+    customer: SelectCustomerSchema.nullable().optional(),
     asset: SelectAssetSchema,
-    user: SelectUserSchema.omit({ roles: true }),
+    user: SelectUserSchema.omit({ roles: true }).nullable().optional(),
     startDate: z.coerce.date(),
     endDate: z.coerce.date(),
     formResponses: z.array(BookingFormResponseSchema).optional(),

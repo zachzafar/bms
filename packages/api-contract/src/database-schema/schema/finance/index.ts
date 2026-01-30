@@ -22,7 +22,7 @@ export const Invoice = mysqlTable("invoice", {
   createdAt: timestamp('createdAt').notNull().defaultNow(),
   updatedAt: timestamp('updated_at', { mode: 'date', }).$onUpdate(() => new Date()),
   deletedAt: timestamp('deleted_at'),
-  customerId:bigint("customer_id", { mode: 'number', unsigned: true }).notNull().references(() => Customer.id),
+  customerId:bigint("customer_id", { mode: 'number', unsigned: true }).references(() => Customer.id, { onDelete: 'set null' }),
   bookingId: varchar("booking_id", { length: 255 }).notNull(),
 }, (table) => ({
   invoiceNumberUniqueIdx: uniqueIndex("invoice_number_unique").on(table.invoiceNumber),
@@ -135,7 +135,7 @@ export const Payment = mysqlTable("payment", {
   createdAt: timestamp('createdAt').notNull().defaultNow(),
   updatedAt: timestamp('updated_at', { mode: 'date', }).$onUpdate(() => new Date()),
   deletedAt: timestamp('deleted_at'),
-  customerId: bigint("customer_id", { mode: 'number', unsigned: true }).notNull().references(() => Customer.id),
+  customerId: bigint("customer_id", { mode: 'number', unsigned: true }).references(() => Customer.id, { onDelete: 'set null' }),
 
 }, (table) => ({
   customerIdx: index("customer_idx").on(table.customerId),
@@ -145,10 +145,10 @@ export const Payment = mysqlTable("payment", {
 
 export const SelectPaymentSchema = createSelectSchema(Payment).extend({
   paymentDate: z.string(),
-  customerId: z.number(),
+  customerId: z.number().nullable(),
 });
 export const InsertPaymentSchema = createInsertSchema(Payment).extend({
-  customerId: z.number(),
+  customerId: z.number().nullable(),
   paymentDate: z.coerce.date(),
 });
 export const UpdatePaymentSchema = InsertPaymentSchema.partial();

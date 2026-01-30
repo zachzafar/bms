@@ -27,7 +27,7 @@ export class AssetTypeController {
     async createAssetType(@Headers() headers: any): Promise<ReturnType<typeof tsRestHandler>> {
         return tsRestHandler(contract.settings.assetType.createAssetType, async ({ body }) => {
             const tenantId = headers['x-tenant-id']
-            const id = await this.assetTypeService.createAssetType({...body.assetType, tenantId}, body.properties, body.forms);
+            const id = await this.assetTypeService.createAssetType({...body.assetType, tenantId}, body.properties, body.forms, body.tagIds);
             this.logger.log(`Created asset type with id ${id}`);
             return { status: 201, body: { id } };
         });
@@ -47,10 +47,10 @@ export class AssetTypeController {
                 };
             }
 
-            const { properties, forms, ...assetTypeData } = assetType;
+            const { properties, forms, tags, ...assetTypeData } = assetType;
             return {
                 status: 200 as const,
-                body: { assetType: assetTypeData, properties, forms }
+                body: { assetType: assetTypeData, properties, forms, tags }
             };
         });
     }
@@ -63,6 +63,7 @@ export class AssetTypeController {
             const assetType = await this.assetTypeService.updateAssetType((params.id), body.assetType);
             await this.assetTypeService.updateAssetTypeProperties((params.id), body.properties);
             await this.assetTypeService.updateAssetTypeForms((params.id), body.forms);
+            await this.assetTypeService.updateAssetTypeTags((params.id), body.tagIds || []);
             if (!assetType) {
                 return {
                     status: 500 as const,

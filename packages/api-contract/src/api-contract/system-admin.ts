@@ -35,6 +35,19 @@ export const systemAdminContract = c.router({
     },
     summary: 'Create a new system admin user',
   },
+  logout: {
+    method: 'POST',
+    path: '/system-admin/logout',
+    body: z.object({
+      userId: z.string().max(255)
+    }),
+    responses: {
+      204: z.object({
+        message: z.string()
+      })
+    },
+    summary: 'Logout'
+  },
 
   getSystemAdmins: {
     method: 'GET',

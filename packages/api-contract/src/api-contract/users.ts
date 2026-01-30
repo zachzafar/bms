@@ -14,7 +14,7 @@ export const userContract = c.router({
         body:   InsertUserSchema.extend({
              roles: z.array(z.coerce.number()),
              ownerDetails: InsertOwnerSchema.omit({tenantId: true, userId: true, }).optional(),
-             customerDetails: InsertCustomerSchema.omit({ tenantId: true, userId: true, dateOfBirth: true}).extend({ dateOfBirth: z.string().optional()}).optional(),
+             customerDetails: InsertCustomerSchema.omit({ tenantId: true, userId: true}).extend({ dateOfBirth: z.string().optional()}).optional(),
             }),
         responses: {
             200: z.object({

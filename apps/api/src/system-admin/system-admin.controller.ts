@@ -10,7 +10,7 @@ import { UsersService } from 'src/users/users.service';
 import { AssetTypeService } from 'src/schema-design/asset-type/asset-type.service';
 import { PropertyService } from 'src/schema-design/property/property.service';
 import { TagsService } from 'src/tags/tags.service';
-
+import { AuthService } from 'src/auth/auth.service';
 
 
 @IsAdminRoute()
@@ -25,6 +25,7 @@ export class SystemAdminController {
     private assetTypeService: AssetTypeService,
     private PropertyService: PropertyService,
     private tagsService: TagsService,
+    private authService: AuthService
   ) { }
 
   // System Admin User Management
@@ -492,18 +493,30 @@ export class SystemAdminController {
     });
   }
 
-  @TsRestHandler(contract.settings.tags.deleteTag)
-  async deleteTag(): Promise<ReturnType<typeof tsRestHandler>> {
-    return tsRestHandler(contract.systemAdmin.deleteTag, async ({ params }) => {
-
-      const tag = await this.tagsService.getTag((params.id));
-
-      // Validate tenant access before deleting
-
-      const result = await this.tagsService.deleteTag((params.id));
-      return { status: 200, body: result };
-    });
+  @IsAdminRoute()
+  @TsRestHandler(contract.systemAdmin.logout)
+  async logout(): Promise<ReturnType<typeof tsRestHandler>> {
+          return tsRestHandler(contract.systemAdmin.logout, async ({ body }) => {
+              await this.authService.logout(body.userId);
+              this.logger.log(`User with user ID: ${body.userId} logged out`);
+              return { status: 204, body: { message: 'Logged out' } };
+          });
   }
+
+  // @TsRestHandler(contract.settings.tags.deleteTag)
+  // async deleteTag(): Promise<ReturnType<typeof tsRestHandler>> {
+  //   return tsRestHandler(contract.systemAdmin.deleteTag, async ({ params }) => {
+
+  //     const tag = await this.tagsService.getTag((params.id));
+
+  //     // Validate tenant access before deleting
+
+  //     const result = await this.tagsService.deleteTag((params.id));
+  //     return { status: 200, body: result };
+  //   });
+  // }
+
+  
 
 
 

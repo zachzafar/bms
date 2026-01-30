@@ -53,7 +53,7 @@ export class TenantController {
             name: tenant.name,
             subdomain: tenant.subdomain,
             enableAutomaticConfirmation: tenant.enableAutomaticConfirmation,
-            booksByTagOnCustomerPage: tenant.booksByTagOnCustomerPage,
+            booksByTagOnCustomerPage: tenant.booksByAssetType,
           }
         };
       } catch (error: any) {

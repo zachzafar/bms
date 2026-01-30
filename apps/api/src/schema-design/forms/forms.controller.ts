@@ -125,30 +125,6 @@ export class FormsController {
         });
     }
 
-    // Tag assignment endpoints
-    @TsRestHandler(contract.settings.form.assignFormToTag)
-    async assignFormToTag(@Headers() headers:any): Promise<ReturnType<typeof tsRestHandler>> {
-        return tsRestHandler(contract.settings.form.assignFormToTag, async ({ params }) => {
-            const tenantId = headers['x-tenant-id']
-            await this.TenantService.validateTenantAccess(tenantId, schema.BookingForm, params.formId)
-            await this.TenantService.validateTenantAccess(tenantId, schema.Tags, params.tagId)
-
-            const result = await this.formsService.assignFormToTag(params.formId, params.tagId);
-            return { status: 201, body: result };
-        });
-    }
-
-    @TsRestHandler(contract.settings.form.unassignFormFromTag)
-    async unassignFormFromTag(@Headers() headers:any): Promise<ReturnType<typeof tsRestHandler>> {
-        return tsRestHandler(contract.settings.form.unassignFormFromTag, async ({ params }) => {
-            const tenantId = headers['x-tenant-id']
-            await this.TenantService.validateTenantAccess(tenantId, schema.BookingForm, params.formId)
-            await this.TenantService.validateTenantAccess(tenantId, schema.Tags, params.tagId)
-
-            await this.formsService.unassignFormFromTag(params.formId, params.tagId);
-            return { status: 204, body: undefined };
-        });
-    }
 
     // Get forms for an asset (with priority resolution)
     @TsRestHandler(contract.settings.form.getFormsForAsset)

@@ -38,7 +38,6 @@ function AddAssetForm() {
 
   const { mutate, isPending } = authClient.assets.createAsset.useMutation();
   const { data: assetTypes } = authClient.settings.assetType.getAssetTypes.useQuery({ queryKey: ASSET_TYPE_QUERY_KEY });
-  const { data: assetTags } = authClient.settings.tags.getTags.useQuery({ queryKey: ASSET_TAGS_QUERY_KEY });
   const { data: bookingForms } = authClient.settings.form.getForms.useQuery({ queryKey: ['bookingForms'] });
 
   const form = useForm<ModifiedInsertAsset>({
@@ -67,7 +66,6 @@ function AddAssetForm() {
           assetTypeId: Number(data.assetTypeId),
         },
         tenant: tenant.id,
-        tagIds: data?.tagId ? [data?.tagId] : [],
         formIds: nonNullFormIds as number[]
       }
     }, {
@@ -121,35 +119,6 @@ function AddAssetForm() {
               <FormDescription>
                 Set the way your asset should be described
               </FormDescription>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-        <FormField
-          control={form.control}
-          name="tagId"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel htmlFor="tag">Tag</FormLabel>
-              <Select onValueChange={(value) => field.onChange(Number(value))} value={field.value?.toString()}>
-                <FormControl>
-                  <SelectTrigger id="tag">
-                    <SelectValue placeholder="Select tag" />
-                  </SelectTrigger>
-                </FormControl>
-                <SelectContent>
-                  {assetTags?.status === 200 ? (
-                    assetTags.body.data.map(tag => (
-                      <SelectItem key={tag.id} value={tag.id.toString()}>
-                        {tag.name}
-                      </SelectItem>
-                    ))
-                  ) : (
-                    <SelectItem value="no-tags">No Tags Found</SelectItem>
-                  )}
-                </SelectContent>
-              </Select>
-              <FormDescription>Select a tag for this asset</FormDescription>
               <FormMessage />
             </FormItem>
           )}

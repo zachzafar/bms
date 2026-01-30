@@ -354,7 +354,7 @@ export default function CustomerPage() {
 
                     <CardContent>
                       {/* Tags */}
-                      {asset.tags && asset.tags.length > 0 && (
+                      {/* {asset.tags && asset.tags.length > 0 && (
                         <div className="flex flex-wrap gap-2 mb-4">
                           {asset.tags.slice(0, 3).map((tag) => (
                             <Badge key={tag.id} variant="secondary">
@@ -367,7 +367,7 @@ export default function CustomerPage() {
                             </Badge>
                           )}
                         </div>
-                      )}
+                      )} */}
 
                       <div className="flex items-center text-sm font-medium text-primary group-hover:text-primary">
                         View Details

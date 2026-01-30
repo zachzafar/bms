@@ -1,4 +1,4 @@
-import { Injectable, Inject, InternalServerErrorException } from '@nestjs/common';
+import { Injectable, Inject, InternalServerErrorException,Logger } from '@nestjs/common';
 import { MySql2Database } from 'drizzle-orm/mysql2';
 import { DrizzleAsyncProvider } from 'src/drizzle/drizzle.provider';
 import * as schema from '@repo/api-contract';
@@ -11,6 +11,7 @@ type UserType = (typeof userTypes)[number];
 
 @Injectable()
 export class UsersService {
+    private readonly logger = new Logger(UsersService.name);
     constructor(@Inject(DrizzleAsyncProvider) private db: MySql2Database<typeof schema>) { }
 
     validateRoles(input: string[]): UserType[] {
@@ -22,10 +23,10 @@ export class UsersService {
         return input as UserType[];
     }
 
-    async createUser(userData: InsertUser, tenantId: string, roles: number[]): Promise<string> {
+    async createUser(userData: InsertUser, tenantId: string, roles: number[], customerDetails?: { phone?: string | null; address?: string | null }): Promise<string> {
         let tenantUser_id: number;
         let userId: string;
-        
+        this.logger.log(`Trying to see customer details ${JSON.stringify(customerDetails)}`)
         await this.db.transaction(async (tx) => {
             // Check if user already exists
             const existingUser = await tx.query.User.findFirst({ 
@@ -88,9 +89,14 @@ export class UsersService {
                 const existingCustomer = await tx.query.Customer.findFirst({
                     where: (c, { eq ,and}) => and(eq(c.userId, userId),eq(c.tenantId, tenantId))
                 });
-                
+
                 if (!existingCustomer) {
-                    await tx.insert(schema.Customer).values({ userId, tenantId });
+                    await tx.insert(schema.Customer).values({
+                        userId,
+                        tenantId,
+                        phone: customerDetails?.phone ?? null,
+                        address: customerDetails?.address ?? null
+                    });
                 }
             }
             
@@ -371,36 +377,51 @@ export class UsersService {
 
 
     async remove(id: string, tenantId: string): Promise<void> {
-        // First check if there's at least one admin in the tenant
-        const admins = await this.db.select()
-            .from(schema.TenantHasUsers)
-            .where(and(eq(schema.TenantHasUsers.tenantId, tenantId), eq(schema.TenantHasUsers.isAdmin, true)))
-            .innerJoin(schema.User, eq(schema.TenantHasUsers.userId, schema.User.id))
+        await this.db.transaction(async (tx) => {
+            // First check if there's at least one admin in the tenant
+            const admins = await tx.select()
+                .from(schema.TenantHasUsers)
+                .where(and(eq(schema.TenantHasUsers.tenantId, tenantId), eq(schema.TenantHasUsers.isAdmin, true)))
+                .innerJoin(schema.User, eq(schema.TenantHasUsers.userId, schema.User.id));
 
-        // Check if the user being removed is an admin and if there's only one admin
-        const isUserAdmin = admins.some(admin => admin.users.id === id);
-        if (isUserAdmin && admins.length <= 1) {
-            throw new InternalServerErrorException("Cannot remove the last admin from a tenant");
-        }
+            // Check if the user being removed is an admin and if there's only one admin
+            const isUserAdmin = admins.some(admin => admin.users.id === id);
+            if (isUserAdmin && admins.length <= 1) {
+                throw new InternalServerErrorException("Cannot remove the last admin from a tenant");
+            }
 
-        // Remove user from the tenant
-        await this.db.delete(schema.TenantHasUsers)
-            .where(and(
-                eq(schema.TenantHasUsers.userId, id),
-                eq(schema.TenantHasUsers.tenantId, tenantId)
-            ));
+            // Delete customer record for this tenant
+            await tx.delete(schema.Customer)
+                .where(and(
+                    eq(schema.Customer.userId, id),
+                    eq(schema.Customer.tenantId, tenantId)
+                )); 
 
-        // Check if user belongs to any other tenants
-        const otherTenants = await this.db.query.TenantHasUsers.findMany({
-            where: (tenantUser, { eq }) => eq(tenantUser.userId, id)
+            // Delete owner record for this tenant
+            await tx.delete(schema.Owner)
+                .where(and(
+                    eq(schema.Owner.userId, id),
+                    eq(schema.Owner.tenantId, tenantId)
+                ));
+
+            // Remove user from the tenant
+            await tx.delete(schema.TenantHasUsers)
+                .where(and(
+                    eq(schema.TenantHasUsers.userId, id),
+                    eq(schema.TenantHasUsers.tenantId, tenantId)
+                ));
+
+            // Check if user belongs to any other tenants
+            const otherTenants = await tx.query.TenantHasUsers.findMany({
+                where: (tenantUser, { eq }) => eq(tenantUser.userId, id)
+            });
+
+            // If user doesn't belong to any other tenants, hard delete the user
+            // Cascade will automatically delete related Customer/Owner records in other tenants
+            if (otherTenants.length === 0) {
+                await tx.delete(schema.User).where(eq(schema.User.id, id));
+            }
         });
-
-        // If user doesn't belong to any other tenants, remove the user profile completely
-        if (otherTenants.length === 0) {
-            // await this.db.delete(schema.User).where(eq(schema.User.id, id));
-            await this.db.update(schema.User).set({deletedAt: new Date}).where(eq(schema.User.id, id))
-            // With cascade delete in the database schema, all related records will be automatically deleted
-        }
     }
 
     async isAdminUser(userId: string): Promise<boolean> {

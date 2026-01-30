@@ -44,10 +44,21 @@ export class AssetsController {
             const asset = await this.assetService.getAssetById(params.id);
 
             if (!asset) {
-                return { status: 404, message: 'Asset not found' };
+                return { status: 404, body: undefined };
             }
 
-            return { status: 200, body: asset };
+            const { bookingForms, ...assetData } = asset;
+
+            return {
+                status: 200,
+                body: {
+                    ...assetData,
+                    bookingForms: bookingForms?.map((bf) => ({
+                        id: bf.bookingForm.id,
+                        name: bf.bookingForm.name,
+                    })) ?? []
+                }
+            };
         });
     }
 
@@ -60,7 +71,6 @@ export class AssetsController {
 
             const id = await this.assetService.createAsset(
                 { ...body.asset, tenantId },
-                body.tagIds, // pass tags here
                 body.formIds // pass forms here
             );
 
@@ -186,10 +196,7 @@ export class AssetsController {
                         name: property.assetProperty.name,
                         value: property.value,
                     })),
-                    tags: asset.tags?.map((tag) => ({
-                        id: tag.id,
-                        name: tag.name,
-                    })) ?? [],
+                    tags: [],
                 };
             });
 

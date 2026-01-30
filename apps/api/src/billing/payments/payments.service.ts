@@ -61,7 +61,9 @@ export class PaymentsService {
     }
 
     // Ensure all invoices belong to the same customer as the payment
-    const allSameCustomer = invoices.every((i) => String(i.customerId) === String(payment.customerId));
+    // Skip invoices with null customerId (customer was deleted)
+    const invoicesWithCustomer = invoices.filter((i) => i.customerId !== null);
+    const allSameCustomer = invoicesWithCustomer.every((i) => String(i.customerId) === String(payment.customerId));
     if (!allSameCustomer) {
       throw new BadRequestException('Invoices must belong to the same customer as the payment');
     }

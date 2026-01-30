@@ -16,7 +16,7 @@ import { CUSTOMERS_QUERY_KEY, } from '@/lib/api/queryKeys';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { InsertCustomerSchema, InsertUserSchema, SelectCustomer, SelectCustomerSchema } from '@repo/api-contract';
-import { date, z } from 'zod';
+import { z } from 'zod';
 import { EditCustomerForm } from '@/components/users/EditCustomerForm';
 import { usePagination } from '@/hooks/usePagination';
 import { DataTablePagination } from '@/components/ui/data-table-pagination';
@@ -35,10 +35,9 @@ type EditableCustomer = {
   updatedAt: Date | null;
   customerDetails: {
     id?: number;
-    userId: string; // 👈 ADD THIS
+    userId: string;
     phone: string | null;
     address: string | null;
-    dateOfBirth: Date | null;
     createdAt?: Date | null;
     updatedAt?: Date | null;
   };
@@ -51,9 +50,8 @@ type EditableCustomer = {
 const CreateCustomerSchema = z.object({
   name: z.string().min(1, 'Name is required'),
   email: z.string().email('Invalid email address'),
-  phone: z.string().min(1, 'Phone number is required'),
+  phone: z.string().min(1, 'Phone number is required').optional(),
   address: z.string().min(1, 'Address is required'),
-  dateOfBirth: z.string().optional(),
   userType: z.string().default('customer'),
 })
 
@@ -103,7 +101,6 @@ export default function Component() {
           customerDetails: {
             phone: data?.phone || null,
             address: data?.address || null,
-            dateOfBirth: data?.dateOfBirth ? data.dateOfBirth.toString() : undefined,
           }
         },
       },
@@ -222,7 +219,13 @@ export default function Component() {
                     />
                   </DialogContent>
                 ) : (
-                  <DialogContent>
+                  <DialogContent className="sm:max-w-[550px]">
+                    <DialogHeader>
+                      <DialogTitle>Add New Customer</DialogTitle>
+                      <DialogDescription>
+                        Enter the customer details below.
+                      </DialogDescription>
+                    </DialogHeader>
                     <Form {...createForm}>
                       <form onSubmit={createForm.handleSubmit(handleCreateCustomer)} className='space-y-4'>
                         <div className='grid grid-cols-1 md:grid-cols-2 gap-4'>
@@ -269,27 +272,10 @@ export default function Component() {
                             control={createForm.control}
                             name="address"
                             render={({ field }) => (
-                              <FormItem>
+                              <FormItem className="md:col-span-2">
                                 <FormLabel>Address</FormLabel>
                                 <FormControl>
                                   <Input {...field} value={field.value || ''} />
-                                </FormControl>
-                                <FormMessage />
-                              </FormItem>
-                            )}
-                          />
-                          <FormField
-                            control={createForm.control}
-                            name="dateOfBirth"
-                            render={({ field }) => (
-                              <FormItem>
-                                <FormLabel>Date of Birth</FormLabel>
-                                <FormControl>
-                                  <Input
-                                    type="date"
-                                    {...field}
-                                    value={field.value ? new Date(field.value).toISOString().split('T')[0] : ''}
-                                  />
                                 </FormControl>
                                 <FormMessage />
                               </FormItem>
@@ -348,15 +334,13 @@ export default function Component() {
                               updatedAt: customer.user.updatedAt,
                               customerDetails: {
                                 id: customer.customer.id,
-                                userId: customer.user.id, 
+                                userId: customer.user.id,
                                 phone: customer.customer.phone,
                                 address: customer.customer.address,
-                                dateOfBirth: customer.customer.dateOfBirth,
                                 createdAt: customer.customer.createdAt,
                                 updatedAt: customer.customer.updatedAt,
                               },
                             })
-
                           }
                           aria-label={`Edit ${customer.user.name}`}
                         >

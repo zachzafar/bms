@@ -13,7 +13,7 @@ export const Tenant = mysqlTable("tenants", {
     name: varchar("name", { length: 255 }).notNull(),
     subdomain: varchar("subdomain", { length: 255 }).unique(),
     enableAutomaticConfirmation: boolean("enable_automatic_confirmation").notNull().default(true),
-    booksByTagOnCustomerPage: boolean("book_by_tag_customer").notNull().default(false),
+    booksByAssetType: boolean("book_by_asset_type").notNull().default(false),
     createdAt: timestamp('createdAt',{mode: 'string'}).notNull().defaultNow(),
     updatedAt: timestamp('updatedAt',{mode: 'string'}).defaultNow().onUpdateNow(),
     deletedAt: timestamp('deleted_at'),

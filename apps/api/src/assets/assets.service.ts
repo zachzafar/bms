@@ -55,20 +55,10 @@ export class AssetsService {
       hasPreviousPage: page > 1,
     };
 
-    const assetsWithTags = await Promise.all(
-      assets.map(async (asset) => {
-        const assetTags = await this.getTagsForAsset(asset.id);
-        return {
-          ...asset,
-          tags: assetTags
-            .map((rel) => rel.tag)
-            .filter((tag): tag is NonNullable<typeof tag> => tag !== null),
-        };
-      })
-    );
+
 
     return {
-      data: assetsWithTags,
+      data: assets,
       pagination: paginationData,
     };
   }
@@ -76,30 +66,20 @@ export class AssetsService {
   async getAssetById(id: string) {
     const asset = await this.db.query.Asset.findFirst({
       where: (asset, { eq, and, isNull }) => and(eq(asset.id, id), isNull(asset.deletedAt)),
+      with: {
+        bookingForms: {
+           with: {
+            bookingForm: true
+           }
+        }
+      }
     });
     if (!asset) return null;
 
-    const assetTags = await this.getTagsForAsset(id);
-
-    return {
-      ...asset,
-      tags: assetTags
-        .map((rel) => rel.tag)
-        .filter((tag): tag is NonNullable<typeof tag> => tag !== null),
-    };
+    return asset
   }
 
-  async getTagsForAsset(assetId: string) {
-    return this.db.query.AssetHasTags.findMany({
-      where: (aht, { eq }) => eq(aht.assetId, assetId),
-      with: {
-        tag: true,
-      },
-    });
-  }
-
-
-  async createAsset(data: InsertAsset, tagIds?: number[], formIds?: number[]) {
+  async createAsset(data: InsertAsset, formIds?: number[]) {
 
     try {
       const result = await this.db
@@ -108,15 +88,6 @@ export class AssetsService {
         .$returningId();
 
       const assetId = result[0].id;
-
-      if (tagIds && tagIds.length > 0) {
-        for (const tagId of tagIds) {
-          await this.db.insert(schema.AssetHasTags).values({
-            assetId,
-            tagId: (tagId),
-          });
-        }
-      }
 
       if (formIds && formIds.length > 0) {
         for (const formId of formIds) {
@@ -135,8 +106,8 @@ export class AssetsService {
     }
   }
 
-  async updateAsset(id: string, data: UpdateAsset & { tagIds?: number[], formIds?: number[] }) {
-    const { tagIds, formIds, ...assetData } = data;
+  async updateAsset(id: string, data: UpdateAsset & {  formIds?: number[] }) {
+    const { formIds, ...assetData } = data;
     let assetTypeId = assetData.assetTypeId ? (assetData.assetTypeId) : undefined;
 
     await this.db
@@ -144,22 +115,6 @@ export class AssetsService {
       .set({ ...assetData, assetTypeId })
       .where(eq(schema.Asset.id, id))
       .execute();
-
-    // Update tags if provided
-    if (tagIds !== undefined) {
-      // Delete existing tags
-      await this.db.delete(schema.AssetHasTags).where(eq(schema.AssetHasTags.assetId, id));
-
-      // Insert new tags
-      if (tagIds.length > 0) {
-        for (const tagId of tagIds) {
-          await this.db.insert(schema.AssetHasTags).values({
-            assetId: id,
-            tagId: tagId,
-          });
-        }
-      }
-    }
 
     // Update forms if provided
     if (formIds !== undefined) {
@@ -325,17 +280,11 @@ export class AssetsService {
       assets.map(async (asset) => {
         const propertyValues = await this.getPropertyValues(asset.id);
         const assetImages = await this.getAssetImages(asset.id);
-        const tagRels = await this.getTagsForAsset(asset.id);
-        const tags = tagRels
-          .map((rel) => rel.tag)
-          .filter((tag): tag is NonNullable<typeof tag> => tag !== null);
-
 
         return {
           ...asset,
           assetImages,
           propertyValues,
-          tags,
         };
       })
     );
@@ -454,7 +403,6 @@ export class AssetsService {
     // Fetch tags, properties, and images for each asset
     const assetsWithDetails = await Promise.all(
       results.map(async (res) => {
-        const assetTags = await this.getTagsForAsset(res.assets.id);
         const propertyValues = await this.getPropertyValues(res.assets.id);
         const assetImages = await this.getAssetImages(res.assets.id);
 
@@ -468,13 +416,6 @@ export class AssetsService {
             name: prop.assetProperty.name,
             value: prop.value,
           })),
-          tags: assetTags
-            .map((rel) => rel.tag)
-            .filter((tag): tag is NonNullable<typeof tag> => tag !== null)
-            .map((tag) => ({
-              id: tag.id,
-              name: tag.name,
-            })),
           pagination: paginationData,
         };
       })
@@ -502,17 +443,13 @@ export class AssetsService {
     const asset = result.assets;
 
     // Fetch related data
-    const [assetTags, assetImages, propertyValues] = await Promise.all([
-      this.getTagsForAsset(assetId),
+    const [ assetImages, propertyValues] = await Promise.all([
       this.getAssetImages(assetId),
       this.getPropertyValues(assetId),
     ]);
 
     return {
       ...asset,
-      tags: assetTags
-        .map((rel) => rel.tag)
-        .filter((tag): tag is NonNullable<typeof tag> => tag !== null),
       images: assetImages,
       properties: propertyValues,
     };
@@ -582,19 +519,13 @@ export class AssetsService {
     // Fetch tags, images, and property values for each asset
     const assetsWithDetails = await Promise.all(
       assets.map(async (asset) => {
-        const [tagRels, images, propertyValues] = await Promise.all([
-          this.getTagsForAsset(asset.id),
+        const [ images, propertyValues] = await Promise.all([
           this.getAssetImages(asset.id),
           this.getPropertyValues(asset.id)
         ]);
 
-        const tags = tagRels
-          .map((rel) => rel.tag)
-          .filter((tag): tag is NonNullable<typeof tag> => tag !== null);
-
         return {
           ...asset,
-          tags,
           images,
           propertyValues
         };
@@ -635,19 +566,13 @@ export class AssetsService {
     const asset = ownerAssetLink.asset;
 
     // Fetch tags, images, and property values
-    const [tagRels, images, propertyValues] = await Promise.all([
-      this.getTagsForAsset(assetId),
+    const [ images, propertyValues] = await Promise.all([
       this.getAssetImages(assetId),
       this.getPropertyValues(assetId)
     ]);
 
-    const tags = tagRels
-      .map((rel) => rel.tag)
-      .filter((tag): tag is NonNullable<typeof tag> => tag !== null);
-
     return {
       ...asset,
-      tags,
       images,
       propertyValues
     };

@@ -15,7 +15,6 @@ const UpdateCustomerSchema = z.object({
     email: z.string().email('Invalid email'),
     phone: z.string().nullable(),
     address: z.string().nullable(),
-    dateOfBirth: z.string().optional(), // sent as string
 });
 
 type UpdateCustomerFormData = z.infer<typeof UpdateCustomerSchema>;
@@ -27,9 +26,9 @@ export interface EditCustomerFormProps {
     email: string;
     customerDetails: {
       id?: number; // customer record ID
+      userId: string;
       phone: string | null;
       address: string | null;
-      dateOfBirth: Date | null;
     }
   };
     onClose: () => void;
@@ -46,9 +45,6 @@ export function EditCustomerForm({ customer, onClose, onSuccess }: EditCustomerF
             email: customer.email,
             phone: customer.customerDetails.phone,
             address: customer.customerDetails.address,
-            dateOfBirth: customer.customerDetails.dateOfBirth
-                ? new Date(customer.customerDetails.dateOfBirth).toISOString().split('T')[0]
-                : '',
         },
     });
 
@@ -61,14 +57,12 @@ export function EditCustomerForm({ customer, onClose, onSuccess }: EditCustomerF
           id: customer.id,
           name: data.name,
           email: data.email,
-          userType: ['customer'], 
+          userType: 'customer',
         },
         customer: {
-          id: customer.customerDetails.id, 
-          userId: customer.id,             
+          userId: customer.id,
           phone: data.phone,
           address: data.address,
-          dateOfBirth: data.dateOfBirth ? new Date(data.dateOfBirth) : null,
         },
         roles: [],
       },
@@ -88,7 +82,7 @@ export function EditCustomerForm({ customer, onClose, onSuccess }: EditCustomerF
 };
 
     return (
-        <DialogContent>
+        <DialogContent className="sm:max-w-[550px]">
             <DialogHeader>
                 <DialogTitle>Edit Customer</DialogTitle>
                 <DialogDescription>Update customer details below</DialogDescription>
@@ -143,28 +137,10 @@ export function EditCustomerForm({ customer, onClose, onSuccess }: EditCustomerF
                             control={form.control}
                             name='address'
                             render={({ field }) => (
-                                <FormItem>
+                                <FormItem className="md:col-span-2">
                                     <FormLabel>Address</FormLabel>
                                     <FormControl>
                                         <Input {...field} value={field.value || ''} />
-                                    </FormControl>
-                                    <FormMessage />
-                                </FormItem>
-                            )}
-                        />
-
-                        <FormField
-                            control={form.control}
-                            name='dateOfBirth'
-                            render={({ field }) => (
-                                <FormItem>
-                                    <FormLabel>Date of Birth</FormLabel>
-                                    <FormControl>
-                                        <Input
-                                            type='date'
-                                            {...field}
-                                            value={field.value || ''}
-                                        />
                                     </FormControl>
                                     <FormMessage />
                                 </FormItem>

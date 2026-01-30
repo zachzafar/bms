@@ -210,67 +210,11 @@ export class FormsService {
         }
     }
 
-    // Tag assignment methods
-    async assignFormToTag(formId: number, tagId: number) {
-        // Check if form exists
-        await this.getForm(formId);
-
-        // Check if tag exists
-        const tag = await this.db.query.Tags.findFirst({
-            where: (tag, { eq }) => eq(tag.id, tagId)
-        });
-
-        if (!tag) {
-            throw new NotFoundException(`Tag with id ${tagId} not found`);
-        }
-
-        // Check if assignment already exists
-        const existing = await this.db.query.TagHasBookingForms.findFirst({
-            where: (rel, { and, eq }) => and(
-                eq(rel.tagId, tagId),
-                eq(rel.bookingFormId, formId)
-            )
-        });
-
-        if (existing) {
-            throw new ConflictException('Form is already assigned to this tag');
-        }
-
-        await this.db.insert(schema.TagHasBookingForms).values({
-            tagId,
-            bookingFormId: formId
-        }).execute();
-
-        return { message: 'Form assigned to tag successfully' };
-    }
-
-    async unassignFormFromTag(formId: number, tagId: number) {
-        const result = await this.db.delete(schema.TagHasBookingForms)
-            .where(
-                and(
-                    eq(schema.TagHasBookingForms.tagId, tagId),
-                    eq(schema.TagHasBookingForms.bookingFormId, formId)
-                )
-            )
-            .execute();
-
-        if (result[0].affectedRows === 0) {
-            throw new NotFoundException('Assignment not found');
-        }
-    }
-
     // Priority-based form resolution for an asset
     async getFormsForAsset(assetId: string) {
         // Get the asset with its type and tags
         const asset = await this.db.query.Asset.findFirst({
             where: (asset, { eq }) => eq(asset.id, assetId),
-            with: {
-                tags: {
-                    with: {
-                        tag: true
-                    }
-                }
-            }
         });
 
         if (!asset) {
@@ -325,30 +269,6 @@ export class FormsService {
             }
         }
 
-        // 3. Get forms from tags (lowest priority)
-        const tagIds = asset.tags.map(at => at.tag.id);
-        if (tagIds.length > 0) {
-            const tagForms = await this.db.query.TagHasBookingForms.findMany({
-                where: (rel, { inArray }) => inArray(rel.tagId, tagIds),
-                with: {
-                    bookingForm: {
-                        with: {
-                            fields: true
-                        }
-                    }
-                }
-            });
-
-            for (const rel of tagForms) {
-                if (rel.bookingForm && rel.bookingForm.fields && !formMap.has(rel.bookingFormId)) {
-                    formMap.set(rel.bookingFormId, {
-                        form: rel.bookingForm,
-                        fields: rel.bookingForm.fields,
-                        assignmentType: 'tag'
-                    });
-                }
-            }
-        }
 
         return { forms: Array.from(formMap.values()) };
     }

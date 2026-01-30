@@ -28,6 +28,7 @@ const AssetTypeWithPropertiesSchema = z.object({
   name: z.string(),
   properties: z.array(z.number()),
   forms: z.array(z.number()),
+  tags: z.array(z.number())
 })
 
 type AssetTypeWithProperties = z.infer<typeof AssetTypeWithPropertiesSchema>;
@@ -37,8 +38,13 @@ export default function AssetTypes() {
   const [editingAssetTypeId, setEditingAssetType] = useState<number>();
   const [selectedProperties, setSelectedProperties] = useState<string[]>([]);
   const [selectedForms, setSelectedForms] = useState<string[]>([]);
+  const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const [isUploading, setIsUploading] = useState(false);
   const queryClient = authClient.useQueryClient();
+
+  const { data: tags, isLoading } = authClient.settings.tags.getTags.useQuery({
+      queryKey: ['tags']
+    });
 
   const { data: assetTypes, isLoading: isLoadingAssetTypes } = authClient.settings.assetType.getAssetTypes.useQuery({
     queryKey: [ASSET_TYPE_QUERY_KEY]
@@ -67,6 +73,7 @@ export default function AssetTypes() {
       reset();
       setSelectedProperties([]);
       setSelectedForms([]);
+      setSelectedTags([]);
     },
     onError: (error) => {
       toast.error(`Error occurred: ${error instanceof Error ? error.message : 'Unknown error'}`);
@@ -79,7 +86,9 @@ export default function AssetTypes() {
       setEditingAssetType(undefined);
       queryClient.invalidateQueries({ queryKey: [ASSET_TYPE_QUERY_KEY] });
       reset();
+      setSelectedProperties([]);
       setSelectedForms([]);
+      setSelectedTags([]);
     },
     onError: (error) => {
       toast.error(`Error occurred: ${error instanceof Error ? error.message : 'Unknown error'}`);
@@ -101,7 +110,8 @@ export default function AssetTypes() {
     defaultValues: {
       name: '',
       properties: [],
-      forms: []
+      forms: [],
+      tags: [],
     }
   });
 
@@ -112,7 +122,8 @@ export default function AssetTypes() {
       reset({
         name: editingAssetType.body.assetType.name,
         properties: editingAssetType.body.properties.map(item => item.id),
-        forms: editingAssetType.body.forms?.map(item => item.id) || []
+        forms: editingAssetType.body.forms?.map(item => item.id) || [],
+        tags: editingAssetType.body.tags?.map(item => item.id) || []
       });
 
       // Set selected properties for MultiSelect
@@ -132,8 +143,17 @@ export default function AssetTypes() {
       }).filter(Boolean);
 
       setSelectedForms(selectedFormNames);
+
+      // Set selected tags for MultiSelect
+      const selectedTagNames = (editingAssetType.body.tags || []).map(item => {
+        const tag = tags?.status === 200 &&
+          tags.body.data.find(t => t.id === item.id);
+        return tag ? tag.name : '';
+      }).filter(Boolean);
+
+      setSelectedTags(selectedTagNames);
     }
-  }, [editingAssetType, properties, bookingForms, reset]);
+  }, [editingAssetType, properties, bookingForms, tags, reset]);
 
   const processForm = (data: AssetTypeWithProperties) => {
     // Convert selected property names to IDs
@@ -154,23 +174,32 @@ export default function AssetTypes() {
 
     const nonNullFormIds = formIds.filter(formId => formId !== null);
 
-    const formData = {
-      ...data,
-      properties: nonNullPropertyIds,
-      forms: nonNullFormIds
-    };
+    // Convert selected tag names to IDs
+    const tagIds = selectedTags.map(tagName => {
+      const tag = tags?.status === 200 &&
+        tags.body.data.find(t => t.name === tagName);
+      return tag ? tag.id : null;
+    })
+
+    const nonNullTagIds = tagIds.filter(tagId => tagId !== null);
 
     if (editingAssetType?.status === 200) {
       updateAssetTypeMutation({
         params: { id: editingAssetType.body.assetType.id },
-        body: { ...formData, assetType: { name: formData.name } }
+        body: {
+          assetType: { name: data.name },
+          properties: nonNullPropertyIds as number[],
+          forms: nonNullFormIds as number[],
+          tagIds: nonNullTagIds as number[]
+        }
       });
     } else {
       addAssetTypeMutation({
         body: {
-          assetType: { name: formData.name, tenantId: tenant?.id as string },
-          properties: formData.properties as number[],
-          forms: formData.forms as number[]
+          assetType: { name: data.name, tenantId: tenant?.id as string },
+          properties: nonNullPropertyIds as number[],
+          forms: nonNullFormIds as number[],
+          tagIds: nonNullTagIds as number[]
         }
       });
     }
@@ -186,8 +215,9 @@ export default function AssetTypes() {
   const cancelEdit = () => {
     setEditingAssetType(undefined);
     reset();
-    setSelectedForms([]);
     setSelectedProperties([]);
+    setSelectedForms([]);
+    setSelectedTags([]);
   };
 
   const handleImageUpload = async (assetTypeId: number, file: File) => {
@@ -256,6 +286,39 @@ export default function AssetTypes() {
                                 value={property.name}
                               >
                                 {property.name}
+                              </MultiSelectorItem>
+                            ))}
+                        </MultiSelectorList>
+                      </MultiSelectorContent>
+                    </MultiSelector>
+
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="tags"
+                render={() => (
+                  <FormItem>
+                    <FormLabel>Tags</FormLabel>
+
+                    <MultiSelector
+                      values={selectedTags}
+                      onValuesChange={setSelectedTags}
+                    >
+                      <MultiSelectorTrigger>
+                        <MultiSelectorInput placeholder="Select Tags..." />
+                      </MultiSelectorTrigger>
+                      <MultiSelectorContent>
+                        <MultiSelectorList>
+                          {tags?.status === 200 &&
+                            tags.body.data.map((tag) => (
+                              <MultiSelectorItem
+                                key={tag.id}
+                                value={tag.name}
+                              >
+                                {tag.name}
                               </MultiSelectorItem>
                             ))}
                         </MultiSelectorList>

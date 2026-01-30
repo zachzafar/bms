@@ -13,7 +13,7 @@ import { Tenant } from "../tenant";
 // Booking Model
 export const Booking = mysqlTable("booking", {
     id: varchar("id", { length: 36 }).primaryKey().$default(uuid),
-    userId: varchar("user_id", { length: 255 }).notNull().references(() => User.id),
+    userId: varchar("user_id", { length: 255 }).references(() => User.id, { onDelete: 'set null' }),
     startDate: datetime("start_date").notNull(),
     endDate: datetime("end_date").notNull(),
     status: mysqlEnum("status", ["Pending", "Confirmed", "Cancelled"]).notNull().$default(() => "Pending"),

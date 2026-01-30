@@ -87,7 +87,6 @@ export default function Component() {
           roles,
           owner: {
             userId: editingOwner.id,
-            companyName: data.companyName || null,
           },
         },
       },
@@ -167,8 +166,7 @@ export default function Component() {
   const parsedOwners = owners?.status === 200 ? owners.body.data.map((item) => ({
     id: item.user.id,
     name: item.user.name,
-    email: item.user.email,
-    companyName: item.owner?.companyName,
+    email: item.user.email
   })) : [];
 
   const paginationMeta = owners?.status === 200 ? owners.body.pagination : undefined;
@@ -222,17 +220,6 @@ export default function Component() {
                             <FormItem>
                               <FormLabel>Email</FormLabel>
                               <FormControl><Input type="email" {...field} /></FormControl>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-                        <FormField
-                          control={editForm.control}
-                          name="companyName"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>Company Name</FormLabel>
-                              <FormControl><Input {...field} /></FormControl>
                               <FormMessage />
                             </FormItem>
                           )}
@@ -372,7 +359,6 @@ export default function Component() {
                 <TableRow>
                   <TableHead>Name</TableHead>
                   <TableHead>Email</TableHead>
-                  <TableHead>Company</TableHead>
                   <TableHead>Actions</TableHead>
                 </TableRow>
               </TableHeader>
@@ -382,7 +368,6 @@ export default function Component() {
                     <TableRow key={owner.id}>
                       <TableCell>{owner.name}</TableCell>
                       <TableCell>{owner.email}</TableCell>
-                      <TableCell>{owner.companyName || '-'}</TableCell>
                       <TableCell className="flex gap-2">
                         <Button
                           variant="ghost"
@@ -392,12 +377,10 @@ export default function Component() {
                               id: owner.id,
                               name: owner.name,
                               email: owner.email,
-                              companyName: owner.companyName ?? undefined,
                             });
                             editForm.reset({
                               name: owner.name,
                               email: owner.email,
-                              companyName: owner.companyName || '',
                             });
                             setOpenEdit(true);
                           }}

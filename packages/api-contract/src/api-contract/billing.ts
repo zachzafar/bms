@@ -8,7 +8,7 @@ const c = initContract();
 // Extended schema for invoice with items
 const ExtendedInvoiceSchema = SelectInvoiceSchema.extend({
   id: z.number(),
-  customerId: z.number(),
+  customerId: z.number().nullable(),
   items: z.array(z.object({
     id: z.number(),
     description: z.string(),
@@ -22,7 +22,7 @@ const ExtendedInvoiceSchema = SelectInvoiceSchema.extend({
 // Extended schema for payment with invoices
 const ExtendedPaymentSchema = SelectPaymentSchema.extend({
   id: z.number(),
-  customerId: z.number(),
+  customerId: z.number().nullable(),
   invoices: z.array(z.object({
     invoiceId: z.number(),
     amountApplied: z.string(),
@@ -33,7 +33,7 @@ const ExtendedPaymentSchema = SelectPaymentSchema.extend({
 // Extended schema for payment list (without invoices)
 const ExtendedPaymentListSchema = SelectPaymentSchema.extend({
   id: z.number(),
-  customerId: z.number(),
+  customerId: z.number().nullable(),
 });
 
 export const billingContract = c.router({

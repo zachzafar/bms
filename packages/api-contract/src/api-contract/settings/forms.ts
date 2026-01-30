@@ -151,40 +151,6 @@ export const formsContract = c.router({
         },
         summary: 'Unassign a form from an asset type'
     },
-
-    // Tag assignment endpoints
-    assignFormToTag: {
-        method: 'POST',
-        path: '/form/:formId/assign/tag/:tagId',
-        pathParams: z.object({
-            formId: z.coerce.number(),
-            tagId: z.coerce.number()
-        }),
-        body: z.object({}),
-        responses: {
-            201: z.object({
-                message: z.string()
-            }),
-            409: z.object({
-                message: z.string()
-            })
-        },
-        summary: 'Assign a form to a tag'
-    },
-    unassignFormFromTag: {
-        method: 'DELETE',
-        path: '/form/:formId/assign/tag/:tagId',
-        pathParams: z.object({
-            formId: z.coerce.number(),
-            tagId: z.coerce.number()
-        }),
-        responses: {
-            204: z.undefined(),
-            404: z.undefined()
-        },
-        summary: 'Unassign a form from a tag'
-    },
-
     // Get forms for an asset (with priority resolution)
     getFormsForAsset: {
         method: 'GET',
