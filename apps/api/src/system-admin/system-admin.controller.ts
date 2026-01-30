@@ -72,6 +72,15 @@ export class SystemAdminController {
     });
   }
 
+  // @IsAdminRoute()
+  // @TsRestHandler(contract.systemAdmin.searchUsers)
+  // async searchUsers(): Promise<ReturnType<typeof tsRestHandler>> {
+  //   return tsRestHandler(contract.systemAdmin.searchUsers, async ({ query }) => {
+  //     const result = await this.systemAdminService.searchUsers(query.email, query.tenantId);
+  //     return { status: 200, body: result };
+  //   });
+  // }
+
   @IsAdminRoute()
   @TsRestHandler(contract.systemAdmin.createTenant)
   async createTenant(): Promise<ReturnType<typeof tsRestHandler>> {
@@ -516,8 +525,16 @@ export class SystemAdminController {
   //   });
   // }
 
-  
+  @IsAdminRoute()
+  @TsRestHandler(contract.systemAdmin.getTenantAssets)
+  async getTenantAssets(): Promise<ReturnType<typeof tsRestHandler>> {
+    return tsRestHandler(contract.systemAdmin.getTenantAssets, async ({ params, query }) => {
+      const page = query.page ? Number(query.page) : 1;
+      const pageSize = query.pageSize ? Number(query.pageSize) : 10;
 
-
+      const result = await this.systemAdminService.getTenantAssets(params.tenantId, page, pageSize);
+      return { status: 200, body: result };
+    });
+  }
 
 }

@@ -158,42 +158,118 @@ export class BookingService {
         // Determine booking status based on tenant settings
         const bookingStatus = tenant?.enableAutomaticConfirmation ? 'Confirmed' : 'Pending';
 
-        // Calculate total price based on asset's rate
+        // Calculate total price based on rate
         let totalPrice = booking.totalPrice ? parseFloat(booking.totalPrice.toString()) : 0;
+        let bestRate: { rateId: number; pricePerNight: string | null; startDate: Date | null; endDate: Date | null; priority: number | null } | null = null;
 
-        // If no price provided, calculate from asset's rate
+        // If no price provided, calculate from rate
         if (!booking.totalPrice || totalPrice === 0) {
-          // Get the applicable rate for this asset
-          const assetRates = await tx
-            .select({
-              rateId: schema.AssetHasRates.rateId,
-              pricePerNight: schema.Rate.pricePerNight,
-              startDate: schema.Rate.startDate,
-              endDate: schema.Rate.endDate,
-              priority: schema.Rate.priority,
-            })
-            .from(schema.AssetHasRates)
-            .innerJoin(schema.Rate, eq(schema.AssetHasRates.rateId, schema.Rate.id))
-            .where(eq(schema.AssetHasRates.assetId, booking.assetId));
-
-          // Find the best matching rate based on booking dates and priority
-          // Filter rates that overlap with the booking period, then sort by priority
           const bookingStartDate = new Date(utcStart);
           const bookingEndDate = new Date(utcEnd);
 
-          const applicableRates = assetRates.filter((rate) => {
-            if (!rate.startDate || !rate.endDate) return false;
-            const rateStart = new Date(rate.startDate);
-            const rateEnd = new Date(rate.endDate);
-            // Rate is applicable if it overlaps with the booking period
-            return rateStart <= bookingEndDate && rateEnd >= bookingStartDate;
-          });
+          // Check tenant's booksByAssetType setting to determine rate lookup strategy
+          if (tenant?.booksByAssetType) {
+            // Look up asset type rate first
+            const assetTypeRates = await tx
+              .select({
+                rateId: schema.Rate.id,
+                pricePerNight: schema.Rate.pricePerNight,
+                startDate: schema.Rate.startDate,
+                endDate: schema.Rate.endDate,
+                priority: schema.Rate.priority,
+              })
+              .from(schema.Rate)
+              .where(eq(schema.Rate.assetTypeId, asset.assetTypeId!));
 
-          // Sort by priority (lower = higher priority) and get the best rate
-          applicableRates.sort((a, b) => (a.priority ?? 100) - (b.priority ?? 100));
-          const bestRate = applicableRates[0];
+            const applicableTypeRates = assetTypeRates.filter((rate) => {
+              if (!rate.startDate || !rate.endDate) return false;
+              const rateStart = new Date(rate.startDate);
+              const rateEnd = new Date(rate.endDate);
+              return rateStart <= bookingEndDate && rateEnd >= bookingStartDate;
+            });
 
-          if (bestRate && bestRate.pricePerNight) {
+            applicableTypeRates.sort((a, b) => (a.priority ?? 100) - (b.priority ?? 100));
+            bestRate = applicableTypeRates[0] || null;
+
+            // Fallback to asset-specific rate if no asset type rate found
+            if (!bestRate) {
+              const assetRates = await tx
+                .select({
+                  rateId: schema.AssetHasRates.rateId,
+                  pricePerNight: schema.Rate.pricePerNight,
+                  startDate: schema.Rate.startDate,
+                  endDate: schema.Rate.endDate,
+                  priority: schema.Rate.priority,
+                })
+                .from(schema.AssetHasRates)
+                .innerJoin(schema.Rate, eq(schema.AssetHasRates.rateId, schema.Rate.id))
+                .where(eq(schema.AssetHasRates.assetId, booking.assetId));
+
+              const applicableRates = assetRates.filter((rate) => {
+                if (!rate.startDate || !rate.endDate) return false;
+                const rateStart = new Date(rate.startDate);
+                const rateEnd = new Date(rate.endDate);
+                return rateStart <= bookingEndDate && rateEnd >= bookingStartDate;
+              });
+
+              applicableRates.sort((a, b) => (a.priority ?? 100) - (b.priority ?? 100));
+              bestRate = applicableRates[0] || null;
+            }
+          } else {
+            // Look up asset-specific rate first
+            const assetRates = await tx
+              .select({
+                rateId: schema.AssetHasRates.rateId,
+                pricePerNight: schema.Rate.pricePerNight,
+                startDate: schema.Rate.startDate,
+                endDate: schema.Rate.endDate,
+                priority: schema.Rate.priority,
+              })
+              .from(schema.AssetHasRates)
+              .innerJoin(schema.Rate, eq(schema.AssetHasRates.rateId, schema.Rate.id))
+              .where(eq(schema.AssetHasRates.assetId, booking.assetId));
+
+            const applicableRates = assetRates.filter((rate) => {
+              if (!rate.startDate || !rate.endDate) return false;
+              const rateStart = new Date(rate.startDate);
+              const rateEnd = new Date(rate.endDate);
+              return rateStart <= bookingEndDate && rateEnd >= bookingStartDate;
+            });
+
+            applicableRates.sort((a, b) => (a.priority ?? 100) - (b.priority ?? 100));
+            bestRate = applicableRates[0] || null;
+
+            // Fallback to asset type rate if no asset-specific rate found
+            if (!bestRate && asset.assetTypeId) {
+              const assetTypeRates = await tx
+                .select({
+                  rateId: schema.Rate.id,
+                  pricePerNight: schema.Rate.pricePerNight,
+                  startDate: schema.Rate.startDate,
+                  endDate: schema.Rate.endDate,
+                  priority: schema.Rate.priority,
+                })
+                .from(schema.Rate)
+                .where(eq(schema.Rate.assetTypeId, asset.assetTypeId));
+
+              const applicableTypeRates = assetTypeRates.filter((rate) => {
+                if (!rate.startDate || !rate.endDate) return false;
+                const rateStart = new Date(rate.startDate);
+                const rateEnd = new Date(rate.endDate);
+                return rateStart <= bookingEndDate && rateEnd >= bookingStartDate;
+              });
+
+              applicableTypeRates.sort((a, b) => (a.priority ?? 100) - (b.priority ?? 100));
+              bestRate = applicableTypeRates[0] || null;
+            }
+          }
+
+          // Throw error if no rate found
+          if (!bestRate) {
+            throw new ConflictException('No rate has been set for this booking period. Please contact the administrator to set up rates before booking.');
+          }
+
+          if (bestRate.pricePerNight) {
             // Calculate number of nights
             const timeDiff = bookingEndDate.getTime() - bookingStartDate.getTime();
             const numberOfNights = Math.ceil(timeDiff / (1000 * 60 * 60 * 24));
@@ -244,6 +320,39 @@ export class BookingService {
             }))
           );
         }
+
+        // Create invoice for the booking
+        const invoiceNumber = `INV-${Date.now()}-${bookingId.slice(0, 8).toUpperCase()}`;
+        const issueDate = new Date();
+        const dueDate = new Date(utcStart); // Due by start date of booking
+
+        // Calculate number of nights for invoice line item
+        const timeDiff = utcEnd.getTime() - utcStart.getTime();
+        const numberOfNights = Math.ceil(timeDiff / (1000 * 60 * 60 * 24));
+
+        const [{ id: invoiceId }] = await tx.insert(schema.Invoice).values({
+          tenantId: asset.tenantId,
+          invoiceNumber,
+          status: 'pending',
+          issueDate,
+          dueDate,
+          subtotal: totalPrice.toFixed(2),
+          taxAmount: '0.00', // Tax can be calculated based on tenant settings later
+          totalAmount: totalPrice.toFixed(2),
+          notes: `Invoice for booking ${bookingId}`,
+          customerId: customers[0].id,
+          bookingId: bookingId,
+        }).$returningId();
+
+        // Create invoice line item for the booking
+        const pricePerNight = bestRate?.pricePerNight ? parseFloat(bestRate.pricePerNight.toString()) : totalPrice / numberOfNights;
+        await tx.insert(schema.InvoiceItem).values({
+          invoiceId,
+          description: `${asset.name} - ${numberOfNights} night${numberOfNights > 1 ? 's' : ''} (${utcStart.toLocaleDateString()} - ${utcEnd.toLocaleDateString()})`,
+          quantity: numberOfNights,
+          unitPrice: pricePerNight.toFixed(2),
+          totalPrice: totalPrice.toFixed(2),
+        });
 
       });
 
@@ -716,41 +825,125 @@ export class BookingService {
           throw new ConflictException('Asset not found');
         }
 
-        // Calculate total price based on asset's rate
+        // Get tenant settings
+        const tenant = await tx.query.Tenant.findFirst({
+          where: (t, { eq }) => eq(t.id, asset.tenantId),
+        });
+
+        // Calculate total price based on rate
         let totalPrice = updateData.totalPrice ? parseFloat(updateData.totalPrice.toString()) : 0;
 
-        // If no price provided or price is 0, calculate from asset's rate
+        // If no price provided or price is 0, calculate from rate
         if (!updateData.totalPrice || totalPrice === 0) {
-          // Get the applicable rate for this asset
-          const assetRates = await tx
-            .select({
-              rateId: schema.AssetHasRates.rateId,
-              pricePerNight: schema.Rate.pricePerNight,
-              startDate: schema.Rate.startDate,
-              endDate: schema.Rate.endDate,
-              priority: schema.Rate.priority,
-            })
-            .from(schema.AssetHasRates)
-            .innerJoin(schema.Rate, eq(schema.AssetHasRates.rateId, schema.Rate.id))
-            .where(eq(schema.AssetHasRates.assetId, updateData.assetId));
-
-          // Find the best matching rate based on booking dates and priority
           const bookingStartDate = new Date(startDate);
           const bookingEndDate = new Date(endDate);
+          let bestRate: { rateId: number; pricePerNight: string | null; startDate: Date | null; endDate: Date | null; priority: number | null } | null = null;
 
-          const applicableRates = assetRates.filter((rate) => {
-            if (!rate.startDate || !rate.endDate) return false;
-            const rateStart = new Date(rate.startDate);
-            const rateEnd = new Date(rate.endDate);
-            // Rate is applicable if it overlaps with the booking period
-            return rateStart <= bookingEndDate && rateEnd >= bookingStartDate;
-          });
+          // Check tenant's booksByAssetType setting to determine rate lookup strategy
+          if (tenant?.booksByAssetType) {
+            // Look up asset type rate first
+            if (asset.assetTypeId) {
+              const assetTypeRates = await tx
+                .select({
+                  rateId: schema.Rate.id,
+                  pricePerNight: schema.Rate.pricePerNight,
+                  startDate: schema.Rate.startDate,
+                  endDate: schema.Rate.endDate,
+                  priority: schema.Rate.priority,
+                })
+                .from(schema.Rate)
+                .where(eq(schema.Rate.assetTypeId, asset.assetTypeId));
 
-          // Sort by priority (lower = higher priority) and get the best rate
-          applicableRates.sort((a, b) => (a.priority ?? 100) - (b.priority ?? 100));
-          const bestRate = applicableRates[0];
+              const applicableTypeRates = assetTypeRates.filter((rate) => {
+                if (!rate.startDate || !rate.endDate) return false;
+                const rateStart = new Date(rate.startDate);
+                const rateEnd = new Date(rate.endDate);
+                return rateStart <= bookingEndDate && rateEnd >= bookingStartDate;
+              });
 
-          if (bestRate && bestRate.pricePerNight) {
+              applicableTypeRates.sort((a, b) => (a.priority ?? 100) - (b.priority ?? 100));
+              bestRate = applicableTypeRates[0] || null;
+            }
+
+            // Fallback to asset-specific rate if no asset type rate found
+            if (!bestRate) {
+              const assetRates = await tx
+                .select({
+                  rateId: schema.AssetHasRates.rateId,
+                  pricePerNight: schema.Rate.pricePerNight,
+                  startDate: schema.Rate.startDate,
+                  endDate: schema.Rate.endDate,
+                  priority: schema.Rate.priority,
+                })
+                .from(schema.AssetHasRates)
+                .innerJoin(schema.Rate, eq(schema.AssetHasRates.rateId, schema.Rate.id))
+                .where(eq(schema.AssetHasRates.assetId, updateData.assetId));
+
+              const applicableRates = assetRates.filter((rate) => {
+                if (!rate.startDate || !rate.endDate) return false;
+                const rateStart = new Date(rate.startDate);
+                const rateEnd = new Date(rate.endDate);
+                return rateStart <= bookingEndDate && rateEnd >= bookingStartDate;
+              });
+
+              applicableRates.sort((a, b) => (a.priority ?? 100) - (b.priority ?? 100));
+              bestRate = applicableRates[0] || null;
+            }
+          } else {
+            // Look up asset-specific rate first
+            const assetRates = await tx
+              .select({
+                rateId: schema.AssetHasRates.rateId,
+                pricePerNight: schema.Rate.pricePerNight,
+                startDate: schema.Rate.startDate,
+                endDate: schema.Rate.endDate,
+                priority: schema.Rate.priority,
+              })
+              .from(schema.AssetHasRates)
+              .innerJoin(schema.Rate, eq(schema.AssetHasRates.rateId, schema.Rate.id))
+              .where(eq(schema.AssetHasRates.assetId, updateData.assetId));
+
+            const applicableRates = assetRates.filter((rate) => {
+              if (!rate.startDate || !rate.endDate) return false;
+              const rateStart = new Date(rate.startDate);
+              const rateEnd = new Date(rate.endDate);
+              return rateStart <= bookingEndDate && rateEnd >= bookingStartDate;
+            });
+
+            applicableRates.sort((a, b) => (a.priority ?? 100) - (b.priority ?? 100));
+            bestRate = applicableRates[0] || null;
+
+            // Fallback to asset type rate if no asset-specific rate found
+            if (!bestRate && asset.assetTypeId) {
+              const assetTypeRates = await tx
+                .select({
+                  rateId: schema.Rate.id,
+                  pricePerNight: schema.Rate.pricePerNight,
+                  startDate: schema.Rate.startDate,
+                  endDate: schema.Rate.endDate,
+                  priority: schema.Rate.priority,
+                })
+                .from(schema.Rate)
+                .where(eq(schema.Rate.assetTypeId, asset.assetTypeId));
+
+              const applicableTypeRates = assetTypeRates.filter((rate) => {
+                if (!rate.startDate || !rate.endDate) return false;
+                const rateStart = new Date(rate.startDate);
+                const rateEnd = new Date(rate.endDate);
+                return rateStart <= bookingEndDate && rateEnd >= bookingStartDate;
+              });
+
+              applicableTypeRates.sort((a, b) => (a.priority ?? 100) - (b.priority ?? 100));
+              bestRate = applicableTypeRates[0] || null;
+            }
+          }
+
+          // Throw error if no rate found
+          if (!bestRate) {
+            throw new ConflictException('No rate has been set for this booking period. Please contact the administrator to set up rates before booking.');
+          }
+
+          if (bestRate.pricePerNight) {
             // Calculate number of nights
             const timeDiff = bookingEndDate.getTime() - bookingStartDate.getTime();
             const numberOfNights = Math.ceil(timeDiff / (1000 * 60 * 60 * 24));
@@ -805,11 +998,34 @@ export class BookingService {
       throw new NotFoundException('Booking not found');
     }
 
+    const previousStatus = existingBooking.status;
+
     // Update the booking status
     await this.db.update(schema.Booking)
       .set({ status })
       .where(eq(schema.Booking.id, bookingId))
       .execute();
+
+    // Handle blocked dates based on status change
+    if (status === 'Cancelled' && previousStatus !== 'Cancelled') {
+      // Delete blocked dates when booking is cancelled
+      await this.db.delete(schema.BlockedDate)
+        .where(eq(schema.BlockedDate.bookingId, bookingId))
+        .execute();
+    } else if (previousStatus === 'Cancelled' && (status === 'Pending' || status === 'Confirmed')) {
+      // Re-create blocked dates when booking is un-cancelled
+      await this.db.insert(schema.BlockedDate)
+        .values({
+          tenantId: existingBooking.asset.tenantId,
+          assetId: existingBooking.assetId,
+          startDate: existingBooking.startDate,
+          endDate: existingBooking.endDate,
+          title: `Booking ${bookingId}`,
+          reason: `Booking restored to ${status}`,
+          bookingId: bookingId,
+        })
+        .execute();
+    }
 
     // Send email notifications for Confirmed or Cancelled status
     if (status === 'Confirmed' || status === 'Cancelled') {
@@ -974,15 +1190,19 @@ export class BookingService {
       throw new NotFoundException('Booking not found or already deleted');
     }
 
+    // Check if booking is cancelled before allowing deletion
+    if (existingBooking.status !== 'Cancelled') {
+      throw new ConflictException('Booking must be cancelled before it can be deleted. Please cancel the booking first.');
+    }
+
     // Soft delete: set deletedAt timestamp
     await this.db.update(schema.Booking)
       .set({ deletedAt: new Date() })
       .where(eq(schema.Booking.id, bookingId))
       .execute();
 
-    // Also soft delete the blocked date entry if it exists
-    await this.db.update(schema.BlockedDate)
-      .set({ updatedAt: new Date() })
+    // Also delete the blocked date entry since booking is cancelled
+    await this.db.delete(schema.BlockedDate)
       .where(eq(schema.BlockedDate.bookingId, bookingId))
       .execute();
   }
