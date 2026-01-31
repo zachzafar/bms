@@ -51,10 +51,12 @@ export class PermissionsGuard implements CanActivate {
       throw new ForbiddenException('Tenant ID required');
     }
 
-    // if (!user.tenants || !user.tenants.includes(tenantId)) {
-    //   this.logger.warn(`User ${userId} does not have access to tenant ${tenantId}`);
-    //   throw new ForbiddenException('Access denied to this tenant');
-    // }
+    // Check if user is a tenant admin - bypass permission checks
+    const isTenantAdmin = await this.authService.isTenantAdmin(userId, tenantId);
+    if (isTenantAdmin) {
+      this.logger.log(`User ${userId} is tenant admin - bypassing permission check`);
+      return true;
+    }
 
     return this.userHasPermissions(userId, tenantId, requiredPermissions);
   }
