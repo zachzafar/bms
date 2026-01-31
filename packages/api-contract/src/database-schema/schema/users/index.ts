@@ -116,7 +116,6 @@ export const Owner = mysqlTable("owner_details", {
     address: varchar("address", { length: 255 }),
     contactId: bigint("contact_id", { mode: 'number', unsigned: true })
       .references(() => Contact.id),
-    taxId: varchar("tax_id", { length: 255 }),
     createdAt: timestamp('createdAt').notNull().defaultNow(),
     updatedAt: timestamp('updated_at', { mode: 'date', }).$onUpdate(() => new Date()),
     deletedAt: timestamp('deleted_at'),

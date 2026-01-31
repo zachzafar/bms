@@ -265,10 +265,16 @@ export class UsersService {
                 });
 
                 if (!existingCustomer) {
-                    await tx.insert(schema.Customer).values({ userId: id, tenantId: tenantId,...customerData });
+                    await tx.insert(schema.Customer).values({ userId: id, tenantId: tenantId, ...customerData });
+                } else if (customerData && Object.keys(customerData).filter(k => k !== 'userId').length > 0) {
+                    // Update existing customer with provided data
+                    const { userId: _, ...updateData } = customerData;
+                    await tx.update(schema.Customer)
+                        .set(updateData)
+                        .where(and(eq(schema.Customer.userId, id), eq(schema.Customer.tenantId, tenantId)));
                 }
             } else {
-                // Optionally: Remove customer if flag is false
+                // Remove customer if flag is false
                 await tx.delete(schema.Customer).where(eq(schema.Customer.userId, id));
             }
 
@@ -279,10 +285,16 @@ export class UsersService {
                 });
 
                 if (!existingOwner) {
-                    await tx.insert(schema.Owner).values({ userId: id, tenantId: tenantId, ...ownerData  });
+                    await tx.insert(schema.Owner).values({ userId: id, tenantId: tenantId, ...ownerData });
+                } else if (ownerData && Object.keys(ownerData).filter(k => k !== 'userId').length > 0) {
+                    // Update existing owner with provided data
+                    const { userId: _, ...updateData } = ownerData;
+                    await tx.update(schema.Owner)
+                        .set(updateData)
+                        .where(and(eq(schema.Owner.userId, id), eq(schema.Owner.tenantId, tenantId)));
                 }
             } else {
-                // Optionally: Remove owner if flag is false
+                // Remove owner if flag is false
                 await tx.delete(schema.Owner).where(eq(schema.Owner.userId, id));
             }
 
@@ -451,6 +463,14 @@ export class UsersService {
                 .where(and(
                     eq(schema.Owner.userId, id),
                     eq(schema.Owner.tenantId, tenantId)
+                ));
+
+            // Unassign assets owned by this user in this tenant
+            await tx.update(schema.Asset)
+                .set({ userId: null })
+                .where(and(
+                    eq(schema.Asset.userId, id),
+                    eq(schema.Asset.tenantId, tenantId)
                 ));
 
             // Remove user from the tenant

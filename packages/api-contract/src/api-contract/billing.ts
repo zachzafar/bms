@@ -138,6 +138,9 @@ export const billingContract = c.router({
     200: z.object({
       message: z.string(),
     }),
+    400: z.object({
+      message: z.string(),
+    }),
     404: z.object({
       message: z.string(),
     }),
@@ -262,6 +265,51 @@ export const billingContract = c.router({
     }),
     responses: {
       200: z.any(), // PDF binary response
+      404: z.object({
+        message: z.string(),
+      }),
+    },
+  },
+
+  // Get payments for an invoice
+  getInvoicePayments: {
+    method: "GET",
+    path: "/invoice/:id/payments",
+    summary: "Get all payments applied to an invoice",
+    pathParams: z.object({
+      id: z.coerce.number(),
+    }),
+    responses: {
+      200: z.array(z.object({
+        paymentId: z.number(),
+        amountApplied: z.string(),
+        paymentDate: z.string(),
+        paymentMethod: z.string(),
+        reference: z.string().nullable(),
+      })),
+      404: z.object({
+        message: z.string(),
+      }),
+    },
+  },
+
+  // Refund all payments for an invoice
+  refundInvoice: {
+    method: "POST",
+    path: "/invoice/:id/refund",
+    summary: "Refund all payments applied to an invoice",
+    pathParams: z.object({
+      id: z.coerce.number(),
+    }),
+    body: z.object({}),
+    responses: {
+      200: z.object({
+        message: z.string(),
+        refundedPayments: z.number(),
+      }),
+      400: z.object({
+        message: z.string(),
+      }),
       404: z.object({
         message: z.string(),
       }),

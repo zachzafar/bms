@@ -162,6 +162,26 @@ export class InvoicesService {
       invoiceId?: number;
     }[]
   ) {
+    // Check if the invoice exists and is not paid
+    const invoice = await this.db.query.Invoice.findFirst({
+      where: (i, { eq }) => eq(i.id, id),
+    });
+
+    if (!invoice) {
+      throw new NotFoundException(`Invoice with ID ${id} not found`);
+    }
+
+    // Check if any payments have been applied to this invoice
+    const paymentInvoices = await this.db.query.PaymentInvoice.findMany({
+      where: (pi, { eq }) => eq(pi.invoiceId, id),
+    });
+
+    if (paymentInvoices.length > 0) {
+      throw new BadRequestException(
+        `Cannot edit invoice. It has ${paymentInvoices.length} payment(s) applied to it. Please refund the payments first.`
+      );
+    }
+
     await this.db.transaction(async (tx) => {
       // Update invoice main fields
       await tx.update(schema.Invoice).set(invoiceData).where(eq(schema.Invoice.id, id)).execute();
@@ -197,13 +217,24 @@ export class InvoicesService {
   }
 
   async delete(id: number) {
-    // Optional: check if the invoice exists first
+    // Check if the invoice exists first
     const invoice = await this.db.query.Invoice.findFirst({
       where: (i, { eq }) => eq(i.id, id),
     });
 
     if (!invoice) {
       throw new NotFoundException(`Invoice with ID ${id} not found`);
+    }
+
+    // Check if any payments have been applied to this invoice
+    const paymentInvoices = await this.db.query.PaymentInvoice.findMany({
+      where: (pi, { eq }) => eq(pi.invoiceId, id),
+    });
+
+    if (paymentInvoices.length > 0) {
+      throw new BadRequestException(
+        `Cannot delete invoice. It has ${paymentInvoices.length} payment(s) applied to it. Please refund the payments first.`
+      );
     }
 
     // Soft delete the invoice
@@ -307,8 +338,81 @@ export class InvoicesService {
   return id;
 }
 
+  /**
+   * Get all payments applied to an invoice
+   */
+  async getInvoicePayments(invoiceId: number) {
+    const paymentInvoices = await this.db.query.PaymentInvoice.findMany({
+      where: (pi, { eq }) => eq(pi.invoiceId, invoiceId),
+      with: { payment: true },
+    });
 
+    return paymentInvoices.map((pi) => ({
+      paymentId: pi.paymentId,
+      amountApplied: String(pi.amountApplied),
+      paymentDate: pi.payment.paymentDate.toISOString(),
+      paymentMethod: pi.payment.paymentMethod,
+      reference: pi.payment.reference,
+    }));
+  }
 
+  /**
+   * Refund all payments applied to an invoice
+   * This deletes all PaymentInvoice records and the associated Payment records
+   */
+  async refundInvoice(invoiceId: number) {
+    // Check if invoice exists
+    const invoice = await this.db.query.Invoice.findFirst({
+      where: (i, { eq }) => eq(i.id, invoiceId),
+    });
 
+    if (!invoice) {
+      throw new NotFoundException(`Invoice with ID ${invoiceId} not found`);
+    }
+
+    // Get all payment links for this invoice
+    const paymentInvoices = await this.db.query.PaymentInvoice.findMany({
+      where: (pi, { eq }) => eq(pi.invoiceId, invoiceId),
+    });
+
+    if (paymentInvoices.length === 0) {
+      throw new BadRequestException('No payments found for this invoice');
+    }
+
+    const paymentIds = paymentInvoices.map((pi) => pi.paymentId);
+
+    await this.db.transaction(async (tx) => {
+      // Delete PaymentInvoice records for this invoice
+      await tx.delete(schema.PaymentInvoice)
+        .where(eq(schema.PaymentInvoice.invoiceId, invoiceId))
+        .execute();
+
+      // Delete the payments themselves
+      for (const paymentId of paymentIds) {
+        // Check if the payment has other invoice links
+        const otherLinks = await tx.query.PaymentInvoice.findMany({
+          where: (pi, { eq }) => eq(pi.paymentId, paymentId),
+        });
+
+        // Only delete payment if it has no other links
+        if (otherLinks.length === 0) {
+          await tx.delete(schema.Payment)
+            .where(eq(schema.Payment.id, paymentId))
+            .execute();
+        }
+      }
+
+      // Reset invoice status to Unpaid
+      await tx.update(schema.Invoice)
+        .set({ status: 'Unpaid' })
+        .where(eq(schema.Invoice.id, invoiceId))
+        .execute();
+    });
+
+    return {
+      message: `Successfully refunded ${paymentIds.length} payment(s) for invoice ${invoiceId}`,
+      refundedPayments: paymentIds.length,
+    };
+  }
 }
 

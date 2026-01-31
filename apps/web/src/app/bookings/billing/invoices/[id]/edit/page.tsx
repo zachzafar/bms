@@ -78,6 +78,16 @@ export default function EditInvoicePage() {
     name: 'items',
   });
 
+  // Redirect if invoice has payments applied (Paid or Partial status)
+  useEffect(() => {
+    if (!invoiceData?.body) return;
+    const status = invoiceData.body.status.toLowerCase();
+    if (status === 'paid' || status === 'partial') {
+      toast.error('Cannot edit invoice with payments applied. Please refund the payments first.');
+      router.push(`/bookings/billing/invoices/${invoiceId}/view`);
+    }
+  }, [invoiceData, router, invoiceId]);
+
   // Populate form when invoice data loads
   useEffect(() => {
     if (!invoiceData?.body) return;
@@ -92,7 +102,7 @@ export default function EditInvoicePage() {
       taxAmount: invoice.taxAmount,
       totalAmount: invoice.totalAmount,
       notes: invoice.notes || '',
-      customerId: invoice.customerId,
+      customerId: invoice.customerId ?? 0,
       items: invoice.items && invoice.items.length > 0
         ? invoice.items.map((item: any) => ({
             id: item.id,
