@@ -54,14 +54,12 @@ export default function Details({ userId }: { userId: string }) {
       email: selected?.user?.email ?? '',
       phone: selected?.customer?.phone ?? '',
       address: selected?.customer?.address ?? '',
-      dateOfBirth: selected?.customer?.dateOfBirth ? new Date(selected.customer.dateOfBirth).toISOString().split('T')[0] : '',
     },
     values: {
       name: selected?.user?.name ?? '',
       email: selected?.user?.email ?? '',
       phone: selected?.customer?.phone ?? '',
       address: selected?.customer?.address ?? '',
-      dateOfBirth: selected?.customer?.dateOfBirth ? new Date(selected.customer.dateOfBirth).toISOString().split('T')[0] : '',
     }
   });
 
@@ -78,7 +76,6 @@ export default function Details({ userId }: { userId: string }) {
             userId,
             phone: values.phone || null,
             address: values.address || null,
-            dateOfBirth: values?.dateOfBirth ? new Date(values.dateOfBirth) : null,
           },
         },
       },
@@ -123,12 +120,6 @@ export default function Details({ userId }: { userId: string }) {
           <div>
             <div className="text-sm text-muted-foreground">Address</div>
             <div className="font-medium">{customer?.address || '-'}</div>
-          </div>
-          <div>
-            <div className="text-sm text-muted-foreground">Date of Birth</div>
-            <div className="font-medium">
-              {customer?.dateOfBirth ? new Date(customer.dateOfBirth).toLocaleDateString() : '-'}
-            </div>
           </div>
         </CardContent>
       </Card>
@@ -181,19 +172,6 @@ export default function Details({ userId }: { userId: string }) {
                     <FormItem>
                       <FormLabel>Address</FormLabel>
                       <FormControl><Input {...field} /></FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="dateOfBirth"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Date of Birth</FormLabel>
-                      <FormControl>
-                        <Input type="date" {...field} value={field.value || ''} />
-                      </FormControl>
                       <FormMessage />
                     </FormItem>
                   )}

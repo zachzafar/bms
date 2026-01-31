@@ -584,6 +584,14 @@ export class SystemAdminService {
             eq(schema.UserHasRoles.userId, userId)
           ));
 
+        // Unassign assets owned by this user in this tenant
+        await tx.update(schema.Asset)
+          .set({ userId: null })
+          .where(and(
+            eq(schema.Asset.userId, userId),
+            eq(schema.Asset.tenantId, tenantId)
+          ));
+
         // Remove tenant assignment
         await tx.delete(schema.TenantHasUsers)
           .where(and(

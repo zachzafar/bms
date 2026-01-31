@@ -8,7 +8,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Plus, Search, Eye, Edit, Download } from 'lucide-react';
+import { Plus, Search, Eye, Edit, Download, Undo2 } from 'lucide-react';
 import { authClient, axiosClient } from '@/lib/api/publicClient';
 import { toast } from 'sonner';
 import { Label } from '@/components/ui/label';
@@ -45,12 +45,12 @@ export default function InvoicesPage() {
   const [customerFilter, setCustomerFilter] = useState<string>('all');
 
   const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
-    const [selectedInvoice, setSelectedInvoice] = useState<Invoice | null>(null);
+  const [selectedInvoice, setSelectedInvoice] = useState<Invoice | null>(null);
 
-    const openPaymentModal = (invoice: Invoice) => {
-      setSelectedInvoice(invoice);
-      setIsPaymentModalOpen(true);
-    };
+  const openPaymentModal = (invoice: Invoice) => {
+    setSelectedInvoice(invoice);
+    setIsPaymentModalOpen(true);
+  };
 
   // Fetch invoices and customers
   const { data: invoicesData, refetch: refetchInvoices } = authClient.billing.getInvoices.useQuery({
@@ -62,15 +62,28 @@ export default function InvoicesPage() {
     queryKey: ['customers'],
   });
 
-  // At the top, import mutation hooks
+  // Mutation hooks
   const { mutate: deleteInvoice } = authClient.billing.deleteInvoice.useMutation({
     onSuccess: () => {
       toast.success('Invoice deleted successfully');
       refetchInvoices();
     },
     onError: (error: any) => {
-      toast.error('Failed to delete invoice');
+      const message = error?.body?.message || 'Failed to delete invoice';
+      toast.error(message);
       console.error('Delete invoice error:', error);
+    },
+  });
+
+  const { mutate: refundInvoice, isPending: isRefunding } = authClient.billing.refundInvoice.useMutation({
+    onSuccess: () => {
+      toast.success('Invoice refunded successfully');
+      refetchInvoices();
+    },
+    onError: (error: any) => {
+      const message = error?.body?.message || 'Failed to refund invoice';
+      toast.error(message);
+      console.error('Refund invoice error:', error);
     },
   });
 
@@ -117,9 +130,20 @@ export default function InvoicesPage() {
     return due < new Date() && status?.toLowerCase() !== 'paid';
   };
 
+  const hasPaymentsApplied = (status: string) => {
+    const s = status.toLowerCase();
+    return s === 'paid' || s === 'partial';
+  };
+
   const handleDeleteInvoice = (invoiceId: number) => {
     if (confirm('Are you sure you want to delete this invoice? This action cannot be undone.')) {
       deleteInvoice({ params: { id: invoiceId } });
+    }
+  };
+
+  const handleRefundInvoice = (invoiceId: number) => {
+    if (confirm('Are you sure you want to refund all payments for this invoice? This will delete the associated payments and reset the invoice status to Unpaid.')) {
+      refundInvoice({ params: { id: invoiceId }, body: {} });
     }
   };
 
@@ -324,6 +348,8 @@ export default function InvoicesPage() {
                           variant="outline"
                           size="sm"
                           onClick={() => router.push(`/bookings/billing/invoices/${invoice.id}/edit`)}
+                          disabled={hasPaymentsApplied(invoice.status)}
+                          title={hasPaymentsApplied(invoice.status) ? 'Cannot edit invoice with payments applied' : 'Edit invoice'}
                         >
                           <Edit className="h-4 w-4" />
                         </Button>
@@ -334,22 +360,36 @@ export default function InvoicesPage() {
                         >
                           <Download className="h-4 w-4" />
                         </Button>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => handleDeleteInvoice(invoice.id)}
-                        >
-                          Delete
-                          {/* <Trash className="h-4 w-4" /> */}
-                        </Button>
-                        {/* New: Apply Payment */}
-                        <Button
-                          variant="default"
-                          size="sm"
-                          onClick={() => openPaymentModal(invoice)}
-                        >
-                          Apply Payment
-                        </Button>
+                        {hasPaymentsApplied(invoice.status) ? (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleRefundInvoice(invoice.id)}
+                            disabled={isRefunding}
+                            title="Refund all payments for this invoice"
+                          >
+                            <Undo2 className="h-4 w-4 mr-1" />
+                            Refund
+                          </Button>
+                        ) : (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleDeleteInvoice(invoice.id)}
+                          >
+                            Delete
+                          </Button>
+                        )}
+                        {/* Apply Payment - only show for unpaid/partial invoices */}
+                        {invoice.status.toLowerCase() !== 'paid' && (
+                          <Button
+                            variant="default"
+                            size="sm"
+                            onClick={() => openPaymentModal(invoice)}
+                          >
+                            Apply Payment
+                          </Button>
+                        )}
                       </div>
                     </TableCell>
                   </TableRow>
@@ -358,7 +398,12 @@ export default function InvoicesPage() {
               <ApplyPaymentModal
                 open={isPaymentModalOpen}
                 onOpenChange={setIsPaymentModalOpen}
-                invoice={selectedInvoice}
+                invoice={selectedInvoice && selectedInvoice.customerId !== null ? {
+                  id: selectedInvoice.id,
+                  invoiceNumber: selectedInvoice.invoiceNumber,
+                  totalAmount: selectedInvoice.totalAmount,
+                  customerId: selectedInvoice.customerId,
+                } : null}
                 customerName={selectedInvoice ? getCustomerName(String(selectedInvoice.customerId)) : undefined}
                 onApplied={() => refetchInvoices()}
               />

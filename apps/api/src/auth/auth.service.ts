@@ -159,6 +159,16 @@ export class AuthService {
     };
   }
 
+  async isTenantAdmin(userId: string, tenantId: string): Promise<boolean> {
+    const tenantUser = await this.db.query.TenantHasUsers.findFirst({
+      where: (thu, { eq, and }) => and(
+        eq(thu.userId, userId),
+        eq(thu.tenantId, tenantId)
+      ),
+    });
+    return tenantUser?.isAdmin === true;
+  }
+
   async getUserPermissionsForTenant(userId:string, tenantId:string): Promise<string[]> {
 
     const userRoles = await this.db.select(

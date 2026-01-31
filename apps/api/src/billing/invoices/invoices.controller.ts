@@ -1,4 +1,4 @@
-import { Controller, Headers, Logger, Res } from '@nestjs/common';
+import { BadRequestException, Controller, Headers, Logger, Res } from '@nestjs/common';
 import { TsRestHandler, tsRestHandler } from '@ts-rest/nest';
 import { billingContract } from '@repo/api-contract';
 import * as schema from '@repo/api-contract';
@@ -92,15 +92,21 @@ export class InvoicesController {
         customerId: body.customerId ? (body.customerId) : undefined,
       };
 
-      // 👇 NEW: handle updated items if included
+      // Handle updated items if included
       const items = body.items?.map(item => ({
         ...item,
         invoiceId: (params.id),
       }));
 
-      await this.invoices.update((params.id), normalizedBody, items);
-
-      return { status: 200, body: { message: 'invoice updated' } };
+      try {
+        await this.invoices.update((params.id), normalizedBody, items);
+        return { status: 200, body: { message: 'invoice updated' } };
+      } catch (error: any) {
+        if (error instanceof BadRequestException) {
+          return { status: 400, body: { message: error.message } };
+        }
+        throw error;
+      }
     });
   }
 
@@ -114,10 +120,16 @@ export class InvoicesController {
       // Validate tenant access
       await this.tenantService.validateTenantAccess(tenantId, schema.Invoice, (params.id));
 
-      // Call service delete method
-      await this.invoices.delete((params.id));
-
-      return { status: 200, body: { message: `Invoice ${params.id} deleted successfully` } };
+      try {
+        // Call service delete method
+        await this.invoices.delete((params.id));
+        return { status: 200, body: { message: `Invoice ${params.id} deleted successfully` } };
+      } catch (error: any) {
+        if (error instanceof BadRequestException) {
+          return { status: 400, body: { message: error.message } };
+        }
+        throw error;
+      }
     });
   }
 
@@ -219,6 +231,37 @@ export class InvoicesController {
       res.send(pdfBuffer);
 
       return { status: 200 as const, body: pdfBuffer };
+    });
+  }
+
+  @TsRestHandler(billingContract.getInvoicePayments)
+  @Roles(PermissionScope.BILLING_READ)
+  async getInvoicePayments(@Headers() headers: any): Promise<ReturnType<typeof tsRestHandler>> {
+    return tsRestHandler(billingContract.getInvoicePayments, async ({ params }) => {
+      const tenantId = headers['x-tenant-id'];
+      await this.tenantService.validateTenantAccess(tenantId, schema.Invoice, params.id);
+
+      const payments = await this.invoices.getInvoicePayments(params.id);
+      return { status: 200, body: payments };
+    });
+  }
+
+  @TsRestHandler(billingContract.refundInvoice)
+  @Roles(PermissionScope.BILLING_WRITE)
+  async refundInvoice(@Headers() headers: any): Promise<ReturnType<typeof tsRestHandler>> {
+    return tsRestHandler(billingContract.refundInvoice, async ({ params }) => {
+      const tenantId = headers['x-tenant-id'];
+      await this.tenantService.validateTenantAccess(tenantId, schema.Invoice, params.id);
+
+      try {
+        const result = await this.invoices.refundInvoice(params.id);
+        return { status: 200, body: result };
+      } catch (error: any) {
+        if (error instanceof BadRequestException) {
+          return { status: 400, body: { message: error.message } };
+        }
+        throw error;
+      }
     });
   }
 }

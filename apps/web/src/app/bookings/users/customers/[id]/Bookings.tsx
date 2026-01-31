@@ -147,7 +147,7 @@ export default function Bookings({ userId }: { userId: string }) {
     <>
       <div className="flex justify-between items-center mb-2">
         <CardTitle className="text-base">Bookings</CardTitle>
-        <Button onClick={() => setOpenCreate(true)}><Plus className="h-4 w-4 mr-2" />Add Booking</Button>
+        {/* <Button onClick={() => setOpenCreate(true)}><Plus className="h-4 w-4 mr-2" />Add Booking</Button> */}
       </div>
       <Card>
         <CardHeader><CardTitle>Customer Bookings</CardTitle></CardHeader>
