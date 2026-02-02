@@ -5,6 +5,7 @@ import { contract } from '@repo/api-contract';
 import { TenantService } from 'src/tenant/tenant.service';
 import * as schema from "@repo/api-contract"
 import { FileInterceptor } from '@nestjs/platform-express';
+import { Public } from 'src/auth/decorators/public.decorator';
 
 @Controller()
 export class AssetTypeController {
@@ -111,6 +112,50 @@ export class AssetTypeController {
 
             const imagePath = await this.assetTypeService.uploadsetTypeImage(tenantId, params.id, file.buffer);
             return { status: 200, body: { message: 'Image uploaded successfully', imagePath } };
+        });
+    }
+
+    @Public()
+    @TsRestHandler(contract.settings.assetType.customerGetAssetTypes)
+    async customerGetAssetTypes(): Promise<ReturnType<typeof tsRestHandler>> {
+        return tsRestHandler(contract.settings.assetType.customerGetAssetTypes, async ({ params, query }) => {
+            const tenant = await this.TenantService.getTenantBySubdomain(params.subdomain);
+            if (!tenant) {
+                return {
+                    status: 200,
+                    body: { data: [], pagination: { page: 1, pageSize: 12, totalCount: 0, totalPages: 0, hasNextPage: false, hasPreviousPage: false } }
+                };
+            }
+
+            const page = query.page ? Number(query.page) : 1;
+            const pageSize = query.pageSize ? Number(query.pageSize) : 12;
+
+            const assetTypes = await this.assetTypeService.getAssetTypesForCustomer(tenant.id, page, pageSize);
+            return { status: 200, body: assetTypes };
+        });
+    }
+
+    @Public()
+    @TsRestHandler(contract.settings.assetType.customerGetAssetType)
+    async customerGetAssetType(): Promise<ReturnType<typeof tsRestHandler>> {
+        return tsRestHandler(contract.settings.assetType.customerGetAssetType, async ({ params }) => {
+            const tenant = await this.TenantService.getTenantBySubdomain(params.subdomain);
+            if (!tenant) {
+                return {
+                    status: 200,
+                    body: { id: 0, name: '', image: '', description: '' }
+                };
+            }
+
+            const assetType = await this.assetTypeService.getAssetTypeForCustomer(tenant.id, params.id);
+            if (!assetType) {
+                return {
+                    status: 200,
+                    body: { id: 0, name: '', image: '', description: '' }
+                };
+            }
+
+            return { status: 200, body: assetType };
         });
     }
 

@@ -16,9 +16,11 @@ import { ArrowLeft, Calendar, CheckCircle2, Loader2, ImageIcon } from 'lucide-re
 import Image from 'next/image';
 import { DateRangePicker, BlockedDateRange } from '@/components/ui/date-range-picker';
 import { DateRange } from 'react-day-picker';
+import { DynamicFormField } from '@/components/forms/DynamicFormField';
+import { useMemo } from 'react';
 
-// Schema for customer booking by tag
-const CustomerTagBookingSchema = z.object({
+// Base schema for customer booking by tag (without refinement)
+const BaseCustomerTagBookingSchema = z.object({
   dateRange: z.object({
     from: z.date({ required_error: 'Start date is required' }),
     to: z.date({ required_error: 'End date is required' }),
@@ -30,7 +32,7 @@ const CustomerTagBookingSchema = z.object({
   customerPhone: z.string().min(10, 'Phone number must be at least 10 characters'),
 });
 
-type CustomerTagBookingFormData = z.infer<typeof CustomerTagBookingSchema>;
+type CustomerTagBookingFormData = z.infer<typeof BaseCustomerTagBookingSchema> & Record<string, any>;
 
 export default function TagBookingPage() {
   const params = useParams();
@@ -48,18 +50,29 @@ export default function TagBookingPage() {
 
   const tenantId = tenantResponse?.status === 200 ? tenantResponse.body.id : null;
 
-
-  const { data: assetTypesResponse, isLoading: AssetTypeLoading, error: tagsError, refetch: refetchTags } = client.settings.assetType.customerGetAssetType.useQuery({
-      queryKey: ['assetTypes-by-subdomain', subdomain],
-      queryData: {
-        params: { subdomain, id: assetTypeId },
-      },
-    });
+  const { data: assetTypesResponse, isLoading: AssetTypeLoading } = client.settings.assetType.customerGetAssetType.useQuery({
+    queryKey: ['assetTypes-by-subdomain', subdomain, assetTypeId],
+    queryData: {
+      params: { subdomain, id: assetTypeId },
+    },
+  });
 
   const assetType = assetTypesResponse?.status === 200 ? assetTypesResponse.body : null;
 
+  // Fetch forms for this asset type
+  const { data: formsResponse, isLoading: isLoadingForms } = client.settings.form.getFormsForAssetTypePublic.useQuery({
+    queryKey: ['forms-for-asset-type', assetTypeId],
+    queryData: {
+      params: { assetTypeId },
+    },
+    enabled: !!assetTypeId,
+  });
+
+  const forms = formsResponse?.status === 200 ? formsResponse.body.forms : [];
+
   const startDate = new Date();
-  const endDate = new Date(startDate.getDate() + 60) 
+  const endDate = new Date(startDate.getTime() + 60 * 24 * 60 * 60 * 1000);
+
   // Fetch blocked dates for this tag
   const { data: blockedDatesResponse } = client.booking.getBlockedDatesForAssetTypePublic.useQuery({
     queryKey: ['blocked-dates-tag', assetTypeId],
@@ -76,10 +89,95 @@ export default function TagBookingPage() {
       }))
     : [];
 
-  const isLoading = isTenantLoading || AssetTypeLoading;
+  // Build dynamic schema based on forms
+  const dynamicSchema = useMemo(() => {
+    const dynamicFields: Record<string, z.ZodTypeAny> = {};
+
+    forms.forEach((formData) => {
+      formData.fields.forEach((field) => {
+        const fieldKey = `form_${formData.form.id}_${field.id}`;
+
+        // Create appropriate zod validator based on field type and required status
+        let fieldSchema: z.ZodTypeAny;
+
+        switch (field.type) {
+          case 'number':
+            if (field.required) {
+              fieldSchema = z.coerce.number({
+                required_error: `${field.name} is required`,
+                invalid_type_error: `${field.name} must be a number`
+              });
+            } else {
+              fieldSchema = z.coerce.number().optional();
+            }
+            break;
+
+          case 'text':
+          case 'textarea':
+          case 'time':
+          case 'date':
+            if (field.required) {
+              fieldSchema = z.string().min(1, `${field.name} is required`);
+            } else {
+              fieldSchema = z.string().optional();
+            }
+            break;
+
+          case 'date_range':
+            if (field.required) {
+              fieldSchema = z.object({
+                start: z.string().min(1, `${field.name} start date is required`),
+                end: z.string().min(1, `${field.name} end date is required`),
+              });
+            } else {
+              fieldSchema = z.object({
+                start: z.string().optional(),
+                end: z.string().optional(),
+              }).optional();
+            }
+            break;
+
+          case 'range':
+            if (field.required) {
+              fieldSchema = z.number({
+                required_error: `${field.name} is required`,
+                invalid_type_error: `${field.name} must be a number`
+              });
+            } else {
+              fieldSchema = z.number().optional();
+            }
+            break;
+
+          case 'boolean':
+            if (field.required) {
+              fieldSchema = z.boolean().refine((val) => val === true, {
+                message: `${field.name} must be checked`,
+              });
+            } else {
+              fieldSchema = z.boolean().optional();
+            }
+            break;
+
+          default:
+            if (field.required) {
+              fieldSchema = z.string().min(1, `${field.name} is required`);
+            } else {
+              fieldSchema = z.string().optional();
+            }
+        }
+
+        dynamicFields[fieldKey] = fieldSchema;
+      });
+    });
+
+    // Extend base schema with dynamic fields
+    return BaseCustomerTagBookingSchema.extend(dynamicFields);
+  }, [forms]);
+
+  const isLoading = isTenantLoading || AssetTypeLoading || isLoadingForms;
 
   const form = useForm<CustomerTagBookingFormData>({
-    resolver: zodResolver(CustomerTagBookingSchema),
+    resolver: zodResolver(dynamicSchema),
     defaultValues: {
       dateRange: { from: undefined, to: undefined },
       customerName: '',
@@ -96,6 +194,39 @@ export default function TagBookingPage() {
       return;
     }
 
+    // Collect form responses from the submitted data
+    const formResponses: Array<{ formFieldId: number; value: string }> = [];
+
+    forms.forEach((formData) => {
+      formData.fields.forEach((field) => {
+        const fieldKey = `form_${formData.form.id}_${field.id}`;
+        const fieldValue = data[fieldKey];
+
+        if (fieldValue !== undefined && fieldValue !== null && fieldValue !== '') {
+          // Handle different field types
+          let stringValue: string;
+
+          if (typeof fieldValue === 'object' && fieldValue !== null) {
+            // Handle date_range type
+            if ('start' in fieldValue && 'end' in fieldValue) {
+              stringValue = JSON.stringify(fieldValue);
+            } else {
+              stringValue = JSON.stringify(fieldValue);
+            }
+          } else if (typeof fieldValue === 'boolean') {
+            stringValue = fieldValue.toString();
+          } else {
+            stringValue = String(fieldValue);
+          }
+
+          formResponses.push({
+            formFieldId: field.id,
+            value: stringValue
+          });
+        }
+      });
+    });
+
     createBookingByTag(
       {
         params: {
@@ -110,10 +241,11 @@ export default function TagBookingPage() {
             email: data.customerEmail,
             phone: data.customerPhone,
           },
+          formResponses: formResponses.length > 0 ? formResponses : undefined,
         },
       },
       {
-        onSuccess: (response:any) => {
+        onSuccess: (response: any) => {
           if (response.status === 201) {
             toast.success(`Booking confirmed! You've been assigned: ${response.body.assetName}. Check your email for details.`);
             // Delay redirect to let user see the success message
@@ -278,6 +410,40 @@ export default function TagBookingPage() {
                     )}
                   />
                 </div>
+
+                {/* Dynamic Forms Section */}
+                {forms.length > 0 && (
+                  <>
+                    <Separator />
+                    {forms.map((formData) => (
+                      <div key={formData.form.id} className="space-y-4">
+                        <div>
+                          <h3 className="text-lg font-semibold text-foreground">{formData.form.name}</h3>
+                          {formData.form.description && (
+                            <p className="text-sm text-muted-foreground mt-1">{formData.form.description}</p>
+                          )}
+                        </div>
+
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          {formData.fields.map((field) => {
+                            const fieldKey = `form_${formData.form.id}_${field.id}` as any;
+                            return (
+                              <div key={field.id} className={field.type === 'textarea' ? 'md:col-span-2' : ''}>
+                                <DynamicFormField
+                                  control={form.control}
+                                  name={fieldKey}
+                                  label={field.name}
+                                  type={field.type as any}
+                                  required={field.required}
+                                />
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    ))}
+                  </>
+                )}
 
                 {/* Info Notice */}
                 <div className="bg-muted/50 rounded-lg p-4">

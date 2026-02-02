@@ -148,4 +148,14 @@ export class FormsController {
         });
     }
 
+    // Public endpoint - Get forms for an asset type (unauthenticated)
+    @Public()
+    @TsRestHandler(contract.settings.form.getFormsForAssetTypePublic)
+    async getFormsForAssetTypePublic(): Promise<ReturnType<typeof tsRestHandler>> {
+        return tsRestHandler(contract.settings.form.getFormsForAssetTypePublic, async ({ params }) => {
+            const result = await this.formsService.getFormsForAssetType(params.assetTypeId);
+            return { status: 200, body: result };
+        });
+    }
+
 }

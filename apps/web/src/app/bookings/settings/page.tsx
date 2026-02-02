@@ -11,15 +11,17 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel } from '@/components/ui/form';
+import { useQueryClient } from '@tanstack/react-query';
 
 const SettingsSchema = z.object({
   enableAutomaticConfirmation: z.boolean(),
-  booksByTagOnCustomerPage: z.boolean(),
+  booksByAssetType: z.boolean(),
 });
 
 type SettingsFormValues = z.infer<typeof SettingsSchema>;
 
 export default function BookingSettingsPage() {
+  const queryClient = useQueryClient();
   const currentTenant = StorageService.getTenant();
   const tenantId = currentTenant?.id;
 
@@ -36,7 +38,7 @@ export default function BookingSettingsPage() {
     resolver: zodResolver(SettingsSchema),
     defaultValues: {
       enableAutomaticConfirmation: true,
-      booksByTagOnCustomerPage: false,
+      booksByAssetType: false,
     },
   });
 
@@ -45,12 +47,22 @@ export default function BookingSettingsPage() {
     if (tenant) {
       form.reset({
         enableAutomaticConfirmation: tenant.enableAutomaticConfirmation ?? true,
-        booksByTagOnCustomerPage: tenant.booksByTagOnCustomerPage ?? false,
+        booksByAssetType: tenant.booksByAssetType ?? false,
       });
     }
   }, [tenant, form]);
 
-  const { mutate: updateTenant, isPending: isSaving } = authClient.tenants.update.useMutation();
+  const { mutate: updateTenant, isPending: isSaving } = authClient.tenants.update.useMutation({
+    onSuccess: () => {
+      toast.success('Settings updated successfully!');
+      // Invalidate and refetch tenant data to show updated values
+      queryClient.invalidateQueries({ queryKey: ['tenant', tenantId] });
+    },
+    onError: (error) => {
+      console.error(error);
+      toast.error('Failed to update settings');
+    },
+  });
 
   const onSubmit = (values: SettingsFormValues) => {
     if (!tenantId || !tenant) {
@@ -58,24 +70,13 @@ export default function BookingSettingsPage() {
       return;
     }
 
-    updateTenant(
-      {
-        params: { id: tenantId },
-        body: {
-          enableAutomaticConfirmation: values.enableAutomaticConfirmation,
-          booksByTagOnCustomerPage: values.booksByTagOnCustomerPage,
-        },
+    updateTenant({
+      params: { id: tenantId },
+      body: {
+        enableAutomaticConfirmation: values.enableAutomaticConfirmation,
+        booksByAssetType: values.booksByAssetType,
       },
-      {
-        onSuccess: () => {
-          toast.success('Settings updated successfully!');
-        },
-        onError: (error) => {
-          console.error(error);
-          toast.error('Failed to update settings');
-        },
-      }
-    );
+    });
   };
 
   if (isLoading) {
@@ -155,15 +156,15 @@ export default function BookingSettingsPage() {
             <CardContent className="space-y-6">
               <FormField
                 control={form.control}
-                name="booksByTagOnCustomerPage"
+                name="booksByAssetType"
                 render={({ field }) => (
                   <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
                     <div className="space-y-0.5">
                       <FormLabel className="text-base">
-                        Book by Tag
+                        Book by Asset Type 
                       </FormLabel>
                       <FormDescription>
-                        When enabled, customers will select a category (tag) instead of a specific asset.
+                        When enabled, customers will select a category (Asset Type) instead of a specific asset.
                         The system will automatically assign an available asset from that category.
                       </FormDescription>
                     </div>
@@ -182,7 +183,7 @@ export default function BookingSettingsPage() {
                   <strong>How it works:</strong>
                 </p>
                 <ul className="list-disc list-inside text-sm text-primary mt-2 space-y-1">
-                  <li>Customers see categories (tags) with images on the booking page</li>
+                  <li>Customers see categories (Asset Types) with images on the booking page</li>
                   <li>They select a category and choose their dates</li>
                   <li>The system automatically assigns the first available asset with that tag</li>
                   <li>Great for rental businesses where customers don't need to choose specific items</li>

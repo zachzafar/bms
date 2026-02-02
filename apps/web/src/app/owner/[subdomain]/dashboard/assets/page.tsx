@@ -111,7 +111,7 @@ export default function OwnerAssetsPage() {
 
                 <CardContent>
                   {/* Tags */}
-                  {asset.tags && asset.tags.length > 0 && (
+                  {/* {asset.tags && asset.tags.length > 0 && (
                     <div className="flex flex-wrap gap-2 mb-4">
                       {asset.tags.slice(0, 3).map((tag: any) => (
                         <Badge key={tag.id} variant="secondary">
@@ -124,7 +124,7 @@ export default function OwnerAssetsPage() {
                         </Badge>
                       )}
                     </div>
-                  )}
+                  )} */}
 
                   {/* View Details Button */}
                   <Button
