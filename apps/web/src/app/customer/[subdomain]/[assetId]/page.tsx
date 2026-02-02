@@ -137,7 +137,7 @@ export default function CustomerAssetDetailPage() {
 
               <CardContent className="px-0">
                 {/* Tags */}
-                {asset.tags.length > 0 && (
+                {/* {asset.tags.length > 0 && (
                   <div className="flex flex-wrap gap-2 mb-6">
                     {asset.tags.map((tag) => (
                       <Badge key={tag.id} variant="secondary">
@@ -145,7 +145,7 @@ export default function CustomerAssetDetailPage() {
                       </Badge>
                     ))}
                   </div>
-                )}
+                )} */}
 
                 {/* Description */}
                 {asset.description && (

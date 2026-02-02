@@ -217,6 +217,89 @@ export class AssetTypeService {
         return tags.map(t => t.tag);
     }
 
+    async getAssetTypesForCustomer(tenantId: string, page: number = 1, pageSize: number = 12) {
+        const offset = (page - 1) * pageSize;
+
+        const totalCountResult = await this.db
+            .select({ count: sql<number>`COUNT(*)` })
+            .from(schema.AssetType)
+            .where(and(eq(schema.AssetType.tenantId, tenantId), isNull(schema.AssetType.deletedAt)))
+            .execute();
+        const totalCount = totalCountResult[0]?.count || 0;
+
+        const results = await this.db.query.AssetType.findMany({
+            where: (assetType, { eq, and, isNull }) => and(
+                eq(assetType.tenantId, tenantId),
+                isNull(assetType.deletedAt)
+            ),
+            limit: pageSize,
+            offset: offset,
+        });
+
+        const assetTypesWithSignedUrls = await Promise.all(
+            results.map(async (assetType) => {
+                let imageUrl = '';
+                if (assetType.image) {
+                    try {
+                        imageUrl = await this.objectStorageService.getObjectUrl(assetType.image);
+                    } catch (error) {
+                        this.logger.warn(`Failed to get signed URL for asset type ${assetType.id}: ${error}`);
+                    }
+                }
+                return {
+                    id: assetType.id,
+                    name: assetType.name,
+                    image: imageUrl,
+                    description: assetType.description || '',
+                };
+            })
+        );
+
+        const paginationData = {
+            page,
+            pageSize,
+            totalCount,
+            totalPages: Math.ceil(totalCount / pageSize),
+            hasNextPage: page * pageSize < totalCount,
+            hasPreviousPage: page > 1,
+        };
+
+        return {
+            data: assetTypesWithSignedUrls,
+            pagination: paginationData,
+        };
+    }
+
+    async getAssetTypeForCustomer(tenantId: string, id: number) {
+        const assetType = await this.db.query.AssetType.findFirst({
+            where: (at, { eq, and, isNull }) => and(
+                eq(at.id, id),
+                eq(at.tenantId, tenantId),
+                isNull(at.deletedAt)
+            ),
+        });
+
+        if (!assetType) {
+            return null;
+        }
+
+        let imageUrl = '';
+        if (assetType.image) {
+            try {
+                imageUrl = await this.objectStorageService.getObjectUrl(assetType.image);
+            } catch (error) {
+                this.logger.warn(`Failed to get signed URL for asset type ${assetType.id}: ${error}`);
+            }
+        }
+
+        return {
+            id: assetType.id,
+            name: assetType.name,
+            image: imageUrl,
+            description: assetType.description || '',
+        };
+    }
+
     async uploadsetTypeImage(tenantId: string, assetTypeId: number, imageBuffer: Buffer): Promise<string> {
         const assetType = await this.getAssetType(assetTypeId);
         if (!assetType) {

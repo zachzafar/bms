@@ -272,4 +272,37 @@ export class FormsService {
 
         return { forms: Array.from(formMap.values()) };
     }
+
+    // Get forms for an asset type (for public booking)
+    async getFormsForAssetType(assetTypeId: number) {
+        // Check if asset type exists
+        const assetType = await this.db.query.AssetType.findFirst({
+            where: (type, { eq }) => eq(type.id, assetTypeId)
+        });
+
+        if (!assetType) {
+            throw new NotFoundException(`Asset type with id ${assetTypeId} not found`);
+        }
+
+        // Get all forms assigned to this asset type
+        const assetTypeForms = await this.db.query.AssetTypeHasBookingForms.findMany({
+            where: (rel, { eq }) => eq(rel.assetTypeId, assetTypeId),
+            with: {
+                bookingForm: {
+                    with: {
+                        fields: true
+                    }
+                }
+            }
+        });
+
+        const forms = assetTypeForms
+            .filter(rel => rel.bookingForm && rel.bookingForm.fields)
+            .map(rel => ({
+                form: rel.bookingForm,
+                fields: rel.bookingForm.fields
+            }));
+
+        return { forms };
+    }
 }

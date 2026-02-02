@@ -176,6 +176,41 @@ export default function BookingDetailsPage() {
     }
   };
 
+  const formatFormResponseValue = (value: string, fieldType: string) => {
+    if (!value) return '-';
+
+    // Handle date_range type
+    if (fieldType === 'date_range') {
+      try {
+        const parsed = JSON.parse(value);
+        if (parsed.start && parsed.end) {
+          const startDate = new Date(parsed.start).toLocaleDateString();
+          const endDate = new Date(parsed.end).toLocaleDateString();
+          return `${startDate} - ${endDate}`;
+        }
+      } catch {
+        return value;
+      }
+    }
+
+    // Handle date type
+    if (fieldType === 'date') {
+      try {
+        return new Date(value).toLocaleDateString();
+      } catch {
+        return value;
+      }
+    }
+
+    // Handle boolean type
+    if (fieldType === 'boolean') {
+      return value === 'true' ? 'Yes' : 'No';
+    }
+
+    // Default: return as-is
+    return value;
+  };
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -286,7 +321,7 @@ export default function BookingDetailsPage() {
                   {response.fieldName}
                 </div>
                 <div className="font-medium">
-                  {response.value || '-'}
+                  {formatFormResponseValue(response.value, response.fieldType)}
                 </div>
               </div>
             ))}

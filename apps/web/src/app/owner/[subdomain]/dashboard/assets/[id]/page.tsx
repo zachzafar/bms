@@ -105,7 +105,7 @@ export default function OwnerAssetDetailPage() {
       )}
 
       {/* Tags */}
-      {asset.tags && asset.tags.length > 0 && (
+      {/* {asset.tags && asset.tags.length > 0 && (
         <Card>
           <CardHeader>
             <CardTitle>Tags</CardTitle>
@@ -120,7 +120,7 @@ export default function OwnerAssetDetailPage() {
             </div>
           </CardContent>
         </Card>
-      )}
+      )} */}
 
       {/* Quick Links */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

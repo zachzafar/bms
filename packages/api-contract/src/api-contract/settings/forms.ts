@@ -188,4 +188,22 @@ export const formsContract = c.router({
         },
         summary: 'Public endpoint - Get all forms applicable to an asset (no authentication required)'
     },
+
+    // Public endpoint - Get forms for an asset type (unauthenticated)
+    getFormsForAssetTypePublic: {
+        method: 'GET',
+        path: '/form/public/asset-type/:assetTypeId',
+        pathParams: z.object({
+            assetTypeId: z.coerce.number()
+        }),
+        responses: {
+            200: z.object({
+                forms: z.array(z.object({
+                    form: SelectBookingFormSchema,
+                    fields: z.array(SelectBookingFormFieldSchema)
+                }))
+            })
+        },
+        summary: 'Public endpoint - Get all forms assigned to an asset type (no authentication required)'
+    },
 })

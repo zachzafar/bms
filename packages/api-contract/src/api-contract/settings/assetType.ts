@@ -161,7 +161,7 @@ export const assetTypeContract = c.router({
         path: '/customer/:subdomain/assetType/:id',
         pathParams:z.object({
             subdomain: z.string(),
-            id: z.number()
+            id: z.coerce.number()
         }),
         responses: {
             200: z.object({
