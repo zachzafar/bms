@@ -2281,8 +2281,8 @@ export class BookingService {
    */
 async getFullyBlockedDaysForAssetType(
   assetTypeId: number,
-  from: Date,
-  to: Date
+  from?: Date,
+  to?: Date
 ): Promise<{ start: Date; end: Date }[]> {
 
   // 1. Get all assets of this type
@@ -2301,7 +2301,17 @@ async getFullyBlockedDaysForAssetType(
 
   const assetIds = assets.map(a => a.id);
 
-  // 2. Get all blocked ranges for those assets (within window)
+  // 2. Get all blocked ranges for those assets
+  // If no date range specified, get all blocked dates; otherwise filter by date range
+  const whereConditions = [inArray(schema.BlockedDate.assetId, assetIds)];
+
+  if (from && to) {
+    whereConditions.push(
+      lte(schema.BlockedDate.startDate, to),
+      gte(schema.BlockedDate.endDate, from)
+    );
+  }
+
   const blockedRanges = await this.db
     .select({
       assetId: schema.BlockedDate.assetId,
@@ -2309,13 +2319,21 @@ async getFullyBlockedDaysForAssetType(
       end: schema.BlockedDate.endDate,
     })
     .from(schema.BlockedDate)
-    .where(
-      and(
-        inArray(schema.BlockedDate.assetId, assetIds),
-        lte(schema.BlockedDate.startDate, to),
-        gte(schema.BlockedDate.endDate, from)
-      )
-    );
+    .where(and(...whereConditions));
+
+  // If no date range specified, find the min/max dates from blocked ranges
+  // and use those to check for fully blocked periods (where ALL assets are blocked)
+  if (!from || !to) {
+    if (blockedRanges.length === 0) return [];
+
+    // Find min and max dates from all blocked ranges
+    const minDate = new Date(Math.min(...blockedRanges.map(r => new Date(r.start).getTime())));
+    const maxDate = new Date(Math.max(...blockedRanges.map(r => new Date(r.end).getTime())));
+
+    // Use these as from/to and continue with the normal logic to find fully blocked periods
+    from = minDate;
+    to = maxDate;
+  }
 
   // 3. Group ranges by asset
   const byAsset = new Map<string, { start: Date; end: Date }[]>();

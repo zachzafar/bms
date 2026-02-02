@@ -269,15 +269,12 @@ export class BookingController {
     @Public()
     @TsRestHandler(contract.booking.getBlockedDatesForAssetTypePublic)
     async getBlockedDatesForTagPublic(): Promise<ReturnType<typeof tsRestHandler>> {
-        return tsRestHandler(contract.booking.getBlockedDatesForAssetTypePublic, async ({ params }) => {
-            const { startDate, endDate, assetTypeId} = params
-            const result = await this.bookingService.getFullyBlockedDaysForAssetType(assetTypeId,startDate,endDate);
+        return tsRestHandler(contract.booking.getBlockedDatesForAssetTypePublic, async ({ params, query }) => {
+            const { assetTypeId } = params;
+            const startDate = query?.startDate;
+            const endDate = query?.endDate;
 
-            // Convert from/to to startDate/endDate format
-            // const formatted = result.map((r) => ({
-            //     startDate: r.from,
-            //     endDate: r.to,
-            // }));
+            const result = await this.bookingService.getFullyBlockedDaysForAssetType(assetTypeId, startDate, endDate);
 
             return { status: 200, body: result };
         });
