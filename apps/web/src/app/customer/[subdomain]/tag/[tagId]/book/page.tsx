@@ -70,14 +70,12 @@ export default function TagBookingPage() {
 
   const forms = formsResponse?.status === 200 ? formsResponse.body.forms : [];
 
-  const startDate = new Date();
-  const endDate = new Date(startDate.getTime() + 60 * 24 * 60 * 60 * 1000);
-
-  // Fetch blocked dates for this tag
+  // Fetch blocked dates for this asset type (without date range filter to get all blocked dates)
   const { data: blockedDatesResponse } = client.booking.getBlockedDatesForAssetTypePublic.useQuery({
     queryKey: ['blocked-dates-tag', assetTypeId],
     queryData: {
-      params: { assetTypeId: assetTypeId, startDate, endDate },
+      params: { assetTypeId: assetTypeId },
+      query: {}
     },
     enabled: !!assetTypeId,
   });

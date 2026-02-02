@@ -296,10 +296,12 @@ export const bookingContract = c.router({
     method: 'GET',
     path: '/public/blocked-dates/assetType/:assetTypeId',
     pathParams: z.object({
-      assetTypeId: z.coerce.number(),
-      startDate: z.coerce.date(),
-      endDate: z.coerce.date()
+      assetTypeId: z.coerce.number()
     }),
+    query: z.object({
+      startDate: z.coerce.date().optional(),
+      endDate: z.coerce.date().optional()
+    }).optional(),
     responses: {
       200: z.array(z.object({
         start: z.coerce.date(),
