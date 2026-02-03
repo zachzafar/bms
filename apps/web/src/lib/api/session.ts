@@ -85,10 +85,21 @@ export async function getSession() {
 export async function deleteSession() {
   try {
     const cookieStore = cookies();
-    cookieStore.delete("session");
+
+    // Get all cookies and delete each one
+    const allCookies = cookieStore.getAll();
+
+    for (const cookie of allCookies) {
+      cookieStore.delete({
+        name: cookie.name,
+        path: "/",
+        domain: process.env.DOMAIN,
+      });
+    }
+
     return { success: true };
   } catch (error) {
-    console.error("Failed to delete session cookie:", error);
+    console.error("Failed to delete cookies:", error);
     return { success: false, error: String(error) };
   }
 }
