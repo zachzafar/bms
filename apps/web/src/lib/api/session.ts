@@ -82,8 +82,15 @@ export async function getSession() {
   }
 }
 
-export  async function deleteSession() {
-   await cookies().delete("session");
+export async function deleteSession() {
+  try {
+    const cookieStore = cookies();
+    cookieStore.delete("session");
+    return { success: true };
+  } catch (error) {
+    console.error("Failed to delete session cookie:", error);
+    return { success: false, error: String(error) };
+  }
 }
 
 export async function updateTokens( refreshToken:string ,accessToken: string) {
