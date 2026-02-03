@@ -601,9 +601,6 @@ export default function Component() {
                   Status {sortBy === 'status' ? (sortOrder === 'asc' ? '↑' : '↓') : ''}
                 </Button>
               </TableHead>
-
-              {/* New columns */}
-              <TableHead>Rate / Night</TableHead>
               <TableHead>Total Price</TableHead>
 
               <TableHead>Actions</TableHead>
@@ -612,11 +609,6 @@ export default function Component() {
           <TableBody>
             {bookingList.length > 0 ? (
               bookingList.map((booking) => {
-                const nights = calculateNights(booking.startDate, booking.endDate);
-                const rate = getApplicableRate(booking.asset.id, nights, rates);
-                const pricePerNight = rate?.pricePerNight ?? 0;
-                const totalPrice = pricePerNight * nights;
-
                 const statusBadge = getStatusBadge(booking.status || '');
                 const StatusIcon = statusBadge.icon;
 
@@ -636,9 +628,7 @@ export default function Component() {
                         {booking.status}
                       </Badge>
                     </TableCell>
-
-                    <TableCell>${pricePerNight.toFixed(2)}</TableCell>
-                    <TableCell>${totalPrice.toFixed(2)}</TableCell>
+                    <TableCell>${booking.totalPrice}</TableCell>
 
                     <TableCell>
                       <div className="flex items-center gap-1">
