@@ -16,7 +16,7 @@ export const Tenant = mysqlTable("tenants", {
     booksByAssetType: boolean("book_by_asset_type").notNull().default(false),
     logoUrl: varchar("logo_url", { length: 500 }),
     address: varchar("address",{ length: 500 }),
-    phone: varchar("address",{ length: 20 }),
+    phone: varchar("phone",{ length: 20 }),
     email: varchar("email",{ length: 100 }),
     backgroundImage: varchar("background_image", { length: 500 }),
     createdAt: timestamp('createdAt',{mode: 'string'}).notNull().defaultNow(),
