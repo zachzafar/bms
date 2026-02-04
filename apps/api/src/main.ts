@@ -60,6 +60,8 @@ async function bootstrap() {
         'http://localhost:3000', // Web app
         'https://app.bookos.xyz',
         'https://www.app.bookos.xyz',
+        'https://selectrental.netlify.app',
+        'https://selectrentalsbarbados.com'
       ];
 
   // Enable CORS for development
