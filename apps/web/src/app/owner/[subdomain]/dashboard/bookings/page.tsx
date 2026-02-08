@@ -22,6 +22,7 @@ import {
   PaginationNext,
   PaginationPrevious,
 } from '@/components/ui/pagination';
+import { formatDisplayDate } from '@/lib/utils/date';
 
 export default function OwnerBookingsPage() {
   const [page, setPage] = useState(1);
@@ -123,10 +124,10 @@ export default function OwnerBookingsPage() {
                         <TableCell>{booking.asset?.name || 'N/A'}</TableCell>
                         <TableCell>{booking.customer?.user?.name || booking.user?.name || 'N/A'}</TableCell>
                         <TableCell>
-                          {new Date(booking.startDate).toLocaleDateString()}
+                          {formatDisplayDate(booking.startDate)}
                         </TableCell>
                         <TableCell>
-                          {new Date(booking.endDate).toLocaleDateString()}
+                          {formatDisplayDate(booking.endDate)}
                         </TableCell>
                         <TableCell>
                           <Badge variant={getStatusVariant(booking.status)}>

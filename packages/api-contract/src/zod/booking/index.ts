@@ -67,6 +67,7 @@ export const InsertRateSchema = z.object({
     maxNights: z.number().nullable().optional(),
     pricePerNight: z.string().nullable().optional(),
     priority: z.number().nullable().optional(),
+    isActive: z.boolean().optional().default(true),
     assetIds: z.array(z.string()).optional(),
 });
 export const SelectRateSchema = z.object({
@@ -79,6 +80,8 @@ export const SelectRateSchema = z.object({
     maxNights: z.number().nullable(),
     pricePerNight: z.string().nullable(),
     priority: z.number().nullable(),
+    isActive: z.boolean(),
+    createdAt: z.coerce.date(),
 });
 export const UpdateRateSchema = InsertRateSchema.partial();
 

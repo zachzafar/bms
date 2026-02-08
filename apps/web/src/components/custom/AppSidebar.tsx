@@ -131,6 +131,12 @@ const items: SidebarItem[] = [
         icon: User2,
         feature: "settings",
       },
+      {
+        title: "Config",
+        url: "/bookings/users/config",
+        icon: Settings,
+        feature: "settings",
+      },
     ],
   },
   {

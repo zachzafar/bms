@@ -14,6 +14,7 @@ import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 import { ArrowLeft, Calendar, CheckCircle2, Loader2, XCircle } from 'lucide-react';
 import { useEffect, useState } from 'react';
+import { formatDateForInput, parseDateInputAsUTC, formatDisplayDate } from '@/lib/utils/date';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -71,12 +72,9 @@ export default function EditBookingPage() {
   // Initialize form data when booking is loaded
   useEffect(() => {
     if (booking) {
-      const startDate = new Date(booking.startDate);
-      const endDate = new Date(booking.endDate);
-
       form.reset({
-        startDate: startDate.toISOString().split('T')[0],
-        endDate: endDate.toISOString().split('T')[0],
+        startDate: formatDateForInput(booking.startDate),
+        endDate: formatDateForInput(booking.endDate),
       });
     }
   }, [booking, form]);
@@ -124,8 +122,8 @@ export default function EditBookingPage() {
         body: {
           id: bookingId,
           assetId: booking.asset.id,
-          startDate: new Date(data.startDate),
-          endDate: new Date(data.endDate),
+          startDate: parseDateInputAsUTC(data.startDate),
+          endDate: parseDateInputAsUTC(data.endDate),
           status: booking.status ?? 'confirmed',
           totalPrice: booking.totalPrice ?? '0',
         },
@@ -223,7 +221,7 @@ export default function EditBookingPage() {
               <div className="bg-primary/5 border border-primary/20 rounded-lg p-4">
                 <p className="text-sm font-medium text-foreground mb-2">Updated Booking Details</p>
                 <p className="text-sm text-muted-foreground">
-                  {new Date(form.getValues('startDate')).toLocaleDateString('en-US', {
+                  {formatDisplayDate(parseDateInputAsUTC(form.getValues('startDate')), {
                     weekday: 'long',
                     year: 'numeric',
                     month: 'long',
@@ -232,7 +230,7 @@ export default function EditBookingPage() {
                 </p>
                 <p className="text-sm text-muted-foreground mb-1">to</p>
                 <p className="text-sm text-muted-foreground">
-                  {new Date(form.getValues('endDate')).toLocaleDateString('en-US', {
+                  {formatDisplayDate(parseDateInputAsUTC(form.getValues('endDate')), {
                     weekday: 'long',
                     year: 'numeric',
                     month: 'long',

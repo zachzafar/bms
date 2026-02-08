@@ -15,7 +15,7 @@ import { billingContract } from './billing';
 import { crmContract } from './crm';
 import { systemAdminContract } from './system-admin';
 import { reportsContract } from './reports';
-
+import { blockedDatesContract } from './blocked-dates';
 
 const c = initContract();
 
@@ -31,6 +31,7 @@ export const contract = c.router({
   tenants: tenantsContract,
   keys: keysContract,
   analytics: analyticsContract,
+  blockedDates: blockedDatesContract,
   slots: slotContract,
   rates: rateContract,
   billing: billingContract,
@@ -43,6 +44,7 @@ export * from './auth';
 export * from './assets';
 export * from './settings';
 export * from './booking';
+export * from './blocked-dates';
 export * from './maintenance';
 export * from './users';
 export * from './teams';

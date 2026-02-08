@@ -65,7 +65,7 @@ export default function CustomerBookingPage() {
   const forms = formsResponse?.status === 200 ? formsResponse.body.forms : [];
 
   // Fetch blocked dates for this asset
-  const { data: blockedDatesResponse } = client.booking.getBlockedDatesForAssetPublic.useQuery({
+  const { data: blockedDatesResponse } = client.blockedDates.getBlockedDatesForAssetPublic.useQuery({
     queryKey: ['blocked-dates', assetId],
     queryData: {
       params: { assetId },

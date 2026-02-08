@@ -5,11 +5,11 @@ import { DrizzleModule } from 'src/drizzle/drizzle.module';
 import { MaintenanceModule } from 'src/maintenance/maintenance.module';
 import { SlotService } from 'src/slot/slot.service';
 import { TenantService } from 'src/tenant/tenant.service';
-import { KeysModule } from 'src/keys/keys.module';
+import { RatesModule } from 'src/rates/rates.module';
 
 @Module({
-  imports: [DrizzleModule,forwardRef(() => MaintenanceModule)],
-  providers: [BookingService,SlotService,TenantService],
+  imports: [DrizzleModule, forwardRef(() => MaintenanceModule), RatesModule],
+  providers: [BookingService, SlotService, TenantService],
   controllers: [BookingController],
   exports: [BookingService]
 })

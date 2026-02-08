@@ -1,9 +1,9 @@
-import { Injectable, Inject, InternalServerErrorException,Logger } from '@nestjs/common';
+import { Injectable, Inject, InternalServerErrorException, Logger, BadRequestException, NotFoundException } from '@nestjs/common';
 import { MySql2Database } from 'drizzle-orm/mysql2';
 import { DrizzleAsyncProvider } from 'src/drizzle/drizzle.provider';
 import * as schema from '@repo/api-contract';
-import { InsertUser, SelectUser, UpdateUser } from '@repo/api-contract';
-import { eq, and, sql, or, like } from 'drizzle-orm';
+import { InsertUser, SelectUser, UpdateUser, SelectCustomerType } from '@repo/api-contract';
+import { eq, and, sql, or, like, isNull } from 'drizzle-orm';
 import { hash } from 'argon2';
 
 const userTypes = ["customer", "owner", "system"] as const;
@@ -29,10 +29,10 @@ export class UsersService {
         this.logger.log(`Trying to see customer details ${JSON.stringify(customerDetails)}`)
         await this.db.transaction(async (tx) => {
             // Check if user already exists
-            const existingUser = await tx.query.User.findFirst({ 
-                where: (user, { eq }) => eq(user.email, userData.email) 
+            const existingUser = await tx.query.User.findFirst({
+                where: (user, { eq }) => eq(user.email, userData.email)
             });
-            
+
             if (existingUser) {
                 // User already exists, check if they're already in this tenant
                 const existingTenantUser = await tx.query.TenantHasUsers.findFirst({
@@ -41,18 +41,18 @@ export class UsersService {
                         eq(tu.tenantId, tenantId)
                     )
                 });
-                
+
                 if (existingTenantUser) {
                     // User already exists in this tenant
                     tenantUser_id = existingTenantUser.id;
                     userId = existingUser.id;
                 } else {
                     // User exists but not in this tenant, add them to this tenant
-                    const [{ id }] = await tx.insert(schema.TenantHasUsers).values({ 
-                        tenantId, 
-                        userId: existingUser.id 
+                    const [{ id }] = await tx.insert(schema.TenantHasUsers).values({
+                        tenantId,
+                        userId: existingUser.id
                     }).$returningId();
-                    
+
                     tenantUser_id = id;
                     userId = existingUser.id;
                 }
@@ -66,28 +66,28 @@ export class UsersService {
                     name: userData.name,
                     email: userData.email,
                     password: hashedPassword,
-                    userType: userData.userType 
+                    userType: userData.userType
                 });
-                
-                const user = await tx.query.User.findFirst({ 
-                    where: (user, { eq }) => eq(user.email, userData.email) 
+
+                const user = await tx.query.User.findFirst({
+                    where: (user, { eq }) => eq(user.email, userData.email)
                 });
-                
+
                 if (!user) throw new InternalServerErrorException("Error occurred while creating user");
-                
-                const [{ id }] = await tx.insert(schema.TenantHasUsers).values({ 
-                    tenantId, 
-                    userId: user.id 
+
+                const [{ id }] = await tx.insert(schema.TenantHasUsers).values({
+                    tenantId,
+                    userId: user.id
                 }).$returningId();
-                
+
                 tenantUser_id = id;
                 userId = user.id;
             }
-            
+
             // Handle customer role if needed
             if (userData.userType.includes("customer")) {
                 const existingCustomer = await tx.query.Customer.findFirst({
-                    where: (c, { eq ,and}) => and(eq(c.userId, userId),eq(c.tenantId, tenantId))
+                    where: (c, { eq, and }) => and(eq(c.userId, userId), eq(c.tenantId, tenantId))
                 });
 
                 if (!existingCustomer) {
@@ -99,18 +99,18 @@ export class UsersService {
                     });
                 }
             }
-            
+
             // Handle owner role if needed
             if (userData.userType.includes("owner")) {
                 const existingOwner = await tx.query.Owner.findFirst({
-                    where: (o, { eq,and }) => and(eq(o.userId, userId),eq(o.tenantId, tenantId))
+                    where: (o, { eq, and }) => and(eq(o.userId, userId), eq(o.tenantId, tenantId))
                 });
-                
+
                 if (!existingOwner) {
                     await tx.insert(schema.Owner).values({ userId, tenantId });
                 }
             }
-            
+
             // Handle roles
             for (const role of roles) {
                 const existingRole = await tx.query.UserHasRoles.findFirst({
@@ -120,93 +120,93 @@ export class UsersService {
                         eq(ur.tenantId, tenantId)
                     )
                 });
-                
+
                 if (!existingRole) {
-                    await tx.insert(schema.UserHasRoles).values({ 
-                        userId, 
-                        roleId: (role) ,
+                    await tx.insert(schema.UserHasRoles).values({
+                        userId,
+                        roleId: (role),
                         tenantId
                     });
                 }
             }
         });
-        
-        const tenantUser = await this.db.query.TenantHasUsers.findFirst({ 
-            where: (tenant_user, { eq }) => eq(tenant_user.id, tenantUser_id) 
+
+        const tenantUser = await this.db.query.TenantHasUsers.findFirst({
+            where: (tenant_user, { eq }) => eq(tenant_user.id, tenantUser_id)
         });
-        
+
         if (!tenantUser) throw new InternalServerErrorException("Error occurred while adding a tenant user");
-        
+
         return tenantUser.userId;
     }
 
     async findAll(tenantId: string, page: number = 1, pageSize: number = 10): Promise<{ data: (Omit<SelectUser, 'roles'> & { roles: { roleId: number; roleName: string }[] })[]; pagination: any }> {
-  const offset = (page - 1) * pageSize;
+        const offset = (page - 1) * pageSize;
 
-  // Get total count (only system users)
-  const totalCountResult = await this.db
-    .select({ count: sql<number>`COUNT(DISTINCT ${schema.User.id})` })
-    .from(schema.TenantHasUsers)
-    .innerJoin(schema.User, eq(schema.TenantHasUsers.userId, schema.User.id))
-    .where(and(
-      eq(schema.TenantHasUsers.tenantId, tenantId),
-      eq(schema.User.userType, 'system')
-    ))
-    .execute();
-  const totalCount = totalCountResult[0]?.count || 0;
+        // Get total count (only system users)
+        const totalCountResult = await this.db
+            .select({ count: sql<number>`COUNT(DISTINCT ${schema.User.id})` })
+            .from(schema.TenantHasUsers)
+            .innerJoin(schema.User, eq(schema.TenantHasUsers.userId, schema.User.id))
+            .where(and(
+                eq(schema.TenantHasUsers.tenantId, tenantId),
+                eq(schema.User.userType, 'system')
+            ))
+            .execute();
+        const totalCount = totalCountResult[0]?.count || 0;
 
-  const usersWithRoles = await this.db
-    .select({
-      user: schema.User,
-      userRole: schema.UserHasRoles,
-      role: schema.Roles
-    })
-    .from(schema.TenantHasUsers)
-    .innerJoin(schema.User, eq(schema.TenantHasUsers.userId, schema.User.id))
-    .leftJoin(schema.UserHasRoles, eq(schema.UserHasRoles.userId, schema.User.id))
-    .leftJoin(schema.Roles, eq(schema.UserHasRoles.roleId, schema.Roles.id))
-    .where(and(
-      eq(schema.TenantHasUsers.tenantId, tenantId),
-      eq(schema.User.userType, 'system')
-    ))
-    .limit(pageSize)
-    .offset(offset);
+        const usersWithRoles = await this.db
+            .select({
+                user: schema.User,
+                userRole: schema.UserHasRoles,
+                role: schema.Roles
+            })
+            .from(schema.TenantHasUsers)
+            .innerJoin(schema.User, eq(schema.TenantHasUsers.userId, schema.User.id))
+            .leftJoin(schema.UserHasRoles, eq(schema.UserHasRoles.userId, schema.User.id))
+            .leftJoin(schema.Roles, eq(schema.UserHasRoles.roleId, schema.Roles.id))
+            .where(and(
+                eq(schema.TenantHasUsers.tenantId, tenantId),
+                eq(schema.User.userType, 'system')
+            ))
+            .limit(pageSize)
+            .offset(offset);
 
-  // Group roles by user
-  const userMap = new Map<string, Omit<SelectUser, 'roles'> & { roles: { roleId: number; roleName: string }[] }>();
+        // Group roles by user
+        const userMap = new Map<string, Omit<SelectUser, 'roles'> & { roles: { roleId: number; roleName: string }[] }>();
 
-  usersWithRoles.forEach(row => {
-    if (!userMap.has(row.user.id)) {
-      userMap.set(row.user.id, {
-        ...row.user,
-        roles: row.userRole?.roleId && row.role?.name
-          ? [{ roleId: row.userRole.roleId, roleName: row.role.name }]
-          : []
-      });
-    } else if (row.userRole?.roleId && row.role?.name) {
-      const user = userMap.get(row.user.id)!;
-      if (!user.roles.some(r => r.roleId === row.userRole!.roleId)) {
-        user.roles.push({ roleId: row.userRole.roleId, roleName: row.role.name });
-      }
+        usersWithRoles.forEach(row => {
+            if (!userMap.has(row.user.id)) {
+                userMap.set(row.user.id, {
+                    ...row.user,
+                    roles: row.userRole?.roleId && row.role?.name
+                        ? [{ roleId: row.userRole.roleId, roleName: row.role.name }]
+                        : []
+                });
+            } else if (row.userRole?.roleId && row.role?.name) {
+                const user = userMap.get(row.user.id)!;
+                if (!user.roles.some(r => r.roleId === row.userRole!.roleId)) {
+                    user.roles.push({ roleId: row.userRole.roleId, roleName: row.role.name });
+                }
+            }
+        });
+
+        const paginationData = {
+            page,
+            pageSize,
+            totalCount,
+            totalPages: Math.ceil(totalCount / pageSize),
+            hasNextPage: page * pageSize < totalCount,
+            hasPreviousPage: page > 1,
+        };
+
+        return {
+            data: Array.from(userMap.values()),
+            pagination: paginationData,
+        };
     }
-  });
 
-  const paginationData = {
-    page,
-    pageSize,
-    totalCount,
-    totalPages: Math.ceil(totalCount / pageSize),
-    hasNextPage: page * pageSize < totalCount,
-    hasPreviousPage: page > 1,
-  };
-
-  return {
-    data: Array.from(userMap.values()),
-    pagination: paginationData,
-  };
-}
-
-    async findOne(id: string, tenantId?: string): Promise<Omit<SelectUser, 'roles'> & { roles: { roleId: number; roleName: string }[] } | Omit<SelectUser,"roles"> | undefined> {
+    async findOne(id: string, tenantId?: string): Promise<Omit<SelectUser, 'roles'> & { roles: { roleId: number; roleName: string }[] } | Omit<SelectUser, "roles"> | undefined> {
         if (!tenantId)
             return this.db.query.User.findFirst({ where: (user, { eq }) => eq(user.id, id) });
 
@@ -216,14 +216,14 @@ export class UsersService {
             userRoles: schema.UserHasRoles,
             role: schema.Roles
         })
-        .from(schema.TenantHasUsers)
-        .where(and(
-            eq(schema.TenantHasUsers.tenantId, tenantId),
-            eq(schema.TenantHasUsers.userId, id)
-        ))
-        .innerJoin(schema.User, eq(schema.TenantHasUsers.userId, schema.User.id))
-        .leftJoin(schema.UserHasRoles, eq(schema.UserHasRoles.userId, schema.User.id))
-        .leftJoin(schema.Roles, eq(schema.UserHasRoles.roleId, schema.Roles.id));
+            .from(schema.TenantHasUsers)
+            .where(and(
+                eq(schema.TenantHasUsers.tenantId, tenantId),
+                eq(schema.TenantHasUsers.userId, id)
+            ))
+            .innerJoin(schema.User, eq(schema.TenantHasUsers.userId, schema.User.id))
+            .leftJoin(schema.UserHasRoles, eq(schema.UserHasRoles.userId, schema.User.id))
+            .leftJoin(schema.Roles, eq(schema.UserHasRoles.roleId, schema.Roles.id));
 
         if (userWithRoles.length === 0) return undefined;
 
@@ -246,7 +246,7 @@ export class UsersService {
         return this.db.query.User.findFirst({ where: (user, { eq }) => eq(user.email, email) });
     }
 
-    async update(id: string,tenantId: string ,userData: UpdateUser, roles: number[], ownerData?: schema.UpdateOwner,customerData?: schema.UpdateCustomer): Promise<void> {
+    async update(id: string, tenantId: string, userData: UpdateUser, roles: number[], ownerData?: schema.UpdateOwner, customerData?: schema.UpdateCustomer): Promise<void> {
         await this.db.transaction(async (tx) => {
             // Update user dat
             let hashedPassword: string | undefined;
@@ -255,8 +255,8 @@ export class UsersService {
                 userData.password = hashedPassword;
             }
             // If userData empty skip update
-            if (Object.keys(userData).length > 0) 
-            await tx.update(schema.User).set({ ...userData, password: hashedPassword }).where(eq(schema.User.id, id));
+            if (Object.keys(userData).length > 0)
+                await tx.update(schema.User).set({ ...userData, password: hashedPassword }).where(eq(schema.User.id, id));
 
             // Handle customer role
             if (userData.userType?.includes("customer")) {
@@ -456,7 +456,7 @@ export class UsersService {
                 .where(and(
                     eq(schema.Customer.userId, id),
                     eq(schema.Customer.tenantId, tenantId)
-                )); 
+                ));
 
             // Delete owner record for this tenant
             await tx.delete(schema.Owner)
@@ -500,5 +500,131 @@ export class UsersService {
         return user !== null;
     }
 
+    // ==================== CUSTOMER TYPES CRUD ====================
 
+    async createCustomerType(
+        tenantId: string,
+        data: { name: string; description?: string | null }
+    ): Promise<number> {
+        // Check if customer type with same name exists in this tenant
+        const existingType = await this.db.query.CustomerType.findFirst({
+            where: (ct, { eq, and, isNull }) => and(
+                eq(ct.tenantId, tenantId),
+                eq(ct.name, data.name),
+                isNull(ct.deletedAt)
+            )
+        });
+
+        if (existingType) {
+            throw new BadRequestException('Customer type with this name already exists');
+        }
+
+        const [{ id }] = await this.db.insert(schema.CustomerType).values({
+            tenantId,
+            name: data.name,
+            description: data.description ?? null
+        }).$returningId();
+
+        return id;
+    }
+
+    async getCustomerTypes(
+        tenantId: string,
+        page: number = 1,
+        pageSize: number = 10
+    ): Promise<{ data: SelectCustomerType[]; pagination: any }> {
+        const offset = (page - 1) * pageSize;
+
+        // Get total count
+        const totalCountResult = await this.db
+            .select({ count: sql<number>`COUNT(*)` })
+            .from(schema.CustomerType)
+            .where(and(
+                eq(schema.CustomerType.tenantId, tenantId),
+                isNull(schema.CustomerType.deletedAt)
+            ))
+            .execute();
+        const totalCount = totalCountResult[0]?.count || 0;
+
+        const customerTypes = await this.db.query.CustomerType.findMany({
+            where: (ct, { eq, and, isNull }) => and(
+                eq(ct.tenantId, tenantId),
+                isNull(ct.deletedAt)
+            ),
+            limit: pageSize,
+            offset: offset,
+        });
+
+        const paginationData = {
+            page,
+            pageSize,
+            totalCount,
+            totalPages: Math.ceil(totalCount / pageSize),
+            hasNextPage: page * pageSize < totalCount,
+            hasPreviousPage: page > 1,
+        };
+
+        return {
+            data: customerTypes,
+            pagination: paginationData,
+        };
+    }
+
+    async getCustomerTypeById(
+        tenantId: string,
+        customerTypeId: number
+    ): Promise<SelectCustomerType | undefined> {
+        return this.db.query.CustomerType.findFirst({
+            where: (ct, { eq, and, isNull }) => and(
+                eq(ct.tenantId, tenantId),
+                eq(ct.id, customerTypeId),
+                isNull(ct.deletedAt)
+            )
+        });
+    }
+
+    async updateCustomerType(
+        tenantId: string,
+        customerTypeId: number,
+        data: { name?: string; description?: string | null }
+    ): Promise<void> {
+        // Check if name is being updated and if it conflicts with existing
+        const { name } = data
+        if (name) {
+            const existingType = await this.db.query.CustomerType.findFirst({
+                where: (ct, { eq, and, isNull, ne }) => and(
+                    eq(ct.tenantId, tenantId),
+                    eq(ct.name, name),
+                    isNull(ct.deletedAt)
+                )
+            });
+
+            if (existingType && existingType.id !== customerTypeId) {
+                throw new BadRequestException('Customer type with this name already exists');
+            }
+        }
+
+        const updateData: any = {};
+        if (data.name !== undefined) updateData.name = data.name;
+        if (data.description !== undefined) updateData.description = data.description;
+
+        if (Object.keys(updateData).length > 0) {
+            await this.db.update(schema.CustomerType)
+                .set(updateData)
+                .where(and(
+                    eq(schema.CustomerType.tenantId, tenantId),
+                    eq(schema.CustomerType.id, customerTypeId)
+                ));
+        }
+    }
+
+    async deleteCustomerType(tenantId: string, customerTypeId: number): Promise<void> {
+        // Soft delete the customer type
+        await this.db.update(schema.CustomerType)
+            .set({ deletedAt: new Date() })
+            .where(and(
+                eq(schema.CustomerType.tenantId, tenantId),
+                eq(schema.CustomerType.id, customerTypeId)
+            ));
+    }
 }

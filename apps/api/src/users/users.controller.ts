@@ -113,4 +113,67 @@ export class UsersController {
             return { status: 200, body: owners };
         })
     }
+
+    // ==================== CUSTOMER TYPES ====================
+
+    @TsRestHandler(c.users.createCustomerType)
+    @Roles(PermissionScope.USERS_WRITE)
+    async createCustomerType(@Headers() headers: any): Promise<ReturnType<typeof tsRestHandler>> {
+        this.logger.log(`Creating a new customer type`);
+        return tsRestHandler(c.users.createCustomerType, async ({ body }) => {
+            const tenantId = headers['x-tenant-id'];
+            const id = await this.UserService.createCustomerType(tenantId, body);
+            return { status: 200, body: { id } };
+        });
+    }
+
+    @TsRestHandler(c.users.getCustomerTypes)
+    @Roles(PermissionScope.USERS_READ)
+    async getCustomerTypes(@Headers() headers: any): Promise<ReturnType<typeof tsRestHandler>> {
+        this.logger.log(`Getting all customer types`);
+        return tsRestHandler(c.users.getCustomerTypes, async ({ query }) => {
+            const tenantId = headers['x-tenant-id'];
+            const page = query.page ? Number(query.page) : 1;
+            const pageSize = query.pageSize ? Number(query.pageSize) : 10;
+
+            const customerTypes = await this.UserService.getCustomerTypes(tenantId, page, pageSize);
+            return { status: 200, body: customerTypes };
+        });
+    }
+
+    @TsRestHandler(c.users.getCustomerType)
+    @Roles(PermissionScope.USERS_READ)
+    async getCustomerType(@Headers() headers: any): Promise<ReturnType<typeof tsRestHandler>> {
+        this.logger.log(`Getting a customer type`);
+        return tsRestHandler(c.users.getCustomerType, async ({ params }) => {
+            const tenantId = headers['x-tenant-id'];
+            const customerType = await this.UserService.getCustomerTypeById(tenantId, params.id);
+            if (!customerType) {
+                return { status: 404, body: { message: 'Customer type not found' } };
+            }
+            return { status: 200, body: customerType };
+        });
+    }
+
+    @TsRestHandler(c.users.updateCustomerType)
+    @Roles(PermissionScope.USERS_WRITE)
+    async updateCustomerType(@Headers() headers: any): Promise<ReturnType<typeof tsRestHandler>> {
+        this.logger.log(`Updating a customer type`);
+        return tsRestHandler(c.users.updateCustomerType, async ({ params, body }) => {
+            const tenantId = headers['x-tenant-id'];
+            await this.UserService.updateCustomerType(tenantId, params.id, body);
+            return { status: 200, body: { message: 'Customer type updated successfully' } };
+        });
+    }
+
+    @TsRestHandler(c.users.deleteCustomerType)
+    @Roles(PermissionScope.USERS_DELETE)
+    async deleteCustomerType(@Headers() headers: any): Promise<ReturnType<typeof tsRestHandler>> {
+        this.logger.log(`Deleting a customer type`);
+        return tsRestHandler(c.users.deleteCustomerType, async ({ params }) => {
+            const tenantId = headers['x-tenant-id'];
+            await this.UserService.deleteCustomerType(tenantId, params.id);
+            return { status: 200, body: { message: 'Customer type deleted successfully' } };
+        });
+    }
 }

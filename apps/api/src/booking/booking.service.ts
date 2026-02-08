@@ -9,8 +9,12 @@ import { OnEvent, EventEmitter2 } from '@nestjs/event-emitter';
 import { EmailEvent } from 'src/email/events';
 import { randomBytes } from 'crypto';
 import { Cron } from '@nestjs/schedule';
+import { generateCustomerReminderEmail, generateStatusUpdateEmailForCustomer, generateStatusUpdateEmailForTenant, generateTenantReminderEmail } from './booking.utils';
+import { RatesService } from 'src/rates/rates.service';
 
-// --- top of file or bottom (outside the class) ---
+// --- Date helpers ---
+
+// Converts input to a UTC Date object
 function toUTCDateTime(input: string | Date): Date {
   if (typeof input === 'string' && input.endsWith('Z')) {
     return new Date(input);
@@ -25,13 +29,22 @@ function toUTCDateTime(input: string | Date): Date {
   return new Date(Date.UTC(year, month - 1, day, hours, minutes, seconds || 0));
 }
 
+// Extracts the date portion as YYYY-MM-DD string (for date-only columns)
+function toDateOnlyString(input: string | Date): string {
+  const dateObj = typeof input === 'string' ? new Date(input) : input;
+  const year = dateObj.getUTCFullYear();
+  const month = String(dateObj.getUTCMonth() + 1).padStart(2, '0');
+  const day = String(dateObj.getUTCDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
 
 @Injectable()
 export class BookingService {
   constructor(
     @Inject(DrizzleAsyncProvider) private db: MySql2Database<typeof schema>,
-    private readonly slotService: SlotService,
     private readonly eventEmitter: EventEmitter2,
+    private readonly ratesService: RatesService,
   ) { }
 
   async createBooking(
@@ -40,21 +53,80 @@ export class BookingService {
     newCustomer?: { name: string; email: string; phone?: string; tenantId: string },
     formResponses?: Array<{ formFieldId: number; value: string }>
   ): Promise<string | void> {
-    const startDate = booking.startDate;
-    const endDate = booking.endDate;
-
-    const utcStart = new Date(startDate.getTime() - startDate.getTimezoneOffset() * 60000);
-    const utcEnd = new Date(endDate.getTime() - endDate.getTimezoneOffset() * 60000);
+    const utcStart = toUTCDateTime(booking.startDate);
+    const utcEnd = toUTCDateTime(booking.endDate);
 
     if (!customerIds.length && !newCustomer) {
       throw new ConflictException('No customers selected or provided');
     }
 
-    // Check if dates are blocked (either by booking or admin block)
+    await this.validateDatesNotBlocked(booking.assetId, booking.startDate, booking.endDate);
+
+    const bookingId = await this.db.transaction(async (tx) => {
+      // Resolve customer
+      const customerId = await this.resolveCustomer(tx, customerIds, newCustomer);
+      const customer = await tx.query.Customer.findFirst({
+        where: (c, { eq }) => eq(c.id, customerId),
+      });
+
+      if (!customer) {
+        throw new ConflictException('Customer not found');
+      }
+
+      // Get asset and tenant
+      const asset = await tx.query.Asset.findFirst({
+        where: (a, { eq }) => eq(a.id, booking.assetId),
+      });
+      if (!asset) {
+        throw new ConflictException('Asset not found');
+      }
+
+      const tenant = await tx.query.Tenant.findFirst({
+        where: (t, { eq }) => eq(t.id, asset.tenantId),
+      });
+
+      // Calculate price
+      const { totalPrice, rate } = await this.calculatePrice(
+        booking.assetId,
+        utcStart,
+        utcEnd,
+        booking.totalPrice,
+        tenant?.booksByAssetType ?? false
+      );
+
+      // Create booking
+      const [{ id }] = await tx.insert(schema.Booking).values({
+        ...booking,
+        userId: customer.userId,
+        startDate: utcStart,
+        endDate: utcEnd,
+        status: tenant?.enableAutomaticConfirmation ? 'Confirmed' : 'Pending',
+        totalPrice: totalPrice.toString(),
+      }).$returningId();
+
+      // Create related records
+      await this.createBlockedDateForBooking(tx, asset.tenantId, booking.assetId, utcStart, utcEnd, id);
+      await this.createBookingUpdateToken(tx, id, customerId, booking.startDate);
+
+      if (formResponses?.length) {
+        await this.saveFormResponses(tx, id, formResponses);
+      }
+
+      await this.createBookingInvoice(tx, asset, id, customerId, utcStart, utcEnd, totalPrice, rate?.pricePerNight);
+
+      return id;
+    });
+
+    this.eventEmitter.emit('create-booking', bookingId);
+    return bookingId;
+  }
+
+  // Helper: Validate dates are not blocked
+  private async validateDatesNotBlocked(assetId: string, startDate: Date, endDate: Date) {
     const blockedDates = await this.db.query.BlockedDate.findMany({
       where: (bd, { and, eq, gte, lte, or }) =>
         and(
-          eq(bd.assetId, booking.assetId),
+          eq(bd.assetId, assetId),
           or(
             and(gte(bd.startDate, startDate), lte(bd.startDate, endDate)),
             and(gte(bd.endDate, startDate), lte(bd.endDate, endDate)),
@@ -66,302 +138,213 @@ export class BookingService {
     if (blockedDates.length > 0) {
       throw new ConflictException('One or more dates are unavailable or already booked');
     }
+  }
 
-    try {
-      let bookingId: string = '';
+  // Helper: Find or create customer
+  private async resolveCustomer(
+    tx: any,
+    customerIds: number[],
+    newCustomer?: { name: string; email: string; phone?: string; tenantId: string }
+  ): Promise<number> {
+    if (customerIds.length > 0) {
+      return customerIds[0];
+    }
 
-      await this.db.transaction(async (tx) => {
-        let customerIdsToUse = [...customerIds];
+    if (!newCustomer) {
+      throw new ConflictException('No customer provided');
+    }
 
-        // Create new customer if provided or find existing customer by email
-        if (newCustomer) {
-          // Check if user with this email already exists
-          const existingUser = await tx.query.User.findFirst({
-            where: (user, { eq }) => eq(user.email, newCustomer.email),
-          });
+    // Check for existing user
+    const existingUser = await tx.query.User.findFirst({
+      where: (user: any, { eq }: any) => eq(user.email, newCustomer.email),
+    });
 
-          let userId: string;
-
-          if (existingUser) {
-            // User exists, check if they have a customer profile for this tenant
-            const existingCustomer = await tx.query.Customer.findFirst({
-              where: (customer, { eq, and }) =>
-                and(
-                  eq(customer.userId, existingUser.id),
-                  eq(customer.tenantId, newCustomer.tenantId)
-                ),
-            });
-
-            if (existingCustomer) {
-              // Customer profile exists for this tenant, use it
-              customerIdsToUse.push(existingCustomer.id);
-            } else {
-              // User exists but no customer profile for this tenant, create one
-              const [{ id: customerId }] = await tx.insert(schema.Customer).values({
-                userId: existingUser.id,
-                phone: newCustomer.phone,
-                tenantId: newCustomer.tenantId,
-              }).$returningId();
-
-              customerIdsToUse.push(customerId);
-            }
-          } else {
-            // User doesn't exist, create new user and customer
-            const [{ id: newUserId }] = await tx.insert(schema.User).values({
-              name: newCustomer.name,
-              email: newCustomer.email,
-              password: randomBytes(32).toString('hex'), // Random password for public customers
-              userType: 'customer',
-            }).$returningId();
-
-            userId = newUserId;
-
-            const [{id: tenant_has_use_id}] = await tx.insert(schema.TenantHasUsers).values({
-                tenantId: newCustomer.tenantId,
-                userId,
-            }).$returningId();
-
-            // Create customer details
-            const [{ id: customerId }] = await tx.insert(schema.Customer).values({
-              userId,
-              phone: newCustomer.phone,
-              tenantId: newCustomer.tenantId,
-            }).$returningId();
-
-            customerIdsToUse.push(customerId);
-          }
-        }
-
-        // Fetch existing customers
-        const customers = await tx.query.Customer.findMany({
-          where: (customer, { inArray }) => inArray(customer.id, customerIdsToUse),
-        });
-
-        if (!customers.length) {
-          throw new ConflictException('No customers found');
-        }
-
-        // Get asset to find tenantId
-        const asset = await tx.query.Asset.findFirst({
-          where: (a, { eq }) => eq(a.id, booking.assetId),
-        });
-
-        if (!asset) {
-          throw new ConflictException('Asset not found');
-        }
-
-        // Get tenant settings to check enableAutomaticConfirmation
-        const tenant = await tx.query.Tenant.findFirst({
-          where: (t, { eq }) => eq(t.id, asset.tenantId),
-        });
-
-        // Determine booking status based on tenant settings
-        const bookingStatus = tenant?.enableAutomaticConfirmation ? 'Confirmed' : 'Pending';
-
-        // Calculate total price based on rate
-        let totalPrice = booking.totalPrice ? parseFloat(booking.totalPrice.toString()) : 0;
-        let bestRate: { rateId: number; pricePerNight: string | null; startDate: Date | null; endDate: Date | null; priority: number | null } | null = null;
-
-        // If no price provided, calculate from rate
-        if (!booking.totalPrice || totalPrice === 0) {
-          const bookingStartDate = new Date(utcStart);
-          const bookingEndDate = new Date(utcEnd);
-
-          // Check tenant's booksByAssetType setting to determine rate lookup strategy
-          if (tenant?.booksByAssetType) {
-            // Look up asset type rate first
-            const assetTypeRates = await tx
-              .select({
-                rateId: schema.Rate.id,
-                pricePerNight: schema.Rate.pricePerNight,
-                startDate: schema.Rate.startDate,
-                endDate: schema.Rate.endDate,
-                priority: schema.Rate.priority,
-              })
-              .from(schema.Rate)
-              .where(eq(schema.Rate.assetTypeId, asset.assetTypeId!));
-
-            const applicableTypeRates = assetTypeRates.filter((rate) => {
-              if (!rate.startDate || !rate.endDate) return false;
-              const rateStart = new Date(rate.startDate);
-              const rateEnd = new Date(rate.endDate);
-              return rateStart <= bookingEndDate && rateEnd >= bookingStartDate;
-            });
-
-            applicableTypeRates.sort((a, b) => (a.priority ?? 100) - (b.priority ?? 100));
-            bestRate = applicableTypeRates[0] || null;
-
-            // Fallback to asset-specific rate if no asset type rate found
-            if (!bestRate) {
-              const assetRates = await tx
-                .select({
-                  rateId: schema.AssetHasRates.rateId,
-                  pricePerNight: schema.Rate.pricePerNight,
-                  startDate: schema.Rate.startDate,
-                  endDate: schema.Rate.endDate,
-                  priority: schema.Rate.priority,
-                })
-                .from(schema.AssetHasRates)
-                .innerJoin(schema.Rate, eq(schema.AssetHasRates.rateId, schema.Rate.id))
-                .where(eq(schema.AssetHasRates.assetId, booking.assetId));
-
-              const applicableRates = assetRates.filter((rate) => {
-                if (!rate.startDate || !rate.endDate) return false;
-                const rateStart = new Date(rate.startDate);
-                const rateEnd = new Date(rate.endDate);
-                return rateStart <= bookingEndDate && rateEnd >= bookingStartDate;
-              });
-
-              applicableRates.sort((a, b) => (a.priority ?? 100) - (b.priority ?? 100));
-              bestRate = applicableRates[0] || null;
-            }
-          } else {
-            // Look up asset-specific rate first
-            const assetRates = await tx
-              .select({
-                rateId: schema.AssetHasRates.rateId,
-                pricePerNight: schema.Rate.pricePerNight,
-                startDate: schema.Rate.startDate,
-                endDate: schema.Rate.endDate,
-                priority: schema.Rate.priority,
-              })
-              .from(schema.AssetHasRates)
-              .innerJoin(schema.Rate, eq(schema.AssetHasRates.rateId, schema.Rate.id))
-              .where(eq(schema.AssetHasRates.assetId, booking.assetId));
-
-            const applicableRates = assetRates.filter((rate) => {
-              if (!rate.startDate || !rate.endDate) return false;
-              const rateStart = new Date(rate.startDate);
-              const rateEnd = new Date(rate.endDate);
-              return rateStart <= bookingEndDate && rateEnd >= bookingStartDate;
-            });
-
-            applicableRates.sort((a, b) => (a.priority ?? 100) - (b.priority ?? 100));
-            bestRate = applicableRates[0] || null;
-
-            // Fallback to asset type rate if no asset-specific rate found
-            if (!bestRate && asset.assetTypeId) {
-              const assetTypeRates = await tx
-                .select({
-                  rateId: schema.Rate.id,
-                  pricePerNight: schema.Rate.pricePerNight,
-                  startDate: schema.Rate.startDate,
-                  endDate: schema.Rate.endDate,
-                  priority: schema.Rate.priority,
-                })
-                .from(schema.Rate)
-                .where(eq(schema.Rate.assetTypeId, asset.assetTypeId));
-
-              const applicableTypeRates = assetTypeRates.filter((rate) => {
-                if (!rate.startDate || !rate.endDate) return false;
-                const rateStart = new Date(rate.startDate);
-                const rateEnd = new Date(rate.endDate);
-                return rateStart <= bookingEndDate && rateEnd >= bookingStartDate;
-              });
-
-              applicableTypeRates.sort((a, b) => (a.priority ?? 100) - (b.priority ?? 100));
-              bestRate = applicableTypeRates[0] || null;
-            }
-          }
-
-          // Throw error if no rate found
-          if (!bestRate) {
-            throw new ConflictException('No rate has been set for this booking period. Please contact the administrator to set up rates before booking.');
-          }
-
-          if (bestRate.pricePerNight) {
-            // Calculate number of nights
-            const timeDiff = bookingEndDate.getTime() - bookingStartDate.getTime();
-            const numberOfNights = Math.ceil(timeDiff / (1000 * 60 * 60 * 24));
-            const pricePerNight = parseFloat(bestRate.pricePerNight.toString());
-            totalPrice = numberOfNights * pricePerNight;
-          }
-        }
-
-        // Insert booking with Date objects
-        const [{ id }] = await tx.insert(schema.Booking).values({
-          ...booking,
-          userId: customers[0].userId, // Set userId directly on booking
-          startDate: utcStart, // ✅ real Date object, UTC normalized
-          endDate: utcEnd,
-          status: bookingStatus,
-          totalPrice: totalPrice.toString(),
-        }).$returningId();
-
-        bookingId = id;
-
-        // Create blocked date entry for this booking
-        await tx.insert(schema.BlockedDate).values({
-          tenantId: asset.tenantId,
-          assetId: booking.assetId,
-          startDate: utcStart,
-          endDate: utcEnd,
-          title: `Booking ${bookingId.slice(0, 8)}`,
-          reason: 'Customer booking',
-          bookingId: bookingId,
-        });
-
-        const updateBookingToken = `uptk_${randomBytes(32).toString('hex')}`
-
-        await tx.insert(schema.BookingUpdateToken).values({
-          bookingId: bookingId,
-          customerId: customers[0].id,
-          token: updateBookingToken,
-          expiresAt: startDate
-        })
-
-        // Save form responses if provided
-        if (formResponses && formResponses.length > 0) {
-          await tx.insert(schema.BookingFormFieldValue).values(
-            formResponses.map((response) => ({
-              bookingId: bookingId,
-              formFieldId: response.formFieldId,
-              value: response.value
-            }))
-          );
-        }
-
-        // Create invoice for the booking
-        const invoiceNumber = `INV-${Date.now()}-${bookingId.slice(0, 8).toUpperCase()}`;
-        const issueDate = new Date();
-        const dueDate = new Date(utcStart); // Due by start date of booking
-
-        // Calculate number of nights for invoice line item
-        const timeDiff = utcEnd.getTime() - utcStart.getTime();
-        const numberOfNights = Math.ceil(timeDiff / (1000 * 60 * 60 * 24));
-
-        const [{ id: invoiceId }] = await tx.insert(schema.Invoice).values({
-          tenantId: asset.tenantId,
-          invoiceNumber,
-          status: 'pending',
-          issueDate,
-          dueDate,
-          subtotal: totalPrice.toFixed(2),
-          taxAmount: '0.00', // Tax can be calculated based on tenant settings later
-          totalAmount: totalPrice.toFixed(2),
-          notes: `Invoice for booking ${bookingId}`,
-          customerId: customers[0].id,
-          bookingId: bookingId,
-        }).$returningId();
-
-        // Create invoice line item for the booking
-        const pricePerNight = bestRate?.pricePerNight ? parseFloat(bestRate.pricePerNight.toString()) : totalPrice / numberOfNights;
-        await tx.insert(schema.InvoiceItem).values({
-          invoiceId,
-          description: `${asset.name} - ${numberOfNights} night${numberOfNights > 1 ? 's' : ''} (${utcStart.toLocaleDateString()} - ${utcEnd.toLocaleDateString()})`,
-          quantity: numberOfNights,
-          unitPrice: pricePerNight.toFixed(2),
-          totalPrice: totalPrice.toFixed(2),
-        });
-
+    if (existingUser) {
+      // Check for existing customer profile for this tenant
+      const existingCustomer = await tx.query.Customer.findFirst({
+        where: (c: any, { eq, and }: any) =>
+          and(eq(c.userId, existingUser.id), eq(c.tenantId, newCustomer.tenantId)),
       });
 
-      this.eventEmitter.emit('create-booking', bookingId)
+      if (existingCustomer) {
+        return existingCustomer.id;
+      }
 
-      return bookingId;
-    } catch (e) {
-      throw new ConflictException('Error occurred while creating booking: ' + e);
+      // Create customer profile for existing user
+      const [{ id }] = await tx.insert(schema.Customer).values({
+        userId: existingUser.id,
+        phone: newCustomer.phone,
+        tenantId: newCustomer.tenantId,
+      }).$returningId();
+
+      return id;
     }
+
+    // Create new user
+    const [{ id: userId }] = await tx.insert(schema.User).values({
+      name: newCustomer.name,
+      email: newCustomer.email,
+      password: randomBytes(32).toString('hex'),
+      userType: 'customer',
+    }).$returningId();
+
+    await tx.insert(schema.TenantHasUsers).values({
+      tenantId: newCustomer.tenantId,
+      userId,
+    });
+
+    const [{ id: customerId }] = await tx.insert(schema.Customer).values({
+      userId,
+      phone: newCustomer.phone,
+      tenantId: newCustomer.tenantId,
+    }).$returningId();
+
+    return customerId;
+  }
+
+  // Helper: Calculate booking price
+  private async calculatePrice(
+    assetId: string,
+    startDate: Date,
+    endDate: Date,
+    providedPrice?: string | number | null,
+    booksByAssetType: boolean = false
+  ): Promise<{ totalPrice: number; rate: any }> {
+    if (providedPrice && parseFloat(providedPrice.toString()) > 0) {
+      return { totalPrice: parseFloat(providedPrice.toString()), rate: null };
+    }
+
+    const effectiveRate = await this.ratesService.getEffectiveRateForAsset(
+      assetId,
+      startDate,
+      endDate,
+      booksByAssetType
+    );
+
+    if (!effectiveRate) {
+      const rateType = booksByAssetType ? 'asset type' : 'asset';
+      throw new ConflictException(
+        `No active rate found for this ${rateType} during the selected booking period. Please contact the administrator to set up rates.`
+      );
+    }
+
+    if (!effectiveRate.pricePerNight) {
+      return { totalPrice: 0, rate: effectiveRate };
+    }
+
+    const numberOfNights = this.calculateNights(startDate, endDate);
+    const pricePerNight = parseFloat(effectiveRate.pricePerNight.toString());
+
+    return { totalPrice: numberOfNights * pricePerNight, rate: effectiveRate };
+  }
+
+  // Helper: Calculate number of nights
+  private calculateNights(startDate: Date, endDate: Date): number {
+    const timeDiff = endDate.getTime() - startDate.getTime();
+    return Math.ceil(timeDiff / (1000 * 60 * 60 * 24));
+  }
+
+  // Helper: Create blocked date for booking
+  // Uses date-only strings since BlockedDate table uses `date` type, not `datetime`
+  private async createBlockedDateForBooking(
+    tx: any,
+    tenantId: string,
+    assetId: string,
+    startDate: Date,
+    endDate: Date,
+    bookingId: string
+  ) {
+    await tx.insert(schema.BlockedDate).values({
+      tenantId,
+      assetId,
+      startDate: toDateOnlyString(startDate),
+      endDate: toDateOnlyString(endDate),
+      title: `Booking ${bookingId.slice(0, 8)}`,
+      reason: 'Customer booking',
+      bookingId,
+    });
+  }
+
+  private async createBlockedDate(
+    tx: any,
+    tenantId: string,
+    assetId: string,
+    startDate: Date,
+    endDate: Date,
+    bookingId: string
+  ) {
+    await this.db.insert(schema.BlockedDate).values({
+      tenantId,
+      assetId,
+      startDate: toDateOnlyString(startDate),
+      endDate: toDateOnlyString(endDate),
+      title: `Booking ${bookingId.slice(0, 8)}`,
+      reason: 'Customer booking',
+      bookingId,
+    });
+  }
+
+
+
+  // Helper: Create booking update token
+  private async createBookingUpdateToken(tx: any, bookingId: string, customerId: number, expiresAt: Date | string) {
+    const token = `uptk_${randomBytes(32).toString('hex')}`;
+    await tx.insert(schema.BookingUpdateToken).values({
+      bookingId,
+      customerId,
+      token,
+      expiresAt,
+    });
+  }
+
+  // Helper: Save form responses
+  private async saveFormResponses(tx: any, bookingId: string, formResponses: Array<{ formFieldId: number; value: string }>) {
+    await tx.insert(schema.BookingFormFieldValue).values(
+      formResponses.map((response) => ({
+        bookingId,
+        formFieldId: response.formFieldId,
+        value: response.value,
+      }))
+    );
+  }
+
+  // Helper: Create invoice for booking
+  private async createBookingInvoice(
+    tx: any,
+    asset: { id: string; name: string; tenantId: string },
+    bookingId: string,
+    customerId: number,
+    startDate: Date,
+    endDate: Date,
+    totalPrice: number,
+    ratePerNight?: string | null
+  ) {
+    const numberOfNights = this.calculateNights(startDate, endDate);
+    const invoiceNumber = `INV-${Date.now()}-${bookingId.slice(0, 8).toUpperCase()}`;
+
+    const [{ id: invoiceId }] = await tx.insert(schema.Invoice).values({
+      tenantId: asset.tenantId,
+      invoiceNumber,
+      status: 'pending',
+      issueDate: new Date(),
+      dueDate: startDate,
+      subtotal: totalPrice.toFixed(2),
+      taxAmount: '0.00',
+      totalAmount: totalPrice.toFixed(2),
+      notes: `Invoice for booking ${bookingId}`,
+      customerId,
+      bookingId,
+    }).$returningId();
+
+    const pricePerNight = ratePerNight ? parseFloat(ratePerNight.toString()) : totalPrice / numberOfNights;
+
+    await tx.insert(schema.InvoiceItem).values({
+      invoiceId,
+      description: `${asset.name} - ${numberOfNights} night${numberOfNights > 1 ? 's' : ''} (${startDate.toLocaleDateString()} - ${endDate.toLocaleDateString()})`,
+      quantity: numberOfNights,
+      unitPrice: pricePerNight.toFixed(2),
+      totalPrice: totalPrice.toFixed(2),
+    });
   }
 
   @OnEvent('create-booking')
@@ -833,121 +816,29 @@ export class BookingService {
         // Calculate total price based on rate
         let totalPrice = updateData.totalPrice ? parseFloat(updateData.totalPrice.toString()) : 0;
 
-        // If no price provided or price is 0, calculate from rate
+        // If no price provided or price is 0, calculate from rate using RatesService
         if (!updateData.totalPrice || totalPrice === 0) {
           const bookingStartDate = new Date(startDate);
           const bookingEndDate = new Date(endDate);
-          let bestRate: { rateId: number; pricePerNight: string | null; startDate: Date | null; endDate: Date | null; priority: number | null } | null = null;
 
-          // Check tenant's booksByAssetType setting to determine rate lookup strategy
-          if (tenant?.booksByAssetType) {
-            // Look up asset type rate first
-            if (asset.assetTypeId) {
-              const assetTypeRates = await tx
-                .select({
-                  rateId: schema.Rate.id,
-                  pricePerNight: schema.Rate.pricePerNight,
-                  startDate: schema.Rate.startDate,
-                  endDate: schema.Rate.endDate,
-                  priority: schema.Rate.priority,
-                })
-                .from(schema.Rate)
-                .where(eq(schema.Rate.assetTypeId, asset.assetTypeId));
+          // Use RatesService to get the effective rate, respecting booksByAssetType setting
+          const effectiveRate = await this.ratesService.getEffectiveRateForAsset(
+            updateData.assetId,
+            bookingStartDate,
+            bookingEndDate,
+            tenant?.booksByAssetType ?? false
+          );
 
-              const applicableTypeRates = assetTypeRates.filter((rate) => {
-                if (!rate.startDate || !rate.endDate) return false;
-                const rateStart = new Date(rate.startDate);
-                const rateEnd = new Date(rate.endDate);
-                return rateStart <= bookingEndDate && rateEnd >= bookingStartDate;
-              });
-
-              applicableTypeRates.sort((a, b) => (a.priority ?? 100) - (b.priority ?? 100));
-              bestRate = applicableTypeRates[0] || null;
-            }
-
-            // Fallback to asset-specific rate if no asset type rate found
-            if (!bestRate) {
-              const assetRates = await tx
-                .select({
-                  rateId: schema.AssetHasRates.rateId,
-                  pricePerNight: schema.Rate.pricePerNight,
-                  startDate: schema.Rate.startDate,
-                  endDate: schema.Rate.endDate,
-                  priority: schema.Rate.priority,
-                })
-                .from(schema.AssetHasRates)
-                .innerJoin(schema.Rate, eq(schema.AssetHasRates.rateId, schema.Rate.id))
-                .where(eq(schema.AssetHasRates.assetId, updateData.assetId));
-
-              const applicableRates = assetRates.filter((rate) => {
-                if (!rate.startDate || !rate.endDate) return false;
-                const rateStart = new Date(rate.startDate);
-                const rateEnd = new Date(rate.endDate);
-                return rateStart <= bookingEndDate && rateEnd >= bookingStartDate;
-              });
-
-              applicableRates.sort((a, b) => (a.priority ?? 100) - (b.priority ?? 100));
-              bestRate = applicableRates[0] || null;
-            }
-          } else {
-            // Look up asset-specific rate first
-            const assetRates = await tx
-              .select({
-                rateId: schema.AssetHasRates.rateId,
-                pricePerNight: schema.Rate.pricePerNight,
-                startDate: schema.Rate.startDate,
-                endDate: schema.Rate.endDate,
-                priority: schema.Rate.priority,
-              })
-              .from(schema.AssetHasRates)
-              .innerJoin(schema.Rate, eq(schema.AssetHasRates.rateId, schema.Rate.id))
-              .where(eq(schema.AssetHasRates.assetId, updateData.assetId));
-
-            const applicableRates = assetRates.filter((rate) => {
-              if (!rate.startDate || !rate.endDate) return false;
-              const rateStart = new Date(rate.startDate);
-              const rateEnd = new Date(rate.endDate);
-              return rateStart <= bookingEndDate && rateEnd >= bookingStartDate;
-            });
-
-            applicableRates.sort((a, b) => (a.priority ?? 100) - (b.priority ?? 100));
-            bestRate = applicableRates[0] || null;
-
-            // Fallback to asset type rate if no asset-specific rate found
-            if (!bestRate && asset.assetTypeId) {
-              const assetTypeRates = await tx
-                .select({
-                  rateId: schema.Rate.id,
-                  pricePerNight: schema.Rate.pricePerNight,
-                  startDate: schema.Rate.startDate,
-                  endDate: schema.Rate.endDate,
-                  priority: schema.Rate.priority,
-                })
-                .from(schema.Rate)
-                .where(eq(schema.Rate.assetTypeId, asset.assetTypeId));
-
-              const applicableTypeRates = assetTypeRates.filter((rate) => {
-                if (!rate.startDate || !rate.endDate) return false;
-                const rateStart = new Date(rate.startDate);
-                const rateEnd = new Date(rate.endDate);
-                return rateStart <= bookingEndDate && rateEnd >= bookingStartDate;
-              });
-
-              applicableTypeRates.sort((a, b) => (a.priority ?? 100) - (b.priority ?? 100));
-              bestRate = applicableTypeRates[0] || null;
-            }
+          if (!effectiveRate) {
+            const rateType = tenant?.booksByAssetType ? 'asset type' : 'asset';
+            throw new ConflictException(`No active rate found for this ${rateType} during the selected booking period. Please contact the administrator to set up rates.`);
           }
 
-          // Throw error if no rate found
-          if (!bestRate) {
-            throw new ConflictException('No rate has been set for this booking period. Please contact the administrator to set up rates before booking.');
-          }
-
-          if (bestRate.pricePerNight) {
+          if (effectiveRate.pricePerNight) {
             // Calculate number of nights
             const timeDiff = bookingEndDate.getTime() - bookingStartDate.getTime();
             const numberOfNights = Math.ceil(timeDiff / (1000 * 60 * 60 * 24));
-            const pricePerNight = parseFloat(bestRate.pricePerNight.toString());
+            const pricePerNight = parseFloat(effectiveRate.pricePerNight.toString());
             totalPrice = numberOfNights * pricePerNight;
           }
         }
@@ -976,12 +867,12 @@ export class BookingService {
           .where(eq(schema.BlockedDate.bookingId, updateData.id))
           .execute();
 
-        // Create new blocked date entry with updated dates
+        // Create new blocked date entry with updated dates (use date-only strings)
         await tx.insert(schema.BlockedDate).values({
           tenantId: asset.tenantId,
           assetId: updateData.assetId,
-          startDate,
-          endDate,
+          startDate: toDateOnlyString(startDate),
+          endDate: toDateOnlyString(endDate),
           title: `Booking ${updateData.id.slice(0, 8)}`,
           reason: 'Customer booking',
           bookingId: updateData.id,
@@ -1013,16 +904,16 @@ export class BookingService {
         .where(eq(schema.BlockedDate.bookingId, bookingId))
         .execute();
     } else if (previousStatus === 'Cancelled' && (status === 'Pending' || status === 'Confirmed')) {
-      // Re-create blocked dates when booking is un-cancelled
+      // Re-create blocked dates when booking is un-cancelled (use date-only strings)
       await this.db.insert(schema.BlockedDate)
         .values({
-          tenantId: existingBooking.asset.tenantId,
-          assetId: existingBooking.assetId,
-          startDate: existingBooking.startDate,
-          endDate: existingBooking.endDate,
+          startDate: toDateOnlyString(existingBooking.startDate),
+          endDate: toDateOnlyString(existingBooking.endDate),
           title: `Booking ${bookingId}`,
           reason: `Booking restored to ${status}`,
           bookingId: bookingId,
+          tenantId: existingBooking.asset.tenantId,
+          assetId: existingBooking.assetId,
         })
         .execute();
     }
@@ -1088,7 +979,7 @@ export class BookingService {
           if (status === 'Confirmed') {
             // Send confirmation emails
             for (const admin of tenantAdmins) {
-              const tenantEmailContent = this.generateStatusUpdateEmailForTenant({
+              const tenantEmailContent = generateStatusUpdateEmailForTenant({
                 tenantName: admin.name,
                 bookingId: booking.id,
                 assetName: asset.name,
@@ -1109,7 +1000,7 @@ export class BookingService {
             }
 
             // Send email to customer
-            const customerEmailContent = this.generateStatusUpdateEmailForCustomer({
+            const customerEmailContent = generateStatusUpdateEmailForCustomer({
               customerName: user.name,
               bookingId: booking.id,
               assetName: asset.name,
@@ -1129,7 +1020,7 @@ export class BookingService {
           } else if (status === 'Cancelled') {
             // Send cancellation emails
             for (const admin of tenantAdmins) {
-              const tenantEmailContent = this.generateStatusUpdateEmailForTenant({
+              const tenantEmailContent = generateStatusUpdateEmailForTenant({
                 tenantName: admin.name,
                 bookingId: booking.id,
                 assetName: asset.name,
@@ -1150,7 +1041,7 @@ export class BookingService {
             }
 
             // Send email to customer
-            const customerEmailContent = this.generateStatusUpdateEmailForCustomer({
+            const customerEmailContent = generateStatusUpdateEmailForCustomer({
               customerName: user.name,
               bookingId: booking.id,
               assetName: asset.name,
@@ -1222,308 +1113,6 @@ export class BookingService {
     return true
   }
 
-
-  // Check availability excluding a specific booking
-
-  // async createBookingByTag(
-  //   data: {
-  //     tagId: number;
-  //     startDate: Date;
-  //     endDate: Date;
-  //     customerIds: number[];
-  //   },
-  //   tenantId: string
-  // ) {
-  //   const { tagId, startDate, endDate, customerIds } = data;
-
-  //   // Step 1: Find all assets with this tag + tenant match
-  //   const assets = await this.db
-  //     .select({ id: schema.Asset.id })
-  //     .from(schema.Asset)
-  //     .innerJoin(schema.AssetHasTags, eq(schema.Asset.id, schema.AssetHasTags.assetId))
-  //     .where(and(
-  //       eq(schema.AssetHasTags.tagId, tagId),
-  //       eq(schema.Asset.tenantId, tenantId)
-  //     ));
-
-  //   // Step 2: Loop through assets to find first available one
-  //   for (const asset of assets) {
-  //     // Check if dates are blocked (either by booking or admin block)
-  //   const blockedDates = await this.db.query.BlockedDate.findMany({
-  //     where: (bd, { and, eq, gte, lte, or }) =>
-  //       and(
-  //         eq(bd.assetId, asset.id),
-  //         or(
-  //           and(gte(bd.startDate, startDate), lte(bd.startDate, endDate)),
-  //           and(gte(bd.endDate, startDate), lte(bd.endDate, endDate)),
-  //           and(lte(bd.startDate, startDate), gte(bd.endDate, endDate))
-  //         )
-  //       ),
-  //   });
-
-  //   if (blockedDates.length > 0) {
-  //     continue
-  //   }
-
-
-  //       // Step 3: Get userId from first customer
-  //       const firstCustomer = await this.db.query.Customer.findFirst({
-  //         where: (c, { eq }) => eq(c.id, customerIds[0]),
-  //       });
-
-  //       if (!firstCustomer) {
-  //         throw new ConflictException('Customer not found');
-  //       }
-
-  //       // Step 4: Use existing booking logic
-  //       const bookingId = await this.createBooking(
-  //         {
-  //           assetId: asset.id,
-  //           startDate,
-  //           endDate
-  //         },
-  //         customerIds
-  //       );
-
-  //       return {
-  //         message: 'Booking created by tag',
-  //         assetId: asset.id,
-  //         bookingId: bookingId ?? ''
-  //       };
-
-  //   }
-
-  //   throw new ConflictException('No available assets found for the selected tag and date range');
-  // }
-
-  // async customerCreateBookingByTag(
-  //   data: {
-  //     tagId: number;
-  //     startDate: Date;
-  //     endDate: Date;
-  //     customer: { name: string; email: string; phone?: string };
-  //     formResponses?: Array<{ formFieldId: number; value: string }>;
-  //   },
-  //   tenantId: string
-  // ): Promise<{ message: string; assetName: string }> {
-  //   const { tagId, startDate, endDate, customer, formResponses } = data;
-
-  //   // Step 1: Find all assets with this tag + tenant match
-  //   const assets = await this.db
-  //     .select({ id: schema.Asset.id, name: schema.Asset.name })
-  //     .from(schema.Asset)
-  //     .innerJoin(schema.AssetHasTags, eq(schema.Asset.id, schema.AssetHasTags.assetId))
-  //     .where(and(
-  //       eq(schema.AssetHasTags.tagId, tagId),
-  //       eq(schema.Asset.tenantId, tenantId)
-  //     ));
-
-  //   if (assets.length === 0) {
-  //     throw new NotFoundException('No assets found with the selected category');
-  //   }
-
-  //   // Step 2: Loop through assets to find first available one
-  //   for (const asset of assets) {
-  //     // Check if dates are blocked (either by booking or admin block)
-  //     const blockedDates = await this.db.query.BlockedDate.findMany({
-  //       where: (bd, { and, eq, gte, lte, or }) =>
-  //         and(
-  //           eq(bd.assetId, asset.id),
-  //           or(
-  //             and(gte(bd.startDate, startDate), lte(bd.startDate, endDate)),
-  //             and(gte(bd.endDate, startDate), lte(bd.endDate, endDate)),
-  //             and(lte(bd.startDate, startDate), gte(bd.endDate, endDate))
-  //           )
-  //         ),
-  //     });
-
-  //     if (blockedDates.length > 0) {
-  //       continue;
-  //     }
-
-  //     // Found an available asset - create booking with new customer
-  //     await this.createBooking(
-  //       {
-  //         assetId: asset.id,
-  //         startDate,
-  //         endDate,
-  //       },
-  //       [], // No existing customer IDs
-  //       { ...customer, tenantId }, // New customer info
-  //       formResponses
-  //     );
-
-  //     return {
-  //       message: 'Booking created successfully',
-  //       assetName: asset.name,
-  //     };
-  //   }
-
-  //   throw new ConflictException('No available assets found for the selected category and date range');
-  // }
-
-  // async checkAvailabilityByTag({ tagId }: { tagId: number }) {
-  //   // Step 1: Get all asset IDs for this tag
-  //   const assets = await this.db
-  //     .select({ id: schema.Asset.id })
-  //     .from(schema.Asset)
-  //     .innerJoin(schema.AssetHasTags, eq(schema.Asset.id, schema.AssetHasTags.assetId))
-  //     .where(eq(schema.AssetHasTags.tagId, (tagId)));
-
-  //   const assetIds = assets.map((a) => a.id);
-  //   const totalAssets = assetIds.length;
-
-  //   if (!totalAssets) return [];
-
-  //   // Step 2: Get all bookings for these assets
-  //   const bookings = await this.db
-  //     .select({
-  //       startDate: schema.Booking.startDate,
-  //       endDate: schema.Booking.endDate,
-  //     })
-  //     .from(schema.Booking)
-  //     .where(inArray(schema.Booking.assetId, assetIds));
-
-  //   if (!bookings.length) return [];
-
-  //   // Step 3: Map bookings to individual dates and count frequency
-  //   const dateMap = new Map<Date, number>(); // key: YYYY-MM-DD, value: count of booked assets
-
-  //   for (const booking of bookings) {
-  //     const start = booking.startDate;
-  //     const end = booking.endDate;
-  //     for (
-  //       let d = start;
-  //       d <= end;
-  //       d.setDate(d.getDate() + 1)
-  //     ) {
-  //       dateMap.set(d, (dateMap.get(d) ?? 0) + 1);
-  //     }
-  //   }
-
-  //   // Step 4: Find fully booked dates
-  //   const fullyBookedDates = [...dateMap.entries()]
-  //     .filter(([_, count]) => count >= totalAssets)
-  //     .map(([date]) => date)
-  //     .sort();
-
-  //   if (!fullyBookedDates.length) return [];
-
-  //   // Step 5: Group consecutive dates into ranges
-  //   const ranges: { from: Date; to: Date }[] = [];
-
-  //   let rangeStart = fullyBookedDates[0];
-  //   let prev = new Date(rangeStart);
-
-  //   for (let i = 1; i < fullyBookedDates.length; i++) {
-  //     const current = new Date(fullyBookedDates[i]);
-  //     const prevPlusOne = new Date(prev);
-  //     prevPlusOne.setDate(prevPlusOne.getDate() + 1);
-
-  //     if (current.getTime() !== prevPlusOne.getTime()) {
-  //       // Range ends
-  //       ranges.push({ from: rangeStart, to: prev });
-  //       rangeStart = fullyBookedDates[i];
-  //     }
-
-  //     prev = current;
-  //   }
-
-  //   // Push the final range
-  //   ranges.push({ from: rangeStart, to: prev });
-
-  //   return ranges;
-  // }
-
-  // -----------------------------
-  // Blocked Dates Methods
-  // -----------------------------
-
-
-
-  async getBlockedDates(assetId?: string) {
-    const blocked = await this.db.query.BlockedDate.findMany({
-      where: assetId ? (b) => eq(b.assetId, assetId) : undefined,
-    });
-
-    return blocked.map(b => ({
-      ...b,
-      reason: b.reason ?? undefined,
-    }));
-  }
-  async createBlockedDate(data: schema.InsertBlockedDate) {
-    const { startDate, endDate, tenantId, assetId, reason, title } = data;
-
-    const utcStart = toUTCDateTime(startDate);
-    const utcEnd = toUTCDateTime(endDate);
-
-    const conflicts = await this.db.query.BlockedDate.findMany({
-      where: (bd, { and, eq, gte, lte, or }) =>
-        and(
-          eq(bd.assetId, assetId),
-          or(
-            and(gte(bd.startDate, utcStart), lte(bd.startDate, utcEnd)),
-            and(gte(bd.endDate, utcStart), lte(bd.endDate, utcEnd))
-          )
-        ),
-    });
-
-    if (conflicts.length) {
-      throw new ConflictException('Blocked date range overlaps with existing blocked dates');
-    }
-
-    const [{ id }] = await this.db
-      .insert(schema.BlockedDate)
-      .values({
-        tenantId,
-        assetId,
-        startDate: utcStart, // ✅ Always UTC
-        endDate: utcEnd,
-        reason,
-        title,
-      })
-      .$returningId();
-
-    return { message: 'Blocked date created', blockedDateId: id };
-  }
-
-
-  async updateBlockedDate(id: number, data: schema.UpdateBlockedDate) {
-    const existing = await this.db.query.BlockedDate.findFirst({
-      where: (bd, { eq }) => eq(bd.id, id),
-    });
-
-    if (!existing) {
-      throw new NotFoundException('Blocked date not found');
-    }
-
-    await this.db.update(schema.BlockedDate)
-      .set({
-        startDate: data.startDate ? new Date(data.startDate) : existing.startDate,
-        endDate: data.endDate ? new Date(data.endDate) : existing.endDate,
-        reason: data.reason ?? existing.reason,
-        assetId: data.assetId ?? existing.assetId,
-        tenantId: data.tenantId ?? existing.tenantId,
-      })
-      .where(eq(schema.BlockedDate.id, id))
-      .execute();
-
-    return { message: 'Blocked date updated' };
-  }
-
-  async deleteBlockedDate(id: number) {
-    const existing = await this.db.query.BlockedDate.findFirst({
-      where: (bd, { eq }) => eq(bd.id, id),
-    });
-
-    if (!existing) {
-      throw new NotFoundException('Blocked date not found');
-    }
-
-    await this.db.delete(schema.BlockedDate)
-      .where(eq(schema.BlockedDate.id, id))
-      .execute();
-  }
 
   // Booking reminder methods
   @Cron('0 8 * * *') // Runs at 8 AM every day
@@ -1605,7 +1194,7 @@ export class BookingService {
 
         // Send email to each tenant admin
         for (const admin of tenantAdmins) {
-          const tenantEmailContent = this.generateTenantReminderEmail({
+          const tenantEmailContent = generateTenantReminderEmail({
             tenantName: admin.name,
             bookingId: booking.id,
             assetName: asset.name,
@@ -1625,7 +1214,7 @@ export class BookingService {
         }
 
         // Send email to customer
-        const customerEmailContent = this.generateCustomerReminderEmail({
+        const customerEmailContent = generateCustomerReminderEmail({
           customerName: user.name,
           bookingId: booking.id,
           assetName: asset.name,
@@ -1651,300 +1240,7 @@ export class BookingService {
     }
   }
 
-  private generateTenantReminderEmail(data: {
-    tenantName: string;
-    bookingId: string;
-    assetName: string;
-    customerName: string;
-    formattedStartDate: string;
-    formattedEndDate: string;
-  }): string {
-    return `
-      <!DOCTYPE html>
-      <html>
-      <head>
-        <style>
-          body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
-          .container { max-width: 600px; margin: 0 auto; padding: 20px; }
-          .header { background-color: #2563eb; color: white; padding: 20px; border-radius: 8px 8px 0 0; }
-          .content { background-color: #f8fafc; padding: 30px; border-radius: 0 0 8px 8px; }
-          .booking-details { background-color: white; padding: 20px; border-radius: 8px; margin: 20px 0; }
-          .detail-row { margin: 10px 0; padding: 10px 0; border-bottom: 1px solid #e2e8f0; }
-          .detail-label { font-weight: bold; color: #64748b; }
-          .footer { text-align: center; margin-top: 20px; color: #64748b; font-size: 14px; }
-        </style>
-      </head>
-      <body>
-        <div class="container">
-          <div class="header">
-            <h1>Booking Reminder</h1>
-          </div>
-          <div class="content">
-            <p>Hello ${data.tenantName},</p>
-            <p>This is a reminder that you have an upcoming booking starting tomorrow.</p>
-
-            <div class="booking-details">
-              <h2 style="color: #2563eb; margin-top: 0;">Booking Details</h2>
-              <div class="detail-row">
-                <span class="detail-label">Booking ID:</span> ${data.bookingId}
-              </div>
-              <div class="detail-row">
-                <span class="detail-label">Asset:</span> ${data.assetName}
-              </div>
-              <div class="detail-row">
-                <span class="detail-label">Customer:</span> ${data.customerName}
-              </div>
-              <div class="detail-row">
-                <span class="detail-label">Start Date:</span> ${data.formattedStartDate}
-              </div>
-              <div class="detail-row">
-                <span class="detail-label">End Date:</span> ${data.formattedEndDate}
-              </div>
-            </div>
-
-            <p>Please ensure that <strong>${data.assetName}</strong> is ready for the customer.</p>
-
-            <div class="footer">
-              <p>This is an automated reminder from your booking management system.</p>
-            </div>
-          </div>
-        </div>
-      </body>
-      </html>
-    `;
-  }
-
-  private generateCustomerReminderEmail(data: {
-    customerName: string;
-    bookingId: string;
-    assetName: string;
-    formattedStartDate: string;
-    formattedEndDate: string;
-  }): string {
-    return `
-      <!DOCTYPE html>
-      <html>
-      <head>
-        <style>
-          body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
-          .container { max-width: 600px; margin: 0 auto; padding: 20px; }
-          .header { background-color: #2563eb; color: white; padding: 20px; border-radius: 8px 8px 0 0; }
-          .content { background-color: #f8fafc; padding: 30px; border-radius: 0 0 8px 8px; }
-          .booking-details { background-color: white; padding: 20px; border-radius: 8px; margin: 20px 0; }
-          .detail-row { margin: 10px 0; padding: 10px 0; border-bottom: 1px solid #e2e8f0; }
-          .detail-label { font-weight: bold; color: #64748b; }
-          .footer { text-align: center; margin-top: 20px; color: #64748b; font-size: 14px; }
-          .highlight { background-color: #fef3c7; padding: 15px; border-radius: 8px; margin: 20px 0; }
-        </style>
-      </head>
-      <body>
-        <div class="container">
-          <div class="header">
-            <h1>Your Booking is Tomorrow!</h1>
-          </div>
-          <div class="content">
-            <p>Hello ${data.customerName},</p>
-            <p>This is a friendly reminder that your booking starts tomorrow.</p>
-
-            <div class="booking-details">
-              <h2 style="color: #2563eb; margin-top: 0;">Booking Details</h2>
-              <div class="detail-row">
-                <span class="detail-label">Booking ID:</span> ${data.bookingId}
-              </div>
-              <div class="detail-row">
-                <span class="detail-label">Asset:</span> ${data.assetName}
-              </div>
-              <div class="detail-row">
-                <span class="detail-label">Start Date:</span> ${data.formattedStartDate}
-              </div>
-              <div class="detail-row">
-                <span class="detail-label">End Date:</span> ${data.formattedEndDate}
-              </div>
-            </div>
-
-            <div class="highlight">
-              <strong>Important:</strong> Please be prepared to pick up <strong>${data.assetName}</strong> on ${data.formattedStartDate}.
-            </div>
-
-            <p>If you have any questions or need to make changes to your booking, please contact us as soon as possible.</p>
-
-            <p>We look forward to serving you!</p>
-
-            <div class="footer">
-              <p>This is an automated reminder from your booking management system.</p>
-            </div>
-          </div>
-        </div>
-      </body>
-      </html>
-    `;
-  }
-
-  private generateStatusUpdateEmailForTenant(data: {
-    tenantName: string;
-    bookingId: string;
-    assetName: string;
-    customerName: string;
-    formattedStartDate: string;
-    formattedEndDate: string;
-    status: 'Confirmed' | 'Cancelled';
-  }): string {
-    const isConfirmed = data.status === 'Confirmed';
-    const headerColor = isConfirmed ? '#2563eb' : '#dc2626';
-    const headerText = isConfirmed ? 'Booking Confirmed' : 'Booking Cancelled';
-    const statusBgColor = isConfirmed ? '#dbeafe' : '#fee2e2';
-    const statusTextColor = isConfirmed ? '#1e40af' : '#991b1b';
-
-    return `
-      <!DOCTYPE html>
-      <html>
-      <head>
-        <style>
-          body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
-          .container { max-width: 600px; margin: 0 auto; padding: 20px; }
-          .header { background-color: ${headerColor}; color: white; padding: 20px; border-radius: 8px 8px 0 0; }
-          .content { background-color: #f8fafc; padding: 30px; border-radius: 0 0 8px 8px; }
-          .booking-details { background-color: white; padding: 20px; border-radius: 8px; margin: 20px 0; }
-          .detail-row { margin: 10px 0; padding: 10px 0; border-bottom: 1px solid #e2e8f0; }
-          .detail-label { font-weight: bold; color: #64748b; }
-          .status-badge { background-color: ${statusBgColor}; color: ${statusTextColor}; padding: 8px 16px; border-radius: 6px; display: inline-block; font-weight: bold; }
-          .footer { text-align: center; margin-top: 20px; color: #64748b; font-size: 14px; }
-        </style>
-      </head>
-      <body>
-        <div class="container">
-          <div class="header">
-            <h1>${headerText}</h1>
-          </div>
-          <div class="content">
-            <p>Hello ${data.tenantName},</p>
-            <p>A booking has been <strong>${data.status.toLowerCase()}</strong>.</p>
-
-            <div style="text-align: center; margin: 20px 0;">
-              <span class="status-badge">${data.status.toUpperCase()}</span>
-            </div>
-
-            <div class="booking-details">
-              <h2 style="color: ${headerColor}; margin-top: 0;">Booking Details</h2>
-              <div class="detail-row">
-                <span class="detail-label">Booking ID:</span> ${data.bookingId}
-              </div>
-              <div class="detail-row">
-                <span class="detail-label">Asset:</span> ${data.assetName}
-              </div>
-              <div class="detail-row">
-                <span class="detail-label">Customer:</span> ${data.customerName}
-              </div>
-              <div class="detail-row">
-                <span class="detail-label">Start Date:</span> ${data.formattedStartDate}
-              </div>
-              <div class="detail-row">
-                <span class="detail-label">End Date:</span> ${data.formattedEndDate}
-              </div>
-            </div>
-
-            ${isConfirmed
-              ? `<p>Please ensure that <strong>${data.assetName}</strong> is ready for the customer on ${data.formattedStartDate}.</p>`
-              : `<p>The booking for <strong>${data.assetName}</strong> has been cancelled and the asset is now available for other bookings.</p>`
-            }
-
-            <div class="footer">
-              <p>This is an automated notification from your booking management system.</p>
-            </div>
-          </div>
-        </div>
-      </body>
-      </html>
-    `;
-  }
-
-  private generateStatusUpdateEmailForCustomer(data: {
-    customerName: string;
-    bookingId: string;
-    assetName: string;
-    formattedStartDate: string;
-    formattedEndDate: string;
-    status: 'Confirmed' | 'Cancelled';
-  }): string {
-    const isConfirmed = data.status === 'Confirmed';
-    const headerColor = isConfirmed ? '#2563eb' : '#dc2626';
-    const headerText = isConfirmed ? 'Your Booking is Confirmed!' : 'Your Booking Has Been Cancelled';
-    const statusBgColor = isConfirmed ? '#dbeafe' : '#fee2e2';
-    const statusTextColor = isConfirmed ? '#1e40af' : '#991b1b';
-
-    return `
-      <!DOCTYPE html>
-      <html>
-      <head>
-        <style>
-          body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
-          .container { max-width: 600px; margin: 0 auto; padding: 20px; }
-          .header { background-color: ${headerColor}; color: white; padding: 20px; border-radius: 8px 8px 0 0; }
-          .content { background-color: #f8fafc; padding: 30px; border-radius: 0 0 8px 8px; }
-          .booking-details { background-color: white; padding: 20px; border-radius: 8px; margin: 20px 0; }
-          .detail-row { margin: 10px 0; padding: 10px 0; border-bottom: 1px solid #e2e8f0; }
-          .detail-label { font-weight: bold; color: #64748b; }
-          .status-badge { background-color: ${statusBgColor}; color: ${statusTextColor}; padding: 8px 16px; border-radius: 6px; display: inline-block; font-weight: bold; }
-          .highlight { background-color: ${isConfirmed ? '#fef3c7' : '#fee2e2'}; padding: 15px; border-radius: 8px; margin: 20px 0; }
-          .footer { text-align: center; margin-top: 20px; color: #64748b; font-size: 14px; }
-        </style>
-      </head>
-      <body>
-        <div class="container">
-          <div class="header">
-            <h1>${headerText}</h1>
-          </div>
-          <div class="content">
-            <p>Hello ${data.customerName},</p>
-            <p>${isConfirmed
-              ? 'Great news! Your booking has been confirmed.'
-              : 'This email confirms that your booking has been cancelled.'
-            }</p>
-
-            <div style="text-align: center; margin: 20px 0;">
-              <span class="status-badge">${data.status.toUpperCase()}</span>
-            </div>
-
-            <div class="booking-details">
-              <h2 style="color: ${headerColor}; margin-top: 0;">Booking Details</h2>
-              <div class="detail-row">
-                <span class="detail-label">Booking ID:</span> ${data.bookingId}
-              </div>
-              <div class="detail-row">
-                <span class="detail-label">Asset:</span> ${data.assetName}
-              </div>
-              <div class="detail-row">
-                <span class="detail-label">Start Date:</span> ${data.formattedStartDate}
-              </div>
-              <div class="detail-row">
-                <span class="detail-label">End Date:</span> ${data.formattedEndDate}
-              </div>
-            </div>
-
-            <div class="highlight">
-              <strong>${isConfirmed ? 'Important:' : 'Note:'}</strong> ${isConfirmed
-                ? `Please be prepared to pick up <strong>${data.assetName}</strong> on ${data.formattedStartDate}.`
-                : 'If you cancelled by mistake or would like to create a new booking, please contact us.'
-              }
-            </div>
-
-            ${isConfirmed
-              ? '<p>If you have any questions or need to make changes, please contact us as soon as possible.</p>'
-              : '<p>Thank you for letting us know. We hope to serve you again in the future.</p>'
-            }
-
-            <p>We ${isConfirmed ? 'look forward to serving you' : 'appreciate your understanding'}!</p>
-
-            <div class="footer">
-              <p>This is an automated notification from your booking management system.</p>
-            </div>
-          </div>
-        </div>
-      </body>
-      </html>
-    `;
-  }
-
+ 
   // -----------------------------
   // Owner-specific Methods
   // -----------------------------
@@ -2049,83 +1345,6 @@ export class BookingService {
       customer,
     };
   }
-
-//   async getFullyBlockedDaysForTag(
-//   tagId: number,
-//   from: Date,
-//   to: Date,
-// ) {
-//   // 1. Get all assets with this tag
-//   const taggedAssets = await this.db
-//     .select({ assetId: schema.Asset.id })
-//     .from(schema.Asset)
-//     .innerJoin(
-//       schema.AssetHasTags,
-//       eq(schema.AssetHasTags.assetId, schema.Asset.id)
-//     )
-//     .where(eq(schema.AssetHasTags.tagId, tagId));
-
-//   if (taggedAssets.length === 0) return [];
-
-//   const assetIds = taggedAssets.map(a => a.assetId);
-
-//   // 2. Get all blocked ranges for those assets (within window)
-//   const blockedRanges = await this.db
-//     .select({
-//       assetId: schema.BlockedDate.assetId,
-//       start: schema.BlockedDate.startDate,
-//       end: schema.BlockedDate.endDate,
-//     })
-//     .from(schema.BlockedDate)
-//     .where(
-//       and(
-//         inArray(schema.BlockedDate.assetId, assetIds),
-//         lte(schema.BlockedDate.startDate, to),
-//         gte(schema.BlockedDate.endDate, from),
-//       )
-//     );
-
-//   // 3. Group ranges by asset
-//   const byAsset = new Map<string, { start: Date; end: Date }[]>();
-
-//   for (const r of blockedRanges) {
-//     if (!byAsset.has(r.assetId)) byAsset.set(r.assetId, []);
-//     byAsset.get(r.assetId)!.push({
-//       start: new Date(r.start),
-//       end: new Date(r.end),
-//     });
-//   }
-
-//   // 4. Helper — is a day blocked for an asset?
-//   const isBlocked = (
-//     day: Date,
-//     ranges: { start: Date; end: Date }[]
-//   ) => ranges.some(r => day >= r.start && day <= r.end);
-
-//   // 5. Walk days and check if ALL assets are blocked
-//   const fullyBlockedDays: Date[] = [];
-
-//   for (
-//     let d = new Date(from);
-//     d <= to;
-//     d.setDate(d.getDate() + 1)
-//   ) {
-//     let blockedForAll = true;
-
-//     for (const ranges of byAsset.values()) {
-//       if (!isBlocked(d, ranges)) {
-//         blockedForAll = false;
-//         break;
-//       }
-//     }
-
-//     if (blockedForAll) {
-//       fullyBlockedDays.push(new Date(d));
-//     }
-//   }
-
-//   return fullyBlockedDays;
-// }
 
   // -----------------------------
   // Asset Type Booking Methods
@@ -2275,132 +1494,5 @@ export class BookingService {
       assetName: availableAsset.name,
     };
   }
-
-  /**
-   * Get fully blocked days for an asset type (when all assets of that type are booked)
-   */
-async getFullyBlockedDaysForAssetType(
-  assetTypeId: number,
-  from?: Date,
-  to?: Date
-): Promise<{ start: Date; end: Date }[]> {
-
-  // 1. Get all assets of this type
-  const assets = await this.db
-    .select({ id: schema.Asset.id })
-    .from(schema.Asset)
-    .where(
-      and(
-        eq(schema.Asset.assetTypeId, assetTypeId),
-        eq(schema.Asset.available, true),
-        isNull(schema.Asset.deletedAt)
-      )
-    );
-
-  if (assets.length === 0) return [];
-
-  const assetIds = assets.map(a => a.id);
-
-  // 2. Get all blocked ranges for those assets
-  // If no date range specified, get all blocked dates; otherwise filter by date range
-  const whereConditions = [inArray(schema.BlockedDate.assetId, assetIds)];
-
-  if (from && to) {
-    whereConditions.push(
-      lte(schema.BlockedDate.startDate, to),
-      gte(schema.BlockedDate.endDate, from)
-    );
-  }
-
-  const blockedRanges = await this.db
-    .select({
-      assetId: schema.BlockedDate.assetId,
-      start: schema.BlockedDate.startDate,
-      end: schema.BlockedDate.endDate,
-    })
-    .from(schema.BlockedDate)
-    .where(and(...whereConditions));
-
-  // If no date range specified, find the min/max dates from blocked ranges
-  // and use those to check for fully blocked periods (where ALL assets are blocked)
-  if (!from || !to) {
-    if (blockedRanges.length === 0) return [];
-
-    // Find min and max dates from all blocked ranges
-    const minDate = new Date(Math.min(...blockedRanges.map(r => new Date(r.start).getTime())));
-    const maxDate = new Date(Math.max(...blockedRanges.map(r => new Date(r.end).getTime())));
-
-    // Use these as from/to and continue with the normal logic to find fully blocked periods
-    from = minDate;
-    to = maxDate;
-  }
-
-  // 3. Group ranges by asset
-  const byAsset = new Map<string, { start: Date; end: Date }[]>();
-
-  for (const r of blockedRanges) {
-    if (!byAsset.has(r.assetId)) byAsset.set(r.assetId, []);
-    byAsset.get(r.assetId)!.push({
-      start: new Date(r.start),
-      end: new Date(r.end),
-    });
-  }
-
-  // 4. Helper — is a day blocked for an asset?
-  const isBlocked = (
-    day: Date,
-    ranges: { start: Date; end: Date }[]
-  ) => ranges.some(r => day >= r.start && day <= r.end);
-
-  // 5. Walk days and build continuous ranges
-  const fullyBlockedRanges: { start: Date; end: Date }[] = [];
-
-  let currentStart: Date | null = null;
-
-  for (
-    let d = new Date(from);
-    d <= to;
-    d.setDate(d.getDate() + 1)
-  ) {
-    let blockedForAll = true;
-
-    for (const assetId of assetIds) {
-      const ranges = byAsset.get(assetId) || [];
-
-      if (!isBlocked(d, ranges)) {
-        blockedForAll = false;
-        break;
-      }
-    }
-
-    if (blockedForAll) {
-      if (!currentStart) {
-        currentStart = new Date(d);
-      }
-    } else {
-      if (currentStart) {
-        const end = new Date(d);
-        end.setDate(end.getDate() - 1);
-
-        fullyBlockedRanges.push({
-          start: currentStart,
-          end,
-        });
-
-        currentStart = null;
-      }
-    }
-  }
-
-  // If the last range runs until `to`
-  if (currentStart) {
-    fullyBlockedRanges.push({
-      start: currentStart,
-      end: new Date(to),
-    });
-  }
-
-  return fullyBlockedRanges;
-}
 
 }

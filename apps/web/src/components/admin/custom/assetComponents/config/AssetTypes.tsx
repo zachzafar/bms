@@ -178,7 +178,10 @@ export default function AssetTypes({ tenantId }: { tenantId: string }) {
   };
 
   const handleDeleteAssetType = (id: number) => {
-    deleteAssetTypeMutation({ params: { id } });
+    deleteAssetTypeMutation({
+      params: { id },
+      body: undefined
+    });
   };
 
   const cancelEdit = () => {

@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue, } from '@/components/ui/select';
@@ -33,6 +33,7 @@ import { useRouter } from 'next/navigation';
 import CopyableId from '@/components/custom/CopyableId';
 import { DateRangePicker, BlockedDateRange } from '@/components/ui/date-range-picker';
 import { DateRange } from 'react-day-picker';
+import { formatDisplayDate } from '@/lib/utils/date';
 
 
 // Booking form schema
@@ -115,9 +116,24 @@ export default function Component() {
   const { mutate: generateInvoiceFromBooking } = authClient.billing.generateInvoiceFromBooking.useMutation();
   const { mutate: createBookingByTag } = authClient.booking.createBookingByTag.useMutation();
 
-  const [assetBlockedDates, setAssetBlockedDates] = useState<BlockedDateRange[]>([]);
   const [dateRange, setDateRange] = useState<DateRange | undefined>(undefined);
   const [selectedAssetId, setSelectedAssetId] = useState<string>('');
+
+  // Fetch blocked dates for selected asset using standard React Query pattern
+  const { data: blockedDatesResponse } = authClient.blockedDates.getBlockedDatesForAssetPublic.useQuery({
+    queryKey: ['blocked-dates', selectedAssetId],
+    queryData: { params: { assetId: selectedAssetId } },
+    enabled: !!selectedAssetId,
+  });
+
+  // Transform blocked dates data
+  const assetBlockedDates: BlockedDateRange[] = useMemo(() => {
+    if (blockedDatesResponse?.status !== 200) return [];
+    return blockedDatesResponse.body.map((b) => ({
+      startDate: new Date(b.startDate),
+      endDate: new Date(b.endDate),
+    }));
+  }, [blockedDatesResponse]);
 
   // Asset search and filter state
   const [assetSearch, setAssetSearch] = useState('');
@@ -202,31 +218,6 @@ export default function Component() {
 
 
 
-  // Fetch blocked dates for a specific asset
-  const fetchBlockedDates = async (assetId: string) => {
-    if (!assetId) {
-      setAssetBlockedDates([]);
-      return;
-    }
-
-    try {
-      const res = await authClient.booking.getBlockedDatesForAssetPublic.query({
-        params: { assetId },
-      });
-      if (res.status === 200) {
-        const blocked: BlockedDateRange[] = res.body.map((b) => ({
-          startDate: new Date(b.startDate),
-          endDate: new Date(b.endDate),
-        }));
-        setAssetBlockedDates(blocked);
-      } else {
-        setAssetBlockedDates([]);
-      }
-    } catch (err) {
-      console.error('Failed to fetch blocked dates:', err);
-      setAssetBlockedDates([]);
-    }
-  };
 
   // Sync date range with form values
   useEffect(() => {
@@ -360,7 +351,6 @@ export default function Component() {
                 setCustomers([]);
                 setSelectedAssetId('');
                 setDateRange(undefined);
-                setAssetBlockedDates([]);
                 setAssetSearch('');
                 setAssetTypeFilter(undefined);
               }}
@@ -424,8 +414,6 @@ export default function Component() {
                             setDateRange(undefined);
                             form.setValue('startDate', undefined as any);
                             form.setValue('endDate', undefined as any);
-                            // Fetch blocked dates for the selected asset
-                            fetchBlockedDates(value);
                           }}
                           value={field.value}
                         >
@@ -620,8 +608,8 @@ export default function Component() {
                     <TableCell>{booking.asset.name}</TableCell>
                     <TableCell>{booking.assetType.name}</TableCell>
                     <TableCell>{booking?.user?.name}</TableCell>
-                    <TableCell>{new Date(booking.startDate).toISOString().split('T')[0]}</TableCell>
-                    <TableCell>{new Date(booking.endDate).toISOString().split('T')[0]}</TableCell>
+                    <TableCell>{formatDisplayDate(booking.startDate)}</TableCell>
+                    <TableCell>{formatDisplayDate(booking.endDate)}</TableCell>
                     <TableCell>
                       <Badge className={statusBadge.color}>
                         <StatusIcon className="h-3 w-3 mr-1" />

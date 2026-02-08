@@ -40,6 +40,7 @@ export const TenantRelations = relations(Tenant, ({ one, many }) => ({
     assetTypes: many(AssetType),
     assetProperties: many(assetProperty),
     tenanTeams: many(TenantTeams),
+    
 }));
 
 

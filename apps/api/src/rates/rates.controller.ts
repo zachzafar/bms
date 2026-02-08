@@ -1,10 +1,7 @@
-import { Body, Controller, Headers, Logger, Param, UseGuards } from '@nestjs/common';
+import { Controller, Headers, UseGuards } from '@nestjs/common';
 import { TsRestHandler, tsRestHandler } from '@ts-rest/nest';
 import { contract } from '@repo/api-contract';
 import { RatesService } from './rates.service';
-import * as schema from '@repo/api-contract';
-import { TenantService } from 'src/tenant/tenant.service';
-// import { RequireRead, RequireWrite, RequireDelete } from 'src/auth/decorators/permissions.decorator';
 import { Roles } from 'src/auth/decorators/permissions.decorator';
 import { PermissionScope } from 'src/auth/permissions';
 import { PermissionsGuard } from 'src/auth/guards/permissions/permissions.guard';
@@ -12,185 +9,70 @@ import { PermissionsGuard } from 'src/auth/guards/permissions/permissions.guard'
 @UseGuards(PermissionsGuard)
 @Controller()
 export class RatesController {
-    private readonly logger = new Logger(RatesController.name);
+  constructor(private rateService: RatesService) {}
 
-    constructor(
-        private rateService: RatesService,
-        private tenantService: TenantService
-    ) { }
+  @TsRestHandler(contract.rates.createRate)
+  @Roles(PermissionScope.RATES_WRITE)
+  async createRate(@Headers() headers: any): Promise<ReturnType<typeof tsRestHandler>> {
+    return tsRestHandler(contract.rates.createRate, async ({ body }) => {
+      const tenantId = headers['x-tenant-id'];
+      const { assetIds = [], ...rateData } = body;
 
-    @TsRestHandler(contract.rates.createRate)
-    @Roles(PermissionScope.RATES_WRITE)
-    async createRate(@Headers() headers: any): Promise<ReturnType<typeof tsRestHandler>> {
-        return tsRestHandler(contract.rates.createRate, async ({ body }) => {
-            const tenantId = headers['x-tenant-id'];
-            const { assetIds = [], ...rateData } = body;
+      const rateId = await this.rateService.createRate(tenantId, rateData, assetIds);
 
-            for (const assetId of assetIds) {
-                await this.tenantService.validateTenantAccess(tenantId, schema.Asset, assetId);
-            }
+      return {
+        status: 201,
+        body: { message: 'Successfully created rate', rateId },
+      };
+    });
+  }
 
-            const rateId = await this.rateService.createRate(rateData, assetIds);
+  @TsRestHandler(contract.rates.getRate)
+  @Roles(PermissionScope.RATES_READ)
+  async getRate(@Headers() headers: any): Promise<ReturnType<typeof tsRestHandler>> {
+    return tsRestHandler(contract.rates.getRate, async ({ params }) => {
+      const tenantId = headers['x-tenant-id'];
+      const rate = await this.rateService.getRate(tenantId, params.id);
+      return { status: 200, body: rate };
+    });
+  }
 
-            return {
-                status: 201,
-                body: {
-                    message: "Successfully created rate",
-                    rateId: rateId,
-                },
-            };
-        });
-    }
+  @TsRestHandler(contract.rates.getRates)
+  @Roles(PermissionScope.RATES_READ)
+  async getRates(@Headers() headers: any): Promise<ReturnType<typeof tsRestHandler>> {
+    return tsRestHandler(contract.rates.getRates, async ({ query }) => {
+      const tenantId = headers['x-tenant-id'];
+      const { assetId, assetTypeId } = query;
+      const page = query.page ? Number(query.page) : 1;
+      const pageSize = query.pageSize ? Number(query.pageSize) : 10;
 
-    @TsRestHandler(contract.rates.getRate)
-    @Roles(PermissionScope.RATES_READ)
-    async getRate(@Headers() headers: any): Promise<ReturnType<typeof tsRestHandler>> {
-        return tsRestHandler(contract.rates.getRate, async ({ params }) => {
-            const tenantId = headers["x-tenant-id"];
-            const rate = await this.rateService.getRate((params.id));
+      const result = await this.rateService.getRates(tenantId, assetId, assetTypeId, page, pageSize);
 
-            for (const asset of rate.assets ?? []) {
-                await this.tenantService.validateTenantAccess(tenantId, schema.Asset, asset.id);
-            }
+      return { status: 200, body: result };
+    });
+  }
 
-            return { status: 200, body: rate };
-        });
-    }
+  @TsRestHandler(contract.rates.updateRate)
+  @Roles(PermissionScope.RATES_WRITE)
+  async updateRate(@Headers() headers: any): Promise<ReturnType<typeof tsRestHandler>> {
+    return tsRestHandler(contract.rates.updateRate, async ({ params, body }) => {
+      const tenantId = headers['x-tenant-id'];
 
-    @TsRestHandler(contract.rates.getRates)
-    @Roles(PermissionScope.RATES_READ)
-    async getRates(@Headers() headers: any): Promise<ReturnType<typeof tsRestHandler>> {
-        return tsRestHandler(contract.rates.getRates, async ({ query }) => {
-            const tenantId = headers['x-tenant-id'];
-            const { assetId, assetTypeId } = query;
-            const page = query.page ? Number(query.page) : 1;
-            const pageSize = query.pageSize ? Number(query.pageSize) : 10;
+      await this.rateService.updateRate(tenantId, params.id, body);
 
-            const result = await this.rateService.getRates(assetId, assetTypeId, page, pageSize);
+      return { status: 200, body: { message: 'Successfully updated rate' } };
+    });
+  }
 
-            const authorizedRates: {
-                rate: {
-                    description: string | null;
-                    id: number;
-                    name: string;
-                    startDate: Date;
-                    assetTypeId: number | null;
-                    endDate: Date;
-                    minNights: number | null;
-                    maxNights: number | null;
-                    pricePerNight: string | null;
-                    priority: number | null;
-                };
-                assetIds: string[];
-                assetTypeIds: number[];
-            }[] = [];
+  @TsRestHandler(contract.rates.deleteRate)
+  @Roles(PermissionScope.RATES_DELETE)
+  async deleteRate(@Headers() headers: any): Promise<ReturnType<typeof tsRestHandler>> {
+    return tsRestHandler(contract.rates.deleteRate, async ({ params }) => {
+      const tenantId = headers['x-tenant-id'];
 
-            for (const item of result.data) {
-                const { rate, assetIds, assetTypeIds } = item;
-                let isAuthorized = false;
+      await this.rateService.deleteRate(tenantId, params.id);
 
-                // Check authorization via assets
-                for (const assetId of assetIds) {
-                    try {
-                        await this.tenantService.validateTenantAccess(tenantId, schema.Asset, assetId);
-                        isAuthorized = true;
-                        break;
-                    } catch (error) {
-                        continue;
-                    }
-                }
-
-                // If not authorized via assets, check via asset types
-                if (!isAuthorized && assetTypeIds.length > 0) {
-                    for (const typeId of assetTypeIds) {
-                        try {
-                            await this.tenantService.validateTenantAccess(tenantId, schema.AssetType, typeId);
-                            isAuthorized = true;
-                            break;
-                        } catch (error) {
-                            continue;
-                        }
-                    }
-                }
-
-                if (isAuthorized) {
-                    authorizedRates.push({
-                        rate,
-                        assetIds,
-                        assetTypeIds,
-                    });
-                }
-            }
-
-            return {
-                status: 200,
-                body: {
-                    data: authorizedRates,
-                    pagination: result.pagination
-                }
-            };
-        });
-    }
-
-
-
-    @TsRestHandler(contract.rates.updateRate)
-    @Roles(PermissionScope.RATES_WRITE)
-    async updateRate(@Headers() headers: any): Promise<ReturnType<typeof tsRestHandler>> {
-        return tsRestHandler(contract.rates.updateRate, async ({ params, body }) => {
-            const tenantId = headers['x-tenant-id'];
-            const { id } = params;
-
-            if (!id) {
-                throw new Error("Rate id is required");
-            }
-
-            if (body.assetIds && body.assetIds.length > 0) {
-                for (const assetId of body.assetIds) {
-                    await this.tenantService.validateTenantAccess(tenantId, schema.Asset, assetId);
-                }
-            }
-
-            await this.rateService.updateRate(id, body);
-
-            return {
-                status: 200,
-                body: { message: "successfully updated rate" },
-            };
-        });
-    }
-
-    @TsRestHandler(contract.rates.deleteRate)
-    @Roles(PermissionScope.RATES_DELETE)
-    async deleteRate(@Headers() headers: any, @Param('id') rateId: string): Promise<ReturnType<typeof tsRestHandler>> {
-        return tsRestHandler(contract.rates.deleteRate, async ({ params }) => {
-            const rateId = params.id;
-
-            // Directly delete the rate based on the rateId without tenant validation
-            try {
-                await this.rateService.deleteRate(rateId);
-                return { status: 204, body: undefined };  // Use `undefined` instead of `null`
-            } catch (error) {
-                // Handle error case if deletion fails
-                return { status: 404, body: { message: 'Rate not found' } };
-            }
-        });
-    }
-
-
-    // @TsRestHandler(contract.rates.getRatesInRange)
-    // async getRatesInRange(@Headers() headers: any): Promise<ReturnType<typeof tsRestHandler>> {
-    //     return tsRestHandler(contract.rates.getRatesInRange, async ({ query }) => {
-    //         const tenantId = headers['x-tenant-id'];
-    //         const { assetId, startDate, endDate } = query;
-
-    //         // validate tenant for the requested asset
-    //         if (assetId) {
-    //             await this.tenantService.validateTenantAccess(tenantId, schema.Asset, assetId);
-    //         }
-
-    //         const rates = await this.rateService.getRatesInRange({ assetId, startDate, endDate });
-    //         return { status: 200, body: rates };
-    //     });
-    // }
+      return { status: 204, body: undefined };
+    });
+  }
 }

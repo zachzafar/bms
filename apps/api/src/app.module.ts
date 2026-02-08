@@ -21,6 +21,7 @@ import { SlotModule } from './slot/slot.module';
 import { EventEmitterModule } from '@nestjs/event-emitter';
 import { EmailModule } from './email/email.module';
 import { RatesModule } from './rates/rates.module';
+import { BlockedDatesModule } from './blocked-dates/blocked-dates.module';
 import { TagsModule } from './tags/tags.module';
 import { BillingModule } from './billing/billing.module';
 import { CrmModule } from './crm/crm.module';
@@ -66,6 +67,7 @@ const allowAllCorsEndpoints = [
     EventEmitterModule.forRoot(),
     EmailModule,
     RatesModule,
+    BlockedDatesModule,
     TagsModule,
     BillingModule,
     CrmModule,
