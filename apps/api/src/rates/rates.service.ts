@@ -1,4 +1,4 @@
-import { ConflictException, Inject, Injectable, NotFoundException } from '@nestjs/common';
+import { ConflictException, Inject, Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { MySql2Database } from 'drizzle-orm/mysql2';
 import { and, eq, sql, desc } from 'drizzle-orm';
 import * as schema from '@repo/api-contract';
@@ -7,6 +7,7 @@ import { InsertRate, UpdateRate, InsertRateType, UpdateRateType } from '@repo/ap
 
 @Injectable()
 export class RatesService {
+      private logger = new Logger(RatesService.name);
   constructor(
     @Inject(DrizzleAsyncProvider) private db: MySql2Database<typeof schema>,
   ) { }
@@ -301,14 +302,14 @@ export class RatesService {
           const rateStart = new Date(rate.startDate);
           const rateEnd = new Date(rate.endDate);
           if (rateStart > bookingStartDate || rateEnd < bookingEndDate) return false;
-
+          this.logger.log(' passed date range doesnt cover booking check ')
           // 2. Check min/max duration (in units of the rate type)
           const unitMinutes = rate.rateTypeMinutes || 1440;
           const bookedUnits = Math.ceil(bookingMinutes / unitMinutes);
-
-          if (rate.minDuration != null && bookedUnits < rate.minDuration) return false;
-          if (rate.maxDuration != null && bookedUnits > rate.maxDuration) return false;
-
+          this.logger.log(`booked units ${bookedUnits} min ${rate.minDuration} max ${rate.maxDuration} `)
+          if (rate.minDuration != null && bookedUnits < (rate.minDuration/unitMinutes)) return false;
+          if (rate.maxDuration != null && bookedUnits > (rate.maxDuration/unitMinutes)) return false;
+          this.logger.log(' passed min max checks')
           return true;
         })
         // Sort by latest createdAt first
@@ -367,7 +368,7 @@ export class RatesService {
           eq(schema.AssetHasRates.assetId, assetId),
           eq(schema.Rate.isActive, true)
         ));
-
+      this.logger.log(JSON.stringify(assetRates))
       const applicable = filterApplicableRates(assetRates);
       return applicable.length > 0 ? { ...applicable[0], source: 'asset' as const } : null;
     }
