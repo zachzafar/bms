@@ -85,33 +85,28 @@ export async function getSession() {
 export async function deleteSession() {
   try {
     const cookieStore = cookies();
-    const allCookies = cookieStore.getAll();
-
     const domain = process.env.DOMAIN;
+    const expired = new Date(0);
 
+    // Expire the session cookie using set() with the exact same flags it was
+    // created with — this is more reliable than delete() for domain-scoped cookies.
+    cookieStore.set("session", "", {
+      httpOnly: true,
+      secure: process.env.SECURE === "true",
+      expires: expired,
+      maxAge: 0,
+      sameSite: "lax",
+      path: "/",
+      domain,
+    });
+
+    // Also try remaining cookies without domain (client-side cookies)
+    const allCookies = cookieStore.getAll();
     for (const cookie of allCookies) {
-      // Delete with explicit domain (e.g. app.bookos.xyz)
-      if (domain) {
-        cookieStore.delete({
-          name: cookie.name,
-          path: "/",
-          domain,
-        });
-
-        // Also try with leading dot (.app.bookos.xyz) — browsers
-        // normalise domains this way when storing cookies
-        const dotDomain = domain.startsWith(".") ? domain : `.${domain}`;
-        cookieStore.delete({
-          name: cookie.name,
-          path: "/",
-          domain: dotDomain,
-        });
-      }
-
-      // Also delete without domain (for client-side cookies set without domain)
-      cookieStore.delete({
-        name: cookie.name,
+      cookieStore.set(cookie.name, "", {
         path: "/",
+        expires: expired,
+        maxAge: 0,
       });
     }
 
