@@ -6,7 +6,6 @@ import { z } from "zod";
 import { Booking } from "../booking";
 import { v4 as uuid } from "uuid";
 import { Tenant } from "../tenant";
-import { CommunicationLog, Contact, Document, Inquiry, Task } from "../crm";
 
 
 // User Model
@@ -34,10 +33,6 @@ export const userRelations = relations(User, ({ one, many }) => ({
     }),
     userToRoles: many(UserHasRoles),
     usersToAssets: many(UserHasAssets),
-    inquiries: many(Inquiry),
-    communications: many(CommunicationLog),
-    tasks: many(Task),
-    documentsUploaded: many(Document),
 }));
 
 export const InsertUserSchema = createInsertSchema(User)
@@ -72,13 +67,43 @@ export const UserHasAssetsRelations = relations(UserHasAssets, ({ one }) => ({
     })
 }))
 
+// CustomerType Model - defines types of customers for a tenant
+export const CustomerType = mysqlTable("customer_types", {
+    id: bigint("id", { mode: "number", unsigned: true }).autoincrement().primaryKey(),
+    name: varchar("name", { length: 255 }).notNull(),
+    description: text("description"),
+    createdAt: timestamp('createdAt').notNull().defaultNow(),
+    updatedAt: timestamp('updated_at', { mode: 'date', }).$onUpdate(() => new Date()),
+    deletedAt: timestamp('deleted_at'),
+    tenantId: varchar("tenant_id", { length: 255 }).notNull().references(() => Tenant.id),
+}, (table) => ({
+    tenantNameIdx: uniqueIndex("customer_type_tenant_name_idx").on(table.tenantId, table.name),
+    deletedAtIdx: index("customer_type_deleted_at_idx").on(table.deletedAt),
+}));
+
+export const InsertCustomerTypeSchema = createInsertSchema(CustomerType);
+export const SelectCustomerTypeSchema = createSelectSchema(CustomerType);
+export const UpdateCustomerTypeSchema = InsertCustomerTypeSchema.partial().required({ id: true });
+
+export type InsertCustomerType = z.infer<typeof InsertCustomerTypeSchema>;
+export type SelectCustomerType = z.infer<typeof SelectCustomerTypeSchema>;
+export type UpdateCustomerType = z.infer<typeof UpdateCustomerTypeSchema>;
+
+export const customerTypeRelations = relations(CustomerType, ({ one, many }) => ({
+    tenant: one(Tenant, {
+        fields: [CustomerType.tenantId],
+        references: [Tenant.id],
+    }),
+    customers: many(Customer),
+}));
+
 // Customer Model
 export const Customer = mysqlTable("customer_details", {
     id: bigint("id", { mode: "number", unsigned: true }).autoincrement().primaryKey(),
     phone: varchar("phone", { length: 255 }),
     address: varchar("address", { length: 255 }),
-    contactId: bigint("contact_id", { mode: 'number', unsigned: true })
-      .references(() => Contact.id),
+    customerTypeId: bigint("customer_type_id", { mode: 'number', unsigned: true })
+      .references(() => CustomerType.id),
     createdAt: timestamp('createdAt').notNull().defaultNow(),
     updatedAt: timestamp('updated_at', { mode: 'date', }).$onUpdate(() => new Date()),
     deletedAt: timestamp('deleted_at'),
@@ -101,11 +126,10 @@ export const customerRelations = relations(Customer, ({ one }) => ({
         fields: [Customer.userId],
         references: [User.id],
     }),
-    contact: one(Contact, {
-        fields: [Customer.contactId],
-        references: [Contact.id],
+    customerType: one(CustomerType, {
+        fields: [Customer.customerTypeId],
+        references: [CustomerType.id],
     }),
-
 }));
 
 
@@ -114,8 +138,6 @@ export const Owner = mysqlTable("owner_details", {
     id: bigint("id", { mode: "number", unsigned: true }).autoincrement().primaryKey(),
     phone: varchar("phone", { length: 255 }),
     address: varchar("address", { length: 255 }),
-    contactId: bigint("contact_id", { mode: 'number', unsigned: true })
-      .references(() => Contact.id),
     createdAt: timestamp('createdAt').notNull().defaultNow(),
     updatedAt: timestamp('updated_at', { mode: 'date', }).$onUpdate(() => new Date()),
     deletedAt: timestamp('deleted_at'),
@@ -137,10 +159,6 @@ export const ownerRelations = relations(Owner, ({ one, many }) => ({
     user: one(User, {
         fields: [Owner.userId],
         references: [User.id],
-    }),
-    contact: one(Contact, {
-        fields: [Owner.contactId],
-        references: [Contact.id],
     }),
 }))
 

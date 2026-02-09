@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue, } from '@/components/ui/select';
@@ -33,6 +33,7 @@ import { useRouter } from 'next/navigation';
 import CopyableId from '@/components/custom/CopyableId';
 import { DateRangePicker, BlockedDateRange } from '@/components/ui/date-range-picker';
 import { DateRange } from 'react-day-picker';
+import { formatDisplayDate } from '@/lib/utils/date';
 
 
 // Booking form schema
@@ -40,17 +41,19 @@ const bookingFormSchema = z.object({
   assetId: z.string().min(1, { message: 'Asset is required' }),
   startDate: z.date(),
   endDate: z.date(),
+  startTime: z.string().default('00:00'),
+  endTime: z.string().default('23:59'),
 });
 
 type BookingFormValues = z.infer<typeof bookingFormSchema>;
 
-// Helper: calculate nights between two dates
-function calculateNights(start: Date | string, end: Date | string) {
+// Helper: calculate duration in minutes between two dates
+function calculateDurationMinutes(start: Date | string, end: Date | string) {
   const startDate = start instanceof Date ? start : new Date(start);
   const endDate = end instanceof Date ? end : new Date(end);
 
   return Math.ceil(
-    (endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24)
+    (endDate.getTime() - startDate.getTime()) / (1000 * 60)
   );
 }
 
@@ -68,23 +71,23 @@ function getStatusBadge(status: string) {
   }
 }
 
-// Helper: find applicable rate for asset and nights
+// Helper: find applicable rate for asset and duration (in minutes)
 function getApplicableRate(
   assetId: string,
-  nights: number,
+  durationMinutes: number,
   rates: {
     assetId: string;
-    minNights?: number;
-    maxNights?: number;
-    pricePerNight?: number;
+    minDuration?: number;
+    maxDuration?: number;
+    pricePerUnit?: number;
     priority?: number;
   }[]
 ) {
   const applicableRates = rates.filter(
     (rate) =>
       rate.assetId === assetId &&
-      (!rate.minNights || rate.minNights <= nights) &&
-      (!rate.maxNights || rate.maxNights >= nights)
+      (!rate.minDuration || rate.minDuration <= durationMinutes) &&
+      (!rate.maxDuration || rate.maxDuration >= durationMinutes)
   );
   if (applicableRates.length === 0) return null;
   return applicableRates.reduce((prev, curr) =>
@@ -115,9 +118,24 @@ export default function Component() {
   const { mutate: generateInvoiceFromBooking } = authClient.billing.generateInvoiceFromBooking.useMutation();
   const { mutate: createBookingByTag } = authClient.booking.createBookingByTag.useMutation();
 
-  const [assetBlockedDates, setAssetBlockedDates] = useState<BlockedDateRange[]>([]);
   const [dateRange, setDateRange] = useState<DateRange | undefined>(undefined);
   const [selectedAssetId, setSelectedAssetId] = useState<string>('');
+
+  // Fetch blocked dates for selected asset using standard React Query pattern
+  const { data: blockedDatesResponse } = authClient.blockedDates.getBlockedDatesForAssetPublic.useQuery({
+    queryKey: ['blocked-dates', selectedAssetId],
+    queryData: { params: { assetId: selectedAssetId } },
+    enabled: !!selectedAssetId,
+  });
+
+  // Transform blocked dates data
+  const assetBlockedDates: BlockedDateRange[] = useMemo(() => {
+    if (blockedDatesResponse?.status !== 200) return [];
+    return blockedDatesResponse.body.map((b) => ({
+      startDate: new Date(b.startDate),
+      endDate: new Date(b.endDate),
+    }));
+  }, [blockedDatesResponse]);
 
   // Asset search and filter state
   const [assetSearch, setAssetSearch] = useState('');
@@ -161,9 +179,9 @@ export default function Component() {
     {
       id: number;
       assetId: string;
-      minNights?: number;
-      maxNights?: number;
-      pricePerNight?: number;
+      minDuration?: number;
+      maxDuration?: number;
+      pricePerUnit?: number;
       priority?: number;
     }[]
   >([]);
@@ -174,10 +192,10 @@ export default function Component() {
         item.assetIds.map((assetId) => ({
           ...item.rate,
           assetId,
-          minNights: item.rate.minNights ?? undefined,
-          maxNights: item.rate.maxNights ?? undefined,
-          pricePerNight: item.rate.pricePerNight
-            ? Number(item.rate.pricePerNight)
+          minDuration: item.rate.minDuration ?? undefined,
+          maxDuration: item.rate.maxDuration ?? undefined,
+          pricePerUnit: item.rate.pricePerUnit
+            ? Number(item.rate.pricePerUnit)
             : undefined,
           priority: item.rate.priority ?? undefined,
         }))
@@ -193,6 +211,8 @@ export default function Component() {
     resolver: zodResolver(bookingFormSchema),
     defaultValues: {
       assetId: '',
+      startTime: '00:00',
+      endTime: '23:59',
     },
   });
 
@@ -202,41 +222,25 @@ export default function Component() {
 
 
 
-  // Fetch blocked dates for a specific asset
-  const fetchBlockedDates = async (assetId: string) => {
-    if (!assetId) {
-      setAssetBlockedDates([]);
-      return;
-    }
 
-    try {
-      const res = await authClient.booking.getBlockedDatesForAssetPublic.query({
-        params: { assetId },
-      });
-      if (res.status === 200) {
-        const blocked: BlockedDateRange[] = res.body.map((b) => ({
-          startDate: new Date(b.startDate),
-          endDate: new Date(b.endDate),
-        }));
-        setAssetBlockedDates(blocked);
-      } else {
-        setAssetBlockedDates([]);
-      }
-    } catch (err) {
-      console.error('Failed to fetch blocked dates:', err);
-      setAssetBlockedDates([]);
-    }
-  };
+  const startTime = form.watch('startTime');
+  const endTime = form.watch('endTime');
 
-  // Sync date range with form values
+  // Sync date range + time into form startDate/endDate
   useEffect(() => {
     if (dateRange?.from) {
-      form.setValue('startDate', dateRange.from);
+      const [sh, sm] = (startTime || '00:00').split(':').map(Number);
+      const start = new Date(dateRange.from);
+      start.setHours(sh, sm, 0, 0);
+      form.setValue('startDate', start);
     }
     if (dateRange?.to) {
-      form.setValue('endDate', dateRange.to);
+      const [eh, em] = (endTime || '23:59').split(':').map(Number);
+      const end = new Date(dateRange.to);
+      end.setHours(eh, em, 0, 0);
+      form.setValue('endDate', end);
     }
-  }, [dateRange, form]);
+  }, [dateRange, startTime, endTime, form]);
 
 
 
@@ -360,7 +364,6 @@ export default function Component() {
                 setCustomers([]);
                 setSelectedAssetId('');
                 setDateRange(undefined);
-                setAssetBlockedDates([]);
                 setAssetSearch('');
                 setAssetTypeFilter(undefined);
               }}
@@ -424,8 +427,6 @@ export default function Component() {
                             setDateRange(undefined);
                             form.setValue('startDate', undefined as any);
                             form.setValue('endDate', undefined as any);
-                            // Fetch blocked dates for the selected asset
-                            fetchBlockedDates(value);
                           }}
                           value={field.value}
                         >
@@ -473,6 +474,36 @@ export default function Component() {
                       Please select an asset first to see available dates
                     </p>
                   )}
+                </div>
+
+                {/* Time Selection */}
+                <div className="grid grid-cols-2 gap-4">
+                  <FormField
+                    control={form.control}
+                    name="startTime"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Start Time</FormLabel>
+                        <FormControl>
+                          <Input type="time" {...field} disabled={!selectedAssetId} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="endTime"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>End Time</FormLabel>
+                        <FormControl>
+                          <Input type="time" {...field} disabled={!selectedAssetId} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
                 </div>
 
                 {/* Customer Selection */}
@@ -620,8 +651,8 @@ export default function Component() {
                     <TableCell>{booking.asset.name}</TableCell>
                     <TableCell>{booking.assetType.name}</TableCell>
                     <TableCell>{booking?.user?.name}</TableCell>
-                    <TableCell>{new Date(booking.startDate).toISOString().split('T')[0]}</TableCell>
-                    <TableCell>{new Date(booking.endDate).toISOString().split('T')[0]}</TableCell>
+                    <TableCell>{formatDisplayDate(booking.startDate)}</TableCell>
+                    <TableCell>{formatDisplayDate(booking.endDate)}</TableCell>
                     <TableCell>
                       <Badge className={statusBadge.color}>
                         <StatusIcon className="h-3 w-3 mr-1" />

@@ -17,6 +17,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { toast } from 'sonner';
 import { Pencil, Trash2, Plus } from 'lucide-react';
+import { formatDisplayDate, formatDateForInput, parseDateInputAsUTC } from '@/lib/utils/date';
 
 const BookingSchema = z.object({
   assetId: z.string().min(1, 'Asset is required'),
@@ -79,8 +80,8 @@ export default function Bookings({ userId }: { userId: string }) {
         body: {
           booking: {
             assetId: values.assetId,
-            startDate: new Date(values.startDate),
-            endDate: new Date(values.endDate),
+            startDate: parseDateInputAsUTC(values.startDate),
+            endDate: parseDateInputAsUTC(values.endDate),
             status: values.status || 'Confirmed',
           },
           customers: [customerIdNum],
@@ -107,8 +108,8 @@ export default function Bookings({ userId }: { userId: string }) {
         params: { id: bookingId },
         body: {
           assetId: values.assetId,
-          startDate: new Date(values.startDate).toISOString(),
-          endDate: new Date(values.endDate).toISOString(),
+          startDate: parseDateInputAsUTC(values.startDate).toISOString(),
+          endDate: parseDateInputAsUTC(values.endDate).toISOString(),
           status: values.status || undefined,
         } as any,
       },
@@ -169,16 +170,16 @@ export default function Bookings({ userId }: { userId: string }) {
                   <TableRow key={b.id}>
                     <TableCell className="font-medium">{b.id}</TableCell>
                     <TableCell>{b.asset?.name ?? '-'}</TableCell>
-                    <TableCell>{new Date(b.startDate).toLocaleDateString()}</TableCell>
-                    <TableCell>{new Date(b.endDate).toLocaleDateString()}</TableCell>
+                    <TableCell>{formatDisplayDate(b.startDate)}</TableCell>
+                    <TableCell>{formatDisplayDate(b.endDate)}</TableCell>
                     <TableCell>{b.status}</TableCell>
                     <TableCell className="flex gap-2">
                       <Button variant="ghost" size="icon" onClick={() => {
                         setOpenEditId(String(b.id));
                         editForm.reset({
                           assetId: b.asset?.id ?? '',
-                          startDate: new Date(b.startDate).toISOString().split('T')[0],
-                          endDate: new Date(b.endDate).toISOString().split('T')[0],
+                          startDate: formatDateForInput(b.startDate),
+                          endDate: formatDateForInput(b.endDate),
                           status: b.status,
                         });
                       }}>

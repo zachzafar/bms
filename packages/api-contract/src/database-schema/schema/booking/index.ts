@@ -1,10 +1,10 @@
 import { relations} from "drizzle-orm";
-import { mysqlTable, varchar, datetime, decimal, text, timestamp, int, index, serial, boolean, bigint, date, mysqlEnum, uniqueIndex } from "drizzle-orm/mysql-core";
+import { mysqlTable, varchar, datetime, decimal, text, timestamp, index, bigint, date, mysqlEnum } from "drizzle-orm/mysql-core";
 import { Customer, User } from "../users";
-import { Asset, AssetHasRates } from "../asset";
+import { Asset } from "../asset";
 import { createInsertSchema, createSelectSchema } from "drizzle-zod";
 import { z } from "zod";
-import { AssetType, BookingFormField } from "../settings";
+import { BookingFormField } from "../settings";
 import { v4 as uuid } from "uuid";
 import { Tenant } from "../tenant";
 
@@ -118,46 +118,13 @@ export const SlotRelations = relations(Slot, ({ one }) => ({
     }),
 }));
 
-export const Rate = mysqlTable("rate", {
-  id: bigint("id", { mode: "number", unsigned: true }).autoincrement().primaryKey(),
-  name: varchar("name", { length: 255 }).notNull(),
-  assetTypeId: bigint("rate_id", { mode: "number", unsigned: true }).references(() => AssetType.id, { onDelete: 'cascade' }),
-  description: text("description"),
-  startDate: date("start_date").notNull(),
-  endDate: date("end_date").notNull(),
-  minNights: int("min_nights"),
-  maxNights: int("max_nights"),
-  pricePerNight: decimal("price_per_night"),
-  priority: int("priority").default(100),
-});
-
-
-export const InsertRateSchema = createInsertSchema(Rate)
-  .omit({ startDate: true, endDate: true, minNights:true,maxNights: true })
-  .extend({
-    startDate: z.coerce.date(),
-    endDate: z.coerce.date(),
-    minNights: z.coerce.number(),
-    maxNights: z.coerce.number(),
-  });
-export const SelectRateSchema = createSelectSchema(Rate);
-export const UpdateRateSchema = InsertRateSchema.partial();
-
-export type InsertRate = z.infer<typeof InsertRateSchema>;
-export type SelectRate = z.infer<typeof SelectRateSchema>;
-export type UpdateRate = z.infer<typeof UpdateRateSchema>;
-
-export const RatesRelations = relations(Rate, ({ many }) => ({
-  assets: many(AssetHasRates),
-}));
-
 // Blocked Dates table
 export const BlockedDate = mysqlTable("blocked_date", {
   id: bigint("id", { mode: "number", unsigned: true }).autoincrement().primaryKey(),
-  tenantId: varchar("tenant_id", { length: 255 }).notNull(),
-  assetId: varchar("asset_id", { length: 255 }).notNull(), // optional if block is asset-specific
-  startDate: date("start_date").notNull(),
-  endDate: date("end_date").notNull(),
+  tenantId: varchar("tenant_id", { length: 255 }).notNull().references(() => Tenant.id, { onDelete: 'cascade'}),
+  assetId: varchar("asset_id", { length: 255 }).notNull(),
+  startDate: datetime("start_date").notNull(),
+  endDate: datetime("end_date").notNull(),
   title: varchar("title", { length: 255 }).notNull(),
   reason: varchar("reason", { length: 255 }),
   bookingId: varchar("booking_id", { length: 36 }).references(() => Booking.id, { onDelete: 'cascade' }), // If this block is for a booking - cascade delete when booking is deleted
@@ -200,6 +167,10 @@ export const BlockedDateRelations = relations(BlockedDate, ({ one }) => ({
     fields: [BlockedDate.bookingId],
     references: [Booking.id],
   }),
+  tenant: one(Tenant, {
+    fields: [BlockedDate.tenantId],
+    references: [Tenant.id]
+  })
 }));
 
 export const BookingUpdateToken = mysqlTable('booking_upate_token',{

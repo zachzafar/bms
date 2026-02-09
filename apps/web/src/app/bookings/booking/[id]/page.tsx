@@ -16,6 +16,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { toast } from 'sonner';
 import { Calendar, User, DollarSign, MapPin, Phone, Mail, Edit } from 'lucide-react';
+import { formatDisplayDate, formatDateForInput, parseDateInputAsUTC } from '@/lib/utils/date';
 
 type BookingFormData = {
   form: {
@@ -101,15 +102,15 @@ export default function BookingDetailsPage() {
     resolver: zodResolver(UpdateBookingSchema),
     defaultValues: {
       assetId: booking?.assetId ?? '',
-      startDate: booking?.startDate ? new Date(booking.startDate).toISOString().split('T')[0] : '',
-      endDate: booking?.endDate ? new Date(booking.endDate).toISOString().split('T')[0] : '',
+      startDate: booking?.startDate ? formatDateForInput(booking.startDate) : '',
+      endDate: booking?.endDate ? formatDateForInput(booking.endDate) : '',
       status: booking?.status ?? 'Pending',
       totalPrice: booking?.totalPrice ?? '',
     },
     values: {
       assetId: booking?.assetId ?? '',
-      startDate: booking?.startDate ? new Date(booking.startDate).toISOString().split('T')[0] : '',
-      endDate: booking?.endDate ? new Date(booking.endDate).toISOString().split('T')[0] : '',
+      startDate: booking?.startDate ? formatDateForInput(booking.startDate) : '',
+      endDate: booking?.endDate ? formatDateForInput(booking.endDate) : '',
       status: booking?.status ?? 'Pending',
       totalPrice: booking?.totalPrice ?? '',
     }
@@ -123,8 +124,8 @@ export default function BookingDetailsPage() {
         params: { id: bookingId },
         body: {
           id: bookingId,
-          startDate: new Date(values.startDate),
-          endDate: new Date(values.endDate),
+          startDate: parseDateInputAsUTC(values.startDate),
+          endDate: parseDateInputAsUTC(values.endDate),
           status: values.status,
           totalPrice: values.totalPrice || booking.totalPrice,
           assetId: values.assetId,
@@ -184,9 +185,7 @@ export default function BookingDetailsPage() {
       try {
         const parsed = JSON.parse(value);
         if (parsed.start && parsed.end) {
-          const startDate = new Date(parsed.start).toLocaleDateString();
-          const endDate = new Date(parsed.end).toLocaleDateString();
-          return `${startDate} - ${endDate}`;
+          return `${formatDisplayDate(parsed.start)} - ${formatDisplayDate(parsed.end)}`;
         }
       } catch {
         return value;
@@ -196,7 +195,7 @@ export default function BookingDetailsPage() {
     // Handle date type
     if (fieldType === 'date') {
       try {
-        return new Date(value).toLocaleDateString();
+        return formatDisplayDate(value);
       } catch {
         return value;
       }
@@ -244,7 +243,7 @@ export default function BookingDetailsPage() {
               <div>
                 <div className="text-sm text-muted-foreground">Booking Period</div>
                 <div className="font-medium">
-                  {new Date(booking.startDate).toLocaleDateString()} - {new Date(booking.endDate).toLocaleDateString()}
+                  {formatDisplayDate(booking.startDate)} - {formatDisplayDate(booking.endDate)}
                 </div>
               </div>
             </div>

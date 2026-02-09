@@ -7,7 +7,7 @@ import { createSelectSchema, createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 import { v4 as uuid } from "uuid";
 import { MaintenanceTask } from "../maintenance";
-import { Rate } from "../booking";
+import { Rate } from "../rates";
 
 // Asset Model
 export const Asset = mysqlTable("assets", {

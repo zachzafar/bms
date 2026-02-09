@@ -1,0 +1,72 @@
+/**
+ * Date utilities for consistent date handling across the app.
+ *
+ * The backend stores dates in UTC. These utilities ensure dates are displayed
+ * consistently without timezone-induced day shifts.
+ */
+
+/**
+ * Formats a date for display, treating it as a UTC date.
+ * This prevents timezone-induced day shifts.
+ *
+ * @param date - Date string or Date object from the API
+ * @param options - Intl.DateTimeFormat options (defaults to short date format)
+ * @returns Formatted date string
+ */
+export function formatDisplayDate(
+  date: string | Date,
+  options: Intl.DateTimeFormatOptions = {
+    year: 'numeric',
+    month: 'short',
+    day: 'numeric'
+  }
+): string {
+  const dateObj = typeof date === 'string' ? new Date(date) : date;
+
+  // Use UTC methods to avoid timezone shifts
+  return new Intl.DateTimeFormat('en-US', {
+    ...options,
+    timeZone: 'UTC'
+  }).format(dateObj);
+}
+
+/**
+ * Formats a date as YYYY-MM-DD for form inputs.
+ * This extracts the UTC date without timezone conversion.
+ *
+ * @param date - Date string or Date object from the API
+ * @returns Date string in YYYY-MM-DD format
+ */
+export function formatDateForInput(date: string | Date): string {
+  const dateObj = typeof date === 'string' ? new Date(date) : date;
+
+  // Use UTC methods to get the correct date parts
+  const year = dateObj.getUTCFullYear();
+  const month = String(dateObj.getUTCMonth() + 1).padStart(2, '0');
+  const day = String(dateObj.getUTCDate()).padStart(2, '0');
+
+  return `${year}-${month}-${day}`;
+}
+
+/**
+ * Creates a Date object from a date input string (YYYY-MM-DD) as UTC.
+ * This ensures the date is interpreted as UTC, not local time.
+ *
+ * @param dateString - Date string in YYYY-MM-DD format
+ * @returns Date object representing midnight UTC on that date
+ */
+export function parseDateInputAsUTC(dateString: string): Date {
+  // Append T00:00:00.000Z to force UTC interpretation
+  return new Date(`${dateString}T00:00:00.000Z`);
+}
+
+/**
+ * Formats a date range for display.
+ *
+ * @param startDate - Start date
+ * @param endDate - End date
+ * @returns Formatted date range string
+ */
+export function formatDateRange(startDate: string | Date, endDate: string | Date): string {
+  return `${formatDisplayDate(startDate)} - ${formatDisplayDate(endDate)}`;
+}

@@ -71,6 +71,7 @@ export function useCrossDomainAuth() {
     StorageService.removeToken();
     StorageService.removeUser();
     StorageService.removeTenant();
+    StorageService.removeTenantList();
     setIsAuthenticated(false);
     redirectToAuth();
   };

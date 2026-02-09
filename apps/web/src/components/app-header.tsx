@@ -20,6 +20,7 @@ import {
 } from "lucide-react"
 import { useStorage } from "@/hooks/useStorage"
 import { deleteSession } from "@/lib/api/session"
+import { StorageService } from "@/lib/api/storage"
 import { queryClient } from "@/providers/tanstack"
 import { ModeToggle } from "@/components/mode-toggle"
 
@@ -78,13 +79,14 @@ export function AppHeader() {
 
   const handleLogout = async () => {
     try {
+      StorageService.removeToken()
+      StorageService.removeUser()
+      StorageService.removeTenant()
+      StorageService.removeTenantList()
       await deleteSession()
-      // queryClient.clear();
-      // Redirect to auth app
       window.location.href = '/login'
     } catch (error) {
       console.error('Logout failed:', error)
-      // Force redirect even if logout fails
       window.location.href = '/login'
     }
   }

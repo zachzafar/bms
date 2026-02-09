@@ -24,6 +24,7 @@ import {
 import { authClient } from '@/lib/api/publicClient';
 import { BOOKINGS_QUERY_KEY } from '@/lib/api/queryKeys';
 import CopyableId from '@/components/custom/CopyableId';
+import { formatDisplayDate } from '@/lib/utils/date';
 
 export default function Component() {
 
@@ -156,8 +157,8 @@ export default function Component() {
                     </TableCell>
                     <TableCell>{booking.user?.name || booking.customer?.userId || 'Unknown'}</TableCell>
                     <TableCell>{booking.asset?.name || 'Unknown Asset'}</TableCell>
-                    <TableCell >{new Date(booking.startDate).toISOString().split('T')[0]}</TableCell>
-                    <TableCell >{new Date(booking.endDate).toISOString().split('T')[0]}</TableCell>
+                    <TableCell>{formatDisplayDate(booking.startDate)}</TableCell>
+                    <TableCell>{formatDisplayDate(booking.endDate)}</TableCell>
                     <TableCell>{booking.status}</TableCell>
                   </TableRow>
                 ))

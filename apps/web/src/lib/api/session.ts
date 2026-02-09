@@ -85,15 +85,20 @@ export async function getSession() {
 export async function deleteSession() {
   try {
     const cookieStore = cookies();
-
-    // Get all cookies and delete each one
     const allCookies = cookieStore.getAll();
 
     for (const cookie of allCookies) {
+      // Delete with explicit domain (for cookies set with domain, e.g. session)
       cookieStore.delete({
         name: cookie.name,
         path: "/",
         domain: process.env.DOMAIN,
+      });
+
+      // Also delete without domain (for client-side cookies set without domain)
+      cookieStore.delete({
+        name: cookie.name,
+        path: "/",
       });
     }
 

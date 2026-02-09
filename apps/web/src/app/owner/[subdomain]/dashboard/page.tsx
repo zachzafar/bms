@@ -7,6 +7,7 @@ import { Calendar, Wrench, FileText, DollarSign, AlertCircle } from 'lucide-reac
 import { Loader2 } from 'lucide-react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
+import { formatDisplayDate } from '@/lib/utils/date';
 
 export default function OwnerDashboardPage() {
   const params = useParams();
@@ -126,7 +127,7 @@ export default function OwnerDashboardPage() {
                     <div className="flex-1">
                       <p className="font-medium text-foreground">{booking.asset?.name || 'Asset'}</p>
                       <p className="text-sm text-muted-foreground">
-                        {new Date(booking.startDate).toLocaleDateString()} - {new Date(booking.endDate).toLocaleDateString()}
+                        {formatDisplayDate(booking.startDate)} - {formatDisplayDate(booking.endDate)}
                       </p>
                     </div>
                     <Badge variant={booking.status === 'confirmed' ? 'default' : booking.status === 'pending' ? 'secondary' : 'outline'}>

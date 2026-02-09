@@ -12,10 +12,9 @@ import { analyticsContract } from './analytics';
 import { slotContract } from './slots';
 import { rateContract } from './rates';
 import { billingContract } from './billing';
-import { crmContract } from './crm';
 import { systemAdminContract } from './system-admin';
 import { reportsContract } from './reports';
-
+import { blockedDatesContract } from './blocked-dates';
 
 const c = initContract();
 
@@ -31,10 +30,10 @@ export const contract = c.router({
   tenants: tenantsContract,
   keys: keysContract,
   analytics: analyticsContract,
+  blockedDates: blockedDatesContract,
   slots: slotContract,
   rates: rateContract,
   billing: billingContract,
-  crm: crmContract,
   systemAdmin: systemAdminContract,
   reports: reportsContract,
 });
@@ -43,6 +42,7 @@ export * from './auth';
 export * from './assets';
 export * from './settings';
 export * from './booking';
+export * from './blocked-dates';
 export * from './maintenance';
 export * from './users';
 export * from './teams';
@@ -51,6 +51,5 @@ export * from './keys';
 export * from './analytics';
 export * from './rates';
 export * from './billing';
-export * from './crm';
 export * from './system-admin';
 export * from './reports';

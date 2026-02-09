@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Form, FormField, FormItem, FormLabel, FormControl, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import Loading from '@/components/custom/Loading';
 import { StorageService } from '@/lib/api/storage';
 import { authClient } from '@/lib/api/publicClient';
@@ -19,7 +20,8 @@ const DetailsSchema = z.object({
   email: z.string().email('Invalid email'),
   phone: z.string().optional(),
   address: z.string().optional(),
-  dateOfBirth: z.string().optional(), // ISO date string
+  dateOfBirth: z.string().optional(),
+  customerTypeId: z.coerce.number().nullable().optional(),
 });
 
 type DetailsForm = z.infer<typeof DetailsSchema>;
@@ -36,6 +38,10 @@ export default function Details({ userId }: { userId: string }) {
     queryKey: ['users'],
     enabled: !!tenant,
   });
+  const { data: customerTypesData } = authClient.users.getCustomerTypes.useQuery({
+    queryKey: ['customerTypes'],
+  });
+  const customerTypes = customerTypesData?.status === 200 ? customerTypesData.body.data : [];
 
   const customers = customersData?.body.data ?? [];
   const users = usersData?.body.data ?? [];
@@ -54,12 +60,14 @@ export default function Details({ userId }: { userId: string }) {
       email: selected?.user?.email ?? '',
       phone: selected?.customer?.phone ?? '',
       address: selected?.customer?.address ?? '',
+      customerTypeId: selected?.customer?.customerTypeId ?? undefined,
     },
     values: {
       name: selected?.user?.name ?? '',
       email: selected?.user?.email ?? '',
       phone: selected?.customer?.phone ?? '',
       address: selected?.customer?.address ?? '',
+      customerTypeId: selected?.customer?.customerTypeId ?? undefined,
     }
   });
 
@@ -76,6 +84,7 @@ export default function Details({ userId }: { userId: string }) {
             userId,
             phone: values.phone || null,
             address: values.address || null,
+            customerTypeId: values.customerTypeId ?? null,
           },
         },
       },
@@ -120,6 +129,10 @@ export default function Details({ userId }: { userId: string }) {
           <div>
             <div className="text-sm text-muted-foreground">Address</div>
             <div className="font-medium">{customer?.address || '-'}</div>
+          </div>
+          <div>
+            <div className="text-sm text-muted-foreground">Customer Type</div>
+            <div className="font-medium">{customerTypes.find((ct: any) => ct.id === customer?.customerTypeId)?.name || '-'}</div>
           </div>
         </CardContent>
       </Card>
@@ -172,6 +185,33 @@ export default function Details({ userId }: { userId: string }) {
                     <FormItem>
                       <FormLabel>Address</FormLabel>
                       <FormControl><Input {...field} /></FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="customerTypeId"
+                  render={({ field }) => (
+                    <FormItem className="md:col-span-2">
+                      <FormLabel>Customer Type</FormLabel>
+                      <Select
+                        value={field.value?.toString() ?? ""}
+                        onValueChange={(value) => field.onChange(value ? Number(value) : null)}
+                      >
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select a customer type" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {customerTypes.map((ct: any) => (
+                            <SelectItem key={ct.id} value={ct.id.toString()}>
+                              {ct.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
                       <FormMessage />
                     </FormItem>
                   )}

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { Calendar, momentLocalizer, Event, SlotInfo, View } from "react-big-calendar";
 import moment from "moment";
 import "react-big-calendar/lib/css/react-big-calendar.css";
@@ -17,6 +17,41 @@ import { queryClient } from "@/providers/tanstack";
 const localizer = momentLocalizer(moment);
 const BLOCKED_DATES_KEY = ["blockedDates"];
 
+type BookingItem = {
+  id: number;
+  startDate: Date;
+  endDate: Date;
+  customerName: string;
+  assetName: string;
+};
+
+type BlockedDateItem = {
+  id: number;
+  startDate: Date;
+  endDate: Date;
+  title: string;
+  reason?: string;
+};
+
+// Helper: Parse date string to local Date, handling both formats:
+// - datetime with timezone: "2026-02-09T04:00:00.000Z" -> extract UTC date
+// - date-only: "2026-02-09" -> treat as local date
+function parseAsLocalDate(dateStr: string): Date {
+  if (dateStr.includes("T")) {
+    const d = new Date(dateStr);
+    return new Date(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate());
+  }
+  const [y, m, d] = dateStr.split("-").map(Number);
+  return new Date(y, m - 1, d);
+}
+
+// Helper: Add days to a date and return new Date
+function addDays(date: Date, days: number): Date {
+  const result = new Date(date);
+  result.setDate(result.getDate() + days);
+  return result;
+}
+
 export default function BookingCalendar() {
   const [blockTitle, setBlockTitle] = useState<string>("");
   const [selectedRange, setSelectedRange] = useState<{ start: Date; end: Date } | null>(null);
@@ -29,13 +64,13 @@ export default function BookingCalendar() {
   });
 
   // Fetch blocked dates
-  const { data: blockedDatesData } = authClient.booking.getBlockedDates.useQuery({
+  const { data: blockedDatesData } = authClient.blockedDates.getBlockedDates.useQuery({
     queryKey: BLOCKED_DATES_KEY,
     queryData: { query: {} },
   });
 
   // Create blocked date mutation
-  const createBlockedDateMutation = authClient.booking.createBlockedDate.useMutation({
+  const createBlockedDateMutation = authClient.blockedDates.createBlockedDate.useMutation({
     onSuccess: () => {
       toast.success("Blocked dates added successfully");
       queryClient.invalidateQueries({ queryKey: BLOCKED_DATES_KEY });
@@ -48,7 +83,7 @@ export default function BookingCalendar() {
   });
 
   // Delete blocked date mutation
-  const deleteBlockedDateMutation = authClient.booking.deleteBlockedDate.useMutation({
+  const deleteBlockedDateMutation = authClient.blockedDates.deleteBlockedDate.useMutation({
     onSuccess: () => {
       toast.success("Blocked date deleted");
       queryClient.invalidateQueries({ queryKey: BLOCKED_DATES_KEY });
@@ -58,38 +93,52 @@ export default function BookingCalendar() {
     },
   });
 
-  // Process bookings data
-  const bookings = bookingsData?.body.data?.map((b) => ({
-    id: Number(b.id),
-    startDate: new Date(b.startDate),
-    endDate: new Date(b.endDate),
-    customerName: b.user.name,
-  })) ?? [];
+  // Process bookings data with proper date parsing
+  const bookings: BookingItem[] = useMemo(() => {
+    if (!bookingsData?.body?.data) return [];
+    return bookingsData.body.data.map((b: any) => ({
+      id: Number(b.id),
+      startDate: parseAsLocalDate(b.startDate),
+      endDate: parseAsLocalDate(b.endDate),
+      customerName: b.user?.name || "Unknown",
+      assetName: b.asset?.name || "Unknown",
+    }));
+  }, [bookingsData]);
 
-  // Process blocked dates data
-  const blockedDates = Array.isArray(blockedDatesData?.body)
-    ? blockedDatesData.body.map((b) => ({
-        id: b.id,
-        startDate: new Date(b.startDate),
-        endDate: new Date(b.endDate),
-        title: b.title,
-        reason: b.reason,
-      }))
-    : [];
+  // Process blocked dates data with proper date parsing
+  const blockedDates: BlockedDateItem[] = useMemo(() => {
+    if (!Array.isArray(blockedDatesData?.body)) return [];
+    return blockedDatesData.body.map((b: any) => ({
+      id: b.id,
+      startDate: parseAsLocalDate(b.startDate),
+      endDate: parseAsLocalDate(b.endDate),
+      title: b.title,
+      reason: b.reason,
+    }));
+  }, [blockedDatesData]);
+
+  // Create calendar events from bookings
+  // Note: react-big-calendar treats end date as EXCLUSIVE for all-day events
+  const bookingEvents: Event[] = useMemo(() => {
+    return bookings.map((b) => ({
+      title: `${b.assetName} - ${b.customerName}`,
+      start: b.startDate,
+      end: addDays(b.endDate, 1), // +1 because react-big-calendar end is exclusive
+      allDay: true,
+      resource: { type: "booking", booking: b },
+    }));
+  }, [bookings]);
 
   // Create calendar events from blocked dates
-  // Add +1 day to end for display (react-big-calendar treats end as exclusive)
-  const blockedEvents: Event[] = blockedDates.map((b) => {
-    const endPlusOne = new Date(b.endDate);
-    endPlusOne.setDate(endPlusOne.getDate() + 1);
-    return {
+  const blockedEvents: Event[] = useMemo(() => {
+    return blockedDates.map((b) => ({
       title: b.title,
       start: b.startDate,
-      end: endPlusOne,
+      end: addDays(b.endDate, 1), // +1 because react-big-calendar end is exclusive
       allDay: true,
-      resource: { blocked: b },
-    };
-  });
+      resource: { type: "blocked", blocked: b },
+    }));
+  }, [blockedDates]);
 
   // Temporary event for selection preview
   const tempEvent: Event[] = selectedRange
@@ -104,7 +153,7 @@ export default function BookingCalendar() {
       ]
     : [];
 
-  const events = [...blockedEvents, ...tempEvent];
+  const events = [...bookingEvents, ...blockedEvents, ...tempEvent];
 
   // Handle adding blocked dates
   const handleBlock = async () => {
@@ -171,12 +220,24 @@ export default function BookingCalendar() {
                   },
                 };
               }
-              return {
-                style: {
-                  backgroundColor: "rgb(239, 68, 68)",
-                  color: "white",
-                },
-              };
+              if (event.resource?.type === "booking") {
+                return {
+                  style: {
+                    backgroundColor: "rgba(0, 180, 0, 0.7)",
+                    color: "white",
+                    fontWeight: "bold",
+                  },
+                };
+              }
+              if (event.resource?.type === "blocked") {
+                return {
+                  style: {
+                    backgroundColor: "rgb(239, 68, 68)",
+                    color: "white",
+                  },
+                };
+              }
+              return {};
             }}
             components={{
               event: ({ event }: any) => (

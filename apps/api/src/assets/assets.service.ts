@@ -484,7 +484,6 @@ export class AssetsService {
       where: (owner, { eq }) => eq(owner.userId, ownerId),
       with: {
         user: true,
-        contact: true,
       }
     });
 

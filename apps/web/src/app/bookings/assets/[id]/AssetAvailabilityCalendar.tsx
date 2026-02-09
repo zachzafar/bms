@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { Calendar, momentLocalizer, Event, SlotInfo, View } from 'react-big-calendar';
 import moment from 'moment';
 import 'react-big-calendar/lib/css/react-big-calendar.css';
@@ -21,72 +21,72 @@ type Booking = {
 
 type BlockedDate = {
   id: number;
-  startDate: string; // expected 'YYYY-MM-DD' or ISO
-  endDate: string;   // expected 'YYYY-MM-DD' or ISO
+  startDate: string;
+  endDate: string;
   title: string;
   reason?: string;
 };
 
 const localizer = momentLocalizer(moment);
 
-function formatLocalDate(date: Date) {
-  const y = date.getFullYear();
-  const m = String(date.getMonth() + 1).padStart(2, '0');
-  const d = String(date.getDate()).padStart(2, '0');
-  return `${y}-${m}-${d}`;
+// Helper: Parse date string to local Date, handling both formats:
+// - datetime with timezone: "2026-02-09T04:00:00.000Z" -> extract UTC date
+// - date-only: "2026-02-09" -> treat as local date
+function parseAsLocalDate(dateStr: string): Date {
+  if (dateStr.includes('T')) {
+    // Datetime format - extract the UTC date portion
+    const d = new Date(dateStr);
+    return new Date(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate());
+  }
+  // Date-only format - parse as local
+  const [y, m, d] = dateStr.split('-').map(Number);
+  return new Date(y, m - 1, d);
 }
 
-// NEW helper: parse a date-only 'YYYY-MM-DD' as a local Date (avoids UTC shift)
-function parseDateOnly(dateStr: string) {
-  // if string includes time or 'T', just rely on Date constructor (it has time info)
-  if (dateStr.includes('T')) return new Date(dateStr);
-  const [y, m, d] = dateStr.split('-').map(Number);
-  return new Date(y, m - 1, d, 0, 0, 0); // local midnight
+// Helper: Add days to a date and return new Date
+function addDays(date: Date, days: number): Date {
+  const result = new Date(date);
+  result.setDate(result.getDate() + days);
+  return result;
 }
 
 export default function AssetAvailabilityCalendar({ asset }: { asset: SelectAsset }) {
-  const [bookings, setBookings] = useState<Booking[]>([]);
-  const [blocked, setBlocked] = useState<BlockedDate[]>([]);
   const [blockTitle, setBlockTitle] = useState<string>('');
   const [selectedRange, setSelectedRange] = useState<{ start: Date; end: Date } | null>(null);
   const [currentDate, setCurrentDate] = useState(new Date());
   const [currentView, setCurrentView] = useState<View>('month');
 
-  const createBlockedDateMutation = authClient.booking.createBlockedDate.useMutation();
-  const deleteBlockedDateMutation = authClient.booking.deleteBlockedDate.useMutation({
-    onSuccess: () => {
-      toast.success('Blocked date deleted');
-      fetchBlockedDates();
-    },
-    onError: () => {
-      toast.error('Failed to delete blocked date');
-    },
+  // Fetch bookings using React Query
+  const { data: bookingsResponse } = authClient.booking.getBookings.useQuery({
+    queryKey: ['asset-bookings', asset.id],
+    queryData: { query: { assetId: asset.id } },
   });
 
-  const fetchBookings = async () => {
-    const res = await authClient.booking.getBookings.query({
-      query: { assetId: asset.id },
-    });
+  // Fetch blocked dates using React Query
+  const { data: blockedDatesResponse, refetch: refetchBlockedDates } = authClient.blockedDates.getBlockedDates.useQuery({
+    queryKey: ['asset-blocked-dates', asset.id],
+    queryData: { query: { assetId: asset.id } },
+  });
 
-    const bookingsData: Booking[] = Array.isArray(res.body)
-      ? res.body.map((b: any) => ({
-          id: Number(b.id),
-          startDate: b.startDate,
-          endDate: b.endDate,
-          customerName: b.user?.name || 'Unknown',
-        }))
-      : [];
+  // Transform bookings data
+  const bookings: Booking[] = useMemo(() => {
+    if (bookingsResponse?.status !== 200) return [];
+    const body = bookingsResponse.body;
+    const data = Array.isArray(body) ? body : body.data;
+    return data.map((b: any) => ({
+      id: Number(b.id),
+      startDate: b.startDate,
+      endDate: b.endDate,
+      customerName: b.user?.name || 'Unknown',
+    }));
+  }, [bookingsResponse]);
 
-    setBookings(bookingsData);
-  };
-
-  const fetchBlockedDates = async () => {
-    const res = await authClient.booking.getBlockedDates.query({
-      query: { assetId: asset.id },
-    });
-
-    const blockedData: BlockedDate[] = Array.isArray(res.body)
-      ? res.body.map((b: any) => ({
+  // Transform blocked dates data
+  const blocked: BlockedDate[] = useMemo(() => {
+    if (blockedDatesResponse?.status !== 200) return [];
+    const body = blockedDatesResponse.body;
+    return Array.isArray(body)
+      ? body.map((b: any) => ({
           id: b.id,
           startDate: b.startDate,
           endDate: b.endDate,
@@ -94,44 +94,50 @@ export default function AssetAvailabilityCalendar({ asset }: { asset: SelectAsse
           reason: b.reason,
         }))
       : [];
+  }, [blockedDatesResponse]);
 
-    setBlocked(blockedData);
-  };
+  const createBlockedDateMutation = authClient.blockedDates.createBlockedDate.useMutation({
+    onSuccess: () => {
+      toast.success('Blocked date created');
+      refetchBlockedDates();
+    },
+    onError: () => {
+      toast.error('Failed to create blocked date');
+    },
+  });
 
-  useEffect(() => {
-    fetchBookings();
-    fetchBlockedDates();
-  }, [asset.id]);
+  const deleteBlockedDateMutation = authClient.blockedDates.deleteBlockedDate.useMutation({
+    onSuccess: () => {
+      toast.success('Blocked date deleted');
+      refetchBlockedDates();
+    },
+    onError: () => {
+      toast.error('Failed to delete blocked date');
+    },
+  });
 
   // Build Calendar Events
+  // Note: react-big-calendar treats end date as EXCLUSIVE for all-day events,
+  // so we add 1 day to the end date to display through the last day
   const bookingEvents: Event[] = bookings.map((b) => {
-    const start = new Date(b.startDate);
-    const end = new Date(b.endDate);
-    const startPlusOne = new Date(start);
-    startPlusOne.setDate(startPlusOne.getDate() + 1);
-    const endPlusOne = new Date(end);
-    endPlusOne.setDate(endPlusOne.getDate() + 1);
+    const start = parseAsLocalDate(b.startDate);
+    const end = parseAsLocalDate(b.endDate);
     return {
       title: `${asset.name} - Booking: ${b.customerName}`,
-      start: startPlusOne,
-      end: endPlusOne,
+      start,
+      end: addDays(end, 1), // +1 because react-big-calendar end is exclusive
       allDay: true,
       resource: { type: 'booking' },
     };
   });
 
   const blockedEvents: Event[] = blocked.map((b) => {
-    // Use parseDateOnly so 'YYYY-MM-DD' is treated as local midnight
-    const start = parseDateOnly(b.startDate);
-    const end = parseDateOnly(b.endDate);
-    const startPlusOne = new Date(start);
-    startPlusOne.setDate(startPlusOne.getDate());
-    const endPlusOne = new Date(end);
-    endPlusOne.setDate(endPlusOne.getDate() + 1);
+    const start = parseAsLocalDate(b.startDate);
+    const end = parseAsLocalDate(b.endDate);
     return {
       title: `${asset.name} - ${b.title || 'Blocked'}`,
-      start: startPlusOne,
-      end: endPlusOne,
+      start,
+      end: addDays(end, 1), // +1 because react-big-calendar end is exclusive
       allDay: true,
       resource: { type: 'blocked', id: b.id },
     };
@@ -157,10 +163,10 @@ export default function AssetAvailabilityCalendar({ asset }: { asset: SelectAsse
     const currentTenant = StorageService.getTenant();
     const tenantId = currentTenant?.id ?? '';
 
-    const startDate = selectedRange.start
-    const endCopy = selectedRange.end
+    const startDate = selectedRange.start;
+    const endCopy = new Date(selectedRange.end);
     endCopy.setDate(endCopy.getDate() - 1);
-    const endDate = endCopy
+    const endDate = endCopy;
 
     await createBlockedDateMutation.mutateAsync({
       body: {
@@ -175,7 +181,6 @@ export default function AssetAvailabilityCalendar({ asset }: { asset: SelectAsse
 
     setSelectedRange(null);
     setBlockTitle('');
-    fetchBlockedDates();
   };
 
   const handleDelete = (id: number) => {
@@ -251,9 +256,8 @@ export default function AssetAvailabilityCalendar({ asset }: { asset: SelectAsse
           ) : (
             <ul className="space-y-2">
               {blocked.map((b) => {
-                // Use parseDateOnly for the list rendering too
-                const start = parseDateOnly(b.startDate);
-                const end = parseDateOnly(b.endDate);
+                const start = parseAsLocalDate(b.startDate);
+                const end = parseAsLocalDate(b.endDate);
                 return (
                   <li key={b.id} className="flex items-center justify-between rounded-lg border p-2">
                     <span>

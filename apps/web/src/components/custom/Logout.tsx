@@ -3,6 +3,7 @@
 import { Button } from '@/components/ui/button';
 import { authClient } from '@/lib/api/publicClient';
 import { deleteSession } from '@/lib/api/session';
+import { StorageService } from '@/lib/api/storage';
 import { useStorage } from '@/hooks/useStorage';
 
 export default function Logout() {
@@ -17,6 +18,13 @@ export default function Logout() {
                 }
             }, {
                 onSuccess: async () => {
+                    // Clear client-side cookies first
+                    StorageService.removeToken();
+                    StorageService.removeUser();
+                    StorageService.removeTenant();
+                    StorageService.removeTenantList();
+
+                    // Clear server-side session cookie
                     const result = await deleteSession();
 
                     if (!result.success) {

@@ -1,5 +1,6 @@
 export * from './users';
 export * from './maintenance';
+export * from './rates'
 export * from './asset'
 export * from './booking'
 export * from './finance'
@@ -8,4 +9,3 @@ export * from './tenant'
 export * from './auth'
 export * from './file'
 export * from './keys'
-export * from './crm'
