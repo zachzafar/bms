@@ -37,7 +37,7 @@ export default function EditPaymentPage() {
     queryData: { params: { id: Number(paymentId) } },
   });
 
-  const { data: customersData } = authClient.users.getCustomers.useQuery({
+  const { data: customersData } = authClient.customers.getCustomers.useQuery({
     queryKey: ['customers'],
   });
 
@@ -45,8 +45,8 @@ export default function EditPaymentPage() {
 
   const customerName = useMemo(() => {
     if (!payment) return '';
-    const found = customers.find((c: any) => Number(c.customer.id) === Number(payment.customerId));
-    return found ? (found.user?.name || found.user?.email || `#${payment.customerId}`) : `#${payment.customerId}`;
+    const found = customers.find((c: any) => Number(c.id) === Number(payment.customerId));
+    return found ? (found.name || found.email || `#${payment.customerId}`) : `#${payment.customerId}`;
   }, [customers, payment]);
 
   const form = useForm<EditPaymentFormValues>({

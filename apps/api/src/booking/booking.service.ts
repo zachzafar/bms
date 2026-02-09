@@ -14,19 +14,32 @@ import { RatesService } from 'src/rates/rates.service';
 
 // --- Date helpers ---
 
-// Converts input to a UTC Date object
+// Converts input to a UTC Date object.
+// For Date objects (from Zod coercion), extracts local components as the intended UTC values.
+// This prevents timezone offset from shifting dates (e.g. local midnight becoming 4 AM UTC).
 function toUTCDateTime(input: string | Date): Date {
-  if (typeof input === 'string' && input.endsWith('Z')) {
-    return new Date(input);
+  if (typeof input === 'string') {
+    if (input.endsWith('Z')) {
+      return new Date(input);
+    }
+    const [datePart, timePart] = input.split('T');
+    const [year, month, day] = datePart.split('-').map(Number);
+    const [hours, minutes, seconds] = timePart
+      ? timePart.replace('Z', '').split(':').map(Number)
+      : [0, 0, 0];
+    return new Date(Date.UTC(year, month - 1, day, hours, minutes, seconds || 0));
   }
 
-  const [datePart, timePart] = (typeof input === 'string' ? input : input.toISOString()).split('T');
-  const [year, month, day] = datePart.split('-').map(Number);
-  const [hours, minutes, seconds] = timePart
-    ? timePart.replace('Z', '').split(':').map(Number)
-    : [0, 0, 0];
-
-  return new Date(Date.UTC(year, month - 1, day, hours, minutes, seconds || 0));
+  // Date objects: use local components (which reflect the original user intent)
+  // and construct a UTC date from them
+  return new Date(Date.UTC(
+    input.getFullYear(),
+    input.getMonth(),
+    input.getDate(),
+    input.getHours(),
+    input.getMinutes(),
+    input.getSeconds()
+  ));
 }
 
 
@@ -88,7 +101,7 @@ export class BookingService {
       // Create booking
       const [{ id }] = await tx.insert(schema.Booking).values({
         ...booking,
-        userId: customer.userId,
+        customerId,
         startDate: utcStart,
         endDate: utcEnd,
         status: tenant?.enableAutomaticConfirmation ? 'Confirmed' : 'Pending',
@@ -145,48 +158,21 @@ export class BookingService {
       throw new ConflictException('No customer provided');
     }
 
-    // Check for existing user
-    const existingUser = await tx.query.User.findFirst({
-      where: (user: any, { eq }: any) => eq(user.email, newCustomer.email),
+    // Check for existing customer by email in this tenant
+    const existingCustomer = await tx.query.Customer.findFirst({
+      where: (c: any, { eq, and }: any) =>
+        and(eq(c.email, newCustomer.email), eq(c.tenantId, newCustomer.tenantId)),
     });
 
-    if (existingUser) {
-      // Check for existing customer profile for this tenant
-      const existingCustomer = await tx.query.Customer.findFirst({
-        where: (c: any, { eq, and }: any) =>
-          and(eq(c.userId, existingUser.id), eq(c.tenantId, newCustomer.tenantId)),
-      });
-
-      if (existingCustomer) {
-        return existingCustomer.id;
-      }
-
-      // Create customer profile for existing user
-      const [{ id }] = await tx.insert(schema.Customer).values({
-        userId: existingUser.id,
-        phone: newCustomer.phone,
-        tenantId: newCustomer.tenantId,
-      }).$returningId();
-
-      return id;
+    if (existingCustomer) {
+      return existingCustomer.id;
     }
 
-    // Create new user
-    const [{ id: userId }] = await tx.insert(schema.User).values({
+    // Create new customer directly (no User record needed)
+    const [{ id: customerId }] = await tx.insert(schema.Customer).values({
       name: newCustomer.name,
       email: newCustomer.email,
-      password: randomBytes(32).toString('hex'),
-      userType: 'customer',
-    }).$returningId();
-
-    await tx.insert(schema.TenantHasUsers).values({
-      tenantId: newCustomer.tenantId,
-      userId,
-    });
-
-    const [{ id: customerId }] = await tx.insert(schema.Customer).values({
-      userId,
-      phone: newCustomer.phone,
+      phone: newCustomer.phone ?? null,
       tenantId: newCustomer.tenantId,
     }).$returningId();
 
@@ -355,13 +341,7 @@ export class BookingService {
         .select()
         .from(schema.Booking)
         .innerJoin(schema.Asset, eq(schema.Booking.assetId, schema.Asset.id))
-        .innerJoin(schema.User, eq(schema.Booking.userId, schema.User.id))
-        .innerJoin(schema.Customer,
-          and(
-            eq(schema.Customer.userId, schema.User.id),
-            eq(schema.Customer.tenantId, schema.Asset.tenantId)
-          )
-        )
+        .innerJoin(schema.Customer, eq(schema.Booking.customerId, schema.Customer.id))
         .innerJoin(schema.BookingUpdateToken, eq(schema.Booking.id, schema.BookingUpdateToken.bookingId))
         .where(eq(schema.Booking.id, bookingId))
         .execute()
@@ -371,7 +351,7 @@ export class BookingService {
         throw new NotFoundException('Booking not found');
       }
 
-      const { booking, assets: asset, users: customer, customer_details, booking_upate_token } = bookingData;
+      const { booking, assets: asset, customer_details: customer, booking_upate_token } = bookingData;
 
       // Get tenant details including subdomain
       const tenant = await this.db.query.Tenant.findFirst({
@@ -595,15 +575,9 @@ export class BookingService {
     const booking = await this.db
       .select()
       .from(schema.Booking)
-      .innerJoin(schema.User, eq(schema.Booking.userId, schema.User.id))
       .innerJoin(schema.Asset, eq(schema.Booking.assetId, schema.Asset.id))
-      .innerJoin(schema.AssetType, eq(schema.AssetType.id,schema.Asset.assetTypeId))
-      .innerJoin(schema.Customer,
-        and(
-          eq(schema.Customer.userId, schema.User.id),
-          eq(schema.Customer.tenantId, schema.Asset.tenantId)
-        )
-      )
+      .innerJoin(schema.AssetType, eq(schema.AssetType.id, schema.Asset.assetTypeId))
+      .leftJoin(schema.Customer, eq(schema.Booking.customerId, schema.Customer.id))
       .where(
         and(
           eq(schema.Booking.id, bookingId),
@@ -638,7 +612,6 @@ export class BookingService {
       ...booking.booking,
       startDate: booking.booking.startDate,
       endDate: booking.booking.endDate,
-      user: booking.users,
       customer: booking.customer_details,
       asset: booking.assets,
       assetType: booking.asset_type,
@@ -729,13 +702,7 @@ export class BookingService {
       .from(schema.Booking)
       .innerJoin(schema.Asset, eq(schema.Booking.assetId, schema.Asset.id))
       .innerJoin(schema.AssetType, eq(schema.AssetType.id, schema.Asset.assetTypeId))
-      .innerJoin(schema.User, eq(schema.Booking.userId, schema.User.id))
-      .innerJoin(schema.Customer,
-        and(
-          eq(schema.Customer.userId, schema.User.id),
-          eq(schema.Customer.tenantId, schema.Asset.tenantId)
-        )
-      )
+      .leftJoin(schema.Customer, eq(schema.Booking.customerId, schema.Customer.id))
       .where(
         filters.length
           ? and(...filters, isNull(schema.Booking.deletedAt))
@@ -758,7 +725,6 @@ export class BookingService {
     const bookingData = bookings.map((row) => ({
       ...row.booking,
       asset: row.assets,
-      user: row.users,
       customer: row.customer_details,
       assetType: row.asset_type
     }));
@@ -813,32 +779,25 @@ export class BookingService {
           where: (t, { eq }) => eq(t.id, asset.tenantId),
         });
 
-        // Calculate total price based on rate
-        let totalPrice = updateData.totalPrice ? parseFloat(updateData.totalPrice.toString()) : 0;
+        // Always recalculate price from rate based on the updated dates
+        let totalPrice = 0;
+        const bookingStartDate = new Date(startDate);
+        const bookingEndDate = new Date(endDate);
 
-        // If no price provided or price is 0, calculate from rate using RatesService
-        if (!updateData.totalPrice || totalPrice === 0) {
-          const bookingStartDate = new Date(startDate);
-          const bookingEndDate = new Date(endDate);
+        const effectiveRate = await this.ratesService.getEffectiveRateForAsset(
+          updateData.assetId,
+          bookingStartDate,
+          bookingEndDate,
+          tenant?.booksByAssetType ?? false
+        );
 
-          // Use RatesService to get the effective rate, respecting booksByAssetType setting
-          const effectiveRate = await this.ratesService.getEffectiveRateForAsset(
-            updateData.assetId,
-            bookingStartDate,
-            bookingEndDate,
-            tenant?.booksByAssetType ?? false
-          );
-
-          if (!effectiveRate) {
-            const rateType = tenant?.booksByAssetType ? 'asset type' : 'asset';
-            throw new ConflictException(`No active rate found for this ${rateType} during the selected booking period. Please contact the administrator to set up rates.`);
-          }
-
-          if (effectiveRate.pricePerUnit) {
-            const durationUnits = this.calculateDurationUnits(bookingStartDate, bookingEndDate, effectiveRate.rateTypeMinutes);
-            const pricePerUnit = parseFloat(effectiveRate.pricePerUnit.toString());
-            totalPrice = durationUnits * pricePerUnit;
-          }
+        if (effectiveRate && effectiveRate.pricePerUnit) {
+          const durationUnits = this.calculateDurationUnits(bookingStartDate, bookingEndDate, effectiveRate.rateTypeMinutes);
+          const pricePerUnit = parseFloat(effectiveRate.pricePerUnit.toString());
+          totalPrice = durationUnits * pricePerUnit;
+        } else if (updateData.totalPrice) {
+          // Fall back to the provided price if no rate is configured
+          totalPrice = parseFloat(updateData.totalPrice.toString());
         }
 
         // Update booking dates, price, and asset
@@ -924,24 +883,17 @@ export class BookingService {
           .select({
             booking: schema.Booking,
             asset: schema.Asset,
-            user: schema.User,
             customer: schema.Customer,
           })
           .from(schema.Booking)
           .innerJoin(schema.Asset, eq(schema.Booking.assetId, schema.Asset.id))
-          .innerJoin(schema.User, eq(schema.Booking.userId, schema.User.id))
-          .innerJoin(schema.Customer,
-            and(
-              eq(schema.Customer.userId, schema.User.id),
-              eq(schema.Customer.tenantId, schema.Asset.tenantId)
-            )
-          )
+          .innerJoin(schema.Customer, eq(schema.Booking.customerId, schema.Customer.id))
           .where(eq(schema.Booking.id, bookingId))
           .execute()
           .then((rows) => rows[0]);
 
         if (bookingDetails) {
-          const { booking, asset, user } = bookingDetails;
+          const { booking, asset, customer } = bookingDetails;
 
           // Get tenant admin users
           const tenantAdmins = await this.db
@@ -981,7 +933,7 @@ export class BookingService {
                 tenantName: admin.name,
                 bookingId: booking.id,
                 assetName: asset.name,
-                customerName: user.name,
+                customerName: customer.name,
                 formattedStartDate,
                 formattedEndDate,
                 status: 'Confirmed'
@@ -991,7 +943,7 @@ export class BookingService {
                 'send-email',
                 new EmailEvent(
                   admin.email,
-                  `Booking Confirmed: ${asset.name} - ${user.name}`,
+                  `Booking Confirmed: ${asset.name} - ${customer.name}`,
                   tenantEmailContent
                 )
               );
@@ -999,7 +951,7 @@ export class BookingService {
 
             // Send email to customer
             const customerEmailContent = generateStatusUpdateEmailForCustomer({
-              customerName: user.name,
+              customerName: customer.name,
               bookingId: booking.id,
               assetName: asset.name,
               formattedStartDate,
@@ -1010,7 +962,7 @@ export class BookingService {
             this.eventEmitter.emit(
               'send-email',
               new EmailEvent(
-                user.email,
+                customer.email,
                 `Booking Confirmed: ${asset.name}`,
                 customerEmailContent
               )
@@ -1022,7 +974,7 @@ export class BookingService {
                 tenantName: admin.name,
                 bookingId: booking.id,
                 assetName: asset.name,
-                customerName: user.name,
+                customerName: customer.name,
                 formattedStartDate,
                 formattedEndDate,
                 status: 'Cancelled'
@@ -1032,7 +984,7 @@ export class BookingService {
                 'send-email',
                 new EmailEvent(
                   admin.email,
-                  `Booking Cancelled: ${asset.name} - ${user.name}`,
+                  `Booking Cancelled: ${asset.name} - ${customer.name}`,
                   tenantEmailContent
                 )
               );
@@ -1040,7 +992,7 @@ export class BookingService {
 
             // Send email to customer
             const customerEmailContent = generateStatusUpdateEmailForCustomer({
-              customerName: user.name,
+              customerName: customer.name,
               bookingId: booking.id,
               assetName: asset.name,
               formattedStartDate,
@@ -1051,7 +1003,7 @@ export class BookingService {
             this.eventEmitter.emit(
               'send-email',
               new EmailEvent(
-                user.email,
+                customer.email,
                 `Booking Cancelled: ${asset.name}`,
                 customerEmailContent
               )
@@ -1132,18 +1084,11 @@ export class BookingService {
         .select({
           booking: schema.Booking,
           asset: schema.Asset,
-          user: schema.User,
           customer: schema.Customer,
         })
         .from(schema.Booking)
         .innerJoin(schema.Asset, eq(schema.Booking.assetId, schema.Asset.id))
-        .innerJoin(schema.User, eq(schema.Booking.userId, schema.User.id))
-        .innerJoin(schema.Customer,
-          and(
-            eq(schema.Customer.userId, schema.User.id),
-            eq(schema.Customer.tenantId, schema.Asset.tenantId)
-          )
-        )
+        .innerJoin(schema.Customer, eq(schema.Booking.customerId, schema.Customer.id))
         .where(
           and(
             gte(schema.Booking.startDate, windowStart),
@@ -1157,7 +1102,9 @@ export class BookingService {
 
       // Send emails for each booking
       for (const row of upcomingBookings) {
-        const { booking, asset, user } = row;
+        const { booking, asset, customer } = row;
+
+        if (!customer) continue;
 
         // Get tenant admin users
         const tenantAdmins = await this.db
@@ -1196,7 +1143,7 @@ export class BookingService {
             tenantName: admin.name,
             bookingId: booking.id,
             assetName: asset.name,
-            customerName: user.name,
+            customerName: customer.name,
             formattedStartDate,
             formattedEndDate
           });
@@ -1213,7 +1160,7 @@ export class BookingService {
 
         // Send email to customer
         const customerEmailContent = generateCustomerReminderEmail({
-          customerName: user.name,
+          customerName: customer.name,
           bookingId: booking.id,
           assetName: asset.name,
           formattedStartDate,
@@ -1223,7 +1170,7 @@ export class BookingService {
         this.eventEmitter.emit(
           'send-email',
           new EmailEvent(
-            user.email,
+            customer.email,
             `Reminder: Your ${asset.name} Booking Starts Tomorrow`,
             customerEmailContent
           )
@@ -1272,14 +1219,8 @@ export class BookingService {
       .select()
       .from(schema.Booking)
       .innerJoin(schema.Asset, eq(schema.Booking.assetId, schema.Asset.id))
-      .innerJoin(schema.AssetType,eq(schema.Asset.assetTypeId,schema.AssetType.id))
-      .innerJoin(schema.User, eq(schema.Booking.userId, schema.User.id))
-      .innerJoin(schema.Customer,
-        and(
-          eq(schema.Customer.userId, schema.User.id),
-          eq(schema.Customer.tenantId, schema.Asset.tenantId)
-        )
-      )
+      .innerJoin(schema.AssetType, eq(schema.Asset.assetTypeId, schema.AssetType.id))
+      .leftJoin(schema.Customer, eq(schema.Booking.customerId, schema.Customer.id))
       .where(and(...filters))
       .limit(pageSize)
       .offset(offset)
@@ -1298,7 +1239,6 @@ export class BookingService {
     const bookingData = bookings.map((row) => ({
       ...row.booking,
       asset: row.assets,
-      user: row.users,
       customer: row.customer_details,
       assetType: row.asset_type
     }));
@@ -1317,7 +1257,7 @@ export class BookingService {
       ),
       with: {
         asset: true,
-        user: true,
+        customer: true,
       }
     });
 
@@ -1330,17 +1270,9 @@ export class BookingService {
       throw new NotFoundException('Booking not found or you do not have access to it');
     }
 
-    // Get customer details
-    const customer = await this.db.query.Customer.findFirst({
-      where: (c, { eq, and }) => and(
-        eq(c.userId, booking.userId as string),
-        eq(c.tenantId, booking.asset.tenantId)
-      ),
-    });
-
     return {
       ...booking,
-      customer,
+      customer: booking.customer,
     };
   }
 
@@ -1418,15 +1350,6 @@ export class BookingService {
       throw new ConflictException('No available assets of this type for the selected dates');
     }
 
-    // Get userId from first customer
-    const firstCustomer = await this.db.query.Customer.findFirst({
-      where: (c, { eq }) => eq(c.id, customerIds[0]),
-    });
-
-    if (!firstCustomer) {
-      throw new ConflictException('Customer not found');
-    }
-
     // Create booking with the found asset
     const bookingId = await this.createBooking(
       {
@@ -1436,8 +1359,6 @@ export class BookingService {
       },
       customerIds
     );
-
-    // Update booking to mark it was booked by asset type
 
     return {
       message: 'Booking created by asset type',

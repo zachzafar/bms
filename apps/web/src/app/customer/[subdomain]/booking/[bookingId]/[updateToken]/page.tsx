@@ -275,7 +275,7 @@ export default function EditBookingPage() {
                 </div>
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Customer:</span>
-                  <span className="font-medium text-foreground">{booking.user.name}</span>
+                  <span className="font-medium text-foreground">{booking?.customer?.name}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Total Price:</span>

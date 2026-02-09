@@ -66,7 +66,7 @@ export default function CreateInvoicePage() {
   });
 
   // Fetch customers and bookings for dropdowns
-  const { data: customersData } = authClient.users.getCustomers.useQuery({
+  const { data: customersData } = authClient.customers.getCustomers.useQuery({
     queryKey: ['customers'],
   });
 
@@ -172,8 +172,8 @@ export default function CreateInvoicePage() {
                       </FormControl>
                       <SelectContent>
                         {customers.map((customer: any) => (
-                          <SelectItem key={customer.customer.id} value={String(customer.customer.id)}>
-                            {customer.user.name || customer.user.email}
+                          <SelectItem key={customer.id} value={String(customer.id)}>
+                            {customer.name || customer.email}
                           </SelectItem>
                         ))}
                       </SelectContent>

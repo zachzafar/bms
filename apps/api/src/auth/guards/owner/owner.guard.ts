@@ -36,48 +36,9 @@ export class OwnerGuard implements CanActivate {
     const request = context.switchToHttp().getRequest();
     const user = request.user;
 
-    this.logger.log('Owner guard - User:', user);
+    
 
-    if (!user) {
-      this.logger.warn('No user found in request');
-      throw new ForbiddenException('User not authenticated');
-    }
-
-    // Check if user exists and is an owner
-    const dbUser = await this.db.query.User.findFirst({
-      where: eq(schema.User.id, user.sub),
-    });
-
-    if (!dbUser) {
-      this.logger.warn(`User ${user.sub} not found in database`);
-      throw new ForbiddenException('User not found');
-    }
-
-    if (dbUser.userType !== 'owner') {
-      this.logger.warn(`User ${user.sub} is not an owner (userType: ${dbUser.userType})`);
-      throw new ForbiddenException('Owner access required');
-    }
-
-    // Get owner details
-    const ownerDetails = await this.db.query.Owner.findFirst({
-      where: eq(schema.Owner.userId, user.sub),
-    });
-
-    if (!ownerDetails) {
-      this.logger.warn(`Owner details not found for user ${user.sub}`);
-      throw new ForbiddenException('Owner profile not found');
-    }
-
-    // Get owner's assets
-    const ownerAssets = await this.db.query.UserHasAssets.findMany({
-      where: eq(schema.UserHasAssets.userId, user.sub),
-    });
-
-    // Attach owner data to request for use in controllers
-    request.ownerDetails = ownerDetails;
-    request.ownerAssets = ownerAssets.map(ua => ua.assetId);
-
-    this.logger.log(`Owner ${user.sub} authenticated with ${ownerAssets.length} assets`);
+    this.logger.log(`Owner ${user.sub} authenticated`);
     return true;
   }
 }

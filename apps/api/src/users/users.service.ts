@@ -1,40 +1,26 @@
-import { Injectable, Inject, InternalServerErrorException, Logger, BadRequestException, NotFoundException } from '@nestjs/common';
+import { Injectable, Inject, InternalServerErrorException, Logger } from '@nestjs/common';
 import { MySql2Database } from 'drizzle-orm/mysql2';
 import { DrizzleAsyncProvider } from 'src/drizzle/drizzle.provider';
 import * as schema from '@repo/api-contract';
-import { InsertUser, SelectUser, UpdateUser, SelectCustomerType } from '@repo/api-contract';
-import { eq, and, sql, or, like, isNull } from 'drizzle-orm';
+import { InsertUser, SelectUser, UpdateUser } from '@repo/api-contract';
+import { eq, and, sql } from 'drizzle-orm';
 import { hash } from 'argon2';
-
-const userTypes = ["customer", "owner", "system"] as const;
-type UserType = (typeof userTypes)[number];
 
 @Injectable()
 export class UsersService {
     private readonly logger = new Logger(UsersService.name);
     constructor(@Inject(DrizzleAsyncProvider) private db: MySql2Database<typeof schema>) { }
 
-    validateRoles(input: string[]): UserType[] {
-        for (const role of input) {
-            if (!userTypes.includes(role as UserType)) {
-                throw new Error(`Invalid role: ${role}`);
-            }
-        }
-        return input as UserType[];
-    }
-
-    async createUser(userData: InsertUser, tenantId: string, roles: number[], customerDetails?: { phone?: string | null; address?: string | null }): Promise<string> {
+    async createUser(userData: InsertUser, tenantId: string, roles: number[]): Promise<string> {
         let tenantUser_id: number;
         let userId: string;
-        this.logger.log(`Trying to see customer details ${JSON.stringify(customerDetails)}`)
+
         await this.db.transaction(async (tx) => {
-            // Check if user already exists
             const existingUser = await tx.query.User.findFirst({
                 where: (user, { eq }) => eq(user.email, userData.email)
             });
 
             if (existingUser) {
-                // User already exists, check if they're already in this tenant
                 const existingTenantUser = await tx.query.TenantHasUsers.findFirst({
                     where: (tu, { and, eq }) => and(
                         eq(tu.userId, existingUser.id),
@@ -43,11 +29,9 @@ export class UsersService {
                 });
 
                 if (existingTenantUser) {
-                    // User already exists in this tenant
                     tenantUser_id = existingTenantUser.id;
                     userId = existingUser.id;
                 } else {
-                    // User exists but not in this tenant, add them to this tenant
                     const [{ id }] = await tx.insert(schema.TenantHasUsers).values({
                         tenantId,
                         userId: existingUser.id
@@ -57,10 +41,6 @@ export class UsersService {
                     userId = existingUser.id;
                 }
             } else {
-                // Create new user
-                if (!userData.userType.includes("system")) {
-                    userData.password = Math.random().toString(36).slice(-8);
-                }
                 const hashedPassword = await hash(userData.password);
                 await tx.insert(schema.User).values({
                     name: userData.name,
@@ -84,39 +64,12 @@ export class UsersService {
                 userId = user.id;
             }
 
-            // Handle customer role if needed
-            if (userData.userType.includes("customer")) {
-                const existingCustomer = await tx.query.Customer.findFirst({
-                    where: (c, { eq, and }) => and(eq(c.userId, userId), eq(c.tenantId, tenantId))
-                });
-
-                if (!existingCustomer) {
-                    await tx.insert(schema.Customer).values({
-                        userId,
-                        tenantId,
-                        phone: customerDetails?.phone ?? null,
-                        address: customerDetails?.address ?? null
-                    });
-                }
-            }
-
-            // Handle owner role if needed
-            if (userData.userType.includes("owner")) {
-                const existingOwner = await tx.query.Owner.findFirst({
-                    where: (o, { eq, and }) => and(eq(o.userId, userId), eq(o.tenantId, tenantId))
-                });
-
-                if (!existingOwner) {
-                    await tx.insert(schema.Owner).values({ userId, tenantId });
-                }
-            }
-
             // Handle roles
             for (const role of roles) {
                 const existingRole = await tx.query.UserHasRoles.findFirst({
                     where: (ur, { and, eq }) => and(
                         eq(ur.userId, userId),
-                        eq(ur.roleId, (role)),
+                        eq(ur.roleId, role),
                         eq(ur.tenantId, tenantId)
                     )
                 });
@@ -124,7 +77,7 @@ export class UsersService {
                 if (!existingRole) {
                     await tx.insert(schema.UserHasRoles).values({
                         userId,
-                        roleId: (role),
+                        roleId: role,
                         tenantId
                     });
                 }
@@ -143,7 +96,6 @@ export class UsersService {
     async findAll(tenantId: string, page: number = 1, pageSize: number = 10): Promise<{ data: (Omit<SelectUser, 'roles'> & { roles: { roleId: number; roleName: string }[] })[]; pagination: any }> {
         const offset = (page - 1) * pageSize;
 
-        // Get total count (only system users)
         const totalCountResult = await this.db
             .select({ count: sql<number>`COUNT(DISTINCT ${schema.User.id})` })
             .from(schema.TenantHasUsers)
@@ -172,7 +124,6 @@ export class UsersService {
             .limit(pageSize)
             .offset(offset);
 
-        // Group roles by user
         const userMap = new Map<string, Omit<SelectUser, 'roles'> & { roles: { roleId: number; roleName: string }[] }>();
 
         usersWithRoles.forEach(row => {
@@ -210,7 +161,6 @@ export class UsersService {
         if (!tenantId)
             return this.db.query.User.findFirst({ where: (user, { eq }) => eq(user.id, id) });
 
-        // Get user with roles using explicit join approach
         const userWithRoles = await this.db.select({
             user: schema.User,
             userRoles: schema.UserHasRoles,
@@ -227,7 +177,6 @@ export class UsersService {
 
         if (userWithRoles.length === 0) return undefined;
 
-        // Process the results to include roles with names
         const roles: { roleId: number; roleName: string }[] = [];
         userWithRoles.forEach(row => {
             if (row.userRoles?.roleId && row.role?.name && !roles.some(r => r.roleId === row.userRoles!.roleId)) {
@@ -235,7 +184,6 @@ export class UsersService {
             }
         });
 
-        // Return user with roles
         return {
             ...userWithRoles[0].user,
             roles
@@ -246,247 +194,67 @@ export class UsersService {
         return this.db.query.User.findFirst({ where: (user, { eq }) => eq(user.email, email) });
     }
 
-    async update(id: string, tenantId: string, userData: UpdateUser, roles: number[], ownerData?: schema.UpdateOwner, customerData?: schema.UpdateCustomer): Promise<void> {
+    async update(id: string, tenantId: string, userData: UpdateUser, roles: number[]): Promise<void> {
         await this.db.transaction(async (tx) => {
-            // Update user dat
             let hashedPassword: string | undefined;
             if (userData.password) {
                 hashedPassword = await hash(userData.password);
                 userData.password = hashedPassword;
             }
-            // If userData empty skip update
+
             if (Object.keys(userData).length > 0)
                 await tx.update(schema.User).set({ ...userData, password: hashedPassword }).where(eq(schema.User.id, id));
 
-            // Handle customer role
-            if (userData.userType?.includes("customer")) {
-                const existingCustomer = await tx.query.Customer.findFirst({
-                    where: (customer, { eq, and }) => and(eq(customer.userId, id), eq(customer.tenantId, tenantId))
-                });
-
-                if (!existingCustomer) {
-                    await tx.insert(schema.Customer).values({ userId: id, tenantId: tenantId, ...customerData });
-                } else if (customerData && Object.keys(customerData).filter(k => k !== 'userId').length > 0) {
-                    // Update existing customer with provided data
-                    const { userId: _, ...updateData } = customerData;
-                    await tx.update(schema.Customer)
-                        .set(updateData)
-                        .where(and(eq(schema.Customer.userId, id), eq(schema.Customer.tenantId, tenantId)));
-                }
-            } else {
-                // Remove customer if flag is false
-                await tx.delete(schema.Customer).where(eq(schema.Customer.userId, id));
-            }
-
-            // Handle owner role
-            if (userData.userType?.includes("owner")) {
-                const existingOwner = await tx.query.Owner.findFirst({
-                    where: (owner, { eq, and }) => and(eq(owner.userId, id), eq(owner.tenantId, tenantId))
-                });
-
-                if (!existingOwner) {
-                    await tx.insert(schema.Owner).values({ userId: id, tenantId: tenantId, ...ownerData });
-                } else if (ownerData && Object.keys(ownerData).filter(k => k !== 'userId').length > 0) {
-                    // Update existing owner with provided data
-                    const { userId: _, ...updateData } = ownerData;
-                    await tx.update(schema.Owner)
-                        .set(updateData)
-                        .where(and(eq(schema.Owner.userId, id), eq(schema.Owner.tenantId, tenantId)));
-                }
-            } else {
-                // Remove owner if flag is false
-                await tx.delete(schema.Owner).where(eq(schema.Owner.userId, id));
-            }
-
-            // Handle roles - first get existing roles
+            // Handle roles
             const existingRoles = await tx.query.UserHasRoles.findMany({
                 where: (userRole, { eq }) => eq(userRole.userId, id)
             });
 
-            const existingRoleIds = existingRoles.map(role => (role.roleId));
+            const existingRoleIds = existingRoles.map(role => role.roleId);
 
-            // Add new roles that don't exist yet
             for (const roleId of roles) {
                 if (!existingRoleIds.includes(roleId)) {
                     await tx.insert(schema.UserHasRoles).values({
                         userId: id,
-                        roleId: (roleId),
+                        roleId,
                         tenantId
                     });
                 }
             }
 
-            // Optionally: Remove roles that are no longer assigned
             const rolesToRemove = existingRoleIds.filter(existingId => !roles.includes(existingId));
             for (const roleId of rolesToRemove) {
                 await tx.delete(schema.UserHasRoles)
                     .where(and(
                         eq(schema.UserHasRoles.userId, id),
-                        eq(schema.UserHasRoles.roleId, (roleId))
+                        eq(schema.UserHasRoles.roleId, roleId)
                     ));
             }
         });
     }
 
-    async getCustomers(tenantId: string, page: number = 1, pageSize: number = 10, search?: string): Promise<{ data: { customer: schema.SelectCustomer, user: Omit<SelectUser, "roles"> }[]; pagination: any }> {
-        const offset = (page - 1) * pageSize;
-
-        // Build search conditions
-        const baseConditions = [
-            eq(schema.TenantHasUsers.tenantId, tenantId),
-            eq(schema.Customer.tenantId, tenantId)
-        ];
-
-        const searchCondition = search ? or(
-            like(schema.User.name, `%${search}%`),
-            like(schema.User.email, `%${search}%`),
-            like(schema.Customer.phone, `%${search}%`),
-            like(schema.Customer.address, `%${search}%`)
-        ) : undefined;
-
-        const whereConditions = searchCondition
-            ? and(...baseConditions, searchCondition)
-            : and(...baseConditions);
-
-        // Get total count
-        const totalCountResult = await this.db
-            .select({ count: sql<number>`COUNT(*)` })
-            .from(schema.TenantHasUsers)
-            .innerJoin(schema.User, eq(schema.TenantHasUsers.userId, schema.User.id))
-            .innerJoin(schema.Customer, eq(schema.Customer.userId, schema.User.id))
-            .where(whereConditions)
-            .execute();
-        const totalCount = totalCountResult[0]?.count || 0;
-
-        const rows = await this.db
-            .select()
-            .from(schema.TenantHasUsers)
-            .innerJoin(schema.User, eq(schema.TenantHasUsers.userId, schema.User.id))
-            .innerJoin(schema.Customer, eq(schema.Customer.userId, schema.User.id))
-            .where(whereConditions)
-            .limit(pageSize)
-            .offset(offset);
-
-        const paginationData = {
-            page,
-            pageSize,
-            totalCount,
-            totalPages: Math.ceil(totalCount / pageSize),
-            hasNextPage: page * pageSize < totalCount,
-            hasPreviousPage: page > 1,
-        };
-
-        return {
-            data: rows.map(row => ({ customer: row.customer_details, user: row.users })),
-            pagination: paginationData,
-        };
-    }
-
-    async getOwners(tenantId: string, page: number = 1, pageSize: number = 10, search?: string): Promise<{ data: { owner: schema.SelectOwner, user: Omit<SelectUser, "roles"> }[]; pagination: any }> {
-        const offset = (page - 1) * pageSize;
-
-        // Build search conditions
-        const baseConditions = [
-            eq(schema.TenantHasUsers.tenantId, tenantId),
-            eq(schema.Owner.tenantId, tenantId)
-        ];
-
-        const searchCondition = search ? or(
-            like(schema.User.name, `%${search}%`),
-            like(schema.User.email, `%${search}%`),
-            like(schema.Owner.phone, `%${search}%`),
-            like(schema.Owner.address, `%${search}%`)
-        ) : undefined;
-
-        const whereConditions = searchCondition
-            ? and(...baseConditions, searchCondition)
-            : and(...baseConditions);
-
-        // Get total count
-        const totalCountResult = await this.db
-            .select({ count: sql<number>`COUNT(*)` })
-            .from(schema.TenantHasUsers)
-            .innerJoin(schema.User, eq(schema.TenantHasUsers.userId, schema.User.id))
-            .innerJoin(schema.Owner, eq(schema.Owner.userId, schema.User.id))
-            .where(whereConditions)
-            .execute();
-        const totalCount = totalCountResult[0]?.count || 0;
-
-        const rows = await this.db
-            .select()
-            .from(schema.TenantHasUsers)
-            .innerJoin(schema.User, eq(schema.TenantHasUsers.userId, schema.User.id))
-            .innerJoin(schema.Owner, eq(schema.Owner.userId, schema.User.id))
-            .where(whereConditions)
-            .limit(pageSize)
-            .offset(offset);
-
-        const paginationData = {
-            page,
-            pageSize,
-            totalCount,
-            totalPages: Math.ceil(totalCount / pageSize),
-            hasNextPage: page * pageSize < totalCount,
-            hasPreviousPage: page > 1,
-        };
-
-        return {
-            data: rows.map(row => ({ owner: row.owner_details, user: row.users })),
-            pagination: paginationData,
-        };
-    }
-
-
     async remove(id: string, tenantId: string): Promise<void> {
         await this.db.transaction(async (tx) => {
-            // First check if there's at least one admin in the tenant
             const admins = await tx.select()
                 .from(schema.TenantHasUsers)
                 .where(and(eq(schema.TenantHasUsers.tenantId, tenantId), eq(schema.TenantHasUsers.isAdmin, true)))
                 .innerJoin(schema.User, eq(schema.TenantHasUsers.userId, schema.User.id));
 
-            // Check if the user being removed is an admin and if there's only one admin
             const isUserAdmin = admins.some(admin => admin.users.id === id);
             if (isUserAdmin && admins.length <= 1) {
                 throw new InternalServerErrorException("Cannot remove the last admin from a tenant");
             }
 
-            // Delete customer record for this tenant
-            await tx.delete(schema.Customer)
-                .where(and(
-                    eq(schema.Customer.userId, id),
-                    eq(schema.Customer.tenantId, tenantId)
-                ));
-
-            // Delete owner record for this tenant
-            await tx.delete(schema.Owner)
-                .where(and(
-                    eq(schema.Owner.userId, id),
-                    eq(schema.Owner.tenantId, tenantId)
-                ));
-
-            // Unassign assets owned by this user in this tenant
-            await tx.update(schema.Asset)
-                .set({ userId: null })
-                .where(and(
-                    eq(schema.Asset.userId, id),
-                    eq(schema.Asset.tenantId, tenantId)
-                ));
-
-            // Remove user from the tenant
             await tx.delete(schema.TenantHasUsers)
                 .where(and(
                     eq(schema.TenantHasUsers.userId, id),
                     eq(schema.TenantHasUsers.tenantId, tenantId)
                 ));
 
-            // Check if user belongs to any other tenants
             const otherTenants = await tx.query.TenantHasUsers.findMany({
                 where: (tenantUser, { eq }) => eq(tenantUser.userId, id)
             });
 
-            // If user doesn't belong to any other tenants, hard delete the user
-            // Cascade will automatically delete related Customer/Owner records in other tenants
             if (otherTenants.length === 0) {
                 await tx.delete(schema.User).where(eq(schema.User.id, id));
             }
@@ -498,133 +266,5 @@ export class UsersService {
             where: (user, { eq, and }) => and(eq(user.id, userId), eq(user.userType, 'admin')),
         })
         return user !== null;
-    }
-
-    // ==================== CUSTOMER TYPES CRUD ====================
-
-    async createCustomerType(
-        tenantId: string,
-        data: { name: string; description?: string | null }
-    ): Promise<number> {
-        // Check if customer type with same name exists in this tenant
-        const existingType = await this.db.query.CustomerType.findFirst({
-            where: (ct, { eq, and, isNull }) => and(
-                eq(ct.tenantId, tenantId),
-                eq(ct.name, data.name),
-                isNull(ct.deletedAt)
-            )
-        });
-
-        if (existingType) {
-            throw new BadRequestException('Customer type with this name already exists');
-        }
-
-        const [{ id }] = await this.db.insert(schema.CustomerType).values({
-            tenantId,
-            name: data.name,
-            description: data.description ?? null
-        }).$returningId();
-
-        return id;
-    }
-
-    async getCustomerTypes(
-        tenantId: string,
-        page: number = 1,
-        pageSize: number = 10
-    ): Promise<{ data: SelectCustomerType[]; pagination: any }> {
-        const offset = (page - 1) * pageSize;
-
-        // Get total count
-        const totalCountResult = await this.db
-            .select({ count: sql<number>`COUNT(*)` })
-            .from(schema.CustomerType)
-            .where(and(
-                eq(schema.CustomerType.tenantId, tenantId),
-                isNull(schema.CustomerType.deletedAt)
-            ))
-            .execute();
-        const totalCount = totalCountResult[0]?.count || 0;
-
-        const customerTypes = await this.db.query.CustomerType.findMany({
-            where: (ct, { eq, and, isNull }) => and(
-                eq(ct.tenantId, tenantId),
-                isNull(ct.deletedAt)
-            ),
-            limit: pageSize,
-            offset: offset,
-        });
-
-        const paginationData = {
-            page,
-            pageSize,
-            totalCount,
-            totalPages: Math.ceil(totalCount / pageSize),
-            hasNextPage: page * pageSize < totalCount,
-            hasPreviousPage: page > 1,
-        };
-
-        return {
-            data: customerTypes,
-            pagination: paginationData,
-        };
-    }
-
-    async getCustomerTypeById(
-        tenantId: string,
-        customerTypeId: number
-    ): Promise<SelectCustomerType | undefined> {
-        return this.db.query.CustomerType.findFirst({
-            where: (ct, { eq, and, isNull }) => and(
-                eq(ct.tenantId, tenantId),
-                eq(ct.id, customerTypeId),
-                isNull(ct.deletedAt)
-            )
-        });
-    }
-
-    async updateCustomerType(
-        tenantId: string,
-        customerTypeId: number,
-        data: { name?: string; description?: string | null }
-    ): Promise<void> {
-        // Check if name is being updated and if it conflicts with existing
-        const { name } = data
-        if (name) {
-            const existingType = await this.db.query.CustomerType.findFirst({
-                where: (ct, { eq, and, isNull, ne }) => and(
-                    eq(ct.tenantId, tenantId),
-                    eq(ct.name, name),
-                    isNull(ct.deletedAt)
-                )
-            });
-
-            if (existingType && existingType.id !== customerTypeId) {
-                throw new BadRequestException('Customer type with this name already exists');
-            }
-        }
-
-        const updateData: any = {};
-        if (data.name !== undefined) updateData.name = data.name;
-        if (data.description !== undefined) updateData.description = data.description;
-
-        if (Object.keys(updateData).length > 0) {
-            await this.db.update(schema.CustomerType)
-                .set(updateData)
-                .where(and(
-                    eq(schema.CustomerType.tenantId, tenantId),
-                    eq(schema.CustomerType.id, customerTypeId)
-                ));
-        }
-    }
-
-    async deleteCustomerType(tenantId: string, customerTypeId: number): Promise<void> {
-        // Soft delete the customer type
-        await this.db.update(schema.CustomerType)
-            .set({ deletedAt: new Date() })
-            .where(and(
-                eq(schema.CustomerType.tenantId, tenantId),
-                eq(schema.CustomerType.id, customerTypeId)
-            ));
     }
 }

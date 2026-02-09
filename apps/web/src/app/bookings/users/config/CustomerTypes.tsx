@@ -25,14 +25,14 @@ export default function CustomerTypes() {
   const [editingCustomerTypeId, setEditingCustomerTypeId] = useState<number>();
   const queryClient = authClient.useQueryClient();
 
-  const { data: customerTypes, isLoading } = authClient.users.getCustomerTypes.useQuery({
+  const { data: customerTypes, isLoading } = authClient.customers.getCustomerTypes.useQuery({
     queryKey: ['customerTypes'],
     queryData: {
       query: {}
     }
   });
 
-  const { mutate: createCustomerTypeMutation } = authClient.users.createCustomerType.useMutation({
+  const { mutate: createCustomerTypeMutation } = authClient.customers.createCustomerType.useMutation({
     onSuccess: () => {
       toast.success('Customer type created successfully');
       queryClient.invalidateQueries({ queryKey: ['customerTypes'] });
@@ -43,7 +43,7 @@ export default function CustomerTypes() {
     }
   });
 
-  const { mutate: updateCustomerTypeMutation } = authClient.users.updateCustomerType.useMutation({
+  const { mutate: updateCustomerTypeMutation } = authClient.customers.updateCustomerType.useMutation({
     onSuccess: () => {
       toast.success('Customer type updated successfully');
       setEditingCustomerTypeId(undefined);
@@ -55,7 +55,7 @@ export default function CustomerTypes() {
     }
   });
 
-  const { mutate: deleteCustomerTypeMutation } = authClient.users.deleteCustomerType.useMutation({
+  const { mutate: deleteCustomerTypeMutation } = authClient.customers.deleteCustomerType.useMutation({
     onSuccess: () => {
       toast.success('Customer type deleted successfully');
       queryClient.invalidateQueries({ queryKey: ['customerTypes'] });
@@ -101,7 +101,10 @@ export default function CustomerTypes() {
   };
 
   const handleDeleteCustomerType = (id: number) => {
-    deleteCustomerTypeMutation({ params: { id } });
+    deleteCustomerTypeMutation({
+      params: { id },
+      body: undefined
+    });
   };
 
   const cancelEdit = () => {

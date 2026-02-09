@@ -84,7 +84,7 @@ export default function PaymentsPage() {
     queryData: {query:queryParams},
   });
 
-  const { data: customersData } = authClient.users.getCustomers.useQuery({
+  const { data: customersData } = authClient.customers.getCustomers.useQuery({
     queryKey: ['customers'],
   });
 
@@ -122,8 +122,8 @@ export default function PaymentsPage() {
   });
 
   const getCustomerName = (customerId: string) => {
-    const customer = customers.find((c) => String(c.customer.id) === customerId);
-    return customer ? customer.user.name || customer.user.email : 'Unknown Customer';
+    const customer = customers.find((c) => String(c.id) === customerId);
+    return customer ? customer.name || customer.email : 'Unknown Customer';
   };
 
   const getMethodLabel = (method: string) => {
@@ -326,8 +326,8 @@ export default function PaymentsPage() {
                 <SelectContent>
                   <SelectItem value="all">All Customers</SelectItem>
                   {customers.map((customer) => (
-                    <SelectItem key={customer.customer.id} value={customer.customer.id.toString()}>
-                      {customer.user.name || customer.user.email}
+                    <SelectItem key={customer.id} value={customer.id.toString()}>
+                      {customer.name || customer.email}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -491,8 +491,8 @@ export default function PaymentsPage() {
                       </SelectTrigger>
                       <SelectContent>
                         {customers.map((customer) => (
-                          <SelectItem key={customer.customer.id} value={customer.customer.id.toString()}>
-                            {customer.user.name || customer.user.email}
+                          <SelectItem key={customer.id} value={customer.id.toString()}>
+                            {customer.name || customer.email}
                           </SelectItem>
                         ))}
                       </SelectContent>

@@ -5,6 +5,8 @@ import { settingsContract } from './settings';
 import { bookingContract } from './booking';
 import { maintenanceContract } from './maintenance';
 import { userContract } from './users';
+import { customerContract } from './customers';
+import { ownerContract } from './owners';
 import { teamsContract } from './teams';
 import { tenantsContract } from './tenants';
 import { keysContract } from './keys';
@@ -26,6 +28,8 @@ export const contract = c.router({
   booking: bookingContract,
   maintenance: maintenanceContract,
   users: userContract,
+  customers: customerContract,
+  owners: ownerContract,
   teams: teamsContract,
   tenants: tenantsContract,
   keys: keysContract,
@@ -45,6 +49,8 @@ export * from './booking';
 export * from './blocked-dates';
 export * from './maintenance';
 export * from './users';
+export * from './customers';
+export * from './owners';
 export * from './teams';
 export * from './tenants';
 export * from './keys';

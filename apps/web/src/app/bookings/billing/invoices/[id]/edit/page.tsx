@@ -53,7 +53,7 @@ export default function EditInvoicePage() {
   });
 
   // Fetch customers
-  const { data: customersData } = authClient.users.getCustomers.useQuery({ queryKey: ['customers'] });
+  const { data: customersData } = authClient.customers.getCustomers.useQuery({ queryKey: ['customers'] });
   const customers = customersData?.body?.data || [];
 
   // Initialize form
@@ -281,8 +281,8 @@ export default function EditInvoicePage() {
                       </FormControl>
                       <SelectContent>
                         {customers.map((customer: any) => (
-                          <SelectItem key={customer.customer.id} value={String(customer.customer.id)}>
-                            {customer.user.name || customer.user.email}
+                          <SelectItem key={customer.id} value={String(customer.id)}>
+                            {customer.name || customer.email}
                           </SelectItem>
                         ))}
                       </SelectContent>

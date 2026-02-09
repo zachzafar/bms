@@ -43,19 +43,19 @@ const PaymentSchema = z.object({
 
 type PaymentForm = z.infer<typeof PaymentSchema>;
 
-export default function Billing({ userId }: { userId: string }) {
+export default function Billing({  customerId }: { customerId: number }) {
   const tenant = StorageService.getTenant();
 
   const [openInvoice, setOpenInvoice] = useState(false);
   const [openPayment, setOpenPayment] = useState(false);
 
-  const { data: customersData, isLoading: customersLoading } = authClient.users.getCustomers.useQuery({
+  const { data: customersData, isLoading: customersLoading } = authClient.customers.getCustomers.useQuery({
     queryKey: ['customers'],
     enabled: !!tenant,
   });
   const customers = customersData?.body.data ?? [];
-  const selected = useMemo(() => customers.find((c: any) => c.user.id === userId), [customers, userId]);
-  const customerIdStr = selected?.customer?.id ? selected.customer.id : undefined;
+  const selected = useMemo(() => customers.find((c: any) => c.id === customerId), [customers, customerId]);
+  const customerIdStr = selected?.id ? selected.id : undefined;
 
   const { data: invoicesData, isLoading: invoicesLoading } = authClient.billing.getInvoices.useQuery({
     queryKey: ['invoices', customerIdStr ?? 'unknown'],

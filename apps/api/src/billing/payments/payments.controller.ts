@@ -136,8 +136,8 @@ export class PaymentsController {
           notes: payment.notes,
         },
         customer: {
-          name: customer?.user?.name ?? 'Unknown Customer',
-          email: customer?.user?.email ?? undefined,
+          name: customer?.name ?? 'Unknown Customer',
+          email: customer?.email ?? undefined,
           address: customer?.address ?? undefined,
         },
         appliedInvoices: payment.invoices?.map(inv => ({

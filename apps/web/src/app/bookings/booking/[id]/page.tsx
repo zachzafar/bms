@@ -277,14 +277,14 @@ export default function BookingDetailsPage() {
               <User className="h-5 w-5 text-muted-foreground mt-0.5" />
               <div>
                 <div className="text-sm text-muted-foreground">Name</div>
-                <div className="font-medium">{booking.user?.name || '-'}</div>
+                <div className="font-medium">{booking.customer?.name || '-'}</div>
               </div>
             </div>
             <div className="flex items-start gap-3">
               <Mail className="h-5 w-5 text-muted-foreground mt-0.5" />
               <div>
                 <div className="text-sm text-muted-foreground">Email</div>
-                <div className="font-medium">{booking.user?.email || '-'}</div>
+                <div className="font-medium">{booking.customer?.email || '-'}</div>
               </div>
             </div>
             <div className="flex items-start gap-3">

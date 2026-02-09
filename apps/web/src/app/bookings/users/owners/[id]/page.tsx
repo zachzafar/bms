@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useState } from 'react';
 import { useParams } from 'next/navigation';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import Loading from '@/components/custom/Loading';
@@ -13,19 +13,20 @@ export default function OwnerDetailsPage() {
   const tenant = StorageService.getTenant();
   const params = useParams();
   const [activeTab, setActiveTab] = useState('details');
-  const userId = params.id as string;
+  const ownerId = Number(params.id);
 
-  // Lightweight header hydration
-  const { data: ownersData, isLoading: ownersLoading } = authClient.users.getOwners.useQuery({
-    queryKey: ['owners'],
+  const { data: ownerData, isLoading } = authClient.owners.getOwner.useQuery({
+    queryKey: ['owner', ownerId],
+    queryData: {
+      params: { id: ownerId },
+    },
     enabled: !!tenant,
   });
-  const owners = ownersData?.body.data ?? [];
-  const selected = useMemo(() => owners.find((o: any) => o.user.id === userId), [owners, userId]);
 
-  if (ownersLoading) return <Loading />;
+  if (isLoading) return <Loading />;
 
-  const displayName = selected?.user?.name || selected?.user?.email || userId;
+  const selected = ownerData?.status === 200 ? ownerData.body : null;
+  const displayName = selected?.name || selected?.email || String(ownerId);
 
   return (
     <>
@@ -40,10 +41,10 @@ export default function OwnerDetailsPage() {
         </TabsList>
 
         <TabsContent value="details">
-          <Details userId={userId} />
+          <Details ownerId={ownerId} />
         </TabsContent>
         <TabsContent value="assets">
-          <Assets userId={userId} />
+          <Assets ownerId={ownerId} />
         </TabsContent>
       </Tabs>
     </>

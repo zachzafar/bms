@@ -15,7 +15,7 @@ import { authClient } from '@/lib/api/publicClient';
 import { CUSTOMERS_QUERY_KEY, } from '@/lib/api/queryKeys';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
-import { InsertCustomerSchema, InsertUserSchema, SelectCustomer, SelectCustomerSchema } from '@repo/api-contract';
+import { InsertCustomerSchema, InsertUserSchema, SelectCustomer, SelectCustomerSchema, UpdateCustomer } from '@repo/api-contract';
 import { z } from 'zod';
 import { EditCustomerForm } from '@/components/users/EditCustomerForm';
 import { usePagination } from '@/hooks/usePagination';
@@ -28,22 +28,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 // })
 
 
-type EditableCustomer = {
-  id: string; // user ID
-  name: string;
-  email: string;
-  createdAt: Date | null;
-  updatedAt: Date | null;
-  customerDetails: {
-    id?: number;
-    userId: string;
-    phone: string | null;
-    address: string | null;
-    customerTypeId?: number | null;
-    createdAt?: Date | null;
-    updatedAt?: Date | null;
-  };
-};
+
 
 
 
@@ -70,26 +55,26 @@ export default function Component() {
 
   const queryClient = authClient.useQueryClient();
   const [searchTerm, setSearchTerm] = useState('');
-  const { data: customerData } = authClient.users.getCustomers.useQuery({
+  const { data: customerData } = authClient.customers.getCustomers.useQuery({
     queryKey: [...CUSTOMERS_QUERY_KEY, page, pageSize, searchTerm],
-    queryData: {query: { ...queryParams, search: searchTerm || undefined }},
+    queryData: { query: { ...queryParams, search: searchTerm || undefined } },
   });
-  const { mutate: createUserMutation, isPending } = authClient.users.createUser.useMutation();
-  const { data: customerTypesData } = authClient.users.getCustomerTypes.useQuery({
+  const { mutate: createCustomerMutation, isPending } = authClient.customers.createCustomer.useMutation();
+  const { data: customerTypesData } = authClient.customers.getCustomerTypes.useQuery({
     queryKey: ['customerTypes'],
   });
   const customerTypes = customerTypesData?.status === 200 ? customerTypesData.body.data : [];
 
-  const { mutate: deleteUser} = authClient.users.deleteUser.useMutation();
+  const { mutate: deleteCustomer } = authClient.customers.deleteCustomer.useMutation();
 
   const [open, setOpen] = useState(false);
-  const [selectedCustomer, setSelectedCustomer] = useState<EditableCustomer | null>(null);
+  const [selectedCustomer, setSelectedCustomer] = useState<UpdateCustomer| null>(null);
 
 
   const customers = customerData?.status === 200 ? customerData.body.data : [];
   const paginationMeta = customerData?.status === 200 ? customerData.body.pagination : undefined;
 
-  const createForm = useForm<CreateCustomerFormData>({
+  const createForm = useForm<CreateCustomerFormData>({ 
     resolver: zodResolver(CreateCustomerSchema),
     defaultValues: {
       userType: 'customer',
@@ -99,19 +84,14 @@ export default function Component() {
 
 
   const handleCreateCustomer: SubmitHandler<CreateCustomerFormData> = async (data) => {
-    createUserMutation(
+    createCustomerMutation(
       {
         body: {
           ...data,
-          password: 'password',
-          userType: 'customer',
-          roles: [],
-          customerDetails: {
-            phone: data?.phone || null,
-            address: data?.address || null,
-            customerTypeId: data?.customerTypeId || null,
-          }
-        },
+          phone: data?.phone || null,
+          address: data?.address || null,
+          customerTypeId: data?.customerTypeId || null,
+        }
       },
       {
         onSuccess: (response) => {
@@ -128,14 +108,14 @@ export default function Component() {
     );
   };
 
-  const handleDeleteUser = async (userId: string) => {
+  const handleDeleteUser = async (userId: number) => {
     if (confirm('Are you sure you want to delete this user? This action cannot be undone.')) {
       try {
-        deleteUser({
+        deleteCustomer({
           params: { id: userId },
           body: undefined
-        },{
-          onSuccess:(response) =>{
+        }, {
+          onSuccess: (response) => {
             queryClient.invalidateQueries({ queryKey: CUSTOMERS_QUERY_KEY });
             toast.success('User deleted successfully');
           },
@@ -143,15 +123,15 @@ export default function Component() {
             toast.error('Failed to delete user');
           }
         })
-        
-        
+
+
       } catch (error: any) {
         console.error('Delete user error:', error);
       }
     }
   };
 
-  const handleEditCustomer = (customer: EditableCustomer) => {
+  const handleEditCustomer = (customer: UpdateCustomer) => {
     setSelectedCustomer(customer); // open modal or route to edit form
     setOpen(true);
   };
@@ -354,41 +334,36 @@ export default function Component() {
               <TableBody>
                 {customers?.length > 0 ? (
                   customers.map((customer) => (
-                    <TableRow key={customer.user.id}>
-                      <TableCell>{customer.user.name}</TableCell>
-                      <TableCell>{customer.user.email}</TableCell>
-                      <TableCell>{customer.customer?.phone || '-'}</TableCell>
-                      <TableCell>{customerTypes.find((ct: any) => ct.id === customer.customer?.customerTypeId)?.name || '-'}</TableCell>
+                    <TableRow key={customer.id}>
+                      <TableCell>{customer.name}</TableCell>
+                      <TableCell>{customer.email}</TableCell>
+                      <TableCell>{customer.phone || '-'}</TableCell>
+                      <TableCell>{customerTypes.find((ct: any) => ct.id === customer.customerTypeId)?.name || '-'}</TableCell>
                       <TableCell>
                         <Button
                           variant='ghost'
                           size='icon'
                           onClick={() =>
                             handleEditCustomer({
-                              id: customer.user.id,
-                              name: customer.user.name,
-                              email: customer.user.email,
-                              createdAt: customer.user.createdAt,
-                              updatedAt: customer.user.updatedAt,
-                              customerDetails: {
-                                id: customer.customer.id,
-                                userId: customer.user.id,
-                                phone: customer.customer.phone,
-                                address: customer.customer.address,
-                                customerTypeId: customer.customer.customerTypeId,
-                                createdAt: customer.customer.createdAt,
-                                updatedAt: customer.customer.updatedAt,
-                              },
+                              id: customer.id,
+                              name: customer.name,
+                              email: customer.email,
+                              createdAt: customer.createdAt,
+                              updatedAt: customer.updatedAt,
+                              phone: customer.phone,
+                              address: customer.address,
+                              customerTypeId: customer.customerTypeId,
+
                             })
                           }
-                          aria-label={`Edit ${customer.user.name}`}
+                          aria-label={`Edit ${customer.name}`}
                         >
                           <Pencil className='h-4 w-4' />
                         </Button>
                         <Button
                           variant="ghost"
                           size="icon"
-                          onClick={() => router.push(`/bookings/users/customers/${customer.user.id}`)}
+                          onClick={() => router.push(`/bookings/users/customers/${customer.id}`)}
                           className="ml-2"
                         >
                           <Eye className="h-4 w-4" />
@@ -396,7 +371,7 @@ export default function Component() {
                         <Button
                           variant="ghost"
                           size="icon"
-                          onClick={() => handleDeleteUser(customer.user.id)}
+                          onClick={() => handleDeleteUser(customer.id)}
                           className="ml-2"
                         >
                           <Trash2 className="h-4 w-4" />

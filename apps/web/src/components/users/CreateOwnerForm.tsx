@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useForm, SubmitHandler } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { InsertUserSchema } from '@repo/api-contract';
+import { InsertOwner, InsertOwnerSchema, InsertUserSchema } from '@repo/api-contract';
 import { toast } from 'sonner';
 import { authClient } from '@/lib/api/publicClient';
 import { DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
@@ -11,12 +11,9 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
-// Schema for creating users
-const CreateUserSchema = InsertUserSchema.extend({
-  roles: z.array(z.number()).default([])
-});
 
-type CreateUserFormData = z.infer<typeof CreateUserSchema>;
+
+
 
 interface CreateUserFormProps {
   roles: { roleId: number; name: string }[];
@@ -25,21 +22,18 @@ interface CreateUserFormProps {
 }
 
 export function CreateUserForm({ roles, onClose, onSuccess }: CreateUserFormProps) {
-  const { mutate: createUserMutation, isPending } = authClient.users.createUser.useMutation();
+  const { mutate: createOwnerMutation, isPending } = authClient.owners.createOwner.useMutation();
 
-  const form = useForm<CreateUserFormData>({
-    resolver: zodResolver(CreateUserSchema),
+  const form = useForm<InsertOwner>({
+    resolver: zodResolver(InsertOwnerSchema),
     defaultValues: {
       name: '',
       email: '',
-      password: '',
-      roles: [],
-      userType: ['system']
     },
   });
 
-  const handleCreateUser: SubmitHandler<CreateUserFormData> = async (data) => {
-    createUserMutation(
+  const handleCreateUser: SubmitHandler<InsertOwner> = async (data) => {
+    createOwnerMutation(
       {
         body: data,
       },
@@ -93,78 +87,9 @@ export function CreateUserForm({ roles, onClose, onSuccess }: CreateUserFormProp
                 </FormItem>
               )}
             />
-            <FormField
-              control={form.control}
-              name="password"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Password</FormLabel>
-                  <FormControl>
-                    <Input 
-                      type="password" 
-                      {...field} 
-                      required
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+           
           </div>
-          
-          <FormField
-            control={form.control}
-            name="roles"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Roles</FormLabel>
-                <FormControl>
-                  <Select
-                    onValueChange={(value) => {
-                      const roleId = Number(value);
-                      const currentRoles = field.value || [];
-                      if (!currentRoles.includes(roleId)) {
-                        field.onChange([...currentRoles, roleId]);
-                      }
-                    }}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select roles" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {roles.map((role) => (
-                        <SelectItem key={role.roleId} value={role.roleId.toString()}>
-                          {role.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </FormControl>
-                <div className="mt-2 flex flex-wrap gap-2">
-                  {field.value?.map((roleId, index) => {
-                    const roleName = roles.find(r => r.roleId === roleId)?.name || roleId;
-                    return (
-                      <div key={index} className="bg-muted px-2 py-1 rounded-md flex items-center">
-                        <span>{roleName}</span>
-                        <button
-                          type="button"
-                          className="ml-2 text-destructive"
-                          onClick={() => {
-                            const newRoles = [...field.value];
-                            newRoles.splice(index, 1);
-                            field.onChange(newRoles);
-                          }}
-                        >
-                          ×
-                        </button>
-                      </div>
-                    );
-                  })}
-                </div>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
+
 
           <div className='flex justify-end space-x-2'>
             <Button

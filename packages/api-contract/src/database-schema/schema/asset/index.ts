@@ -2,7 +2,7 @@ import { relations } from "drizzle-orm";
 import { mysqlTable, serial, varchar, text, timestamp, index, uniqueIndex, boolean, bigint, mysqlEnum } from "drizzle-orm/mysql-core";
 import { AssetType,assetProperty, BookingForm, Tags } from "../settings";
 import { Tenant, TenantTeamHasAssets } from "../tenant";
-import { User, UserHasAssets } from "../users";
+import { User, OwnerHasAssets } from "../users";
 import { createSelectSchema, createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 import { v4 as uuid } from "uuid";
@@ -48,7 +48,7 @@ export const AssetRelations = relations(Asset, ({ one, many }) => ({
     references: [AssetType.id],
   }),
   maintenances: many(MaintenanceTask),
-  user: many(UserHasAssets),
+  user: many(OwnerHasAssets),
   bookingForms: many(AssetHasBookingForms),
   assetImages: many(AssetImages),
   properties: many(AssetHasProperties),

@@ -15,7 +15,11 @@ export enum PermissionScope {
   USERS_DELETE = "users:delete",
   USERS_ROLES_MANAGE = "users:roles:manage",
   CUSTOMERS_READ = "customers:read",
+  CUSTOMERS_WRITE = "customers:write",
+  CUSTOMERS_DELETE = "customers:delete",
   OWNERS_READ = "owners:read",
+  OWNERS_WRITE = "owners:write",
+  OWNERS_DELETE = "owners:delete",
   
   // Booking Management
   BOOKINGS_READ = "bookings:read",
@@ -173,7 +177,11 @@ export function getUserScopes(): string[] {
     PermissionScope.USERS_DELETE,
     PermissionScope.USERS_ROLES_MANAGE,
     PermissionScope.CUSTOMERS_READ,
+    PermissionScope.CUSTOMERS_WRITE,
+    PermissionScope.CUSTOMERS_DELETE,
     PermissionScope.OWNERS_READ,
+    PermissionScope.OWNERS_WRITE,
+    PermissionScope.OWNERS_DELETE,
   ];
 }
 
@@ -320,6 +328,8 @@ export function getWriteScopes(): string[] {
     PermissionScope.ASSETS_PROPERTIES_MANAGE,
     PermissionScope.USERS_WRITE,
     PermissionScope.USERS_ROLES_MANAGE,
+    PermissionScope.CUSTOMERS_WRITE,
+    PermissionScope.OWNERS_WRITE,
     PermissionScope.BOOKINGS_WRITE,
     PermissionScope.BOOKINGS_BY_TAG_CREATE,
     PermissionScope.MAINTENANCE_WRITE,
@@ -357,6 +367,8 @@ export function getDeleteScopes(): string[] {
   return [
     PermissionScope.ASSETS_DELETE,
     PermissionScope.USERS_DELETE,
+    PermissionScope.CUSTOMERS_DELETE,
+    PermissionScope.OWNERS_DELETE,
     PermissionScope.BOOKINGS_DELETE,
     PermissionScope.BOOKINGS_CANCEL,
     PermissionScope.MAINTENANCE_DELETE,

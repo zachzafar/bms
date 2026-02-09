@@ -28,7 +28,7 @@ const BookingSchema = z.object({
 
 type BookingForm = z.infer<typeof BookingSchema>;
 
-export default function Bookings({ userId }: { userId: string }) {
+export default function Bookings({ customerId }: { customerId: number }) {
   const tenant = StorageService.getTenant();
   const [openCreate, setOpenCreate] = useState(false);
   const [openEditId, setOpenEditId] = useState<string | null>(null);
@@ -41,7 +41,7 @@ export default function Bookings({ userId }: { userId: string }) {
     queryKey: ['assets'],
     enabled: !!tenant,
   });
-  const { data: customersData } = authClient.users.getCustomers.useQuery({
+  const { data: customersData } = authClient.customers.getCustomers.useQuery({
     queryKey: ['customers'],
     enabled: !!tenant,
   });
@@ -49,10 +49,10 @@ export default function Bookings({ userId }: { userId: string }) {
   const bookings = bookingsData?.body.data ?? [];
   const assets = assetsData?.body.data ?? [];
   const customers = customersData?.body.data ?? [];
-  const selectedCustomer = useMemo(() => customers.find((c: any) => c.user.id === userId), [customers, userId]);
-  const customerIdNum = selectedCustomer?.customer?.id;
+  const selectedCustomer = useMemo(() => customers.find((c: any) => c.id === customerId), [customers, customerId]);
+  const customerIdNum = selectedCustomer?.id;
 
-  const customerBookings = useMemo(() => bookings.filter((b: any) => b.user?.id === userId), [bookings, userId]);
+  const customerBookings = useMemo(() => bookings.filter((b: any) => b.customer?.id === customerId), [bookings, customerId]);
 
   const { mutate: createBooking, isPending: creating } = authClient.booking.createBooking.useMutation();
   const { mutate: updateBooking, isPending: updating } = authClient.booking.updateBooking.useMutation();

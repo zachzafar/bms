@@ -17,7 +17,8 @@ export class BlockedDatesController {
         @Query() query: { assetId?: string }
     ): Promise<ReturnType<typeof tsRestHandler>> {
         return tsRestHandler(contract.blockedDates.getBlockedDates, async ({ query }) => {
-            const blockedDates = await this.blockedDatesService.getBlockedDates(query?.assetId);
+            const tenantId = headers['x-tenant-id'];
+            const blockedDates = await this.blockedDatesService.getBlockedDates(tenantId,query?.assetId);
 
             const formatted = blockedDates.map((b) => ({
                 tenantId: b.tenantId,

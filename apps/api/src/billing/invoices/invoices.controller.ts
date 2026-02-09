@@ -213,8 +213,8 @@ export class InvoicesController {
           notes: invoice.notes ?? undefined,
         },
         customer: {
-          name: customer?.user?.name ?? 'Unknown Customer',
-          email: customer?.user?.email ?? undefined,
+          name: customer?.name ?? 'Unknown Customer',
+          email: customer?.email ?? undefined,
           address: customer?.address ?? undefined,
         },
         items: invoice.items.map(item => ({

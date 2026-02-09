@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo } from 'react';
+import { useEffect } from 'react';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import Loading from '@/components/custom/Loading';
 import { StorageService } from '@/lib/api/storage';
@@ -30,28 +30,18 @@ const ownerFormSchema = z.object({
 
 type OwnerFormValues = z.infer<typeof ownerFormSchema>;
 
-export default function Details({ userId }: { userId: string }) {
+export default function Details({ ownerId }: { ownerId: number }) {
   const tenant = StorageService.getTenant();
 
-  // Fetch owners for display and refetch support
-  const { data: ownersData, isLoading: ownersLoading, refetch } = authClient.users.getOwners.useQuery({
-    queryKey: ['owners'],
+  const { data: ownerData, isLoading, refetch } = authClient.owners.getOwner.useQuery({
+    queryKey: ['owner', ownerId],
+    queryData: {
+      params: { id: ownerId },
+    },
     enabled: !!tenant,
   });
 
-  // Preserve roles on update
-  const { data: usersData } = authClient.users.getUsers.useQuery({
-    queryKey: ['users'],
-    enabled: !!tenant,
-  });
-
-  const owners = ownersData?.body.data ?? [];
-  const selected = useMemo(() => owners.find((o: any) => o.user.id === userId), [owners, userId]);
-  const rolesForUser: number[] = useMemo(() => {
-    const users = usersData?.body.data ?? [];
-    const u = users.find((u: any) => u.id === userId);
-    return (u?.roles ?? []).map((r: any) => r.roleId as number);
-  }, [usersData, userId]);
+  const selected = ownerData?.status === 200 ? ownerData.body : null;
 
   const form = useForm<OwnerFormValues>({
     resolver: zodResolver(ownerFormSchema),
@@ -67,37 +57,34 @@ export default function Details({ userId }: { userId: string }) {
   useEffect(() => {
     if (selected) {
       form.reset({
-        name: selected.user?.name ?? '',
-        email: selected.user?.email ?? '',
-        phone: selected.owner?.phone ?? '',
-        address: selected.owner?.address ?? '',
+        name: selected.name ?? '',
+        email: selected.email ?? '',
+        phone: selected.phone ?? '',
+        address: selected.address ?? '',
       });
     }
   }, [selected, form]);
 
-  const { mutate: updateUser } = authClient.users.updateUser.useMutation();
+  const { mutate: updateOwner } = authClient.owners.updateOwner.useMutation();
 
-  if (ownersLoading || !selected) return <Loading />;
+  if (isLoading || !selected) return <Loading />;
 
   const onSubmit = (values: OwnerFormValues) => {
-    updateUser(
+    updateOwner(
       {
-        params: { id: userId },
+        params: { id: ownerId },
         body: {
-          user: { name: values.name, email: values.email, userType: 'owner' },
-          roles: rolesForUser,
-          owner: {
-            userId,
-            phone: values.phone || null,
-            address: values.address || null,
-          },
+          name: values.name,
+          email: values.email,
+          phone: values.phone || null,
+          address: values.address || null,
         },
       },
       {
         onSuccess: async () => {
           toast.success('Owner profile updated');
           await refetch();
-          form.reset(values); // Reset dirty state with new values
+          form.reset(values);
         },
         onError: () => {
           toast.error('Failed to update owner profile');

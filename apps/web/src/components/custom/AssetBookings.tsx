@@ -44,7 +44,7 @@ export default function AssetBookings({ asset }: { asset: SelectAsset }) {
     },
   );
   const { mutate: createBooking } = authClient.booking.createBooking.useMutation();
-  const { data: customerResponse } = authClient.users.getCustomers.useQuery({ queryKey: ['customers'] })
+  const { data: customerResponse } = authClient.customers.getCustomers.useQuery({ queryKey: ['customers'] })
   const customerList = customerResponse?.body.data ?? [];
   const bookings = data?.body.data ?? [];
   console.log(bookings)
@@ -141,10 +141,10 @@ export default function AssetBookings({ asset }: { asset: SelectAsset }) {
                           <MultiSelectorList>
                             {customerList.map((customer) => (
                               <MultiSelectorItem
-                                key={customer.customer.id}
-                                value={customer.customer.id.toString()}
+                                key={customer.id}
+                                value={customer.id.toString()}
                               >
-                                {customer.user.name}
+                                {customer.name}
                               </MultiSelectorItem>
                             ))}
                           </MultiSelectorList>
@@ -179,7 +179,7 @@ export default function AssetBookings({ asset }: { asset: SelectAsset }) {
                 <TableCell>{new Date(booking.startDate).toDateString()}</TableCell>
                 <TableCell>{new Date(booking.endDate).toDateString()}</TableCell>
                 <TableCell>
-                  <div>{booking?.user?.name}</div>
+                  <div>{booking?.customer?.name}</div>
                 </TableCell>
                 <TableCell>
                   <span className={`capitalize ${getStatusColor(booking.status ?? "")}`}>
