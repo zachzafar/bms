@@ -58,7 +58,13 @@ function getCookie(name: string): string | null {
 
 function removeCookie(name: string, path: string = "/") {
   if (!isClient()) return;
+  // Delete without domain (cookies set without explicit domain)
   document.cookie = `${encodeURIComponent(name)}=; Path=${path}; Max-Age=0`;
+  // Also delete with domain to cover cookies that may have been set with a domain
+  const domain = process.env.NEXT_PUBLIC_DOMAIN;
+  if (domain) {
+    document.cookie = `${encodeURIComponent(name)}=; Path=${path}; Domain=${domain}; Max-Age=0`;
+  }
 }
 
 function safeParse<T>(raw: string | null): T | null {

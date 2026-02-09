@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { authClient } from '@/lib/api/publicClient';
 import { useRouter } from 'next/navigation';
 import { deleteSession } from '@/lib/api/session';
+import { StorageService } from '@/lib/api/storage';
 import { useStorage } from '@/hooks/useStorage';
 import { LogOut } from 'lucide-react';
 import { toast } from 'sonner';
@@ -25,6 +26,10 @@ export default function OwnerLogout({ subdomain }: OwnerLogoutProps) {
         }
       }, {
         onSuccess: async () => {
+          StorageService.removeToken();
+          StorageService.removeUser();
+          StorageService.removeTenant();
+          StorageService.removeTenantList();
           await deleteSession();
           toast.success('Logged out successfully');
           router.replace(`/owner/${subdomain}/login`);

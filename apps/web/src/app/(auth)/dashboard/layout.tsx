@@ -14,6 +14,7 @@ import { toast } from 'sonner';
 import { useStorage } from '@/hooks/useStorage';
 import { authClient } from '@/lib/api/publicClient';
 import { deleteSession } from '@/lib/api/session';
+import { StorageService } from '@/lib/api/storage';
 
 interface DashboardLayoutProps {
   children: React.ReactNode;
@@ -41,8 +42,11 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
         }
       }, {
         onSuccess: async (response) => {
+          StorageService.removeToken();
+          StorageService.removeUser();
+          StorageService.removeTenant();
+          StorageService.removeTenantList();
           await deleteSession();
-          // Redirect to auth app instead of /login
           const authUrl = process.env.NODE_ENV === 'production'
             ? 'https://app.bookos.xyz'
             : 'http://localhost:3000';

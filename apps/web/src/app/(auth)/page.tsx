@@ -8,6 +8,7 @@ import { Building, Users, Settings, LogOut, User, Shield, Key, Globe } from 'luc
 import { useRouter } from 'next/navigation';
 import { authClient } from '@/lib/api/publicClient';
 import { getSession, deleteSession } from '@/lib/api/session';
+import { StorageService } from '@/lib/api/storage';
 import { toast } from 'sonner';
 import { queryClient } from '@/providers/tanstack';
 
@@ -116,11 +117,11 @@ export default function AuthHubPage() {
 
   const handleLogout = async () => {
     try {
+      StorageService.removeToken();
+      StorageService.removeUser();
+      StorageService.removeTenant();
+      StorageService.removeTenantList();
       await deleteSession();
-      localStorage.removeItem('auth_token');
-      localStorage.removeItem('user');
-      localStorage.removeItem('tenant');
-      localStorage.clear()
 
       queryClient.clear();
 
