@@ -5,7 +5,7 @@ export const InsertUserSchema = z.object({
     name: z.string(),
     email: z.string(),
     password: z.string(),
-    userType: z.enum(["customer", "owner", "system", "admin"]),
+    userType: z.enum(["owner", "system", "admin"]),
     createdAt: z.date().optional(),
     updatedAt: z.date().nullable().optional(),
 });
@@ -14,7 +14,7 @@ export const SelectUserSchema = z.object({
     name: z.string(),
     email: z.string(),
     password: z.string(),
-    userType: z.enum(["customer", "owner", "system", "admin"]),
+    userType: z.enum(["owner", "system", "admin"]),
     createdAt: z.date().nullable(),
     updatedAt: z.date().nullable(),
     roles: z.array(z.number()),
@@ -43,27 +43,27 @@ export type SelectUserHasAssets = z.infer<typeof SelectUserHasAssetsSchema>
 
 export const InsertCustomerSchema = z.object({
     id: z.number().optional(),
+    name: z.string(),
+    email: z.string(),
     phone: z.string().nullable().optional(),
     address: z.string().nullable().optional(),
-    contactId: z.number().nullable().optional(),
-    dateOfBirth: z.date().nullable().optional(),
+    customerTypeId: z.number().nullable().optional(),
     createdAt: z.date().optional(),
     updatedAt: z.date().nullable().optional(),
     tenantId: z.string(),
-    userId: z.string(),
 });
 export const SelectCustomerSchema = z.object({
     id: z.number(),
+    name: z.string(),
+    email: z.string(),
     phone: z.string().nullable(),
     address: z.string().nullable(),
-    contactId: z.number().nullable(),
-    dateOfBirth: z.date().nullable(),
+    customerTypeId: z.number().nullable(),
     createdAt: z.date(),
     updatedAt: z.date().nullable(),
     tenantId: z.string(),
-    userId: z.string(),
 });
-export const UpdateCustomerSchema = InsertCustomerSchema.partial().required({ userId: true });
+export const UpdateCustomerSchema = InsertCustomerSchema.partial().required({ id: true });
 
 export type InsertCustomer = z.infer<typeof InsertCustomerSchema>;
 export type SelectCustomer = z.infer<typeof SelectCustomerSchema>;
@@ -71,11 +71,10 @@ export type UpdateCustomer = z.infer<typeof UpdateCustomerSchema>;
 
 export const InsertOwnerSchema = z.object({
     id: z.number().optional(),
+    name: z.string(),
+    email: z.string(),
     phone: z.string().nullable().optional(),
     address: z.string().nullable().optional(),
-    companyName: z.string().nullable().optional(),
-    contactId: z.number().nullable().optional(),
-    taxId: z.string().nullable().optional(),
     createdAt: z.date().optional(),
     updatedAt: z.date().nullable().optional(),
     tenantId: z.string(),
@@ -83,17 +82,16 @@ export const InsertOwnerSchema = z.object({
 });
 export const SelectOwnerSchema = z.object({
     id: z.number(),
+    name: z.string(),
+    email: z.string(),
     phone: z.string().nullable(),
     address: z.string().nullable(),
-    companyName: z.string().nullable(),
-    contactId: z.number().nullable(),
-    taxId: z.string().nullable(),
     createdAt: z.date(),
     updatedAt: z.date().nullable(),
     tenantId: z.string(),
     userId: z.string(),
 });
-export const UpdateOwnerSchema = InsertOwnerSchema.partial().required({ userId: true });
+export const UpdateOwnerSchema = InsertOwnerSchema.partial().required({ id: true });
 export type InsertOwner = z.infer<typeof InsertOwnerSchema>;
 export type SelectOwner = z.infer<typeof SelectOwnerSchema>;
 export type UpdateOwner = z.infer<typeof UpdateOwnerSchema>;

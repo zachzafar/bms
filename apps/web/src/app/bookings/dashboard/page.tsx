@@ -34,7 +34,7 @@ export default function Component() {
   });
 
   // Fetch customers data
-  const { data: customersData } = authClient.users.getCustomers.useQuery({
+  const { data: customersData } = authClient.customers.getCustomers.useQuery({
     queryKey: ['customers'],
   });
 
@@ -155,7 +155,7 @@ export default function Component() {
                     <TableCell className="font-medium">
                       <CopyableId id={booking.id} />
                     </TableCell>
-                    <TableCell>{booking.user?.name || booking.customer?.userId || 'Unknown'}</TableCell>
+                    <TableCell>{booking.customer?.name || 'Unknown'}</TableCell>
                     <TableCell>{booking.asset?.name || 'Unknown Asset'}</TableCell>
                     <TableCell>{formatDisplayDate(booking.startDate)}</TableCell>
                     <TableCell>{formatDisplayDate(booking.endDate)}</TableCell>

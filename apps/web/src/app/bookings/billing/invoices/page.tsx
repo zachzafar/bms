@@ -58,7 +58,7 @@ export default function InvoicesPage() {
     queryData: {query: queryParams},
   });
 
-  const { data: customersData } = authClient.users.getCustomers.useQuery({
+  const { data: customersData } = authClient.customers.getCustomers.useQuery({
     queryKey: ['customers'],
   });
 
@@ -104,8 +104,8 @@ export default function InvoicesPage() {
   });
 
   const getCustomerName = (customerId: string) => {
-    const customer = customers.find((c) => String(c.customer.id) === customerId);
-    return customer ? customer.user.name || customer.user.email : 'Unknown Customer';
+    const customer = customers.find((c) => String(c.id) === customerId);
+    return customer ? customer.name || customer.email : 'Unknown Customer';
   };
 
   const getStatusColor = (status: string) => {
@@ -278,8 +278,8 @@ export default function InvoicesPage() {
                 <SelectContent>
                   <SelectItem value="all">All Customers</SelectItem>
                   {customers.map((customer) => (
-                    <SelectItem key={customer.customer.id} value={customer.customer.id.toString()}>
-                      {customer.user.name || customer.user.email}
+                    <SelectItem key={customer.id} value={customer.id.toString()}>
+                      {customer.name || customer.email}
                     </SelectItem>
                   ))}
                 </SelectContent>

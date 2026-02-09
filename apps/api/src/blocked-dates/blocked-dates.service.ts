@@ -6,17 +6,27 @@ import { and, eq, gte, inArray, isNull, lte } from 'drizzle-orm';
 
 // Helper function to convert to UTC DateTime
 function toUTCDateTime(input: string | Date): Date {
-  if (typeof input === 'string' && input.endsWith('Z')) {
-    return new Date(input);
+  if (typeof input === 'string') {
+    if (input.endsWith('Z')) {
+      return new Date(input);
+    }
+    const [datePart, timePart] = input.split('T');
+    const [year, month, day] = datePart.split('-').map(Number);
+    const [hours, minutes, seconds] = timePart
+      ? timePart.replace('Z', '').split(':').map(Number)
+      : [0, 0, 0];
+    return new Date(Date.UTC(year, month - 1, day, hours, minutes, seconds || 0));
   }
 
-  const [datePart, timePart] = (typeof input === 'string' ? input : input.toISOString()).split('T');
-  const [year, month, day] = datePart.split('-').map(Number);
-  const [hours, minutes, seconds] = timePart
-    ? timePart.replace('Z', '').split(':').map(Number)
-    : [0, 0, 0];
-
-  return new Date(Date.UTC(year, month - 1, day, hours, minutes, seconds || 0));
+  // Date objects: use local components (which reflect the original user intent)
+  return new Date(Date.UTC(
+    input.getFullYear(),
+    input.getMonth(),
+    input.getDate(),
+    input.getHours(),
+    input.getMinutes(),
+    input.getSeconds()
+  ));
 }
 
 @Injectable()
@@ -25,9 +35,9 @@ export class BlockedDatesService {
     @Inject(DrizzleAsyncProvider) private db: MySql2Database<typeof schema>,
   ) {}
 
-  async getBlockedDates(assetId?: string) {
+  async getBlockedDates(tenantId: string,assetId?: string) {
     const blocked = await this.db.query.BlockedDate.findMany({
-      where: assetId ? (b) => eq(b.assetId, assetId) : undefined,
+      where: assetId ? (b) => and(eq(b.assetId, assetId),eq(b.tenantId,tenantId)): (b) => eq(b.tenantId,tenantId),
     });
 
     return blocked.map(b => ({

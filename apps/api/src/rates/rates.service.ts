@@ -289,14 +289,29 @@ export class RatesService {
       where: (a, { eq }) => eq(a.id, assetId),
     });
 
+    const bookingMinutes = Math.ceil(
+      (bookingEndDate.getTime() - bookingStartDate.getTime()) / (1000 * 60)
+    );
+
     const filterApplicableRates = (rates: any[]) => {
       return rates
         .filter(rate => {
+          // 1. Check date range covers the booking
           if (!rate.startDate || !rate.endDate) return false;
           const rateStart = new Date(rate.startDate);
           const rateEnd = new Date(rate.endDate);
-          return rateStart <= bookingStartDate && rateEnd >= bookingEndDate;
+          if (rateStart > bookingStartDate || rateEnd < bookingEndDate) return false;
+
+          // 2. Check min/max duration (in units of the rate type)
+          const unitMinutes = rate.rateTypeMinutes || 1440;
+          const bookedUnits = Math.ceil(bookingMinutes / unitMinutes);
+
+          if (rate.minDuration != null && bookedUnits < rate.minDuration) return false;
+          if (rate.maxDuration != null && bookedUnits > rate.maxDuration) return false;
+
+          return true;
         })
+        // Sort by latest createdAt first
         .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
     };
 
@@ -310,6 +325,8 @@ export class RatesService {
           pricePerUnit: schema.Rate.pricePerUnit,
           startDate: schema.Rate.startDate,
           endDate: schema.Rate.endDate,
+          minDuration: schema.Rate.minDuration,
+          maxDuration: schema.Rate.maxDuration,
           priority: schema.Rate.priority,
           isActive: schema.Rate.isActive,
           createdAt: schema.Rate.createdAt,
@@ -333,6 +350,8 @@ export class RatesService {
           pricePerUnit: schema.Rate.pricePerUnit,
           startDate: schema.Rate.startDate,
           endDate: schema.Rate.endDate,
+          minDuration: schema.Rate.minDuration,
+          maxDuration: schema.Rate.maxDuration,
           priority: schema.Rate.priority,
           name: schema.Rate.name,
           isActive: schema.Rate.isActive,

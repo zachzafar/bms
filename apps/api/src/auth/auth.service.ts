@@ -114,7 +114,7 @@ export class AuthService {
 
     if (user_.userType =='admin') return this.loginAdmin(email, password);
 
-    if (!user_.userType.includes("system") && user_.userType !== "owner") {
+    if (!user_.userType.includes("system")) {
       throw new UnauthorizedException('Invalid email or password');
     }
   

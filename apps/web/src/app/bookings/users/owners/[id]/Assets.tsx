@@ -7,7 +7,6 @@ import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
 import Loading from '@/components/custom/Loading';
 import { StorageService } from '@/lib/api/storage';
@@ -15,20 +14,32 @@ import { authClient } from '@/lib/api/publicClient';
 import { Check, ChevronsUpDown } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
-export default function Assets({ userId }: { userId: string }) {
+export default function Assets({ ownerId }: { ownerId: number }) {
   const tenant = StorageService.getTenant();
 
-  const { data: assetsData, isLoading: assetsLoading, refetch } = authClient.assets.getAssets.useQuery({
+  // Fetch owner's assigned assets
+  const { data: ownerAssetsData, isLoading: ownerAssetsLoading, refetch: refetchOwnerAssets } = authClient.owners.getOwnerAssetsAdmin.useQuery({
+    queryKey: ['ownerAssets', ownerId],
+    queryData: {
+      params: { id: ownerId },
+      query: { pageSize: 100 },
+    },
+    enabled: !!tenant,
+  });
+
+  // Fetch all assets for the assign dialog
+  const { data: allAssetsData, isLoading: allAssetsLoading, refetch: refetchAllAssets } = authClient.assets.getAssets.useQuery({
     queryKey: ['assets'],
     enabled: !!tenant,
   });
 
-  const { mutate: updateAsset, isPending: isAssigning } = authClient.assets.updateAsset.useMutation();
+  const { mutate: assignAsset, isPending: isAssigning } = authClient.owners.assignAsset.useMutation();
+  const { mutate: unassignAsset } = authClient.owners.unassignAsset.useMutation();
 
-  const assets = assetsData?.body.data ?? [];
-  const ownedAssets = useMemo(() => assets.filter((a: any) => a.userId === userId), [assets, userId]);
-  // Show unassigned assets and assets not owned by this user
-  const assignableAssets = useMemo(() => assets.filter((a: any) => a.userId !== userId), [assets, userId]);
+  const ownedAssets = ownerAssetsData?.body.data ?? [];
+  const ownedAssetIds = useMemo(() => new Set(ownedAssets.map((a: any) => a.id)), [ownedAssets]);
+  const allAssets = allAssetsData?.body.data ?? [];
+  const assignableAssets = useMemo(() => allAssets.filter((a: any) => !ownedAssetIds.has(a.id)), [allAssets, ownedAssetIds]);
 
   const [openAssign, setOpenAssign] = useState(false);
   const [openCombobox, setOpenCombobox] = useState(false);
@@ -39,21 +50,22 @@ export default function Assets({ userId }: { userId: string }) {
     [assignableAssets, selectedAssetId]
   );
 
-  if (assetsLoading) return <Loading />;
+  if (ownerAssetsLoading || allAssetsLoading) return <Loading />;
 
   const handleAssign = () => {
     if (!selectedAssetId) return;
-    updateAsset(
+    assignAsset(
       {
-        params: { id: selectedAssetId },
-        body: { userId },
+        params: { id: ownerId },
+        body: { assetId: selectedAssetId },
       },
       {
         onSuccess: async () => {
           toast.success('Asset assigned');
           setOpenAssign(false);
           setSelectedAssetId('');
-          await refetch();
+          await refetchOwnerAssets();
+          await refetchAllAssets();
         },
         onError: () => toast.error('Failed to assign asset'),
       }
@@ -61,15 +73,15 @@ export default function Assets({ userId }: { userId: string }) {
   };
 
   const handleUnassign = (assetId: string) => {
-    updateAsset(
+    unassignAsset(
       {
-        params: { id: assetId },
-        body: { userId: null },
+        params: { id: ownerId, assetId },
       },
       {
         onSuccess: async () => {
           toast.success('Asset unassigned');
-          await refetch();
+          await refetchOwnerAssets();
+          await refetchAllAssets();
         },
         onError: () => toast.error('Failed to unassign asset'),
       }
@@ -137,11 +149,6 @@ export default function Assets({ userId }: { userId: string }) {
                                   ID: {asset.id}
                                 </span>
                               </div>
-                              {asset.userId ? (
-                                <Badge variant="secondary" className="ml-2 shrink-0">Assigned</Badge>
-                              ) : (
-                                <Badge variant="outline" className="ml-2 shrink-0">Unassigned</Badge>
-                              )}
                             </CommandItem>
                           ))}
                         </CommandGroup>
@@ -158,11 +165,6 @@ export default function Assets({ userId }: { userId: string }) {
                     <p><strong>ID:</strong> {selectedAsset.id}</p>
                     {selectedAsset.description && (
                       <p><strong>Description:</strong> {selectedAsset.description}</p>
-                    )}
-                    {selectedAsset.userId && (
-                      <p className="text-amber-600 mt-2">
-                        This asset is currently assigned to another owner and will be reassigned.
-                      </p>
                     )}
                   </div>
                 </div>

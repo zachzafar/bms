@@ -36,7 +36,6 @@ export class TenantService {
     async getCustomerById(customerId: number) {
         return await this.db.query.Customer.findFirst({
             where: (customer, { eq }) => eq(customer.id, customerId),
-            with: { user: true }
         });
     }
 

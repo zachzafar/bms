@@ -1,6 +1,6 @@
 import { relations} from "drizzle-orm";
 import { mysqlTable, varchar, datetime, decimal, text, timestamp, index, bigint, date, mysqlEnum } from "drizzle-orm/mysql-core";
-import { Customer, User } from "../users";
+import { Customer } from "../users";
 import { Asset } from "../asset";
 import { createInsertSchema, createSelectSchema } from "drizzle-zod";
 import { z } from "zod";
@@ -13,7 +13,7 @@ import { Tenant } from "../tenant";
 // Booking Model
 export const Booking = mysqlTable("booking", {
     id: varchar("id", { length: 36 }).primaryKey().$default(uuid),
-    userId: varchar("user_id", { length: 255 }).references(() => User.id, { onDelete: 'set null' }),
+    customerId: bigint("customer_id", { mode: "number", unsigned: true }).references(() => Customer.id, { onDelete: 'set null' }),
     startDate: datetime("start_date").notNull(),
     endDate: datetime("end_date").notNull(),
     status: mysqlEnum("status", ["Pending", "Confirmed", "Cancelled"]).notNull().$default(() => "Pending"),
@@ -24,11 +24,11 @@ export const Booking = mysqlTable("booking", {
     assetId: varchar("asset_id", { length: 255 }).notNull().references(() => Asset.id),
 }, (table) => ({
     assetIdx: index("asset_idx").on(table.assetId),
-    userIdx: index("user_idx").on(table.userId),
+    customerIdx: index("customer_idx").on(table.customerId),
     deletedAtIdx: index("deleted_at_idx").on(table.deletedAt),
 }));
 
-export const InsertBookingSchema = createInsertSchema(Booking).omit({ startDate: true, endDate: true, userId: true }).extend({ startDate: z.coerce.date(), endDate: z.coerce.date() });
+export const InsertBookingSchema = createInsertSchema(Booking).omit({ startDate: true, endDate: true, customerId: true }).extend({ startDate: z.coerce.date(), endDate: z.coerce.date() });
 export const SelectBookingSchema = createSelectSchema(Booking);
 
 export const UpdateBookingSchema = InsertBookingSchema.partial().required({id:true, startDate: true, endDate: true, status: true, totalPrice: true, assetId: true});
@@ -66,9 +66,9 @@ export const BookingFormFieldValueRelations = relations(BookingFormFieldValue, (
 }));
 
 export const BookingRelations = relations(Booking, ({ one,many }) => ({
-    user: one(User, {
-        fields: [Booking.userId],
-        references: [User.id],
+    customer: one(Customer, {
+        fields: [Booking.customerId],
+        references: [Customer.id],
     }),
     asset: one(Asset, {
             fields: [Booking.assetId],

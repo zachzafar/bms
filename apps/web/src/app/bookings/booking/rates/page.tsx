@@ -208,6 +208,13 @@ export default function RatesPage() {
     return dateStr ? dateStr.slice(0, 10) : '';
   }
 
+  // Parse date-only strings (e.g. "2026-02-10") as local midnight
+  // to avoid UTC interpretation shifting the date by -1 day
+  function parseLocalDate(dateStr: string): Date {
+    const [year, month, day] = dateStr.slice(0, 10).split('-').map(Number);
+    return new Date(year, month - 1, day);
+  }
+
   const handleEdit = (rate: any, assetIds: string[], assetTypeIds: number[]) => {
     const hasAssetType = assetTypeIds && assetTypeIds.length > 0;
     const mode: SelectionMode = hasAssetType ? "assetType" : "assets";
@@ -220,8 +227,8 @@ export default function RatesPage() {
     form.reset({
       name: rate.name,
       description: rate.description ?? "",
-      startDate: new Date(rate.startDate),
-      endDate: new Date(rate.endDate),
+      startDate: parseLocalDate(rate.startDate),
+      endDate: parseLocalDate(rate.endDate),
       minUnits: rate.minDuration ? Math.round(rate.minDuration / editUnitMinutes) : undefined,
       maxUnits: rate.maxDuration ? Math.round(rate.maxDuration / editUnitMinutes) : undefined,
       pricePerUnit: rate.pricePerUnit ? Number(rate.pricePerUnit) : undefined,

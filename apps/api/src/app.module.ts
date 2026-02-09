@@ -31,6 +31,7 @@ import { ScheduleModule } from '@nestjs/schedule';
 import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
 import { APP_GUARD } from '@nestjs/core';
 import { OwnerModule } from './owner/owner.module';
+import { CustomersModule } from './customers/customers.module';
 var cors = require('cors');
 
 const allowAllCorsEndpoints = [
@@ -72,7 +73,8 @@ const allowAllCorsEndpoints = [
     SystemAdminModule,
     InvoicesModule,
     PaymentsModule,
-    OwnerModule
+    OwnerModule,
+    CustomersModule
   ],
   controllers: [AppController, SlotController],
   providers: [

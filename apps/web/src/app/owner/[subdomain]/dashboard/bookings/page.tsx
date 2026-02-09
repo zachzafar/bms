@@ -122,7 +122,7 @@ export default function OwnerBookingsPage() {
                           {booking.id.substring(0, 8)}...
                         </TableCell>
                         <TableCell>{booking.asset?.name || 'N/A'}</TableCell>
-                        <TableCell>{booking.customer?.user?.name || booking.user?.name || 'N/A'}</TableCell>
+                        <TableCell>{booking.customer?.name || 'N/A'}</TableCell>
                         <TableCell>
                           {formatDisplayDate(booking.startDate)}
                         </TableCell>

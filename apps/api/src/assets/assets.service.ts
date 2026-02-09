@@ -479,12 +479,9 @@ export class AssetsService {
   // Owner-specific Methods
   // -----------------------------
 
-  async getOwnerInformation(ownerId: string) {
+  async getOwnerInformation(ownerId: number) {
     const owner = await this.db.query.Owner.findFirst({
-      where: (owner, { eq }) => eq(owner.userId, ownerId),
-      with: {
-        user: true,
-      }
+      where: (owner, { eq }) => eq(owner.id, ownerId),
     });
 
     if (!owner) {
@@ -492,8 +489,8 @@ export class AssetsService {
     }
 
     // Get owner's assets
-    const ownerAssets = await this.db.query.UserHasAssets.findMany({
-      where: (uha, { eq }) => eq(uha.userId, ownerId),
+    const ownerAssets = await this.db.query.OwnerHasAssets.findMany({
+      where: (uha, { eq }) => eq(uha.ownerId, ownerId),
       with: {
         asset: true,
       }
@@ -505,24 +502,24 @@ export class AssetsService {
     };
   }
 
-  async getOwnerAssets(ownerId: string, page: number = 1, pageSize: number = 10) {
+  async getOwnerAssets(ownerId: number, page: number = 1, pageSize: number = 10) {
     const offset = (page - 1) * pageSize;
 
-    // Get total count of assets for this owner using UserHasAssets junction table
+    // Get total count of assets for this owner using OwnerHasAssets junction table
     const totalCountResult = await this.db
       .select({ count: sql<number>`COUNT(*)` })
-      .from(schema.UserHasAssets)
-      .innerJoin(schema.Asset, eq(schema.UserHasAssets.assetId, schema.Asset.id))
-      .where(and(eq(schema.UserHasAssets.userId, ownerId),isNull(schema.Asset.deletedAt)))
+      .from(schema.OwnerHasAssets)
+      .innerJoin(schema.Asset, eq(schema.OwnerHasAssets.assetId, schema.Asset.id))
+      .where(and(eq(schema.OwnerHasAssets.ownerId, ownerId),isNull(schema.Asset.deletedAt)))
       .execute();
     const totalCount = totalCountResult[0]?.count || 0;
 
-    // Get paginated assets for this owner using UserHasAssets junction table
+    // Get paginated assets for this owner using OwnerHasAssets junction table
     const rows = await this.db
       .select()
-      .from(schema.UserHasAssets)
-      .innerJoin(schema.Asset, eq(schema.UserHasAssets.assetId, schema.Asset.id))
-      .where(and(eq(schema.UserHasAssets.userId, ownerId),isNull(schema.Asset.deletedAt)))
+      .from(schema.OwnerHasAssets)
+      .innerJoin(schema.Asset, eq(schema.OwnerHasAssets.assetId, schema.Asset.id))
+      .where(and(eq(schema.OwnerHasAssets.ownerId, ownerId),isNull(schema.Asset.deletedAt)))
       .limit(pageSize)
       .offset(offset)
       .execute();
@@ -560,11 +557,11 @@ export class AssetsService {
     };
   }
 
-  async getOwnerAsset(ownerId: string, assetId: string) {
-    // Verify owner owns the asset by checking UserHasAssets junction table
-    const ownerAssetLink = await this.db.query.UserHasAssets.findFirst({
+  async getOwnerAsset(ownerId: number, assetId: string) {
+    // Verify owner owns the asset by checking OwnerHasAssets junction table
+    const ownerAssetLink = await this.db.query.OwnerHasAssets.findFirst({
       where: (uha, { eq, and }) => and(
-        eq(uha.userId, ownerId),
+        eq(uha.ownerId, ownerId),
         eq(uha.assetId, assetId)
       ),
       with: {

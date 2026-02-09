@@ -10,6 +10,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { UpdateCustomer } from '@repo/api-contract';
 
 const UpdateCustomerSchema = z.object({
     name: z.string().min(1, 'Name is required'),
@@ -22,25 +23,14 @@ const UpdateCustomerSchema = z.object({
 type UpdateCustomerFormData = z.infer<typeof UpdateCustomerSchema>;
 
 export interface EditCustomerFormProps {
-  customer: {
-    id: string; // user ID
-    name: string;
-    email: string;
-    customerDetails: {
-      id?: number; // customer record ID
-      userId: string;
-      phone: string | null;
-      address: string | null;
-      customerTypeId?: number | null;
-    }
-  };
+    customer: UpdateCustomer;
     onClose: () => void;
     onSuccess: () => void;
 }
 
 export function EditCustomerForm({ customer, onClose, onSuccess }: EditCustomerFormProps) {
-    const { mutate: updateUserMutation, isPending } = authClient.users.updateUser.useMutation();
-    const { data: customerTypesData } = authClient.users.getCustomerTypes.useQuery({
+    const { mutate: updateCustomer, isPending } = authClient.customers.updateCustomer.useMutation();
+    const { data: customerTypesData } = authClient.customers.getCustomerTypes.useQuery({
       queryKey: ['customerTypes'],
     });
     const customerTypes = customerTypesData?.status === 200 ? customerTypesData.body.data : [];
@@ -50,30 +40,22 @@ export function EditCustomerForm({ customer, onClose, onSuccess }: EditCustomerF
         defaultValues: {
             name: customer.name,
             email: customer.email,
-            phone: customer.customerDetails.phone,
-            address: customer.customerDetails.address,
-            customerTypeId: customer.customerDetails.customerTypeId ?? undefined,
+            phone: customer.phone,
+            address: customer.address,
+            customerTypeId: customer.customerTypeId ?? undefined,
         },
     });
 
     const handleUpdateCustomer: SubmitHandler<UpdateCustomerFormData> = async (data) => {
-  updateUserMutation(
+  updateCustomer(
     {
       params: { id: customer.id },
       body: {
-        user: {
-          id: customer.id,
           name: data.name,
           email: data.email,
-          userType: 'customer',
-        },
-        customer: {
-          userId: customer.id,
           phone: data.phone,
           address: data.address,
           customerTypeId: data.customerTypeId ?? null,
-        },
-        roles: [],
       },
     },
     {

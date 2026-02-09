@@ -1,15 +1,14 @@
 'use client';
 
-import { SetStateAction, useMemo, useState } from 'react';
+import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger, } from '@/components/ui/dialog';
-import { Search, PlusCircle, ChevronLeft, ChevronRight, Eye, Pencil, Trash2 } from 'lucide-react';
+import { Search, PlusCircle, Eye, Pencil, Trash2 } from 'lucide-react';
 import { useForm, SubmitHandler } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { InsertUserSchema } from '@repo/api-contract';
 import { toast } from 'sonner';
 import { useRouter } from 'next/navigation';
 import { authClient } from '@/lib/api/publicClient';
@@ -19,83 +18,62 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { usePagination } from '@/hooks/usePagination';
 import { DataTablePagination } from '@/components/ui/data-table-pagination';
 
-// Schema for creating owners
-const CreateOwnerSchema = InsertUserSchema.extend({
-  roles: z.array(z.number()).default([]),
-  companyName: z.string().optional(),
-  userType: z.string().default("owner")
-});
-
-const EditOwnerSchema = z.object({
+const OwnerFormSchema = z.object({
   name: z.string().min(1, 'Name is required'),
   email: z.string().email('Invalid email'),
-  companyName: z.string().optional(),
+  phone: z.string().optional(),
+  address: z.string().optional(),
 });
-type EditOwnerFormData = z.infer<typeof EditOwnerSchema>;
 
-type CreateOwnerFormData = z.infer<typeof CreateOwnerSchema>;
+type OwnerFormData = z.infer<typeof OwnerFormSchema>;
 
 export default function Component() {
   const router = useRouter();
   const { page, pageSize, queryParams, goToPage, changePageSize } = usePagination(1, 10);
   const queryClient = authClient.useQueryClient();
   const [searchTerm, setSearchTerm] = useState('');
-  const { data: owners } = authClient.users.getOwners.useQuery({
+  const { data: owners } = authClient.owners.getOwners.useQuery({
     queryKey: [...OWNERS_QUERY_KEY, page, pageSize, searchTerm],
     queryData: { query: { ...queryParams, search: searchTerm || undefined } },
   });
-  const { mutate: deleteUser } = authClient.users.deleteUser.useMutation();
-  const { mutate: createUserMutation, isPending } = authClient.users.createUser.useMutation();
-  const { mutate: updateUserMutation, isPending: updating } = authClient.users.updateUser.useMutation();
-  const { data: usersData } = authClient.users.getUsers.useQuery({ queryKey: ['users'] });
-
-  const users = usersData?.body?.data ?? usersData?.body.data ?? [];
-  const rolesByUserId = useMemo(() => {
-    const map = new Map<string, number[]>();
-    users.forEach((u: any) => map.set(u.id, (u.roles ?? []).map((r: any) => r.roleId)));
-    return map;
-  }, [users]);
+  const { mutate: deleteOwner } = authClient.owners.deleteOwner.useMutation();
+  const { mutate: createOwner, isPending } = authClient.owners.createOwner.useMutation();
+  const { mutate: updateOwner, isPending: updating } = authClient.owners.updateOwner.useMutation();
 
   const [open, setOpen] = useState(false);
   const [openEdit, setOpenEdit] = useState(false);
-  const [editingOwner, setEditingOwner] = useState<{ id: string; name: string; email: string; companyName?: string } | null>(null);
-  
+  const [editingOwner, setEditingOwner] = useState<{ id: number; name: string; email: string; phone?: string; address?: string } | null>(null);
 
-  const createForm = useForm<CreateOwnerFormData>({
-    resolver: zodResolver(CreateOwnerSchema),
+  const createForm = useForm<OwnerFormData>({
+    resolver: zodResolver(OwnerFormSchema),
     defaultValues: {
       name: '',
       email: '',
-      password: '',
-      roles: [],
-      companyName: '',
-      userType: "owner"
+      phone: '',
+      address: '',
     },
   });
 
-  const editForm = useForm<EditOwnerFormData>({
-    resolver: zodResolver(EditOwnerSchema),
+  const editForm = useForm<OwnerFormData>({
+    resolver: zodResolver(OwnerFormSchema),
   });
 
-  const onEditOwnerSubmit: SubmitHandler<EditOwnerFormData> = (data) => {
+  const onEditOwnerSubmit: SubmitHandler<OwnerFormData> = (data) => {
     if (!editingOwner) return;
-    const roles = rolesByUserId.get(editingOwner.id) ?? [];
-    updateUserMutation(
+    updateOwner(
       {
         params: { id: editingOwner.id },
         body: {
-          user: { name: data.name, email: data.email },
-          roles,
-          owner: {
-            userId: editingOwner.id,
-          },
+          name: data.name,
+          email: data.email,
+          phone: data.phone || undefined,
+          address: data.address || undefined,
         },
       },
       {
         onSuccess: () => {
           toast.success('Owner updated successfully');
           queryClient.invalidateQueries({ queryKey: OWNERS_QUERY_KEY });
-          queryClient.invalidateQueries({ queryKey: ['users'] });
           setOpenEdit(false);
           setEditingOwner(null);
         },
@@ -107,54 +85,39 @@ export default function Component() {
     );
   };
 
-  const handleDeleteUser = async (userId: string) => {
-    if (confirm('Are you sure you want to delete this user? This action cannot be undone.')) {
-      try {
-        deleteUser({
-          params: { id: userId },
-          body: undefined
-        }, {
-          onSuccess: (response) => {
-            queryClient.invalidateQueries({ queryKey: OWNERS_QUERY_KEY });
-            toast.success('User deleted successfully');
-          },
-          onError: (error) => {
-            toast.error('Failed to delete user');
-          }
-        })
-
-
-      } catch (error: any) {
-        console.error('Delete user error:', error);
-      }
+  const handleDeleteOwner = async (ownerId: number) => {
+    if (confirm('Are you sure you want to delete this owner? This action cannot be undone.')) {
+      deleteOwner({
+        params: { id: ownerId },
+        body: {}
+      }, {
+        onSuccess: () => {
+          queryClient.invalidateQueries({ queryKey: OWNERS_QUERY_KEY });
+          toast.success('Owner deleted successfully');
+        },
+        onError: () => {
+          toast.error('Failed to delete owner');
+        }
+      });
     }
   };
 
-  const handleCreateOwner: SubmitHandler<CreateOwnerFormData> = async (data) => {
-    // Extract owner-specific fields
-    const { companyName, ...userData } = data;
-
-    createUserMutation(
+  const handleCreateOwner: SubmitHandler<OwnerFormData> = async (data) => {
+    createOwner(
       {
         body: {
-          ...userData,
-          userType: "owner"
+          name: data.name,
+          email: data.email,
+          phone: data.phone || undefined,
+          address: data.address || undefined,
         },
       },
       {
-        onSuccess: (response) => {
+        onSuccess: () => {
           toast.success('Owner created successfully');
           setOpen(false);
           queryClient.invalidateQueries({ queryKey: OWNERS_QUERY_KEY });
-          createForm.reset({
-            name: '',
-            email: '',
-            password: '',
-            roles: [],
-            companyName: '',
-            // taxId: '',
-            userType: "owner"
-          });
+          createForm.reset();
         },
         onError: (error) => {
           console.error('Create error:', error);
@@ -165,9 +128,11 @@ export default function Component() {
   };
 
   const parsedOwners = owners?.status === 200 ? owners.body.data.map((item) => ({
-    id: item.user.id,
-    name: item.user.name,
-    email: item.user.email
+    id: item.id,
+    name: item.name,
+    email: item.email,
+    phone: item.phone,
+    address: item.address,
   })) : [];
 
   const paginationMeta = owners?.status === 200 ? owners.body.pagination : undefined;
@@ -221,6 +186,28 @@ export default function Component() {
                             <FormItem>
                               <FormLabel>Email</FormLabel>
                               <FormControl><Input type="email" {...field} /></FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                        <FormField
+                          control={editForm.control}
+                          name="phone"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Phone</FormLabel>
+                              <FormControl><Input {...field} /></FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                        <FormField
+                          control={editForm.control}
+                          name="address"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Address</FormLabel>
+                              <FormControl><Input {...field} /></FormControl>
                               <FormMessage />
                             </FormItem>
                           )}
@@ -289,24 +276,31 @@ export default function Component() {
                         />
                         <FormField
                           control={createForm.control}
-                          name="password"
+                          name="phone"
                           render={({ field }) => (
                             <FormItem>
-                              <FormLabel>Password</FormLabel>
+                              <FormLabel>Phone</FormLabel>
                               <FormControl>
-                                <Input
-                                  type="password"
-                                  {...field}
-                                  required
-                                />
+                                <Input {...field} />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                        <FormField
+                          control={createForm.control}
+                          name="address"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Address</FormLabel>
+                              <FormControl>
+                                <Input {...field} />
                               </FormControl>
                               <FormMessage />
                             </FormItem>
                           )}
                         />
                       </div>
-
-
 
                       <div className='flex justify-end space-x-2'>
                         <Button
@@ -352,10 +346,14 @@ export default function Component() {
                               id: owner.id,
                               name: owner.name,
                               email: owner.email,
+                              phone: owner.phone ?? undefined,
+                              address: owner.address ?? undefined,
                             });
                             editForm.reset({
                               name: owner.name,
                               email: owner.email,
+                              phone: owner.phone ?? '',
+                              address: owner.address ?? '',
                             });
                             setOpenEdit(true);
                           }}
@@ -372,7 +370,7 @@ export default function Component() {
                         <Button
                           variant="ghost"
                           size="icon"
-                          onClick={() => handleDeleteUser(owner.id)}
+                          onClick={() => handleDeleteOwner(owner.id)}
                           className="ml-2"
                         >
                           <Trash2 className="h-4 w-4" />
@@ -403,9 +401,3 @@ export default function Component() {
     </>
   );
 }
-
-
-
-
-
-

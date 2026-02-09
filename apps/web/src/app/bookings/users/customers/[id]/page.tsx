@@ -14,19 +14,19 @@ export default function CustomerDetailsPage() {
   const tenant = StorageService.getTenant();
   const params = useParams();
   const [activeTab, setActiveTab] = useState('details');
-  const userId = params.id as string;
+  const userId = parseInt(params.id as string)
 
   // Lightweight header hydration
-  const { data: customersData, isLoading: customersLoading } = authClient.users.getCustomers.useQuery({
+  const { data: customersData, isLoading: customersLoading } = authClient.customers.getCustomers.useQuery({
     queryKey: ['customers'],
     enabled: !!tenant,
   });
   const customers = customersData?.body.data ?? [];
-  const selected = useMemo(() => customers.find((c: any) => c.user.id === userId), [customers, userId]);
+  const selected = useMemo(() => customers.find((c: any) => c.id === userId), [customers, userId]);
 
   if (customersLoading) return <Loading />;
 
-  const displayName = selected?.user?.name || selected?.user?.email || userId;
+  const displayName = selected?.name || selected?.email || userId;
 
   return (
     <>
@@ -42,13 +42,13 @@ export default function CustomerDetailsPage() {
         </TabsList>
 
         <TabsContent value="details">
-          <Details userId={userId} />
+          <Details customerId={userId} />
         </TabsContent>
         <TabsContent value="bookings">
-          <Bookings userId={userId} />
+          <Bookings customerId={userId} />
         </TabsContent>
         <TabsContent value="billing">
-          <Billing userId={userId} />
+          <Billing customerId={userId} />
         </TabsContent>
       </Tabs>
     </>

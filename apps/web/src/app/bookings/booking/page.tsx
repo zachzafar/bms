@@ -159,7 +159,7 @@ export default function Component() {
   });
   const assetList = assets?.body.data || [];
 
-  const { data: customerResponse } = authClient.users.getCustomers.useQuery({ queryKey: ['customers'] });
+  const { data: customerResponse } = authClient.customers.getCustomers.useQuery({ queryKey: ['customers'] });
   const customerList = customerResponse?.body.data ?? [];
   const [customers, setCustomers] = useState<string[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
@@ -516,8 +516,8 @@ export default function Component() {
                     values={customers}
                     onValuesChange={setCustomers}
                     getDisplayValue={(id) => {
-                      const customer = customerList.find(c => c.customer.id.toString() === id);
-                      return customer?.user.name ?? id;
+                      const customer = customerList.find(c => c.id.toString() === id);
+                      return customer?.name ?? id;
                     }}
                   >
                     <MultiSelectorTrigger>
@@ -527,10 +527,10 @@ export default function Component() {
                       <MultiSelectorList>
                         {customerList.map((customer) => (
                           <MultiSelectorItem
-                            key={customer.customer.id}
-                            value={customer.customer.id.toString()}
+                            key={customer.id}
+                            value={customer.id.toString()}
                           >
-                            {customer.user.name}
+                            {customer.name}
                           </MultiSelectorItem>
                         ))}
                       </MultiSelectorList>
@@ -650,7 +650,7 @@ export default function Component() {
                     </TableCell>
                     <TableCell>{booking.asset.name}</TableCell>
                     <TableCell>{booking.assetType.name}</TableCell>
-                    <TableCell>{booking?.user?.name}</TableCell>
+                    <TableCell>{booking?.customer?.name}</TableCell>
                     <TableCell>{formatDisplayDate(booking.startDate)}</TableCell>
                     <TableCell>{formatDisplayDate(booking.endDate)}</TableCell>
                     <TableCell>

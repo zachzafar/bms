@@ -26,67 +26,58 @@ const DetailsSchema = z.object({
 
 type DetailsForm = z.infer<typeof DetailsSchema>;
 
-export default function Details({ userId }: { userId: string }) {
+export default function Details({ customerId }: { customerId: number }) {
   const tenant = StorageService.getTenant();
   const [open, setOpen] = useState(false);
 
-  const { data: customersData, isLoading: customersLoading } = authClient.users.getCustomers.useQuery({
+  const { data: customersData, isLoading: customersLoading } = authClient.customers.getCustomers.useQuery({
     queryKey: ['customers'],
     enabled: !!tenant,
   });
-  const { data: usersData } = authClient.users.getUsers.useQuery({
-    queryKey: ['users'],
-    enabled: !!tenant,
-  });
-  const { data: customerTypesData } = authClient.users.getCustomerTypes.useQuery({
+  const { data: customerTypesData } = authClient.customers.getCustomerTypes.useQuery({
     queryKey: ['customerTypes'],
   });
   const customerTypes = customerTypesData?.status === 200 ? customerTypesData.body.data : [];
 
   const customers = customersData?.body.data ?? [];
-  const users = usersData?.body.data ?? [];
 
-  const selected = useMemo(() => customers.find((c: any) => c.user.id === userId), [customers, userId]);
-  const selectedUserWithRoles = useMemo(() => users.find((u: any) => u.id === userId), [users, userId]);
-  const roles: number[] = (selectedUserWithRoles?.roles ?? []).map((r: any) => r.roleId as number);
+  const selected = useMemo(() => customers.find((c: any) => c.id === customerId), [customers, customerId]);
 
-  const { mutate: updateUser, isPending } = authClient.users.updateUser.useMutation();
+
+  const { mutate: updateCustomer, isPending } = authClient.customers.updateCustomer.useMutation();
   const queryClient = authClient.useQueryClient();
 
   const form = useForm<DetailsForm>({
     resolver: zodResolver(DetailsSchema),
     defaultValues: {
-      name: selected?.user?.name ?? '',
-      email: selected?.user?.email ?? '',
-      phone: selected?.customer?.phone ?? '',
-      address: selected?.customer?.address ?? '',
-      customerTypeId: selected?.customer?.customerTypeId ?? undefined,
+      name: selected?.name ?? '',
+      email: selected?.email ?? '',
+      phone: selected?.phone ?? '',
+      address: selected?.address ?? '',
+      customerTypeId: selected?.customerTypeId ?? undefined,
     },
     values: {
-      name: selected?.user?.name ?? '',
-      email: selected?.user?.email ?? '',
-      phone: selected?.customer?.phone ?? '',
-      address: selected?.customer?.address ?? '',
-      customerTypeId: selected?.customer?.customerTypeId ?? undefined,
+      name: selected?.name ?? '',
+      email: selected?.email ?? '',
+      phone: selected?.phone ?? '',
+      address: selected?.address ?? '',
+      customerTypeId: selected?.customerTypeId ?? undefined,
     }
   });
 
   if (customersLoading || !selected) return <Loading />;
 
   const onSubmit = (values: DetailsForm) => {
-    updateUser(
+    updateCustomer(
       {
-        params: { id: userId },
+        params: { id: customerId },
         body: {
-          user: { name: values.name, email: values.email },
-          roles,
-          customer: {
-            userId,
-            phone: values.phone || null,
-            address: values.address || null,
-            customerTypeId: values.customerTypeId ?? null,
+          name: values.name,
+          address: values.address || null,
+          phone: values.phone || null,
+          email: values.email,
+          customerTypeId: values.customerTypeId ?? null
           },
-        },
       },
       {
         onSuccess: () => {
@@ -103,8 +94,8 @@ export default function Details({ userId }: { userId: string }) {
     );
   };
 
-  const user = selected.user;
-  const customer = selected.customer;
+  const user = selected;
+  const customer = selected;
 
   return (
     <>
