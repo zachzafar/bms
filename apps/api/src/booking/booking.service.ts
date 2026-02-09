@@ -29,15 +29,6 @@ function toUTCDateTime(input: string | Date): Date {
   return new Date(Date.UTC(year, month - 1, day, hours, minutes, seconds || 0));
 }
 
-// Extracts the date portion as YYYY-MM-DD string (for date-only columns)
-function toDateOnlyString(input: string | Date): string {
-  const dateObj = typeof input === 'string' ? new Date(input) : input;
-  const year = dateObj.getUTCFullYear();
-  const month = String(dateObj.getUTCMonth() + 1).padStart(2, '0');
-  const day = String(dateObj.getUTCDate()).padStart(2, '0');
-  return `${year}-${month}-${day}`;
-}
-
 
 @Injectable()
 export class BookingService {
@@ -112,7 +103,7 @@ export class BookingService {
         await this.saveFormResponses(tx, id, formResponses);
       }
 
-      await this.createBookingInvoice(tx, asset, id, customerId, utcStart, utcEnd, totalPrice, rate?.pricePerNight);
+      await this.createBookingInvoice(tx, asset, id, customerId, utcStart, utcEnd, totalPrice, rate?.pricePerUnit, rate?.rateTypeMinutes, rate?.rateTypeName);
 
       return id;
     });
@@ -228,24 +219,30 @@ export class BookingService {
       );
     }
 
-    if (!effectiveRate.pricePerNight) {
+    if (!effectiveRate.pricePerUnit) {
       return { totalPrice: 0, rate: effectiveRate };
     }
 
-    const numberOfNights = this.calculateNights(startDate, endDate);
-    const pricePerNight = parseFloat(effectiveRate.pricePerNight.toString());
+    const durationUnits = this.calculateDurationUnits(startDate, endDate, effectiveRate.rateTypeMinutes);
+    const pricePerUnit = parseFloat(effectiveRate.pricePerUnit.toString());
 
-    return { totalPrice: numberOfNights * pricePerNight, rate: effectiveRate };
+    return { totalPrice: durationUnits * pricePerUnit, rate: effectiveRate };
   }
 
-  // Helper: Calculate number of nights
-  private calculateNights(startDate: Date, endDate: Date): number {
+  // Helper: Calculate duration in minutes
+  private calculateDurationMinutes(startDate: Date, endDate: Date): number {
     const timeDiff = endDate.getTime() - startDate.getTime();
-    return Math.ceil(timeDiff / (1000 * 60 * 60 * 24));
+    return Math.ceil(timeDiff / (1000 * 60));
+  }
+
+  // Helper: Calculate number of billing units based on rate type minutes
+  private calculateDurationUnits(startDate: Date, endDate: Date, rateTypeMinutes?: number | null): number {
+    const totalMinutes = this.calculateDurationMinutes(startDate, endDate);
+    const unitMinutes = rateTypeMinutes || 1440; // default to daily (1440 min) if no rate type
+    return Math.ceil(totalMinutes / unitMinutes);
   }
 
   // Helper: Create blocked date for booking
-  // Uses date-only strings since BlockedDate table uses `date` type, not `datetime`
   private async createBlockedDateForBooking(
     tx: any,
     tenantId: string,
@@ -257,8 +254,8 @@ export class BookingService {
     await tx.insert(schema.BlockedDate).values({
       tenantId,
       assetId,
-      startDate: toDateOnlyString(startDate),
-      endDate: toDateOnlyString(endDate),
+      startDate,
+      endDate,
       title: `Booking ${bookingId.slice(0, 8)}`,
       reason: 'Customer booking',
       bookingId,
@@ -276,8 +273,8 @@ export class BookingService {
     await this.db.insert(schema.BlockedDate).values({
       tenantId,
       assetId,
-      startDate: toDateOnlyString(startDate),
-      endDate: toDateOnlyString(endDate),
+      startDate,
+      endDate,
       title: `Booking ${bookingId.slice(0, 8)}`,
       reason: 'Customer booking',
       bookingId,
@@ -317,9 +314,12 @@ export class BookingService {
     startDate: Date,
     endDate: Date,
     totalPrice: number,
-    ratePerNight?: string | null
+    ratePerUnit?: string | null,
+    rateTypeMinutes?: number | null,
+    rateTypeName?: string | null
   ) {
-    const numberOfNights = this.calculateNights(startDate, endDate);
+    const durationUnits = this.calculateDurationUnits(startDate, endDate, rateTypeMinutes);
+    const unitLabel = rateTypeName || 'unit';
     const invoiceNumber = `INV-${Date.now()}-${bookingId.slice(0, 8).toUpperCase()}`;
 
     const [{ id: invoiceId }] = await tx.insert(schema.Invoice).values({
@@ -336,13 +336,13 @@ export class BookingService {
       bookingId,
     }).$returningId();
 
-    const pricePerNight = ratePerNight ? parseFloat(ratePerNight.toString()) : totalPrice / numberOfNights;
+    const pricePerUnit = ratePerUnit ? parseFloat(ratePerUnit.toString()) : totalPrice / durationUnits;
 
     await tx.insert(schema.InvoiceItem).values({
       invoiceId,
-      description: `${asset.name} - ${numberOfNights} night${numberOfNights > 1 ? 's' : ''} (${startDate.toLocaleDateString()} - ${endDate.toLocaleDateString()})`,
-      quantity: numberOfNights,
-      unitPrice: pricePerNight.toFixed(2),
+      description: `${asset.name} - ${durationUnits} ${unitLabel}${durationUnits > 1 ? 's' : ''} (${startDate.toLocaleDateString()} - ${endDate.toLocaleDateString()})`,
+      quantity: durationUnits,
+      unitPrice: pricePerUnit.toFixed(2),
       totalPrice: totalPrice.toFixed(2),
     });
   }
@@ -834,12 +834,10 @@ export class BookingService {
             throw new ConflictException(`No active rate found for this ${rateType} during the selected booking period. Please contact the administrator to set up rates.`);
           }
 
-          if (effectiveRate.pricePerNight) {
-            // Calculate number of nights
-            const timeDiff = bookingEndDate.getTime() - bookingStartDate.getTime();
-            const numberOfNights = Math.ceil(timeDiff / (1000 * 60 * 60 * 24));
-            const pricePerNight = parseFloat(effectiveRate.pricePerNight.toString());
-            totalPrice = numberOfNights * pricePerNight;
+          if (effectiveRate.pricePerUnit) {
+            const durationUnits = this.calculateDurationUnits(bookingStartDate, bookingEndDate, effectiveRate.rateTypeMinutes);
+            const pricePerUnit = parseFloat(effectiveRate.pricePerUnit.toString());
+            totalPrice = durationUnits * pricePerUnit;
           }
         }
 
@@ -867,12 +865,12 @@ export class BookingService {
           .where(eq(schema.BlockedDate.bookingId, updateData.id))
           .execute();
 
-        // Create new blocked date entry with updated dates (use date-only strings)
+        // Create new blocked date entry with updated dates
         await tx.insert(schema.BlockedDate).values({
           tenantId: asset.tenantId,
           assetId: updateData.assetId,
-          startDate: toDateOnlyString(startDate),
-          endDate: toDateOnlyString(endDate),
+          startDate,
+          endDate,
           title: `Booking ${updateData.id.slice(0, 8)}`,
           reason: 'Customer booking',
           bookingId: updateData.id,
@@ -904,11 +902,11 @@ export class BookingService {
         .where(eq(schema.BlockedDate.bookingId, bookingId))
         .execute();
     } else if (previousStatus === 'Cancelled' && (status === 'Pending' || status === 'Confirmed')) {
-      // Re-create blocked dates when booking is un-cancelled (use date-only strings)
+      // Re-create blocked dates when booking is un-cancelled
       await this.db.insert(schema.BlockedDate)
         .values({
-          startDate: toDateOnlyString(existingBooking.startDate),
-          endDate: toDateOnlyString(existingBooking.endDate),
+          startDate: existingBooking.startDate,
+          endDate: existingBooking.endDate,
           title: `Booking ${bookingId}`,
           reason: `Booking restored to ${status}`,
           bookingId: bookingId,

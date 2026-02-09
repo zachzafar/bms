@@ -33,6 +33,7 @@ import {
   FileText,
   CircleDollarSign,
   ChevronDown,
+  Timer,
 } from "lucide-react"
 
 import { FEATURE_PERMISSIONS } from "@/lib/feature-permissions"
@@ -69,6 +70,12 @@ const items: SidebarItem[] = [
         title: "Rates",
         url: "/bookings/booking/rates",
         icon: CircleDollarSign,
+        feature: "settings",
+      },
+      {
+        title: "Rate Types",
+        url: "/bookings/booking/rate-types",
+        icon: Timer,
         feature: "settings",
       },
       {

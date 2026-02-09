@@ -13,6 +13,7 @@ export const PROPERTY_VALUES_QUERY_KEY = ['propertyValues'];
 export const ASSET_IMAGES_QUERY_KEY = ['assetImages'];
 export const ASSET_TAGS_QUERY_KEY = ['tags'];
 export const RATES_QUERY_KEY = ['rates'];
+export const RATE_TYPES_QUERY_KEY = ['rateTypes'];
 export const INVOICES_QUERY_KEY = ['invoices'];
 
 

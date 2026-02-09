@@ -39,7 +39,7 @@ import {
 import { Calendar } from "@/components/ui/calendar";
 import { toast } from "sonner";
 import { Form, FormField, FormItem, FormLabel, FormControl, FormMessage } from "@/components/ui/form";
-import { ASSET_TYPE_QUERY_KEY, ASSETS_QUERY_KEY, RATES_QUERY_KEY } from "@/lib/api/queryKeys";
+import { ASSET_TYPE_QUERY_KEY, ASSETS_QUERY_KEY, RATES_QUERY_KEY, RATE_TYPES_QUERY_KEY } from "@/lib/api/queryKeys";
 import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { CalendarIcon } from "lucide-react";
@@ -52,10 +52,11 @@ const rateSchema = z.object({
   description: z.string().optional(),
   startDate: z.date(),
   endDate: z.date(),
-  minNights: z.coerce.number(),
-  maxNights: z.coerce.number(),
+  minUnits: z.coerce.number(),
+  maxUnits: z.coerce.number(),
   assetTypeId: z.coerce.number().optional(),
-  pricePerNight: z.coerce.number().optional(),
+  pricePerUnit: z.coerce.number().optional(),
+  rateTypeId: z.coerce.number().optional(),
   assetIds: z.array(z.string()),
 });
 
@@ -66,9 +67,10 @@ const defaultFormValues: Partial<RateFormValues> = {
   description: '',
   startDate: undefined,
   endDate: undefined,
-  minNights: 0,
-  maxNights: 0,
-  pricePerNight: 0,
+  minUnits: 0,
+  maxUnits: 0,
+  pricePerUnit: 0,
+  rateTypeId: undefined,
   assetTypeId: undefined,
   assetIds: [],
 };
@@ -90,18 +92,26 @@ export default function RatesPage() {
   const { data: assetTypesResponse } = authClient.settings.assetType.getAssetTypes.useQuery({
     queryKey: [ASSET_TYPE_QUERY_KEY]
   });
+  const { data: rateTypesResponse } = authClient.rates.getRateTypes.useQuery({
+    queryKey: RATE_TYPES_QUERY_KEY,
+  });
   const rates = rateData?.body.data ?? [];
   const assets = assetsResponse?.body.data ?? [];
   const assetTypes = assetTypesResponse?.body.data ?? [];
+  const rateTypes = rateTypesResponse?.body.data ?? [];
 
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingRateId, setEditingRateId] = useState<number | null>(null);
   const [selectionMode, setSelectionMode] = useState<SelectionMode>("assets");
-  
 
   const form = useForm<RateFormValues>({
     defaultValues: defaultFormValues,
   });
+
+  const selectedRateTypeId = form.watch("rateTypeId");
+  const selectedRateType = rateTypes.find((rt: any) => rt.id === selectedRateTypeId);
+  const unitLabel = selectedRateType?.name ?? "Unit";
+  const unitMinutes = selectedRateType?.minutes ?? 1;
 
   const handleSelectionModeChange = (mode: SelectionMode) => {
     setSelectionMode(mode);
@@ -138,9 +148,10 @@ export default function RatesPage() {
       description: values.description,
       startDate: new Date(values.startDate),
       endDate: new Date(values.endDate),
-      minNights: values.minNights,
-      maxNights: values.maxNights,
-      pricePerNight: values.pricePerNight !== undefined ? String(values.pricePerNight) : undefined,
+      minDuration: values.minUnits * unitMinutes,
+      maxDuration: values.maxUnits * unitMinutes,
+      pricePerUnit: values.pricePerUnit !== undefined ? String(values.pricePerUnit) : undefined,
+      rateTypeId: values.rateTypeId,
     };
 
     const resetState = () => {
@@ -203,14 +214,18 @@ export default function RatesPage() {
     setSelectionMode(mode);
     setAssetSearch('');
 
+    const editRateType = rateTypes.find((rt: any) => rt.id === rate.rateTypeId);
+    const editUnitMinutes = editRateType?.minutes ?? 1;
+
     form.reset({
       name: rate.name,
       description: rate.description ?? "",
       startDate: new Date(rate.startDate),
       endDate: new Date(rate.endDate),
-      minNights: rate.minNights ?? undefined,
-      maxNights: rate.maxNights ?? undefined,
-      pricePerNight: rate.pricePerNight ?? undefined,
+      minUnits: rate.minDuration ? Math.round(rate.minDuration / editUnitMinutes) : undefined,
+      maxUnits: rate.maxDuration ? Math.round(rate.maxDuration / editUnitMinutes) : undefined,
+      pricePerUnit: rate.pricePerUnit ? Number(rate.pricePerUnit) : undefined,
+      rateTypeId: rate.rateTypeId ?? undefined,
       assetTypeId: hasAssetType ? assetTypeIds[0] : undefined,
       assetIds: hasAssetType ? [] : assetIds,
     });
@@ -474,10 +489,38 @@ export default function RatesPage() {
 
                 <FormField
                   control={form.control}
-                  name="minNights"
+                  name="rateTypeId"
+                  render={({ field }) => (
+                    <FormItem className="md:col-span-2">
+                      <FormLabel>Rate Type</FormLabel>
+                      <Select
+                        value={field.value?.toString() ?? ""}
+                        onValueChange={(value) => field.onChange(Number(value))}
+                      >
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select a rate type" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {rateTypes.map((rt: any) => (
+                            <SelectItem key={rt.id} value={rt.id.toString()}>
+                              {rt.name} ({rt.minutes} min)
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="minUnits"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Min Nights</FormLabel>
+                      <FormLabel>{selectedRateType ? `Min ${unitLabel}s` : "Min Units"}</FormLabel>
                       <FormControl>
                         <Input {...field} type="number" placeholder="0" />
                       </FormControl>
@@ -488,10 +531,10 @@ export default function RatesPage() {
 
                 <FormField
                   control={form.control}
-                  name="maxNights"
+                  name="maxUnits"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Max Nights</FormLabel>
+                      <FormLabel>{selectedRateType ? `Max ${unitLabel}s` : "Max Units"}</FormLabel>
                       <FormControl>
                         <Input {...field} type="number" placeholder="0" />
                       </FormControl>
@@ -502,10 +545,10 @@ export default function RatesPage() {
 
                 <FormField
                   control={form.control}
-                  name="pricePerNight"
+                  name="pricePerUnit"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Price Per Night</FormLabel>
+                      <FormLabel>{selectedRateType ? `Price Per ${unitLabel}` : "Price Per Unit"}</FormLabel>
                       <FormControl>
                         <Input {...field} type="number" placeholder="0.00" />
                       </FormControl>
@@ -528,9 +571,10 @@ export default function RatesPage() {
             <TableRow>
               <TableHead>Name</TableHead>
               <TableHead>Applies To</TableHead>
+              <TableHead>Rate Type</TableHead>
               <TableHead>Start Date</TableHead>
               <TableHead>End Date</TableHead>
-              <TableHead>Price/Night</TableHead>
+              <TableHead>Price/Unit</TableHead>
               <TableHead>Actions</TableHead>
             </TableRow>
           </TableHeader>
@@ -548,13 +592,16 @@ export default function RatesPage() {
                       .map((a: any) => a.name)
                       .join(", ") || "—";
 
+                const rateTypeName = rateTypes.find((rt: any) => rt.id === rate.rateTypeId)?.name ?? "—";
+
                 return (
                   <TableRow key={rate.id}>
                     <TableCell>{rate.name}</TableCell>
                     <TableCell>{appliesTo}</TableCell>
+                    <TableCell>{rateTypeName}</TableCell>
                     <TableCell>{toDateInputFormat(rate.startDate)}</TableCell>
                     <TableCell>{toDateInputFormat(rate.endDate)}</TableCell>
-                    <TableCell>{rate.pricePerNight}</TableCell>
+                    <TableCell>{rate.pricePerUnit}</TableCell>
                     <TableCell>
                       <div className="flex gap-2">
                         <Button
@@ -578,7 +625,7 @@ export default function RatesPage() {
               })
             ) : (
               <TableRow>
-                <TableCell colSpan={6}>No rates found.</TableCell>
+                <TableCell colSpan={7}>No rates found.</TableCell>
               </TableRow>
             )}
           </TableBody>

@@ -57,18 +57,41 @@ export type InsertSlot = z.infer<typeof InsertSlotSchema>;
 export type SelectSlot = z.infer<typeof SelectSlotSchema>;
 export type UpdateSlot = z.infer<typeof UpdateSlotSchema>;
 
+// RateType schemas
+export const InsertRateTypeSchema = z.object({
+    id: z.number().optional(),
+    name: z.string(),
+    minutes: z.number(),
+    tenantId: z.string().optional(),
+});
+export const SelectRateTypeSchema = z.object({
+    id: z.number(),
+    name: z.string(),
+    minutes: z.number(),
+    tenantId: z.string(),
+    createdAt: z.coerce.date(),
+    updatedAt: z.coerce.date().nullable().optional(),
+});
+export const UpdateRateTypeSchema = InsertRateTypeSchema.partial();
+
+export type InsertRateType = z.infer<typeof InsertRateTypeSchema>;
+export type SelectRateType = z.infer<typeof SelectRateTypeSchema>;
+export type UpdateRateType = z.infer<typeof UpdateRateTypeSchema>;
+
+// Rate schemas
 export const InsertRateSchema = z.object({
     id: z.number().optional(),
     name: z.string(),
     description: z.string().nullable().optional(),
     startDate: z.string(),
     endDate: z.string(),
-    minNights: z.number().nullable().optional(),
-    maxNights: z.number().nullable().optional(),
-    pricePerNight: z.string().nullable().optional(),
+    minDuration: z.number().nullable().optional(),
+    maxDuration: z.number().nullable().optional(),
+    pricePerUnit: z.string().nullable().optional(),
     priority: z.number().nullable().optional(),
     isActive: z.boolean().optional().default(true),
     assetIds: z.array(z.string()).optional(),
+    rateTypeId: z.number().nullable().optional(),
 });
 export const SelectRateSchema = z.object({
     id: z.number(),
@@ -76,11 +99,12 @@ export const SelectRateSchema = z.object({
     description: z.string().nullable(),
     startDate: z.string(),
     endDate: z.string(),
-    minNights: z.number().nullable(),
-    maxNights: z.number().nullable(),
-    pricePerNight: z.string().nullable(),
+    minDuration: z.number().nullable(),
+    maxDuration: z.number().nullable(),
+    pricePerUnit: z.string().nullable(),
     priority: z.number().nullable(),
     isActive: z.boolean(),
+    rateTypeId: z.number().nullable(),
     createdAt: z.coerce.date(),
 });
 export const UpdateRateSchema = InsertRateSchema.partial();
@@ -117,7 +141,3 @@ export const UpdateBlockedDateSchema = InsertBlockedDateSchema.partial();
 export type InsertBlockedDate = z.infer<typeof InsertBlockedDateSchema>;
 export type SelectBlockedDate = z.infer<typeof SelectBlockedDateSchema>;
 export type UpdateBlockedDate = z.infer<typeof UpdateBlockedDateSchema>;
-
-
-
-

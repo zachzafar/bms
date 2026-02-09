@@ -3,7 +3,7 @@ import { MySql2Database } from 'drizzle-orm/mysql2';
 import { and, eq, sql, desc } from 'drizzle-orm';
 import * as schema from '@repo/api-contract';
 import { DrizzleAsyncProvider } from 'src/drizzle/drizzle.provider';
-import { InsertRate, UpdateRate } from '@repo/api-contract';
+import { InsertRate, UpdateRate, InsertRateType, UpdateRateType } from '@repo/api-contract';
 
 @Injectable()
 export class RatesService {
@@ -11,17 +11,86 @@ export class RatesService {
     @Inject(DrizzleAsyncProvider) private db: MySql2Database<typeof schema>,
   ) { }
 
+  // ==============================
+  // RateType CRUD
+  // ==============================
+
+  async createRateType(tenantId: string, data: InsertRateType): Promise<number> {
+    const [inserted] = await this.db
+      .insert(schema.RateType)
+      .values({ ...data, tenantId })
+      .$returningId();
+    return inserted.id;
+  }
+
+  async getRateTypes(tenantId: string, page: number = 1, pageSize: number = 10) {
+    const offset = (page - 1) * pageSize;
+
+    const [countResult, rateTypes] = await Promise.all([
+      this.db
+        .select({ count: sql<number>`COUNT(*)` })
+        .from(schema.RateType)
+        .where(eq(schema.RateType.tenantId, tenantId))
+        .execute(),
+      this.db
+        .select()
+        .from(schema.RateType)
+        .where(eq(schema.RateType.tenantId, tenantId))
+        .limit(pageSize)
+        .offset(offset)
+        .orderBy(desc(schema.RateType.createdAt)),
+    ]);
+
+    const totalCount = countResult[0]?.count || 0;
+
+    return {
+      data: rateTypes,
+      pagination: this.buildPagination(page, pageSize, totalCount),
+    };
+  }
+
+  async updateRateType(tenantId: string, id: number, data: UpdateRateType) {
+    const existing = await this.db.query.RateType.findFirst({
+      where: (rt, { eq, and }) => and(eq(rt.id, id), eq(rt.tenantId, tenantId)),
+    });
+
+    if (!existing) {
+      throw new NotFoundException('Rate type not found');
+    }
+
+    await this.db
+      .update(schema.RateType)
+      .set(data)
+      .where(eq(schema.RateType.id, id));
+  }
+
+  async deleteRateType(tenantId: string, id: number) {
+    const existing = await this.db.query.RateType.findFirst({
+      where: (rt, { eq, and }) => and(eq(rt.id, id), eq(rt.tenantId, tenantId)),
+    });
+
+    if (!existing) {
+      throw new NotFoundException('Rate type not found');
+    }
+
+    await this.db.delete(schema.RateType).where(eq(schema.RateType.id, id));
+  }
+
+  // ==============================
+  // Rate CRUD
+  // ==============================
+
   async createRate(tenantId: string, data: InsertRate, assetIds?: string[]): Promise<number> {
     const newStartDate = new Date(data.startDate);
     const newEndDate = new Date(data.endDate);
-    const newMinNights = data.minNights ?? 1;
-    const newMaxNights = data.maxNights ?? 999;
+    const newMinDuration = data.minDuration ?? 1;
+    const newMaxDuration = data.maxDuration ?? 999999;
 
-    // Check for overlapping rates with conflicting min/max nights
+    // Check for overlapping rates with conflicting duration ranges
     const existingRates = await this.getOverlappingRates(tenantId, assetIds, data.assetTypeId);
 
     // Check for conflicts
-    this.validateNoOverlap(existingRates, newStartDate, newEndDate, newMinNights, newMaxNights);
+    this.validateNoOverlap(existingRates, newStartDate, newEndDate, newMinDuration, newMaxDuration);
 
     return await this.db.transaction(async (tx) => {
       const [inserted] = await tx
@@ -141,8 +210,8 @@ export class RatesService {
 
     const newStartDate = updateData.startDate ? new Date(updateData.startDate) : new Date(existing.startDate);
     const newEndDate = updateData.endDate ? new Date(updateData.endDate) : new Date(existing.endDate);
-    const newMinNights = updateData.minNights ?? existing.minNights ?? 1;
-    const newMaxNights = updateData.maxNights ?? existing.maxNights ?? 999;
+    const newMinDuration = updateData.minDuration ?? existing.minDuration ?? 1;
+    const newMaxDuration = updateData.maxDuration ?? existing.maxDuration ?? 999999;
     const hasAssetIds = updateData.assetIds && updateData.assetIds.length > 0;
     const hasAssetTypeIds = updateData.assetTypeIds && updateData.assetTypeIds.length > 0;
 
@@ -157,7 +226,7 @@ export class RatesService {
 
     // Check for overlapping rates (excluding current)
     const existingRates = await this.getOverlappingRates(tenantId, assetIdsToCheck, assetTypeIdToCheck, id);
-    this.validateNoOverlap(existingRates, newStartDate, newEndDate, newMinNights, newMaxNights);
+    this.validateNoOverlap(existingRates, newStartDate, newEndDate, newMinDuration, newMaxDuration);
 
     await this.db.transaction(async (tx) => {
       const updatePayload: any = {
@@ -235,8 +304,21 @@ export class RatesService {
       if (!asset?.assetTypeId) return null;
 
       const assetTypeRates = await this.db
-        .select()
+        .select({
+          id: schema.Rate.id,
+          name: schema.Rate.name,
+          pricePerUnit: schema.Rate.pricePerUnit,
+          startDate: schema.Rate.startDate,
+          endDate: schema.Rate.endDate,
+          priority: schema.Rate.priority,
+          isActive: schema.Rate.isActive,
+          createdAt: schema.Rate.createdAt,
+          rateTypeId: schema.Rate.rateTypeId,
+          rateTypeMinutes: schema.RateType.minutes,
+          rateTypeName: schema.RateType.name,
+        })
         .from(schema.Rate)
+        .leftJoin(schema.RateType, eq(schema.Rate.rateTypeId, schema.RateType.id))
         .where(and(
           eq(schema.Rate.assetTypeId, asset.assetTypeId),
           eq(schema.Rate.isActive, true)
@@ -248,16 +330,20 @@ export class RatesService {
       const assetRates = await this.db
         .select({
           rateId: schema.AssetHasRates.rateId,
-          pricePerNight: schema.Rate.pricePerNight,
+          pricePerUnit: schema.Rate.pricePerUnit,
           startDate: schema.Rate.startDate,
           endDate: schema.Rate.endDate,
           priority: schema.Rate.priority,
           name: schema.Rate.name,
           isActive: schema.Rate.isActive,
           createdAt: schema.Rate.createdAt,
+          rateTypeId: schema.Rate.rateTypeId,
+          rateTypeMinutes: schema.RateType.minutes,
+          rateTypeName: schema.RateType.name,
         })
         .from(schema.AssetHasRates)
         .innerJoin(schema.Rate, eq(schema.AssetHasRates.rateId, schema.Rate.id))
+        .leftJoin(schema.RateType, eq(schema.Rate.rateTypeId, schema.RateType.id))
         .where(and(
           eq(schema.AssetHasRates.assetId, assetId),
           eq(schema.Rate.isActive, true)
@@ -294,14 +380,17 @@ export class RatesService {
     };
   }
 
+  // ==============================
   // Helper methods
+  // ==============================
+
   private async getOverlappingRates(
     tenantId: string,
     assetIds?: string[],
     assetTypeId?: number | null,
     excludeRateId?: number
   ) {
-    let rates: { id: number; startDate: Date | string; endDate: Date | string; minNights: number | null; maxNights: number | null }[] = [];
+    let rates: { id: number; startDate: Date | string; endDate: Date | string; minDuration: number | null; maxDuration: number | null }[] = [];
 
     if (assetIds && assetIds.length > 0) {
       const assetRateLinks = await this.db
@@ -321,8 +410,8 @@ export class RatesService {
               id: schema.Rate.id,
               startDate: schema.Rate.startDate,
               endDate: schema.Rate.endDate,
-              minNights: schema.Rate.minNights,
-              maxNights: schema.Rate.maxNights,
+              minDuration: schema.Rate.minDuration,
+              maxDuration: schema.Rate.maxDuration,
             })
             .from(schema.Rate)
             .where(and(
@@ -348,8 +437,8 @@ export class RatesService {
           id: schema.Rate.id,
           startDate: schema.Rate.startDate,
           endDate: schema.Rate.endDate,
-          minNights: schema.Rate.minNights,
-          maxNights: schema.Rate.maxNights,
+          minDuration: schema.Rate.minDuration,
+          maxDuration: schema.Rate.maxDuration,
         })
         .from(schema.Rate)
         .where(and(...conditions));
@@ -359,25 +448,25 @@ export class RatesService {
   }
 
   private validateNoOverlap(
-    existingRates: { startDate: Date | string; endDate: Date | string; minNights: number | null; maxNights: number | null }[],
+    existingRates: { startDate: Date | string; endDate: Date | string; minDuration: number | null; maxDuration: number | null }[],
     newStartDate: Date,
     newEndDate: Date,
-    newMinNights: number,
-    newMaxNights: number
+    newMinDuration: number,
+    newMaxDuration: number
   ) {
     for (const existing of existingRates) {
       const existingStart = new Date(existing.startDate);
       const existingEnd = new Date(existing.endDate);
-      const existingMin = existing.minNights ?? 1;
-      const existingMax = existing.maxNights ?? 999;
+      const existingMin = existing.minDuration ?? 1;
+      const existingMax = existing.maxDuration ?? 999999;
 
       const datesOverlap = existingStart <= newEndDate && existingEnd >= newStartDate;
       if (datesOverlap) {
-        const nightsOverlap = existingMin <= newMaxNights && existingMax >= newMinNights;
-        if (nightsOverlap) {
+        const durationOverlap = existingMin <= newMaxDuration && existingMax >= newMinDuration;
+        if (durationOverlap) {
           throw new ConflictException(
-            `Cannot save rate: overlapping min/max nights (${newMinNights}-${newMaxNights}) ` +
-            `with existing rate (${existingMin}-${existingMax} nights) for overlapping date range.`
+            `Cannot save rate: overlapping min/max duration (${newMinDuration}-${newMaxDuration} min) ` +
+            `with existing rate (${existingMin}-${existingMax} min) for overlapping date range.`
           );
         }
       }

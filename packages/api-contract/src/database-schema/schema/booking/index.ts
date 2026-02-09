@@ -123,8 +123,8 @@ export const BlockedDate = mysqlTable("blocked_date", {
   id: bigint("id", { mode: "number", unsigned: true }).autoincrement().primaryKey(),
   tenantId: varchar("tenant_id", { length: 255 }).notNull().references(() => Tenant.id, { onDelete: 'cascade'}),
   assetId: varchar("asset_id", { length: 255 }).notNull(),
-  startDate: date("start_date").notNull(),
-  endDate: date("end_date").notNull(),
+  startDate: datetime("start_date").notNull(),
+  endDate: datetime("end_date").notNull(),
   title: varchar("title", { length: 255 }).notNull(),
   reason: varchar("reason", { length: 255 }),
   bookingId: varchar("booking_id", { length: 36 }).references(() => Booking.id, { onDelete: 'cascade' }), // If this block is for a booking - cascade delete when booking is deleted

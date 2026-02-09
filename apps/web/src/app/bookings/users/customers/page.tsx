@@ -20,6 +20,7 @@ import { z } from 'zod';
 import { EditCustomerForm } from '@/components/users/EditCustomerForm';
 import { usePagination } from '@/hooks/usePagination';
 import { DataTablePagination } from '@/components/ui/data-table-pagination';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 // Schema for creating customers
 // const CreateCustomerSchema = InsertUserSchema.merge(InsertCustomerSchema.omit({ id: true, dateOfBirth: true})).extend({
@@ -38,6 +39,7 @@ type EditableCustomer = {
     userId: string;
     phone: string | null;
     address: string | null;
+    customerTypeId?: number | null;
     createdAt?: Date | null;
     updatedAt?: Date | null;
   };
@@ -53,6 +55,7 @@ const CreateCustomerSchema = z.object({
   phone: z.string().min(1, 'Phone number is required').optional(),
   address: z.string().min(1, 'Address is required'),
   userType: z.string().default('customer'),
+  customerTypeId: z.coerce.number().optional(),
 })
 
 type CreateCustomerFormData = z.infer<typeof CreateCustomerSchema>;
@@ -72,6 +75,10 @@ export default function Component() {
     queryData: {query: { ...queryParams, search: searchTerm || undefined }},
   });
   const { mutate: createUserMutation, isPending } = authClient.users.createUser.useMutation();
+  const { data: customerTypesData } = authClient.users.getCustomerTypes.useQuery({
+    queryKey: ['customerTypes'],
+  });
+  const customerTypes = customerTypesData?.status === 200 ? customerTypesData.body.data : [];
 
   const { mutate: deleteUser} = authClient.users.deleteUser.useMutation();
 
@@ -102,6 +109,7 @@ export default function Component() {
           customerDetails: {
             phone: data?.phone || null,
             address: data?.address || null,
+            customerTypeId: data?.customerTypeId || null,
           }
         },
       },
@@ -282,6 +290,33 @@ export default function Component() {
                               </FormItem>
                             )}
                           />
+                          <FormField
+                            control={createForm.control}
+                            name="customerTypeId"
+                            render={({ field }) => (
+                              <FormItem className="md:col-span-2">
+                                <FormLabel>Customer Type</FormLabel>
+                                <Select
+                                  value={field.value?.toString() ?? ""}
+                                  onValueChange={(value) => field.onChange(value ? Number(value) : undefined)}
+                                >
+                                  <FormControl>
+                                    <SelectTrigger>
+                                      <SelectValue placeholder="Select a customer type" />
+                                    </SelectTrigger>
+                                  </FormControl>
+                                  <SelectContent>
+                                    {customerTypes.map((ct: any) => (
+                                      <SelectItem key={ct.id} value={ct.id.toString()}>
+                                        {ct.name}
+                                      </SelectItem>
+                                    ))}
+                                  </SelectContent>
+                                </Select>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
                         </div>
 
                         <div className='flex justify-end space-x-2'>
@@ -312,6 +347,7 @@ export default function Component() {
                   <TableHead>Name</TableHead>
                   <TableHead>Email</TableHead>
                   <TableHead>Phone</TableHead>
+                  <TableHead>Type</TableHead>
                   <TableHead>Actions</TableHead>
                 </TableRow>
               </TableHeader>
@@ -322,6 +358,7 @@ export default function Component() {
                       <TableCell>{customer.user.name}</TableCell>
                       <TableCell>{customer.user.email}</TableCell>
                       <TableCell>{customer.customer?.phone || '-'}</TableCell>
+                      <TableCell>{customerTypes.find((ct: any) => ct.id === customer.customer?.customerTypeId)?.name || '-'}</TableCell>
                       <TableCell>
                         <Button
                           variant='ghost'
@@ -338,6 +375,7 @@ export default function Component() {
                                 userId: customer.user.id,
                                 phone: customer.customer.phone,
                                 address: customer.customer.address,
+                                customerTypeId: customer.customer.customerTypeId,
                                 createdAt: customer.customer.createdAt,
                                 updatedAt: customer.customer.updatedAt,
                               },
@@ -369,7 +407,7 @@ export default function Component() {
                   ))
                 ) : (
                   <TableRow>
-                    <TableCell colSpan={4} className="text-center py-4">
+                    <TableCell colSpan={5} className="text-center py-4">
                       No customers found. Add your first customer to get started.
                     </TableCell>
                   </TableRow>

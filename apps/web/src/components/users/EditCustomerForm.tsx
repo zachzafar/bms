@@ -9,12 +9,14 @@ import { DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/c
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 const UpdateCustomerSchema = z.object({
     name: z.string().min(1, 'Name is required'),
     email: z.string().email('Invalid email'),
     phone: z.string().nullable(),
     address: z.string().nullable(),
+    customerTypeId: z.coerce.number().nullable().optional(),
 });
 
 type UpdateCustomerFormData = z.infer<typeof UpdateCustomerSchema>;
@@ -29,6 +31,7 @@ export interface EditCustomerFormProps {
       userId: string;
       phone: string | null;
       address: string | null;
+      customerTypeId?: number | null;
     }
   };
     onClose: () => void;
@@ -37,6 +40,10 @@ export interface EditCustomerFormProps {
 
 export function EditCustomerForm({ customer, onClose, onSuccess }: EditCustomerFormProps) {
     const { mutate: updateUserMutation, isPending } = authClient.users.updateUser.useMutation();
+    const { data: customerTypesData } = authClient.users.getCustomerTypes.useQuery({
+      queryKey: ['customerTypes'],
+    });
+    const customerTypes = customerTypesData?.status === 200 ? customerTypesData.body.data : [];
 
     const form = useForm<UpdateCustomerFormData>({
         resolver: zodResolver(UpdateCustomerSchema),
@@ -45,6 +52,7 @@ export function EditCustomerForm({ customer, onClose, onSuccess }: EditCustomerF
             email: customer.email,
             phone: customer.customerDetails.phone,
             address: customer.customerDetails.address,
+            customerTypeId: customer.customerDetails.customerTypeId ?? undefined,
         },
     });
 
@@ -63,6 +71,7 @@ export function EditCustomerForm({ customer, onClose, onSuccess }: EditCustomerF
           userId: customer.id,
           phone: data.phone,
           address: data.address,
+          customerTypeId: data.customerTypeId ?? null,
         },
         roles: [],
       },
@@ -137,11 +146,39 @@ export function EditCustomerForm({ customer, onClose, onSuccess }: EditCustomerF
                             control={form.control}
                             name='address'
                             render={({ field }) => (
-                                <FormItem className="md:col-span-2">
+                                <FormItem>
                                     <FormLabel>Address</FormLabel>
                                     <FormControl>
                                         <Input {...field} value={field.value || ''} />
                                     </FormControl>
+                                    <FormMessage />
+                                </FormItem>
+                            )}
+                        />
+
+                        <FormField
+                            control={form.control}
+                            name='customerTypeId'
+                            render={({ field }) => (
+                                <FormItem className="md:col-span-2">
+                                    <FormLabel>Customer Type</FormLabel>
+                                    <Select
+                                        value={field.value?.toString() ?? ""}
+                                        onValueChange={(value) => field.onChange(value ? Number(value) : null)}
+                                    >
+                                        <FormControl>
+                                            <SelectTrigger>
+                                                <SelectValue placeholder="Select a customer type" />
+                                            </SelectTrigger>
+                                        </FormControl>
+                                        <SelectContent>
+                                            {customerTypes.map((ct: any) => (
+                                                <SelectItem key={ct.id} value={ct.id.toString()}>
+                                                    {ct.name}
+                                                </SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
                                     <FormMessage />
                                 </FormItem>
                             )}

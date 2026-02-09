@@ -41,17 +41,19 @@ const bookingFormSchema = z.object({
   assetId: z.string().min(1, { message: 'Asset is required' }),
   startDate: z.date(),
   endDate: z.date(),
+  startTime: z.string().default('00:00'),
+  endTime: z.string().default('23:59'),
 });
 
 type BookingFormValues = z.infer<typeof bookingFormSchema>;
 
-// Helper: calculate nights between two dates
-function calculateNights(start: Date | string, end: Date | string) {
+// Helper: calculate duration in minutes between two dates
+function calculateDurationMinutes(start: Date | string, end: Date | string) {
   const startDate = start instanceof Date ? start : new Date(start);
   const endDate = end instanceof Date ? end : new Date(end);
 
   return Math.ceil(
-    (endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24)
+    (endDate.getTime() - startDate.getTime()) / (1000 * 60)
   );
 }
 
@@ -69,23 +71,23 @@ function getStatusBadge(status: string) {
   }
 }
 
-// Helper: find applicable rate for asset and nights
+// Helper: find applicable rate for asset and duration (in minutes)
 function getApplicableRate(
   assetId: string,
-  nights: number,
+  durationMinutes: number,
   rates: {
     assetId: string;
-    minNights?: number;
-    maxNights?: number;
-    pricePerNight?: number;
+    minDuration?: number;
+    maxDuration?: number;
+    pricePerUnit?: number;
     priority?: number;
   }[]
 ) {
   const applicableRates = rates.filter(
     (rate) =>
       rate.assetId === assetId &&
-      (!rate.minNights || rate.minNights <= nights) &&
-      (!rate.maxNights || rate.maxNights >= nights)
+      (!rate.minDuration || rate.minDuration <= durationMinutes) &&
+      (!rate.maxDuration || rate.maxDuration >= durationMinutes)
   );
   if (applicableRates.length === 0) return null;
   return applicableRates.reduce((prev, curr) =>
@@ -177,9 +179,9 @@ export default function Component() {
     {
       id: number;
       assetId: string;
-      minNights?: number;
-      maxNights?: number;
-      pricePerNight?: number;
+      minDuration?: number;
+      maxDuration?: number;
+      pricePerUnit?: number;
       priority?: number;
     }[]
   >([]);
@@ -190,10 +192,10 @@ export default function Component() {
         item.assetIds.map((assetId) => ({
           ...item.rate,
           assetId,
-          minNights: item.rate.minNights ?? undefined,
-          maxNights: item.rate.maxNights ?? undefined,
-          pricePerNight: item.rate.pricePerNight
-            ? Number(item.rate.pricePerNight)
+          minDuration: item.rate.minDuration ?? undefined,
+          maxDuration: item.rate.maxDuration ?? undefined,
+          pricePerUnit: item.rate.pricePerUnit
+            ? Number(item.rate.pricePerUnit)
             : undefined,
           priority: item.rate.priority ?? undefined,
         }))
@@ -209,6 +211,8 @@ export default function Component() {
     resolver: zodResolver(bookingFormSchema),
     defaultValues: {
       assetId: '',
+      startTime: '00:00',
+      endTime: '23:59',
     },
   });
 
@@ -219,15 +223,24 @@ export default function Component() {
 
 
 
-  // Sync date range with form values
+  const startTime = form.watch('startTime');
+  const endTime = form.watch('endTime');
+
+  // Sync date range + time into form startDate/endDate
   useEffect(() => {
     if (dateRange?.from) {
-      form.setValue('startDate', dateRange.from);
+      const [sh, sm] = (startTime || '00:00').split(':').map(Number);
+      const start = new Date(dateRange.from);
+      start.setHours(sh, sm, 0, 0);
+      form.setValue('startDate', start);
     }
     if (dateRange?.to) {
-      form.setValue('endDate', dateRange.to);
+      const [eh, em] = (endTime || '23:59').split(':').map(Number);
+      const end = new Date(dateRange.to);
+      end.setHours(eh, em, 0, 0);
+      form.setValue('endDate', end);
     }
-  }, [dateRange, form]);
+  }, [dateRange, startTime, endTime, form]);
 
 
 
@@ -461,6 +474,36 @@ export default function Component() {
                       Please select an asset first to see available dates
                     </p>
                   )}
+                </div>
+
+                {/* Time Selection */}
+                <div className="grid grid-cols-2 gap-4">
+                  <FormField
+                    control={form.control}
+                    name="startTime"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Start Time</FormLabel>
+                        <FormControl>
+                          <Input type="time" {...field} disabled={!selectedAssetId} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="endTime"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>End Time</FormLabel>
+                        <FormControl>
+                          <Input type="time" {...field} disabled={!selectedAssetId} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
                 </div>
 
                 {/* Customer Selection */}

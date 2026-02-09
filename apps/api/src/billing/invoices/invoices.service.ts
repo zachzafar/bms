@@ -11,7 +11,6 @@ type ItemInput = { description: string; quantity: number; unitPrice: string; tot
 @Injectable()
 export class InvoicesService {
   constructor(@Inject(DrizzleAsyncProvider) private db: MySql2Database<typeof schema>,
-    private readonly slotService: SlotService,
   ) { }
 
   private iso(d: Date | null | undefined) {
@@ -270,19 +269,21 @@ export class InvoicesService {
   });
   if (!customer) throw new BadRequestException('No customer found for booking user');
 
-  // 3) Calculate number of nights
+  // 3) Calculate duration
   const startDate = new Date(booking.startDate);
   const endDate = new Date(booking.endDate);
-  const nights = Math.ceil((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24));
 
-  // 4) Fetch applicable rate from Rate table
+  // 4) Fetch applicable rate from Rate table (with RateType join)
   const matchingRates = await this.db
     .select({
       rate: schema.Rate,
       assetHasRate: schema.AssetHasRates,
+      rateTypeMinutes: schema.RateType.minutes,
+      rateTypeName: schema.RateType.name,
     })
     .from(schema.Rate)
     .innerJoin(schema.AssetHasRates, eq(schema.Rate.id, schema.AssetHasRates.rateId))
+    .leftJoin(schema.RateType, eq(schema.Rate.rateTypeId, schema.RateType.id))
     .where(
       and(
         eq(schema.AssetHasRates.assetId, booking.assetId),
@@ -296,12 +297,18 @@ export class InvoicesService {
   }
 
   // Pick the rate with highest priority (lowest number)
-  const applicableRate = matchingRates
-    .map((r) => r.rate)
-    .reduce((prev, curr) => (prev.priority ?? 100) < (curr.priority ?? 100) ? prev : curr);
+  const applicableEntry = matchingRates
+    .reduce((prev, curr) => (prev.rate.priority ?? 100) < (curr.rate.priority ?? 100) ? prev : curr);
 
-  const unitPrice = Number(applicableRate.pricePerNight ?? 0);
-  const total = (unitPrice * nights).toFixed(2);
+  const applicableRate = applicableEntry.rate;
+  const rateTypeMinutes = applicableEntry.rateTypeMinutes || 1440; // default daily
+  const rateTypeName = applicableEntry.rateTypeName || 'unit';
+
+  const totalMinutes = Math.ceil((endDate.getTime() - startDate.getTime()) / (1000 * 60));
+  const durationUnits = Math.ceil(totalMinutes / rateTypeMinutes);
+
+  const unitPrice = Number(applicableRate.pricePerUnit ?? 0);
+  const total = (unitPrice * durationUnits).toFixed(2);
 
   const invoiceNumber = await this.generateInvoiceNumber();
 
@@ -326,8 +333,8 @@ export class InvoicesService {
     // 6) Insert invoice item
     await tx.insert(schema.InvoiceItem).values({
       invoiceId,
-      description: `Rate per night for ${booking.asset?.name ?? booking.assetId}`,
-      quantity: nights,
+      description: `${booking.asset?.name ?? booking.assetId} - ${durationUnits} ${rateTypeName}${durationUnits > 1 ? 's' : ''}`,
+      quantity: durationUnits,
       unitPrice: unitPrice as any,
       totalPrice: total as any,
     });
