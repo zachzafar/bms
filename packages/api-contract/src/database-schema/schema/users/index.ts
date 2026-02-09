@@ -6,7 +6,6 @@ import { z } from "zod";
 import { Booking } from "../booking";
 import { v4 as uuid } from "uuid";
 import { Tenant } from "../tenant";
-import { CommunicationLog, Contact, Document, Inquiry, Task } from "../crm";
 
 
 // User Model
@@ -34,10 +33,6 @@ export const userRelations = relations(User, ({ one, many }) => ({
     }),
     userToRoles: many(UserHasRoles),
     usersToAssets: many(UserHasAssets),
-    inquiries: many(Inquiry),
-    communications: many(CommunicationLog),
-    tasks: many(Task),
-    documentsUploaded: many(Document),
 }));
 
 export const InsertUserSchema = createInsertSchema(User)
@@ -107,8 +102,6 @@ export const Customer = mysqlTable("customer_details", {
     id: bigint("id", { mode: "number", unsigned: true }).autoincrement().primaryKey(),
     phone: varchar("phone", { length: 255 }),
     address: varchar("address", { length: 255 }),
-    contactId: bigint("contact_id", { mode: 'number', unsigned: true })
-      .references(() => Contact.id),
     customerTypeId: bigint("customer_type_id", { mode: 'number', unsigned: true })
       .references(() => CustomerType.id),
     createdAt: timestamp('createdAt').notNull().defaultNow(),
@@ -133,10 +126,6 @@ export const customerRelations = relations(Customer, ({ one }) => ({
         fields: [Customer.userId],
         references: [User.id],
     }),
-    contact: one(Contact, {
-        fields: [Customer.contactId],
-        references: [Contact.id],
-    }),
     customerType: one(CustomerType, {
         fields: [Customer.customerTypeId],
         references: [CustomerType.id],
@@ -149,8 +138,6 @@ export const Owner = mysqlTable("owner_details", {
     id: bigint("id", { mode: "number", unsigned: true }).autoincrement().primaryKey(),
     phone: varchar("phone", { length: 255 }),
     address: varchar("address", { length: 255 }),
-    contactId: bigint("contact_id", { mode: 'number', unsigned: true })
-      .references(() => Contact.id),
     createdAt: timestamp('createdAt').notNull().defaultNow(),
     updatedAt: timestamp('updated_at', { mode: 'date', }).$onUpdate(() => new Date()),
     deletedAt: timestamp('deleted_at'),
@@ -172,10 +159,6 @@ export const ownerRelations = relations(Owner, ({ one, many }) => ({
     user: one(User, {
         fields: [Owner.userId],
         references: [User.id],
-    }),
-    contact: one(Contact, {
-        fields: [Owner.contactId],
-        references: [Contact.id],
     }),
 }))
 

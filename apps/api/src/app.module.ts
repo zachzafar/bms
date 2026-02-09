@@ -24,7 +24,6 @@ import { RatesModule } from './rates/rates.module';
 import { BlockedDatesModule } from './blocked-dates/blocked-dates.module';
 import { TagsModule } from './tags/tags.module';
 import { BillingModule } from './billing/billing.module';
-import { CrmModule } from './crm/crm.module';
 import { SystemAdminModule } from './system-admin/system-admin.module';
 import { InvoicesModule } from './billing/invoices/invoices.module';
 import { PaymentsModule } from './billing/payments/payments.module';
@@ -70,7 +69,6 @@ const allowAllCorsEndpoints = [
     BlockedDatesModule,
     TagsModule,
     BillingModule,
-    CrmModule,
     SystemAdminModule,
     InvoicesModule,
     PaymentsModule,
