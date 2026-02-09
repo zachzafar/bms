@@ -13,7 +13,6 @@ import {
 import { toast } from 'sonner';
 import { useStorage } from '@/hooks/useStorage';
 import { authClient } from '@/lib/api/publicClient';
-import { deleteSession } from '@/lib/api/session';
 import { StorageService } from '@/lib/api/storage';
 
 interface DashboardLayoutProps {
@@ -41,12 +40,8 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
           userId: user.id
         }
       }, {
-        onSuccess: async (response) => {
-          StorageService.removeToken();
-          StorageService.removeUser();
-          StorageService.removeTenant();
-          StorageService.removeTenantList();
-          await deleteSession();
+        onSuccess: async () => {
+          await StorageService.clearAll();
           const authUrl = process.env.NODE_ENV === 'production'
             ? 'https://app.bookos.xyz'
             : 'http://localhost:3000';
