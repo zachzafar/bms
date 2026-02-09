@@ -67,11 +67,8 @@ export function useCrossDomainAuth() {
     window.location.href = authUrl;
   };
 
-  const logout = () => {
-    StorageService.removeToken();
-    StorageService.removeUser();
-    StorageService.removeTenant();
-    StorageService.removeTenantList();
+  const logout = async () => {
+    await StorageService.clearAll();
     setIsAuthenticated(false);
     redirectToAuth();
   };

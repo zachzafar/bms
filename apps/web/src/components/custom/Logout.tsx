@@ -2,7 +2,6 @@
 
 import { Button } from '@/components/ui/button';
 import { authClient } from '@/lib/api/publicClient';
-import { deleteSession } from '@/lib/api/session';
 import { StorageService } from '@/lib/api/storage';
 import { useStorage } from '@/hooks/useStorage';
 
@@ -18,20 +17,8 @@ export default function Logout() {
                 }
             }, {
                 onSuccess: async () => {
-                    // Clear client-side cookies first
-                    StorageService.removeToken();
-                    StorageService.removeUser();
-                    StorageService.removeTenant();
-                    StorageService.removeTenantList();
+                    await StorageService.clearAll();
 
-                    // Clear server-side session cookie
-                    const result = await deleteSession();
-
-                    if (!result.success) {
-                        console.error('Failed to delete session:', result.error);
-                    }
-
-                    // Redirect to auth app instead of /login
                     const authUrl = process.env.NODE_ENV === 'production'
                         ? 'https://app.bookos.xyz'
                         : 'http://localhost:3002';
@@ -40,14 +27,13 @@ export default function Logout() {
             });
         }
     };
-    
+
     return (
-        <Button 
-            disabled={isPending || user == null} 
+        <Button
+            disabled={isPending || user == null}
             onClick={handleLogout}
         >
             Logout
         </Button>
     );
 }
-

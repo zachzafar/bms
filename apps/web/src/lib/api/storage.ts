@@ -162,6 +162,29 @@ export class StorageService {
     removeCookie(StorageService.TENANT_LIST_KEY);
   }
 
+  /* ----------------------- CLEAR ALL ----------------------- */
+
+  /**
+   * Clears ALL cookies — calls /api/logout to expire the httpOnly session
+   * cookie via Set-Cookie headers, then removes client-side cookies.
+   */
+  static async clearAll(): Promise<{ success: boolean }> {
+    // 1. Hit the API route to expire the httpOnly session cookie
+    try {
+      await fetch("/api/logout", { method: "POST", credentials: "include" });
+    } catch (e) {
+      console.error("Failed to call /api/logout:", e);
+    }
+
+    // 2. Remove client-side cookies
+    StorageService.removeToken();
+    StorageService.removeUser();
+    StorageService.removeTenant();
+    StorageService.removeTenantList();
+
+    return { success: true };
+  }
+
   /* ----------------------- AUTH CHECK ----------------------- */
 
   static async isAuthenticated(): Promise<boolean> {

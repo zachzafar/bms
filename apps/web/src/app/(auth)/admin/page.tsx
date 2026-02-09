@@ -7,7 +7,7 @@ import { Badge } from '@/components/ui/badge';
 import { Building, Users, Settings, LogOut, User, Shield, Key, Globe } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { authClient } from '@/lib/api/publicClient';
-import { getSession, deleteSession } from '@/lib/api/session';
+import { getSession } from '@/lib/api/session';
 import { StorageService } from '@/lib/api/storage';
 import { toast } from 'sonner';
 import { queryClient } from '@/providers/tanstack';
@@ -117,14 +117,8 @@ export default function AuthHubPage() {
 
   const handleLogout = async () => {
     try {
-      StorageService.removeToken();
-      StorageService.removeUser();
-      StorageService.removeTenant();
-      StorageService.removeTenantList();
-      await deleteSession();
-
+      await StorageService.clearAll();
       queryClient.clear();
-
       toast.success('Logged out successfully');
       router.push('/login');
     } catch (error) {
