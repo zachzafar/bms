@@ -87,13 +87,26 @@ export async function deleteSession() {
     const cookieStore = cookies();
     const allCookies = cookieStore.getAll();
 
+    const domain = process.env.DOMAIN;
+
     for (const cookie of allCookies) {
-      // Delete with explicit domain (for cookies set with domain, e.g. session)
-      cookieStore.delete({
-        name: cookie.name,
-        path: "/",
-        domain: process.env.DOMAIN,
-      });
+      // Delete with explicit domain (e.g. app.bookos.xyz)
+      if (domain) {
+        cookieStore.delete({
+          name: cookie.name,
+          path: "/",
+          domain,
+        });
+
+        // Also try with leading dot (.app.bookos.xyz) — browsers
+        // normalise domains this way when storing cookies
+        const dotDomain = domain.startsWith(".") ? domain : `.${domain}`;
+        cookieStore.delete({
+          name: cookie.name,
+          path: "/",
+          domain: dotDomain,
+        });
+      }
 
       // Also delete without domain (for client-side cookies set without domain)
       cookieStore.delete({
