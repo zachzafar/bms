@@ -100,7 +100,7 @@ export default function BookingCalendar() {
       id: Number(b.id),
       startDate: parseAsLocalDate(b.startDate),
       endDate: parseAsLocalDate(b.endDate),
-      customerName: b.user?.name || "Unknown",
+      customerName: b.customer?.name || "Unknown",
       assetName: b.asset?.name || "Unknown",
     }));
   }, [bookingsData]);

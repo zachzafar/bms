@@ -73,11 +73,11 @@ export default function AssetAvailabilityCalendar({ asset }: { asset: SelectAsse
     if (bookingsResponse?.status !== 200) return [];
     const body = bookingsResponse.body;
     const data = Array.isArray(body) ? body : body.data;
-    return data.map((b: any) => ({
+    return data.map((b) => ({
       id: Number(b.id),
       startDate: b.startDate,
       endDate: b.endDate,
-      customerName: b.user?.name || 'Unknown',
+      customerName: b.customer?.name || 'Unknown',
     }));
   }, [bookingsResponse]);
 
