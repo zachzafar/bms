@@ -167,4 +167,48 @@ export const rateContract = c.router({
       204: z.undefined(),
     },
   },
+
+  // --- Public endpoints (by subdomain) ---
+
+  getPublicRates: {
+    method: "GET",
+    path: "/rates-by-sub/:subdomain",
+    summary: "Get all rates for a tenant by subdomain (public)",
+    pathParams: z.object({
+      subdomain: z.string(),
+    }),
+    query: z.object({
+      assetId: z.string().optional(),
+      assetTypeId: z.coerce.number().optional(),
+      page: z.coerce.number().optional(),
+      pageSize: z.coerce.number().optional(),
+    }),
+    responses: {
+      200: z.object({
+        data: z.array(
+          z.object({
+            rate: SelectRateSchema,
+            assetIds: z.array(z.string()),
+            assetTypeIds: z.array(z.number()).optional(),
+          })
+        ),
+        pagination,
+      }),
+      404: z.object({ message: z.string() }),
+    },
+  },
+
+  getPublicRate: {
+    method: "GET",
+    path: "/rates-by-sub/:subdomain/:id",
+    summary: "Get a single rate by subdomain and ID (public)",
+    pathParams: z.object({
+      subdomain: z.string(),
+      id: z.coerce.number(),
+    }),
+    responses: {
+      200: SelectRateSchema,
+      404: z.object({ message: z.string() }),
+    },
+  },
 });

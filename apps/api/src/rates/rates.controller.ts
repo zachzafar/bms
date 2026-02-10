@@ -5,6 +5,7 @@ import { RatesService } from './rates.service';
 import { Roles } from 'src/auth/decorators/permissions.decorator';
 import { PermissionScope } from 'src/auth/permissions';
 import { PermissionsGuard } from 'src/auth/guards/permissions/permissions.guard';
+import { Public } from 'src/auth/decorators/public.decorator';
 
 @UseGuards(PermissionsGuard)
 @Controller()
@@ -123,6 +124,32 @@ export class RatesController {
       const tenantId = headers['x-tenant-id'];
       await this.rateService.deleteRateType(tenantId, params.id);
       return { status: 204, body: undefined };
+    });
+  }
+
+  // --- Public endpoints (by subdomain) ---
+
+  @Public()
+  @TsRestHandler(contract.rates.getPublicRates)
+  async getPublicRates(): Promise<ReturnType<typeof tsRestHandler>> {
+    return tsRestHandler(contract.rates.getPublicRates, async ({ params, query }) => {
+      const { subdomain } = params;
+      const { assetId, assetTypeId } = query;
+      const page = query.page ? Number(query.page) : 1;
+      const pageSize = query.pageSize ? Number(query.pageSize) : 10;
+
+      const result = await this.rateService.getRatesBySubdomain(subdomain, assetId, assetTypeId, page, pageSize);
+      return { status: 200, body: result };
+    });
+  }
+
+  @Public()
+  @TsRestHandler(contract.rates.getPublicRate)
+  async getPublicRate(): Promise<ReturnType<typeof tsRestHandler>> {
+    return tsRestHandler(contract.rates.getPublicRate, async ({ params }) => {
+      const { subdomain, id } = params;
+      const rate = await this.rateService.getRateBySubdomain(subdomain, id);
+      return { status: 200, body: rate };
     });
   }
 }

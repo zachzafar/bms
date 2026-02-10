@@ -493,6 +493,30 @@ export class RatesService {
     }
   }
 
+  // ==============================
+  // Public (subdomain-based) methods
+  // ==============================
+
+  private async resolveTenantBySubdomain(subdomain: string): Promise<string> {
+    const tenant = await this.db.query.Tenant.findFirst({
+      where: (t, { eq }) => eq(t.subdomain, subdomain),
+    });
+    if (!tenant) {
+      throw new NotFoundException('Tenant not found');
+    }
+    return tenant.id;
+  }
+
+  async getRatesBySubdomain(subdomain: string, assetId?: string, assetTypeId?: number, page: number = 1, pageSize: number = 10) {
+    const tenantId = await this.resolveTenantBySubdomain(subdomain);
+    return this.getRates(tenantId, assetId, assetTypeId, page, pageSize);
+  }
+
+  async getRateBySubdomain(subdomain: string, id: number) {
+    const tenantId = await this.resolveTenantBySubdomain(subdomain);
+    return this.getRate(tenantId, id);
+  }
+
   private buildPagination(page: number, pageSize: number, totalCount: number) {
     return {
       page,
