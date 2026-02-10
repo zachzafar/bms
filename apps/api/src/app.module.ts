@@ -15,9 +15,6 @@ import { ObjectStorageService } from './object-storage/object-storage.service';
 import { ObjectStorageModule } from './object-storage/object-storage.module';
 import { KeysModule } from './keys/keys.module';
 import { AnalyticsModule } from './analytics/analytics.module';
-import { SlotService } from './slot/slot.service';
-import { SlotController } from './slot/slot.controller';
-import { SlotModule } from './slot/slot.module';
 import { EventEmitterModule } from '@nestjs/event-emitter';
 import { EmailModule } from './email/email.module';
 import { RatesModule } from './rates/rates.module';
@@ -63,7 +60,6 @@ const allowAllCorsEndpoints = [
     ObjectStorageModule,
     KeysModule,
     AnalyticsModule,
-    SlotModule,
     EventEmitterModule.forRoot(),
     EmailModule,
     RatesModule,
@@ -76,11 +72,10 @@ const allowAllCorsEndpoints = [
     OwnerModule,
     CustomersModule
   ],
-  controllers: [AppController, SlotController],
+  controllers: [AppController],
   providers: [
     AppService,
     ObjectStorageService,
-    SlotService,
     {
       provide: APP_GUARD,
       useClass: ThrottlerGuard,

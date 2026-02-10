@@ -11,7 +11,6 @@ import { teamsContract } from './teams';
 import { tenantsContract } from './tenants';
 import { keysContract } from './keys';
 import { analyticsContract } from './analytics';
-import { slotContract } from './slots';
 import { rateContract } from './rates';
 import { billingContract } from './billing';
 import { systemAdminContract } from './system-admin';
@@ -35,7 +34,6 @@ export const contract = c.router({
   keys: keysContract,
   analytics: analyticsContract,
   blockedDates: blockedDatesContract,
-  slots: slotContract,
   rates: rateContract,
   billing: billingContract,
   systemAdmin: systemAdminContract,

@@ -68,7 +68,7 @@ export class BlockedDatesController {
     @TsRestHandler(contract.blockedDates.getBlockedDatesForAssetPublic)
     async getBlockedDatesForAssetPublic(): Promise<ReturnType<typeof tsRestHandler>> {
         return tsRestHandler(contract.blockedDates.getBlockedDatesForAssetPublic, async ({ params }) => {
-            const blockedDates = await this.blockedDatesService.getBlockedDates(params.assetId);
+            const blockedDates = await this.blockedDatesService.getBlockedDatesForAsset(params.assetId);
 
             const formatted = blockedDates.map((b) => ({
                 startDate: b.startDate,

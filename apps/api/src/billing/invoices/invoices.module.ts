@@ -7,7 +7,6 @@ import { DrizzleModule } from 'src/drizzle/drizzle.module';
 import { AuthModule } from 'src/auth/auth.module';
 import { KeysModule } from 'src/keys/keys.module';
 import { PermissionsGuard } from 'src/auth/guards/permissions/permissions.guard';
-import { SlotService } from 'src/slot/slot.service';
 import { BillingModule } from '../billing.module';
 
 @Module({
@@ -15,7 +14,7 @@ import { BillingModule } from '../billing.module';
         DrizzleModule, AuthModule, KeysModule, BillingModule
     ],
     controllers: [InvoicesController],
-    providers: [InvoicesService, TenantService, SlotService, PermissionsGuard],
+    providers: [InvoicesService, TenantService, PermissionsGuard],
     exports: [InvoicesService]
 })
 export class InvoicesModule { }

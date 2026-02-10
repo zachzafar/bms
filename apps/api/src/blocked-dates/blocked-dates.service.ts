@@ -46,6 +46,17 @@ export class BlockedDatesService {
     }));
   }
 
+  async getBlockedDatesForAsset(assetId: string) {
+    const blocked = await this.db.query.BlockedDate.findMany({
+      where: (b,{ eq }) => eq(b.assetId, assetId),
+    });
+
+    return blocked.map(b => ({
+      ...b,
+      reason: b.reason ?? undefined,
+    }));
+  }
+
   async createBlockedDate(data: schema.InsertBlockedDate) {
     const { startDate, endDate, tenantId, assetId, reason, title } = data;
 
