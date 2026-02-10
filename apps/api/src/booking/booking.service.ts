@@ -4,7 +4,6 @@ import * as schema from '@repo/api-contract';
 import { DrizzleAsyncProvider } from 'src/drizzle/drizzle.provider';
 import { and, eq, gte, inArray, isNull, lte, or, sql } from 'drizzle-orm';
 import { ExtendedSelectBooking, InsertBooking } from '@repo/api-contract';
-import { SlotService } from '../slot/slot.service';
 import { OnEvent, EventEmitter2 } from '@nestjs/event-emitter';
 import { EmailEvent } from 'src/email/events';
 import { randomBytes } from 'crypto';
