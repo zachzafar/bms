@@ -3,7 +3,6 @@ import { MySql2Database } from 'drizzle-orm/mysql2';
 import * as schema from '@repo/api-contract';
 import { DrizzleAsyncProvider } from 'src/drizzle/drizzle.provider';
 import { and, eq, gte, inArray, isNull, lte, sql } from 'drizzle-orm';
-import { SlotService } from 'src/slot/slot.service';
 
 type CreateInvoiceInput = Omit<schema.InsertInvoice, 'id'>;
 type ItemInput = { description: string; quantity: number; unitPrice: string; totalPrice: string; };
