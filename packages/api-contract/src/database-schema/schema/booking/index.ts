@@ -122,7 +122,7 @@ export const SlotRelations = relations(Slot, ({ one }) => ({
 export const BlockedDate = mysqlTable("blocked_date", {
   id: bigint("id", { mode: "number", unsigned: true }).autoincrement().primaryKey(),
   tenantId: varchar("tenant_id", { length: 255 }).notNull().references(() => Tenant.id, { onDelete: 'cascade'}),
-  assetId: varchar("asset_id", { length: 255 }).notNull(),
+  assetId: varchar("asset_id", { length: 255 }), // null = global (applies to all assets)
   startDate: datetime("start_date").notNull(),
   endDate: datetime("end_date").notNull(),
   title: varchar("title", { length: 255 }).notNull(),
@@ -145,7 +145,7 @@ export const InsertBlockedDateSchema = createInsertSchema(BlockedDate)
     endDate: z.coerce.date(),
     reason: z.string().optional(),
     title: z.string(),
-    assetId: z.string(),
+    assetId: z.string().nullable().optional(),
     tenantId: z.string(),
     bookingId: z.string().optional(),
   });

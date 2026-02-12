@@ -13,6 +13,7 @@ import { BOOKINGS_QUERY_KEY } from "@/lib/api/queryKeys";
 import { toast } from "sonner";
 import { StorageService } from "@/lib/api/storage";
 import { queryClient } from "@/providers/tanstack";
+import { parseAsLocalDate, addDays } from "@/lib/utils/date";
 
 const localizer = momentLocalizer(moment);
 const BLOCKED_DATES_KEY = ["blockedDates"];
@@ -32,25 +33,6 @@ type BlockedDateItem = {
   title: string;
   reason?: string;
 };
-
-// Helper: Parse date string to local Date, handling both formats:
-// - datetime with timezone: "2026-02-09T04:00:00.000Z" -> extract UTC date
-// - date-only: "2026-02-09" -> treat as local date
-function parseAsLocalDate(dateStr: string): Date {
-  if (dateStr.includes("T")) {
-    const d = new Date(dateStr);
-    return new Date(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate());
-  }
-  const [y, m, d] = dateStr.split("-").map(Number);
-  return new Date(y, m - 1, d);
-}
-
-// Helper: Add days to a date and return new Date
-function addDays(date: Date, days: number): Date {
-  const result = new Date(date);
-  result.setDate(result.getDate() + days);
-  return result;
-}
 
 export default function BookingCalendar() {
   const [blockTitle, setBlockTitle] = useState<string>("");
@@ -161,7 +143,6 @@ export default function BookingCalendar() {
 
     const currentTenant = StorageService.getTenant();
     const tenantId = currentTenant?.id ?? "";
-    const assetId = "null";
 
     const startDate = selectedRange.start;
     // Subtract 1 day from end since react-big-calendar end is exclusive
@@ -171,7 +152,7 @@ export default function BookingCalendar() {
     createBlockedDateMutation.mutate({
       body: {
         tenantId,
-        assetId,
+        assetId: null, // null = global blocked date (applies to all assets)
         startDate,
         endDate,
         title: blockTitle || "Blocked",

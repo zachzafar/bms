@@ -70,3 +70,23 @@ export function parseDateInputAsUTC(dateString: string): Date {
 export function formatDateRange(startDate: string | Date, endDate: string | Date): string {
   return `${formatDisplayDate(startDate)} - ${formatDisplayDate(endDate)}`;
 }
+
+
+// Helper: Parse date string to local Date, handling both formats:
+// - datetime with timezone: "2026-02-09T04:00:00.000Z" -> extract UTC date
+// - date-only: "2026-02-09" -> treat as local date
+export function parseAsLocalDate(dateStr: string): Date {
+  if (dateStr.includes("T")) {
+    const d = new Date(dateStr);
+    return new Date(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate());
+  }
+  const [y, m, d] = dateStr.split("-").map(Number);
+  return new Date(y, m - 1, d);
+}
+
+// Helper: Add days to a date and return new Date
+export function addDays(date: Date, days: number): Date {
+  const result = new Date(date);
+  result.setDate(result.getDate() + days);
+  return result;
+}

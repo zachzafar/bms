@@ -33,7 +33,7 @@ import { useRouter } from 'next/navigation';
 import CopyableId from '@/components/custom/CopyableId';
 import { DateRangePicker, BlockedDateRange } from '@/components/ui/date-range-picker';
 import { DateRange } from 'react-day-picker';
-import { formatDisplayDate } from '@/lib/utils/date';
+import { formatDisplayDate, parseAsLocalDate } from '@/lib/utils/date';
 
 
 // Booking form schema
@@ -131,9 +131,9 @@ export default function Component() {
   // Transform blocked dates data
   const assetBlockedDates: BlockedDateRange[] = useMemo(() => {
     if (blockedDatesResponse?.status !== 200) return [];
-    return blockedDatesResponse.body.map((b) => ({
-      startDate: new Date(b.startDate),
-      endDate: new Date(b.endDate),
+    return blockedDatesResponse.body.map((b: any) => ({
+      startDate: parseAsLocalDate(b.startDate),
+      endDate: parseAsLocalDate(b.endDate),
     }));
   }, [blockedDatesResponse]);
 

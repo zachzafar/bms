@@ -13,6 +13,7 @@ import { Plus, Edit, UserMinus, Users, User, Loader2, Search, UserPlus } from 'l
 import { toast } from 'sonner';
 import { authClient } from '@/lib/api/publicClient';
 import { TENANT_ROLES_QUERY_KEY, TENANT_USERS_QUERY_KEY } from '@/lib/api/queryKeys';
+import { formatDisplayDate } from '@/lib/utils/date';
 
 interface TenantUsersProps {
   tenantId: string;
@@ -591,7 +592,7 @@ export function TenantUsers({ tenantId }: TenantUsersProps) {
                       </div>
                     </td>
                     <td className="p-3 text-muted-foreground text-sm">
-                      {user.user.createdAt ? new Date(user.user.createdAt).toLocaleDateString() : 'N/A'}
+                      {user.user.createdAt ? formatDisplayDate(user.user.createdAt) : 'N/A'}
                     </td>
                     <td className="p-3">
                       <div className="flex space-x-2">

@@ -12,6 +12,7 @@ import { Plus, Search, Eye, Pencil, DollarSign, Calendar, Trash2, Download } fro
 import { authClient, axiosClient } from '@/lib/api/publicClient';
 import { toast } from 'sonner';
 import { Label } from '@/components/ui/label';
+import { formatDisplayDate } from '@/lib/utils/date';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Textarea } from '@/components/ui/textarea';
 import { Form,FormField, FormItem, FormLabel, FormControl, FormMessage } from '@/components/ui/form';
@@ -393,7 +394,7 @@ export default function PaymentsPage() {
                     <TableCell>
                       <Badge className={getStatusColor(payment.status)}>{payment.status}</Badge>
                     </TableCell>
-                    <TableCell>{new Date(payment.createdAt).toLocaleDateString()}</TableCell>
+                    <TableCell>{formatDisplayDate(payment.createdAt)}</TableCell>
                     <TableCell>
                       <div className="flex items-center gap-2">
                         <Button variant="outline" size="sm" onClick={() => router.push(`/bookings/billing/payments/${payment.id}/view`)}>

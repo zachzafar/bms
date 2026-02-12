@@ -2,7 +2,7 @@ import { ConflictException, Inject, Injectable, NotFoundException } from '@nestj
 import { MySql2Database } from 'drizzle-orm/mysql2';
 import * as schema from '@repo/api-contract';
 import { DrizzleAsyncProvider } from 'src/drizzle/drizzle.provider';
-import { and, eq, gte, inArray, isNull, lte } from 'drizzle-orm';
+import { and, eq, gte, inArray, isNull, lte, or, sql } from 'drizzle-orm';
 
 // Helper function to convert to UTC DateTime
 function toUTCDateTime(input: string | Date): Date {
@@ -35,9 +35,12 @@ export class BlockedDatesService {
     @Inject(DrizzleAsyncProvider) private db: MySql2Database<typeof schema>,
   ) {}
 
-  async getBlockedDates(tenantId: string,assetId?: string) {
+  async getBlockedDates(tenantId: string, assetId?: string) {
     const blocked = await this.db.query.BlockedDate.findMany({
-      where: assetId ? (b) => and(eq(b.assetId, assetId),eq(b.tenantId,tenantId)): (b) => eq(b.tenantId,tenantId),
+      where: assetId
+        // When filtering by asset, also include global blocks (assetId IS NULL)
+        ? (b) => and(eq(b.tenantId, tenantId), or(eq(b.assetId, assetId), isNull(b.assetId)))
+        : (b) => eq(b.tenantId, tenantId),
     });
 
     return blocked.map(b => ({
@@ -47,8 +50,18 @@ export class BlockedDatesService {
   }
 
   async getBlockedDatesForAsset(assetId: string) {
+    // Get asset to find its tenantId for global blocks
+    const asset = await this.db.query.Asset.findFirst({
+      where: (a, { eq }) => eq(a.id, assetId),
+    });
+
     const blocked = await this.db.query.BlockedDate.findMany({
-      where: (b,{ eq }) => eq(b.assetId, assetId),
+      where: (b, { eq, and, or }) => asset
+        ? and(
+            eq(b.tenantId, asset.tenantId),
+            or(eq(b.assetId, assetId), isNull(b.assetId))
+          )
+        : eq(b.assetId, assetId),
     });
 
     return blocked.map(b => ({
@@ -63,10 +76,16 @@ export class BlockedDatesService {
     const utcStart = toUTCDateTime(startDate);
     const utcEnd = toUTCDateTime(endDate);
 
+    // Only check for overlapping conflicts on asset-specific blocks
+    const assetCondition = assetId
+      ? eq(schema.BlockedDate.assetId, assetId)
+      : isNull(schema.BlockedDate.assetId);
+
     const conflicts = await this.db.query.BlockedDate.findMany({
-      where: (bd, { and, eq, gte, lte, or }) =>
+      where: (bd, { and, gte, lte, or }) =>
         and(
-          eq(bd.assetId, assetId),
+          assetCondition,
+          eq(bd.tenantId, tenantId),
           or(
             and(gte(bd.startDate, utcStart), lte(bd.startDate, utcEnd)),
             and(gte(bd.endDate, utcStart), lte(bd.endDate, utcEnd))
@@ -155,8 +174,12 @@ export class BlockedDatesService {
 
     const assetIds = assets.map(a => a.id);
 
-    // 2. Get all blocked ranges for those assets
-    const whereConditions = [inArray(schema.BlockedDate.assetId, assetIds)];
+    // 2. Get all blocked ranges for those assets + global blocks (assetId IS NULL)
+    const assetOrGlobal = or(
+      inArray(schema.BlockedDate.assetId, assetIds),
+      isNull(schema.BlockedDate.assetId)
+    )!;
+    const whereConditions = [assetOrGlobal];
 
     if (from && to) {
       whereConditions.push(
@@ -185,15 +208,18 @@ export class BlockedDatesService {
       to = maxDate;
     }
 
-    // 3. Group ranges by asset
+    // 3. Group ranges by asset; global blocks (assetId=null) apply to ALL assets
+    const globalRanges: { start: Date; end: Date }[] = [];
     const byAsset = new Map<string, { start: Date; end: Date }[]>();
 
     for (const r of blockedRanges) {
-      if (!byAsset.has(r.assetId)) byAsset.set(r.assetId, []);
-      byAsset.get(r.assetId)!.push({
-        start: new Date(r.start),
-        end: new Date(r.end),
-      });
+      const range = { start: new Date(r.start), end: new Date(r.end) };
+      if (r.assetId === null) {
+        globalRanges.push(range);
+      } else {
+        if (!byAsset.has(r.assetId)) byAsset.set(r.assetId, []);
+        byAsset.get(r.assetId)!.push(range);
+      }
     }
 
     // 4. Helper — is a day blocked for an asset?
@@ -214,12 +240,15 @@ export class BlockedDatesService {
     ) {
       let blockedForAll = true;
 
-      for (const assetId of assetIds) {
-        const ranges = byAsset.get(assetId) || [];
+      // Global blocks apply to all assets — if this day is globally blocked, it's blocked for all
+      if (!isBlocked(d, globalRanges)) {
+        for (const assetId of assetIds) {
+          const ranges = byAsset.get(assetId) || [];
 
-        if (!isBlocked(d, ranges)) {
-          blockedForAll = false;
-          break;
+          if (!isBlocked(d, ranges)) {
+            blockedForAll = false;
+            break;
+          }
         }
       }
 

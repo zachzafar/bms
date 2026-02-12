@@ -8,6 +8,7 @@ import { ArrowLeft, Home, Loader2, Calendar, FileText } from 'lucide-react';
 import { useParams, useRouter } from 'next/navigation';
 import Image from 'next/image';
 import Link from 'next/link';
+import { formatDisplayDate } from '@/lib/utils/date';
 
 export default function OwnerAssetDetailPage() {
   const params = useParams();
@@ -173,14 +174,14 @@ export default function OwnerAssetDetailPage() {
             <div>
               <dt className="text-sm font-medium text-muted-foreground">Created</dt>
               <dd className="text-base text-foreground mt-1">
-                {new Date(asset.createdAt).toLocaleDateString()}
+                {formatDisplayDate(asset.createdAt)}
               </dd>
             </div>
             {asset.updatedAt && (
               <div>
                 <dt className="text-sm font-medium text-muted-foreground">Last Updated</dt>
                 <dd className="text-base text-foreground mt-1">
-                  {new Date(asset.updatedAt).toLocaleDateString()}
+                  {formatDisplayDate(asset.updatedAt)}
                 </dd>
               </div>
             )}

@@ -8,6 +8,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
+import { formatDisplayDate } from '@/lib/utils/date';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import {
@@ -176,8 +177,8 @@ export default function AssetBookings({ asset }: { asset: SelectAsset }) {
           <TableBody>
             {bookings.map((booking) => (
               <TableRow key={booking.id}>
-                <TableCell>{new Date(booking.startDate).toDateString()}</TableCell>
-                <TableCell>{new Date(booking.endDate).toDateString()}</TableCell>
+                <TableCell>{formatDisplayDate(booking.startDate)}</TableCell>
+                <TableCell>{formatDisplayDate(booking.endDate)}</TableCell>
                 <TableCell>
                   <div>{booking?.customer?.name}</div>
                 </TableCell>

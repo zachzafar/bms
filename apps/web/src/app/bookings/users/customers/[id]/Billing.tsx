@@ -13,6 +13,7 @@ import { authClient } from '@/lib/api/publicClient';
 import { z } from 'zod';
 import { useForm, useFieldArray } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
+import { formatDisplayDate } from '@/lib/utils/date';
 import { toast } from 'sonner';
 import { Plus, Trash2 } from 'lucide-react';
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select';
@@ -224,8 +225,8 @@ export default function Billing({  customerId }: { customerId: number }) {
                       <TableRow key={inv.id}>
                         <TableCell className="font-medium">{inv.invoiceNumber}</TableCell>
                         <TableCell>{inv.status}</TableCell>
-                        <TableCell>{new Date(inv.issueDate).toLocaleDateString()}</TableCell>
-                        <TableCell>{new Date(inv.dueDate).toLocaleDateString()}</TableCell>
+                        <TableCell>{formatDisplayDate(inv.issueDate)}</TableCell>
+                        <TableCell>{formatDisplayDate(inv.dueDate)}</TableCell>
                         <TableCell>${Number(inv.totalAmount ?? 0).toFixed(2)}</TableCell>
                         {/* <TableCell>
                           <Button
@@ -273,7 +274,7 @@ export default function Billing({  customerId }: { customerId: number }) {
                         <TableCell className="font-medium">{p.id}</TableCell>
                         <TableCell>{p.paymentMethod}</TableCell>
                         <TableCell>{p.status}</TableCell>
-                        <TableCell>{new Date(p.paymentDate).toLocaleDateString()}</TableCell>
+                        <TableCell>{formatDisplayDate(p.paymentDate)}</TableCell>
                         <TableCell>${Number(p.amount ?? 0).toFixed(2)}</TableCell>
                       </TableRow>
                     ))

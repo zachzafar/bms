@@ -7,7 +7,7 @@ const c = initContract();
 export const BlockedDateSchema = z.object({
   id: z.number(),
   tenantId: z.string(),
-  assetId: z.string(),
+  assetId: z.string().nullable(),
   startDate: z.coerce.date(),
   endDate: z.coerce.date(),
   title: z.string().min(1, "Title is required"),

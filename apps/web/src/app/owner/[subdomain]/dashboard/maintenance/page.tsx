@@ -6,6 +6,7 @@ import { Wrench, Loader2, Search } from 'lucide-react';
 import { useState } from 'react';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
+import { formatDisplayDate } from '@/lib/utils/date';
 import {
   Table,
   TableBody,
@@ -150,7 +151,7 @@ export default function OwnerMaintenancePage() {
                           </Badge>
                         </TableCell>
                         <TableCell>
-                          {task.dueDate ? new Date(task.dueDate).toLocaleDateString() : 'N/A'}
+                          {task.dueDate ? formatDisplayDate(task.dueDate) : 'N/A'}
                         </TableCell>
                       </TableRow>
                     ))}
