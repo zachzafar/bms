@@ -13,6 +13,7 @@ import { SubmitHandler, useForm } from 'react-hook-form';
 import { z } from 'zod';
 import Link from 'next/link';
 import { usePagination } from '@/hooks/usePagination';
+import { formatDisplayDate } from '@/lib/utils/date';
 import { DataTablePagination } from '@/components/ui/data-table-pagination';
 
 
@@ -275,7 +276,7 @@ export default function Component() {
                 <TableCell>{task.status}</TableCell>
                 <TableCell>${task.cost.toFixed(2)}</TableCell>
                 <TableCell>{task.assetId}</TableCell>
-                <TableCell>{new Date(task.createdAt).toLocaleDateString()}</TableCell>
+                <TableCell>{formatDisplayDate(task.createdAt)}</TableCell>
                 {/* <TableCell>
                   <Select
                     value={task.status}

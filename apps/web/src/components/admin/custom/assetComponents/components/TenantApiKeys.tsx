@@ -13,6 +13,7 @@ import { toast } from 'sonner';
 import { authClient } from '@/lib/api/publicClient';
 import { AVAILABLE_SCOPES } from '@/lib/types';
 import { TENANT_API_KEYS_QUERY_KEY } from '@/lib/api/queryKeys';
+import { formatDisplayDate } from '@/lib/utils/date';
 
 interface TenantApiKeysProps {
   tenantId: string;
@@ -277,10 +278,10 @@ export function TenantApiKeys({ tenantId }: TenantApiKeysProps) {
                       </Badge>
                     </td>
                     <td className="p-3 text-muted-foreground text-sm">
-                      {new Date(apiKey.createdAt).toLocaleDateString()}
+                      {formatDisplayDate(apiKey.createdAt)}
                     </td>
                     <td className="p-3 text-muted-foreground text-sm">
-                      {apiKey.lastUsed ? new Date(apiKey.lastUsed).toLocaleDateString() : 'Never'}
+                      {apiKey.lastUsed ? formatDisplayDate(apiKey.lastUsed) : 'Never'}
                     </td>
                     <td className="p-3">
                       <div className="flex space-x-2">

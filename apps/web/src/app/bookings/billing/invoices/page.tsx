@@ -12,6 +12,7 @@ import { Plus, Search, Eye, Edit, Download, Undo2 } from 'lucide-react';
 import { authClient, axiosClient } from '@/lib/api/publicClient';
 import { toast } from 'sonner';
 import { Label } from '@/components/ui/label';
+import { formatDisplayDate } from '@/lib/utils/date';
 import ApplyPaymentModal from '@/components/billing/ApplyPaymentModal';
 import { usePagination } from '@/hooks/usePagination';
 import { DataTablePagination } from '@/components/ui/data-table-pagination';
@@ -328,10 +329,10 @@ export default function InvoicesPage() {
                         </Badge>
                       )}
                     </TableCell>
-                    <TableCell>{new Date(invoice.issueDate).toLocaleDateString()}</TableCell>
+                    <TableCell>{formatDisplayDate(invoice.issueDate)}</TableCell>
                     <TableCell>
                       <span className={isOverdue(invoice.dueDate, invoice.status) ? 'text-destructive font-medium' : ''}>
-                        {new Date(invoice.dueDate).toLocaleDateString()}
+                        {formatDisplayDate(invoice.dueDate)}
                       </span>
                     </TableCell>
                     <TableCell className="font-medium">${parseFloat(invoice.totalAmount).toFixed(2)}</TableCell>

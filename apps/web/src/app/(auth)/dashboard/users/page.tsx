@@ -11,6 +11,7 @@ import { Edit, Trash2, User, Building, Shield, Search, X } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { authClient } from '@/lib/api/publicClient';
 import { toast } from 'sonner';
+import { formatDisplayDate } from '@/lib/utils/date';
 
 interface User {
   id: string;
@@ -263,7 +264,7 @@ export default function UsersPage() {
                       }
                     </td> */}
                     <td className="p-3 text-muted-foreground text-sm">
-                      {user.createdAt ? new Date(user.createdAt).toLocaleDateString() : 'N/A'}
+                      {user.createdAt ? formatDisplayDate(user.createdAt) : 'N/A'}
                     </td>
                     <td className="p-3">
                       <div className="flex space-x-2">

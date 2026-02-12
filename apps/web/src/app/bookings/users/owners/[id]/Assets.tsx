@@ -13,6 +13,7 @@ import { StorageService } from '@/lib/api/storage';
 import { authClient } from '@/lib/api/publicClient';
 import { Check, ChevronsUpDown } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { formatDisplayDate } from '@/lib/utils/date';
 
 export default function Assets({ ownerId }: { ownerId: number }) {
   const tenant = StorageService.getTenant();
@@ -76,6 +77,7 @@ export default function Assets({ ownerId }: { ownerId: number }) {
     unassignAsset(
       {
         params: { id: ownerId, assetId },
+        body: undefined
       },
       {
         onSuccess: async () => {
@@ -200,7 +202,7 @@ export default function Assets({ ownerId }: { ownerId: number }) {
                   <TableCell className="font-medium">{a.id}</TableCell>
                   <TableCell>{a.name}</TableCell>
                   <TableCell>{a.description ?? '-'}</TableCell>
-                  <TableCell>{a.createdAt ? new Date(a.createdAt).toLocaleDateString() : '-'}</TableCell>
+                  <TableCell>{a.createdAt ? formatDisplayDate(a.createdAt) : '-'}</TableCell>
                   <TableCell className="text-right">
                     <Button variant="ghost" size="sm" onClick={() => handleUnassign(a.id)}>
                       Unassign

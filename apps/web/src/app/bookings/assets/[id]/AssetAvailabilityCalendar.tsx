@@ -11,6 +11,7 @@ import { Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { StorageService } from '@/lib/api/storage';
 import { SelectAsset } from '@repo/api-contract';
+import { parseAsLocalDate, addDays } from '@/lib/utils/date';
 
 type Booking = {
   id: number;
@@ -29,26 +30,6 @@ type BlockedDate = {
 
 const localizer = momentLocalizer(moment);
 
-// Helper: Parse date string to local Date, handling both formats:
-// - datetime with timezone: "2026-02-09T04:00:00.000Z" -> extract UTC date
-// - date-only: "2026-02-09" -> treat as local date
-function parseAsLocalDate(dateStr: string): Date {
-  if (dateStr.includes('T')) {
-    // Datetime format - extract the UTC date portion
-    const d = new Date(dateStr);
-    return new Date(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate());
-  }
-  // Date-only format - parse as local
-  const [y, m, d] = dateStr.split('-').map(Number);
-  return new Date(y, m - 1, d);
-}
-
-// Helper: Add days to a date and return new Date
-function addDays(date: Date, days: number): Date {
-  const result = new Date(date);
-  result.setDate(result.getDate() + days);
-  return result;
-}
 
 export default function AssetAvailabilityCalendar({ asset }: { asset: SelectAsset }) {
   const [blockTitle, setBlockTitle] = useState<string>('');

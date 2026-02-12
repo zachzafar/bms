@@ -4,6 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Users, Shield, Key } from 'lucide-react';
 import { authClient } from '@/lib/api/publicClient';
 import { TENANTS_QUERY_KEY } from '@/lib/api/queryKeys';
+import { formatDisplayDate } from '@/lib/utils/date';
 
 
 
@@ -70,7 +71,7 @@ export function TenantOverview({tenantId}: {tenantId: string}) {
       <div>
         <h2 className="text-2xl font-bold text-white mb-2">Overview</h2>
         <p className="text-muted-foreground">
-          Tenant created on {tenantDetails.tenant.createdAt ? new Date(tenantDetails.tenant.createdAt).toLocaleDateString() : 'Unknown'}
+          Tenant created on {tenantDetails.tenant.createdAt ? formatDisplayDate(tenantDetails.tenant.createdAt) : 'Unknown'}
         </p>
       </div>
       
