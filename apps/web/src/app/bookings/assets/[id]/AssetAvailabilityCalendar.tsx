@@ -1,11 +1,19 @@
 'use client';
 
 import { useMemo, useState } from 'react';
-import { Calendar, momentLocalizer, Event, SlotInfo, View } from 'react-big-calendar';
+import {
+  Calendar,
+  momentLocalizer,
+  Event,
+  SlotInfo,
+  View,
+  DateHeaderProps,
+} from 'react-big-calendar';
 import moment from 'moment';
 import 'react-big-calendar/lib/css/react-big-calendar.css';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
 import { authClient } from '@/lib/api/publicClient';
 import { Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
@@ -13,11 +21,35 @@ import { StorageService } from '@/lib/api/storage';
 import { SelectAsset } from '@repo/api-contract';
 import { parseAsLocalDate, addDays } from '@/lib/utils/date';
 
+const localizer = momentLocalizer(moment);
+
+/* 🔹 helper */
+const isDateInRange = (date: Date, start: Date, end: Date) => {
+  const d = new Date(date); d.setHours(0, 0, 0, 0);
+  const s = new Date(start); s.setHours(0, 0, 0, 0);
+  const e = new Date(end); e.setHours(0, 0, 0, 0);
+  return d >= s && d <= e;
+};
+
+/* 🔹 check if new range overlaps existing blocked dates */
+const isOverlapping = (
+  newStart: Date,
+  newEnd: Date,
+  blockedDates: { startDate: string; endDate: string }[]
+) => {
+  return blockedDates.some((b) => {
+    const start = parseAsLocalDate(b.startDate);
+    const end = parseAsLocalDate(b.endDate);
+    return newStart <= end && newEnd >= start;
+  });
+};
+
 type Booking = {
   id: number;
   startDate: string;
   endDate: string;
   customerName: string;
+  status?: string;
 };
 
 type BlockedDate = {
@@ -28,28 +60,26 @@ type BlockedDate = {
   reason?: string;
 };
 
-const localizer = momentLocalizer(moment);
-
-
 export default function AssetAvailabilityCalendar({ asset }: { asset: SelectAsset }) {
-  const [blockTitle, setBlockTitle] = useState<string>('');
+  const [blockTitle, setBlockTitle] = useState('');
   const [selectedRange, setSelectedRange] = useState<{ start: Date; end: Date } | null>(null);
   const [currentDate, setCurrentDate] = useState(new Date());
   const [currentView, setCurrentView] = useState<View>('month');
 
-  // Fetch bookings using React Query
+  /* 🔹 Fetch bookings */
   const { data: bookingsResponse } = authClient.booking.getBookings.useQuery({
     queryKey: ['asset-bookings', asset.id],
     queryData: { query: { assetId: asset.id } },
   });
 
-  // Fetch blocked dates using React Query
-  const { data: blockedDatesResponse, refetch: refetchBlockedDates } = authClient.blockedDates.getBlockedDates.useQuery({
-    queryKey: ['asset-blocked-dates', asset.id],
-    queryData: { query: { assetId: asset.id } },
-  });
+  /* 🔹 Fetch blocked dates */
+  const { data: blockedDatesResponse, refetch: refetchBlockedDates } =
+    authClient.blockedDates.getBlockedDates.useQuery({
+      queryKey: ['asset-blocked-dates', asset.id],
+      queryData: { query: { assetId: asset.id } },
+    });
 
-  // Transform bookings data
+  /* 🔹 Transform bookings */
   const bookings: Booking[] = useMemo(() => {
     if (bookingsResponse?.status !== 200) return [];
     const body = bookingsResponse.body;
@@ -59,15 +89,16 @@ export default function AssetAvailabilityCalendar({ asset }: { asset: SelectAsse
       startDate: b.startDate,
       endDate: b.endDate,
       customerName: b.customer?.name || 'Unknown',
+      status: b.status,
     }));
   }, [bookingsResponse]);
 
-  // Transform blocked dates data
+  /* 🔹 Transform blocked dates (manual only) */
   const blocked: BlockedDate[] = useMemo(() => {
     if (blockedDatesResponse?.status !== 200) return [];
     const body = blockedDatesResponse.body;
     return Array.isArray(body)
-      ? body.map((b: any) => ({
+      ? body.filter((b: any) => b.reason === 'Manual Block').map((b: any) => ({
           id: b.id,
           startDate: b.startDate,
           endDate: b.endDate,
@@ -77,14 +108,15 @@ export default function AssetAvailabilityCalendar({ asset }: { asset: SelectAsse
       : [];
   }, [blockedDatesResponse]);
 
+  /* 🔹 Mutations */
   const createBlockedDateMutation = authClient.blockedDates.createBlockedDate.useMutation({
     onSuccess: () => {
       toast.success('Blocked date created');
       refetchBlockedDates();
+      setSelectedRange(null);
+      setBlockTitle('');
     },
-    onError: () => {
-      toast.error('Failed to create blocked date');
-    },
+    onError: () => toast.error('Failed to create blocked date'),
   });
 
   const deleteBlockedDateMutation = authClient.blockedDates.deleteBlockedDate.useMutation({
@@ -92,37 +124,25 @@ export default function AssetAvailabilityCalendar({ asset }: { asset: SelectAsse
       toast.success('Blocked date deleted');
       refetchBlockedDates();
     },
-    onError: () => {
-      toast.error('Failed to delete blocked date');
-    },
+    onError: () => toast.error('Failed to delete blocked date'),
   });
 
-  // Build Calendar Events
-  // Note: react-big-calendar treats end date as EXCLUSIVE for all-day events,
-  // so we add 1 day to the end date to display through the last day
-  const bookingEvents: Event[] = bookings.map((b) => {
-    const start = parseAsLocalDate(b.startDate);
-    const end = parseAsLocalDate(b.endDate);
-    return {
-      title: `${asset.name} - Booking: ${b.customerName}`,
-      start,
-      end: addDays(end, 1), // +1 because react-big-calendar end is exclusive
-      allDay: true,
-      resource: { type: 'booking' },
-    };
-  });
-
-  const blockedEvents: Event[] = blocked.map((b) => {
-    const start = parseAsLocalDate(b.startDate);
-    const end = parseAsLocalDate(b.endDate);
-    return {
-      title: `${asset.name} - ${b.title || 'Blocked'}`,
-      start,
-      end: addDays(end, 1), // +1 because react-big-calendar end is exclusive
-      allDay: true,
-      resource: { type: 'blocked', id: b.id },
-    };
-  });
+  /* 🔹 Calendar events (bookings + temp selection only) */
+  const bookingEvents: Event[] = useMemo(
+    () =>
+      bookings.map((b) => {
+        const start = parseAsLocalDate(b.startDate);
+        const end = parseAsLocalDate(b.endDate);
+        return {
+          title: `${asset.name} - ${b.customerName}`,
+          start,
+          end: addDays(end, 1),
+          allDay: true,
+          resource: { type: 'booking', status: b.status },
+        };
+      }),
+    [bookings, asset.name]
+  );
 
   const tempEvent: Event[] = selectedRange
     ? [
@@ -136,20 +156,24 @@ export default function AssetAvailabilityCalendar({ asset }: { asset: SelectAsse
       ]
     : [];
 
-  const events = [...bookingEvents, ...blockedEvents, ...tempEvent];
+  const events = [...bookingEvents, ...tempEvent];
 
-  const handleBlock = async () => {
+  /* 🔹 Handlers */
+  const handleBlock = () => {
     if (!selectedRange) return;
 
-    const currentTenant = StorageService.getTenant();
-    const tenantId = currentTenant?.id ?? '';
-
     const startDate = selectedRange.start;
-    const endCopy = new Date(selectedRange.end);
-    endCopy.setDate(endCopy.getDate() - 1);
-    const endDate = endCopy;
+    const endDate = new Date(selectedRange.end);
+    endDate.setDate(endDate.getDate() - 1); // react-big-calendar is exclusive on end
 
-    await createBlockedDateMutation.mutateAsync({
+    if (isOverlapping(startDate, endDate, blocked)) {
+      toast.error('Selected range overlaps with an existing blocked date.');
+      return;
+    }
+
+    const tenantId = StorageService.getTenant()?.id ?? '';
+
+    createBlockedDateMutation.mutate({
       body: {
         tenantId,
         assetId: asset.id,
@@ -159,9 +183,6 @@ export default function AssetAvailabilityCalendar({ asset }: { asset: SelectAsse
         reason: 'Manual Block',
       },
     });
-
-    setSelectedRange(null);
-    setBlockTitle('');
   };
 
   const handleDelete = (id: number) => {
@@ -171,11 +192,12 @@ export default function AssetAvailabilityCalendar({ asset }: { asset: SelectAsse
   };
 
   return (
-    <Card className="w-full max-w-6xl mx-auto p-4">
+    <Card className="w-full max-w-6xl mx-auto">
       <CardHeader>
         <CardTitle>{asset.name} Availability Calendar</CardTitle>
       </CardHeader>
-      <CardContent>
+
+      <CardContent className="space-y-4">
         <div style={{ height: 700 }}>
           <Calendar
             localizer={localizer}
@@ -187,50 +209,94 @@ export default function AssetAvailabilityCalendar({ asset }: { asset: SelectAsse
             onNavigate={setCurrentDate}
             onView={setCurrentView}
             selectable
-            onSelectSlot={(slotInfo: SlotInfo) => setSelectedRange({ start: slotInfo.start, end: slotInfo.end })}
+            onSelectSlot={(slotInfo: SlotInfo) =>
+              setSelectedRange({ start: slotInfo.start, end: slotInfo.end })
+            }
+
+            /* 🔹 Grey tiles for manual blocks (not events) */
+            dayPropGetter={(date) => {
+              const blockedDate = blocked.find((b) =>
+                isDateInRange(date, parseAsLocalDate(b.startDate), parseAsLocalDate(b.endDate))
+              );
+              return blockedDate
+                ? { style: { backgroundColor: '#E5E7EB' } }
+                : {};
+            }}
+
+            /* 🔹 Event styles (bookings & temp selection only) */
             eventPropGetter={(event) => {
               if (event.resource?.temp) {
                 return {
-                  style: { backgroundColor: 'rgba(0,128,255,0.3)', border: '1px solid #007BFF' },
+                  style: {
+                    backgroundColor: 'rgba(59, 130, 246, 0.3)',
+                    border: '1px solid rgb(59, 130, 246)',
+                  },
                 };
               }
+
               if (event.resource?.type === 'booking') {
+                const map: Record<string, string> = {
+                  Confirmed: 'rgba(62, 98, 227, 0.7)',
+                  Pending: 'rgba(234, 179, 8, 0.8)',
+                  Cancelled: 'rgba(219, 74, 84, 0.7)',
+                };
                 return {
-                  style: { backgroundColor: 'rgba(0,180,0,0.7)', color: 'white', fontWeight: 'bold' },
+                  style: {
+                    backgroundColor: map[event.resource.status] ?? map.Confirmed,
+                    color: 'white',
+                    fontWeight: 'bold',
+                    fontSize: '0.75rem',
+                    textAlign: 'center',
+                  },
                 };
               }
-              if (event.resource?.type === 'blocked') {
-                return {
-                  style: { backgroundColor: 'rgba(255,0,0,0.7)', color: 'white' },
-                };
-              }
+
               return {};
             }}
+
+            /* 🔹 Centered text for manual blocks in month view */
             components={{
-              event: ({ event }: any) => (
-                <div className="truncate text-xs text-center">{event.title}</div>
-              ),
+              month: {
+                dateHeader: ({ date }: DateHeaderProps) => {
+                  const blockedDate = blocked.find((b) =>
+                    isDateInRange(date, parseAsLocalDate(b.startDate), parseAsLocalDate(b.endDate))
+                  );
+
+                  if (!blockedDate) return <span>{moment(date).date()}</span>;
+
+                  return (
+                    <div className="relative h-full w-full">
+                      <div className="absolute top-1 right-1 text-s font-semibold text-gray-700">
+                        {moment(date).date()}
+                      </div>
+                      <div className="h-full w-full flex items-center justify-center text-xs font-semibold text-red-700 px-1 text-center">
+                        {blockedDate.title}
+                      </div>
+                    </div>
+                  );
+                },
+              },
             }}
           />
         </div>
 
-        <div className="mt-2">
-          <input
-            type="text"
-            placeholder="Blocked date title"
-            value={blockTitle}
-            onChange={(e) => setBlockTitle(e.target.value)}
-            className="border rounded p-1 w-full"
-          />
-        </div>
+        {selectedRange && (
+          <div className="space-y-2">
+            <Input
+              placeholder="Blocked date title"
+              value={blockTitle}
+              onChange={(e) => setBlockTitle(e.target.value)}
+            />
+            <div className="flex gap-2">
+              <Button onClick={handleBlock}>Add Blocked Dates</Button>
+              <Button variant="outline" onClick={() => setSelectedRange(null)}>
+                Cancel
+              </Button>
+            </div>
+          </div>
+        )}
 
-        <div className="flex gap-2 mt-4">
-          <Button onClick={handleBlock} disabled={!selectedRange}>
-            Add Blocked Dates
-          </Button>
-        </div>
-
-        <div className="mt-6">
+        <div>
           <h2 className="text-lg font-semibold mb-2">Blocked Dates</h2>
           {blocked.length === 0 ? (
             <p className="text-muted-foreground">No blocked dates</p>
@@ -240,13 +306,13 @@ export default function AssetAvailabilityCalendar({ asset }: { asset: SelectAsse
                 const start = parseAsLocalDate(b.startDate);
                 const end = parseAsLocalDate(b.endDate);
                 return (
-                  <li key={b.id} className="flex items-center justify-between rounded-lg border p-2">
-                    <span>
-                      {start.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}{' '}
-                      -{' '}
-                      {end.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}
-                      {b.reason ? ` (${b.reason})` : ''}
-                    </span>
+                  <li key={b.id} className="flex justify-between border p-3 rounded-lg">
+                    <div>
+                      <p className="font-medium">{b.title}</p>
+                      <p className="text-sm text-muted-foreground">
+                        {start.toDateString()} – {end.toDateString()}
+                      </p>
+                    </div>
                     <Button
                       size="icon"
                       variant="destructive"
