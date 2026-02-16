@@ -21,6 +21,7 @@ import { EditCustomerForm } from '@/components/users/EditCustomerForm';
 import { usePagination } from '@/hooks/usePagination';
 import { DataTablePagination } from '@/components/ui/data-table-pagination';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { QuickCreateCustomerType } from '@/components/custom/QuickCreate';
 
 // Schema for creating customers
 // const CreateCustomerSchema = InsertUserSchema.merge(InsertCustomerSchema.omit({ id: true, dateOfBirth: true})).extend({
@@ -293,6 +294,7 @@ export default function Component() {
                                     ))}
                                   </SelectContent>
                                 </Select>
+                                <QuickCreateCustomerType />
                                 <FormMessage />
                               </FormItem>
                             )}

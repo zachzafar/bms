@@ -226,7 +226,7 @@ export default function AuthHubPage() {
         </section>
 
         {/* Quick Actions */}
-        <section>
+        {/* <section>
           <h3 className="text-xl font-semibold text-foreground mb-6">Quick Actions</h3>
           <div className="flex flex-wrap gap-4">
             <Button variant="outline" onClick={() => router.push('/admin/users')}>
@@ -244,9 +244,9 @@ export default function AuthHubPage() {
             {/* <Button className="bg-white border-white text-gray-900" variant="outline" onClick={() => router.push('/admin/tenants')}>
               <Globe className="h-4 w-4 mr-2" />
               Tenants
-            </Button> */}
+            </Button> 
           </div>
-        </section>
+        </section> */}
       </main>
     </div>
   );

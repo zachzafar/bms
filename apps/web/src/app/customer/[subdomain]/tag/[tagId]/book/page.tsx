@@ -17,6 +17,7 @@ import Image from 'next/image';
 import { DateRangePicker, BlockedDateRange } from '@/components/ui/date-range-picker';
 import { DateRange } from 'react-day-picker';
 import { DynamicFormField } from '@/components/forms/DynamicFormField';
+import { parseAsLocalDate } from '@/lib/utils/date';
 import { useMemo } from 'react';
 
 // Base schema for customer booking by tag (without refinement)
@@ -82,8 +83,8 @@ export default function TagBookingPage() {
 
   const blockedDates: BlockedDateRange[] = blockedDatesResponse?.status === 200
     ? blockedDatesResponse.body.map(d => ({
-        startDate: new Date(d.start),
-        endDate: new Date(d.end),
+        startDate: parseAsLocalDate(d.start as unknown as string),
+        endDate: parseAsLocalDate(d.end as unknown as string),
       }))
     : [];
 

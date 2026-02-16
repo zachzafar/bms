@@ -11,6 +11,7 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { UpdateCustomer } from '@repo/api-contract';
+import { QuickCreateCustomerType } from '@/components/custom/QuickCreate';
 
 const UpdateCustomerSchema = z.object({
     name: z.string().min(1, 'Name is required'),
@@ -161,6 +162,7 @@ export function EditCustomerForm({ customer, onClose, onSuccess }: EditCustomerF
                                             ))}
                                         </SelectContent>
                                     </Select>
+                                    <QuickCreateCustomerType />
                                     <FormMessage />
                                 </FormItem>
                             )}

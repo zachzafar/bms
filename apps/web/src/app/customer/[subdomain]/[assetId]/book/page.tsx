@@ -17,6 +17,7 @@ import { DynamicFormField } from '@/components/forms/DynamicFormField';
 import { useMemo } from 'react';
 import { DateRangePicker, BlockedDateRange } from '@/components/ui/date-range-picker';
 import { DateRange } from 'react-day-picker';
+import { parseAsLocalDate } from '@/lib/utils/date';
 
 // Base schema for customer booking (without refinement)
 const BaseCustomerBookingObjectSchema = z.object({
@@ -75,8 +76,8 @@ export default function CustomerBookingPage() {
 
   const blockedDates: BlockedDateRange[] = blockedDatesResponse?.status === 200
     ? blockedDatesResponse.body.map(d => ({
-        startDate: new Date(d.startDate),
-        endDate: new Date(d.endDate),
+        startDate: parseAsLocalDate(d.startDate as unknown as string),
+        endDate: parseAsLocalDate(d.endDate as unknown as string),
       }))
     : [];
 

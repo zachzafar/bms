@@ -379,7 +379,7 @@ function CreateTenantModal() {
                   name="tenant.subdomain"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel className="text-card-foreground">Subdomain</FormLabel>
+                      <FormLabel className="text-card-foreground">Slug</FormLabel>
                       <FormControl>
                         <div className="relative">
                           <Input 
@@ -387,9 +387,6 @@ function CreateTenantModal() {
                             className="border-border text-foreground placeholder:text-muted-foreground pr-20"
                             {...field} 
                           />
-                          <span className="absolute right-3 top-1/2 transform -translate-y-1/2 text-muted-foreground text-sm">
-                            .bookos.com
-                          </span>
                         </div>
                       </FormControl>
                       <FormMessage className="text-destructive" />

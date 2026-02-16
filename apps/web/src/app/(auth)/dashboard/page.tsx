@@ -141,7 +141,7 @@ export default function DashboardPage() {
       </div>
 
       {/* Quick Actions */}
-      <div>
+      {/* <div>
         <h2 className="text-2xl font-bold text-foreground mb-6">Quick Actions</h2>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
           {quickActions.map((action, index) => {
@@ -172,7 +172,7 @@ export default function DashboardPage() {
             );
           })}
         </div>
-      </div>
+      </div> */}
 
       {/* Recent Activity */}
       <div>
