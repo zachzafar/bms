@@ -20,13 +20,19 @@ import {
 import {
   UserIcon,
   Package2Icon,
+  ExternalLinkIcon,
 } from 'lucide-react';
 import { authClient } from '@/lib/api/publicClient';
 import { BOOKINGS_QUERY_KEY } from '@/lib/api/queryKeys';
 import CopyableId from '@/components/custom/CopyableId';
 import { formatDisplayDate } from '@/lib/utils/date';
+import { StorageService } from '@/lib/api/storage';
+import { Button } from '@/components/ui/button';
+import Link from 'next/link';
 
 export default function Component() {
+  const tenant = StorageService.getTenant();
+  const customerPageUrl = tenant?.subdomain ? `/customer/${tenant.subdomain}` : null;
 
   // Fetch bookings data
   const { data: bookingsData } = authClient.booking.getBookings.useQuery({
@@ -69,10 +75,18 @@ export default function Component() {
 
   return (
     <>
-      <div className='flex items-center'>
+      <div className='flex items-center justify-between'>
         <h1 className='font-semibold text-lg md:text-2xl'>
           Booking Dashboard
         </h1>
+        {customerPageUrl && (
+          <Button variant="outline" size="sm" asChild>
+            <Link href={customerPageUrl} target="_blank">
+              View Customer Page
+              <ExternalLinkIcon className="ml-2 h-4 w-4" />
+            </Link>
+          </Button>
+        )}
       </div>
       <div className='grid gap-4 md:grid-cols-2 lg:grid-cols-3 mt-6'>
         <Card>

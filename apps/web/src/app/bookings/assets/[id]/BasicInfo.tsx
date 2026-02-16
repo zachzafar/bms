@@ -17,6 +17,9 @@ import {
 import { authClient } from '@/lib/api/publicClient';
 import { toast } from 'sonner';
 import { SelectAsset } from '@repo/api-contract';
+import { QuickCreateAssetType } from '@/components/custom/QuickCreate';
+import Link from 'next/link';
+import { PlusCircle } from 'lucide-react';
 
 type AssetWithForms = SelectAsset & {
   bookingForms: { id: number; name: string }[];
@@ -137,17 +140,18 @@ function BasicInfo({ asset, refetch }: { asset: AssetWithForms; refetch: () => v
               <SelectValue placeholder="Select asset type" />
             </SelectTrigger>
             <SelectContent>
-              {assetTypes?.status === 200 ? (
+              {assetTypes?.status === 200 && assetTypes.body.data.length > 0 ? (
                 assetTypes.body.data.map((type) => (
                   <SelectItem key={type.id} value={type.id.toString()}>
                     {type.name}
                   </SelectItem>
                 ))
               ) : (
-                <SelectItem value="no-types">No Asset Types Found</SelectItem>
+                <div className="p-2 text-sm text-muted-foreground text-center">No asset types found</div>
               )}
             </SelectContent>
           </Select>
+          <QuickCreateAssetType />
         </div>
 
         <div className="space-y-2">
@@ -174,6 +178,10 @@ function BasicInfo({ asset, refetch }: { asset: AssetWithForms; refetch: () => v
               </MultiSelectorList>
             </MultiSelectorContent>
           </MultiSelector>
+          {/* <Link href="/bookings/settings/forms" className="flex items-center gap-1 text-xs text-primary hover:underline mt-1">
+            <PlusCircle className="h-3 w-3" />
+            Create Booking Form
+          </Link> */}
         </div>
 
         {hasChanges() && (

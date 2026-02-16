@@ -44,6 +44,7 @@ import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { CalendarIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { QuickCreateAssetType, QuickCreateRateType } from '@/components/custom/QuickCreate';
 
 type SelectionMode = "assets" | "assetType";
 
@@ -379,6 +380,7 @@ export default function RatesPage() {
                             ))}
                           </SelectContent>
                         </Select>
+                        <QuickCreateAssetType />
                         <FormMessage />
                       </FormItem>
                     )}
@@ -517,6 +519,7 @@ export default function RatesPage() {
                           ))}
                         </SelectContent>
                       </Select>
+                      <QuickCreateRateType />
                       <FormMessage />
                     </FormItem>
                   )}

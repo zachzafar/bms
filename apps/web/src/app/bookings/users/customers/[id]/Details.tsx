@@ -8,6 +8,7 @@ import { Form, FormField, FormItem, FormLabel, FormControl, FormMessage } from '
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import Loading from '@/components/custom/Loading';
+import { QuickCreateCustomerType } from '@/components/custom/QuickCreate';
 import { StorageService } from '@/lib/api/storage';
 import { authClient } from '@/lib/api/publicClient';
 import { z } from 'zod';
@@ -203,6 +204,7 @@ export default function Details({ customerId }: { customerId: number }) {
                           ))}
                         </SelectContent>
                       </Select>
+                                <QuickCreateCustomerType />
                       <FormMessage />
                     </FormItem>
                   )}
