@@ -25,7 +25,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
 
   const navigation = [
     { name: 'Dashboard', href: '/dashboard', icon: Home },
-    { name: 'Users', href: '/dashboard/users', icon: Users },
+    // { name: 'Users', href: '/dashboard/users', icon: Users },
     { name: 'Tenants', href: '/dashboard/tenants', icon: Building },
   ];
 
@@ -52,8 +52,8 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
   };
 
   const isActiveRoute = (href: string) => {
-    if (href === '/admin') {
-      return pathname === '/admin';
+    if (href === '/dashboard' || href === '/admin') {
+      return pathname === href;
     }
     return pathname.startsWith(href);
   };
