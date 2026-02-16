@@ -176,18 +176,79 @@ export default function RateTypesPage() {
                 <FormField
                   control={form.control}
                   name="minutes"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Minutes per unit</FormLabel>
-                      <FormControl>
-                        <Input {...field} type="number" placeholder="60" />
-                      </FormControl>
-                      <FormMessage />
-                      <p className="text-xs text-muted-foreground">
-                        Common values: 30 (half hour), 60 (hourly), 1440 (daily)
-                      </p>
-                    </FormItem>
-                  )}
+                  render={({ field }) => {
+                    const totalMinutes = field.value || 0;
+                    const days = Math.floor(totalMinutes / 1440);
+                    const hours = Math.floor((totalMinutes % 1440) / 60);
+                    const mins = totalMinutes % 60;
+
+                    const updateTotal = (d: number, h: number, m: number) => {
+                      field.onChange(d * 1440 + h * 60 + m);
+                    };
+
+                    return (
+                      <FormItem>
+                        <FormLabel>Duration per unit</FormLabel>
+                        <div className="flex gap-2">
+                          <div className="flex-1">
+                            <label className="text-xs text-muted-foreground">Days</label>
+                            <Input
+                              type="number"
+                              min={0}
+                              value={days}
+                              onChange={(e) => updateTotal(Number(e.target.value) || 0, hours, mins)}
+                            />
+                          </div>
+                          <div className="flex-1">
+                            <label className="text-xs text-muted-foreground">Hours</label>
+                            <Input
+                              type="number"
+                              min={0}
+                              max={23}
+                              value={hours}
+                              onChange={(e) => updateTotal(days, Number(e.target.value) || 0, mins)}
+                            />
+                          </div>
+                          <div className="flex-1">
+                            <label className="text-xs text-muted-foreground">Minutes</label>
+                            <Input
+                              type="number"
+                              min={0}
+                              max={59}
+                              value={mins}
+                              onChange={(e) => updateTotal(days, hours, Number(e.target.value) || 0)}
+                            />
+                          </div>
+                        </div>
+                        <div className="flex flex-wrap gap-1.5 pt-1">
+                          {[
+                            { label: "30 min", value: 30 },
+                            { label: "1 hour", value: 60 },
+                            { label: "2 hours", value: 120 },
+                            { label: "4 hours", value: 240 },
+                            { label: "Half day", value: 720 },
+                            { label: "1 day", value: 1440 },
+                            { label: "1 week", value: 10080 },
+                          ].map((preset) => (
+                            <Button
+                              key={preset.value}
+                              type="button"
+                              variant={totalMinutes === preset.value ? "default" : "outline"}
+                              size="sm"
+                              className="text-xs h-7"
+                              onClick={() => field.onChange(preset.value)}
+                            >
+                              {preset.label}
+                            </Button>
+                          ))}
+                        </div>
+                        <p className="text-xs text-muted-foreground">
+                          Total: {totalMinutes} minutes ({formatMinutes(totalMinutes)})
+                        </p>
+                        <FormMessage />
+                      </FormItem>
+                    );
+                  }}
                 />
 
                 <Button type="submit" className="w-full">
