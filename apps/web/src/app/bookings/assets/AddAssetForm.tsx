@@ -21,6 +21,9 @@ import {
   MultiSelectorItem,
 } from '@/components/extension/multi-select';
 import { useState } from 'react';
+import { QuickCreateAssetType } from '@/components/custom/QuickCreate';
+import Link from 'next/link';
+import { PlusCircle } from 'lucide-react';
 
 const ModifiedInsertAssetSchema = z.object({
   name: z.string().min(1, 'Asset name is required'),
@@ -109,13 +112,16 @@ function AddAssetForm() {
                   </SelectTrigger>
                 </FormControl>
                 <SelectContent>
-                  {assetTypes?.status === 200 ? assetTypes.body.data.map((type) => (
+                  {assetTypes?.status === 200 && assetTypes.body.data.length > 0 ? assetTypes.body.data.map((type) => (
                     <SelectItem key={type.name} value={type.id.toString()}>
                       {type.name}
                     </SelectItem>
-                  )) : <SelectItem value="No Asset Types Found">No Asset Types Found</SelectItem>}
+                  )) : (
+                    <div className="p-2 text-sm text-muted-foreground text-center">No asset types found</div>
+                  )}
                 </SelectContent>
               </Select>
+              <QuickCreateAssetType />
               <FormDescription>
                 Set the way your asset should be described
               </FormDescription>
@@ -151,6 +157,10 @@ function AddAssetForm() {
                 </MultiSelectorContent>
               </MultiSelector>
               <FormDescription>Select booking forms for this asset</FormDescription>
+              {/* <Link href="/bookings/settings/forms" className="flex items-center gap-1 text-xs text-primary hover:underline mt-1">
+                <PlusCircle className="h-3 w-3" />
+                Create Booking Form
+              </Link> */}
               <FormMessage />
             </FormItem>
           )}

@@ -34,6 +34,7 @@ import CopyableId from '@/components/custom/CopyableId';
 import { DateRangePicker, BlockedDateRange } from '@/components/ui/date-range-picker';
 import { DateRange } from 'react-day-picker';
 import { formatDisplayDate, parseAsLocalDate } from '@/lib/utils/date';
+import { QuickCreateAssetType } from '@/components/custom/QuickCreate';
 
 
 // Booking form schema
@@ -450,6 +451,7 @@ export default function Component() {
                           </SelectContent>
                         </Select>
                         <FormMessage />
+                        <p className="text-xs text-muted-foreground">Create assets in the Assets section first.</p>
                       </FormItem>
                     )}
                   />
