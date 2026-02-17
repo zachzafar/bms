@@ -62,11 +62,11 @@ function calculateDurationMinutes(start: Date | string, end: Date | string) {
 function getStatusBadge(status: string) {
   switch (status) {
     case 'Confirmed':
-      return { variant: 'default' as const, color: 'bg-primary/10 text-primary', icon: CheckCircle };
+      return { variant: 'default' as const, color: 'bg-green-100 text-green-800 border-green-200', icon: CheckCircle };
     case 'Pending':
-      return { variant: 'secondary' as const, color: 'bg-secondary/10 text-secondary-foreground', icon: Clock };
+      return { variant: 'secondary' as const, color: 'bg-yellow-100 text-yellow-800 border-yellow-200', icon: Clock };
     case 'Cancelled':
-      return { variant: 'destructive' as const, color: 'bg-destructive/10 text-destructive', icon: XCircle };
+      return { variant: 'destructive' as const, color: 'bg-red-100 text-red-800 border-red-200', icon: XCircle };
     default:
       return { variant: 'outline' as const, color: 'bg-muted text-gray-800', icon: Clock };
   }
@@ -687,21 +687,21 @@ export default function Component() {
                               onClick={() => handleStatusChange(booking.id, 'Confirmed')}
                               disabled={booking.status === 'Confirmed'}
                             >
-                              <CheckCircle className="h-4 w-4 mr-2 text-primary" />
+                              <CheckCircle className="h-4 w-4 mr-2 text-green-600" />
                               Confirm
                             </DropdownMenuItem>
                             <DropdownMenuItem
                               onClick={() => handleStatusChange(booking.id, 'Pending')}
                               disabled={booking.status === 'Pending'}
                             >
-                              <Clock className="h-4 w-4 mr-2 text-secondary-foreground" />
+                              <Clock className="h-4 w-4 mr-2 text-yellow-600" />
                               Set Pending
                             </DropdownMenuItem>
                             <DropdownMenuItem
                               onClick={() => handleStatusChange(booking.id, 'Cancelled')}
                               disabled={booking.status === 'Cancelled'}
                             >
-                              <XCircle className="h-4 w-4 mr-2 text-destructive" />
+                              <XCircle className="h-4 w-4 mr-2 text-red-600" />
                               Cancel
                             </DropdownMenuItem>
                           </DropdownMenuContent>
