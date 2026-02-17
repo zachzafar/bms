@@ -201,14 +201,16 @@ export default function BookingCalendar() {
               }
 
               if (event.resource?.type === "booking") {
-                const map: Record<string, string> = {
-                  Confirmed: "rgba(62, 98, 227, 0.7)",
-                  Pending: "rgba(234, 179, 8, 0.8)",
-                  Cancelled: "rgba(219, 74, 84, 0.7)",
+                const map: Record<string, { bg: string; border: string }> = {
+                  Confirmed: { bg: "rgba(34, 197, 94, 0.85)", border: "rgb(22, 163, 74)" },
+                  Pending: { bg: "rgba(234, 179, 8, 0.85)", border: "rgb(202, 138, 4)" },
+                  Cancelled: { bg: "rgba(239, 68, 68, 0.85)", border: "rgb(220, 38, 38)" },
                 };
+                const colors = map[event.resource.status] ?? map.Confirmed;
                 return {
                   style: {
-                    backgroundColor: map[event.resource.status] ?? map.Confirmed,
+                    backgroundColor: colors.bg,
+                    border: `1px solid ${colors.border}`,
                     color: "white",
                     fontWeight: "bold",
                     fontSize: "0.75rem",

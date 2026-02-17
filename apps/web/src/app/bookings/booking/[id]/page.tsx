@@ -168,12 +168,12 @@ export default function BookingDetailsPage() {
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'Confirmed':
-        return 'bg-primary/10 text-primary hover:bg-primary/10';
+        return 'bg-green-100 text-green-800 border-green-200 hover:bg-green-100';
       case 'Cancelled':
-        return 'bg-destructive/10 text-destructive hover:bg-destructive/10';
+        return 'bg-red-100 text-red-800 border-red-200 hover:bg-red-100';
       case 'Pending':
       default:
-        return 'bg-secondary/10 text-secondary-foreground hover:bg-secondary/10';
+        return 'bg-yellow-100 text-yellow-800 border-yellow-200 hover:bg-yellow-100';
     }
   };
 
