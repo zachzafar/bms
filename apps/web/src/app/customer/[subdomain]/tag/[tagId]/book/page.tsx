@@ -187,6 +187,37 @@ export default function TagBookingPage() {
 
   const { mutate: createBookingByTag, isPending } = client.booking.customerCreateBookingByAssetType.useMutation();
 
+  // Watch selected dates
+  const selectedDates = form.watch('dateRange');
+
+  // Fetch rates for asset
+  const { data: ratesResponse, isLoading: isRateLoading } = client.rates.getPublicRate.useQuery({
+    queryKey: ['public-rate', subdomain, (assetTypeId)],
+    queryData: { params: { subdomain, id: (assetTypeId) } },
+    enabled: !!subdomain && Number.isInteger(assetTypeId),
+  });
+
+  // Get the rates array from response
+  const rate =
+    ratesResponse?.status === 200 &&
+      Array.isArray((ratesResponse.body as any).data)
+      ? (ratesResponse.body as any).data[0]?.rate ?? null
+      : null;
+
+  // Find correct rate for selected start date
+
+  const numberOfNights =
+    selectedDates?.from && selectedDates?.to
+      ? Math.ceil(
+        (selectedDates.to.getTime() - selectedDates.from.getTime()) /
+        (1000 * 60 * 60 * 24)
+      )
+      : 0;
+
+  const pricePerUnit = rate ? Number(rate.pricePerUnit) : 0;
+
+  const totalPrice = pricePerUnit * numberOfNights;
+
   const onSubmit = (data: CustomerTagBookingFormData) => {
     if (!tenantId) {
       toast.error('Unable to process booking. Please try again.');
@@ -360,6 +391,29 @@ export default function TagBookingPage() {
                     </FormItem>
                   )}
                 />
+
+                {/* Rate & total */}
+                {selectedDates?.from && selectedDates?.to && (
+                  <div className="mt-2 p-4 bg-green-50 border border-green-200 rounded">
+                    {isRateLoading ? (
+                      <p className="text-muted-foreground">Checking rate...</p>
+                    ) : rate ? (
+                      <>
+                        <p className="text-green-800 font-medium">
+                          Rate: ${pricePerUnit} per night
+                        </p>
+                        <p className="text-green-900 font-semibold">
+                          Total for {numberOfNights} night{numberOfNights !== 1 ? 's' : ''}: $
+                          {totalPrice}
+                        </p>
+                      </>
+                    ) : (
+                      <p className="text-red-600 font-medium">
+                        No rate available
+                      </p>
+                    )}
+                  </div>
+                )}
 
                 <Separator />
 
