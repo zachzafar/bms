@@ -169,6 +169,12 @@ const items: SidebarItem[] = [
         icon: CreditCard,
         feature: "invoices",
       },
+      {
+        title: "Config",
+        url: "/bookings/billing/config",
+        icon: Settings,
+        feature: "settings",
+      },
     ],
   },
   {

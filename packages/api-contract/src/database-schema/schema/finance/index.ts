@@ -118,6 +118,37 @@ export const PaymentInvoiceRelations = relations(PaymentInvoice, ({ one }) => ({
   }),
 }))
 
+// PaymentMethodModel - defines method types of payments for a tenant
+export const PaymentMethod = mysqlTable("payment_methods", {
+    id: bigint("id", { mode: "number", unsigned: true }).autoincrement().primaryKey(),
+    name: varchar("name", { length: 255 }).notNull(),
+    description: text("description"),
+    createdAt: timestamp('createdAt').notNull().defaultNow(),
+    updatedAt: timestamp('updated_at', { mode: 'date', }).$onUpdate(() => new Date()),
+    deletedAt: timestamp('deleted_at'),
+    tenantId: varchar("tenant_id", { length: 255 }).notNull().references(() => Tenant.id),
+}, (table) => ({
+    tenantNameIdx: uniqueIndex("payment_method_tenant_name_idx").on(table.tenantId, table.name),
+    deletedAtIdx: index("payment_method_deleted_at_idx").on(table.deletedAt),
+
+}));
+
+export const InsertPaymentMethodSchema = createInsertSchema(PaymentMethod);
+export const SelectPaymentMethodSchema = createSelectSchema(PaymentMethod);
+export const UpdatePaymentMethodSchema = InsertPaymentMethodSchema.partial().required({ id: true });
+
+export type InsertPaymentMethod = z.infer<typeof InsertPaymentMethodSchema>;
+export type SelectPaymentMethod = z.infer<typeof SelectPaymentMethodSchema>;
+export type UpdatePaymentMethod = z.infer<typeof UpdatePaymentMethodSchema>;
+
+export const paymentMethodRelations = relations(PaymentMethod, ({ one, many }) => ({
+    tenant: one(Tenant, {
+        fields: [PaymentMethod.tenantId],
+        references: [Tenant.id],
+    }),
+    payments: many(Payment),
+}));
+
 
 
 // Payment Model

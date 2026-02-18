@@ -3,6 +3,10 @@ import { MySql2Database } from 'drizzle-orm/mysql2';
 import * as schema from '@repo/api-contract';
 import { DrizzleAsyncProvider } from 'src/drizzle/drizzle.provider';
 import { and, eq, inArray, isNull, sql } from 'drizzle-orm';
+import { TsRestHandler, tsRestHandler } from '@ts-rest/nest';
+import { PermissionScope } from 'src/auth/permissions';
+import { any } from 'zod';
+import { SelectPaymentMethod } from '@repo/api-contract';
 
 type CreatePaymentInput = Omit<schema.InsertPayment, 'id'>;
 
@@ -333,4 +337,127 @@ export class PaymentsService {
 
     return { message: `Payment ${id} deleted successfully` };
   }
+
+  // ==================== PAYMENT METHOD CRUD ====================
+
+    async createPaymentMethod(
+        tenantId: string,
+        data: { name: string; description?: string | null }
+    ): Promise<number> {
+        const existingType = await this.db.query.PaymentMethod.findFirst({
+            where: (ct, { eq, and, isNull }) => and(
+                eq(ct.tenantId, tenantId),
+                eq(ct.name, data.name),
+                isNull(ct.deletedAt)
+            )
+        });
+
+        if (existingType) {
+            throw new BadRequestException('Payment method with this name already exists');
+        }
+
+        const [{ id }] = await this.db.insert(schema.PaymentMethod).values({
+            tenantId,
+            name: data.name,
+            description: data.description ?? null
+        }).$returningId();
+
+        return id;
+    }
+
+    async getPaymentMethods(
+        tenantId: string,
+        page: number = 1,
+        pageSize: number = 10
+    ): Promise<{ data: SelectPaymentMethod[]; pagination: any }> {
+        const offset = (page - 1) * pageSize;
+
+        const totalCountResult = await this.db
+            .select({ count: sql<number>`COUNT(*)` })
+            .from(schema.PaymentMethod)
+            .where(and(
+                eq(schema.PaymentMethod.tenantId, tenantId),
+                isNull(schema.PaymentMethod.deletedAt)
+            ))
+            .execute();
+        const totalCount = totalCountResult[0]?.count || 0;
+
+        const customerTypes = await this.db.query.PaymentMethod.findMany({
+            where: (ct, { eq, and, isNull }) => and(
+                eq(ct.tenantId, tenantId),
+                isNull(ct.deletedAt)
+            ),
+            limit: pageSize,
+            offset: offset,
+        });
+
+        const paginationData = {
+            page,
+            pageSize,
+            totalCount,
+            totalPages: Math.ceil(totalCount / pageSize),
+            hasNextPage: page * pageSize < totalCount,
+            hasPreviousPage: page > 1,
+        };
+
+        return {
+            data: customerTypes,
+            pagination: paginationData,
+        };
+    }
+
+    async getPaymentMethodById(
+        tenantId: string,
+        paymentMethodId: number
+    ): Promise<schema.SelectPaymentMethod | undefined> {
+        return this.db.query.PaymentMethod.findFirst({
+            where: (ct, { eq, and, isNull }) => and(
+                eq(ct.tenantId, tenantId),
+                eq(ct.id, paymentMethodId),
+                isNull(ct.deletedAt)
+            )
+        });
+    }
+
+    async updatePaymentMethod(
+        tenantId: string,
+        paymentMethodId: number,
+        data: { name?: string; description?: string | null }
+    ): Promise<void> {
+        if (data.name) {
+            const existingType = await this.db.query.PaymentMethod.findFirst({
+                where: (ct, { eq, and, isNull }) => and(
+                    eq(ct.tenantId, tenantId),
+                    eq(ct.name, data.name!),
+                    isNull(ct.deletedAt)
+                )
+            });
+
+            if (existingType && existingType.id !== paymentMethodId) {
+                throw new BadRequestException('Payment method with this name already exists');
+            }
+        }
+
+        const updateData: any = {};
+        if (data.name !== undefined) updateData.name = data.name;
+        if (data.description !== undefined) updateData.description = data.description;
+
+        if (Object.keys(updateData).length > 0) {
+            await this.db.update(schema.PaymentMethod)
+                .set(updateData)
+                .where(and(
+                    eq(schema.PaymentMethod.tenantId, tenantId),
+                    eq(schema.PaymentMethod.id, paymentMethodId)
+                ));
+        }
+    }
+
+    async deletePaymentMethod(tenantId: string, paymentMethodId: number): Promise<void> {
+        await this.db.update(schema.PaymentMethod)
+            .set({ deletedAt: new Date() })
+            .where(and(
+                eq(schema.PaymentMethod.tenantId, tenantId),
+                eq(schema.PaymentMethod.id, paymentMethodId)
+            ));
+    }
 }
