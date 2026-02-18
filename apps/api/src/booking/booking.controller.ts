@@ -18,9 +18,9 @@ export class BookingController {
     @Roles(PermissionScope.BOOKINGS_WRITE)
     async createBooking(): Promise<ReturnType<typeof tsRestHandler>> {
         return tsRestHandler(contract.booking.createBooking, async ({ body }) => {
-            const { booking, customers } = body;
+            const { booking, customers, addons } = body;
 
-            const bookingId = await this.bookingService.createBooking(booking, customers);
+            const bookingId = await this.bookingService.createBooking(booking, customers, undefined, undefined, addons);
 
             if (!bookingId) {
                 throw new ConflictException('Booking creation failed, no bookingId returned');
@@ -124,9 +124,9 @@ export class BookingController {
     @TsRestHandler(contract.booking.customerCreateBooking)
     async customerCreateBooking(): Promise<ReturnType<typeof tsRestHandler>> {
         return tsRestHandler(contract.booking.customerCreateBooking,async ({params, body}) => {
-            const { booking, customer, formResponses } = body
+            const { booking, customer, formResponses, addons } = body
             const { tenantId } = params
-            const booking_result = await this.bookingService.createBooking(booking,[],{...customer, tenantId}, formResponses)
+            const booking_result = await this.bookingService.createBooking(booking,[],{...customer, tenantId}, formResponses, addons)
 
             return { status: 201, body: { message: "successfully created new booking"}}
         })
@@ -137,11 +137,11 @@ export class BookingController {
     async customerCreateBookingByAssetType(): Promise<ReturnType<typeof tsRestHandler>> {
         return tsRestHandler(contract.booking.customerCreateBookingByAssetType, async ({ params, body }) => {
             const { tenantId } = params;
-            const { assetTypeId, startDate, endDate, customer, formResponses } = body;
+            const { assetTypeId, startDate, endDate, customer, formResponses, addons } = body;
 
             try {
                 const result = await this.bookingService.customerCreateBookingByAssetType(
-                    { assetTypeId, startDate, endDate, customer, formResponses },
+                    { assetTypeId, startDate, endDate, customer, formResponses, addons },
                     tenantId
                 );
                 return { status: 201, body: result };

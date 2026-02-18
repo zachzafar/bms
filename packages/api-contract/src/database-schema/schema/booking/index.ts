@@ -7,7 +7,7 @@ import { z } from "zod";
 import { BookingFormField } from "../settings";
 import { v4 as uuid } from "uuid";
 import { Tenant } from "../tenant";
-
+import { BookingAddon } from "../addon";
 
 
 // Booking Model
@@ -65,6 +65,8 @@ export const BookingFormFieldValueRelations = relations(BookingFormFieldValue, (
     }),
 }));
 
+
+
 export const BookingRelations = relations(Booking, ({ one,many }) => ({
     customer: one(Customer, {
         fields: [Booking.customerId],
@@ -75,6 +77,7 @@ export const BookingRelations = relations(Booking, ({ one,many }) => ({
             references: [Asset.id],
     }),
     formFieldValues: many(BookingFormFieldValue),
+    addons: many(BookingAddon),
 }))
 
 

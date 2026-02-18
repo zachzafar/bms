@@ -14,10 +14,11 @@ import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 import { ArrowLeft, Calendar, CheckCircle2, Loader2 } from 'lucide-react';
 import { DynamicFormField } from '@/components/forms/DynamicFormField';
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { DateRangePicker, BlockedDateRange } from '@/components/ui/date-range-picker';
 import { DateRange } from 'react-day-picker';
 import { parseAsLocalDate } from '@/lib/utils/date';
+import { Plus, Minus } from 'lucide-react';
 
 // Base schema
 const BaseCustomerBookingObjectSchema = z.object({
@@ -75,6 +76,27 @@ export default function CustomerBookingPage() {
       endDate: parseAsLocalDate(d.endDate as unknown as string),
     }))
     : [];
+
+  // Add-ons
+  const { data: addonsResponse } = client.addons.getPublicAddons.useQuery({
+    queryKey: ['public-addons', subdomain],
+    queryData: { params: { subdomain } },
+    enabled: !!subdomain,
+  });
+  const availableAddons = addonsResponse?.status === 200 ? addonsResponse.body : [];
+  const [selectedAddons, setSelectedAddons] = useState<Record<number, number>>({});
+
+  const updateAddonQty = (addonId: number, delta: number) => {
+    setSelectedAddons(prev => {
+      const current = prev[addonId] || 0;
+      const next = Math.max(0, current + delta);
+      if (next === 0) {
+        const { [addonId]: _, ...rest } = prev;
+        return rest;
+      }
+      return { ...prev, [addonId]: next };
+    });
+  };
 
   // React Hook Form
   const dynamicSchema = useMemo(() => {
@@ -197,6 +219,10 @@ export default function CustomerBookingPage() {
       });
     });
 
+    const addonSelections = Object.entries(selectedAddons)
+      .filter(([, qty]) => qty > 0)
+      .map(([id, qty]) => ({ addonItemId: Number(id), quantity: qty }));
+
     createBooking(
       {
         params: { tenantId: asset.tenantId },
@@ -204,6 +230,7 @@ export default function CustomerBookingPage() {
           booking: { assetId: asset.id, startDate: data.dateRange.from, endDate: data.dateRange.to },
           customer: { name: data.customerName, email: data.customerEmail, phone: data.customerPhone },
           formResponses: formResponses.length > 0 ? formResponses : undefined,
+          addons: addonSelections.length > 0 ? addonSelections : undefined,
         },
       },
       {
@@ -306,8 +333,26 @@ export default function CustomerBookingPage() {
                             {seg.days} night{seg.days !== 1 ? 's' : ''} at ${seg.pricePerUnit}/night = ${seg.subtotal}
                           </p>
                         ))}
+                        {Object.entries(selectedAddons).map(([addonIdStr, qty]) => {
+                          const addon = availableAddons.find((a: any) => a.id === Number(addonIdStr));
+                          if (!addon || qty === 0) return null;
+                          const price = Number(addon.price);
+                          const addonTotal = addon.billingType === 'per_unit'
+                            ? price * qty * numberOfNights
+                            : price * qty;
+                          return (
+                            <p key={addonIdStr} className="text-green-800 font-medium">
+                              {addon.name} x{qty}{addon.billingType === 'per_unit' ? ` x ${numberOfNights} night${numberOfNights !== 1 ? 's' : ''}` : ''} = ${addonTotal.toFixed(2)}
+                            </p>
+                          );
+                        })}
                         <p className="text-green-900 font-semibold mt-1">
-                          Total for {numberOfNights} night{numberOfNights !== 1 ? 's' : ''}: ${totalPrice}
+                          Total: ${(totalPrice + Object.entries(selectedAddons).reduce((sum, [id, qty]) => {
+                            const addon = availableAddons.find((a: any) => a.id === Number(id));
+                            if (!addon) return sum;
+                            const price = Number(addon.price);
+                            return sum + (addon.billingType === 'per_unit' ? price * qty * numberOfNights : price * qty);
+                          }, 0)).toFixed(2)}
                         </p>
                       </>
                     ) : (
@@ -315,6 +360,52 @@ export default function CustomerBookingPage() {
                         No rate available for the selected dates
                       </p>
                     )}
+                  </div>
+                )}
+
+                {/* Add-ons */}
+                {availableAddons.length > 0 && (
+                  <div className="space-y-3">
+                    <h3 className="text-lg font-semibold text-foreground">Add-Ons</h3>
+                    <div className="space-y-2">
+                      {availableAddons.map((addon: any) => (
+                        <div key={addon.id} className="flex items-center justify-between p-3 border rounded-lg">
+                          <div>
+                            <p className="font-medium">{addon.name}</p>
+                            <p className="text-sm text-muted-foreground">
+                              ${Number(addon.price).toFixed(2)} {addon.billingType === 'per_unit' ? '/ unit' : '(flat)'}
+                            </p>
+                            {addon.description && (
+                              <p className="text-xs text-muted-foreground">{addon.description}</p>
+                            )}
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="icon"
+                              className="h-8 w-8"
+                              onClick={() => updateAddonQty(addon.id, -1)}
+                              disabled={!selectedAddons[addon.id]}
+                            >
+                              <Minus className="h-4 w-4" />
+                            </Button>
+                            <span className="w-8 text-center font-medium">
+                              {selectedAddons[addon.id] || 0}
+                            </span>
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="icon"
+                              className="h-8 w-8"
+                              onClick={() => updateAddonQty(addon.id, 1)}
+                            >
+                              <Plus className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
                   </div>
                 )}
 

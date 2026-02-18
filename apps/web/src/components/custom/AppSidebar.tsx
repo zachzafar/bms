@@ -34,6 +34,7 @@ import {
   CircleDollarSign,
   ChevronDown,
   Timer,
+  Package,
 } from "lucide-react"
 
 import { FEATURE_PERMISSIONS } from "@/lib/feature-permissions"
@@ -76,6 +77,12 @@ const items: SidebarItem[] = [
         title: "Rate Types",
         url: "/bookings/booking/rate-types",
         icon: Timer,
+        feature: "settings",
+      },
+      {
+        title: "Add-Ons",
+        url: "/bookings/booking/addons",
+        icon: Package,
         feature: "settings",
       },
       {
@@ -173,13 +180,7 @@ const items: SidebarItem[] = [
         url: "/bookings/settings",
         icon: Settings,
         feature: "settings",
-      },
-      // {
-      //   title: "Booking Forms",
-      //   url: "/bookings/settings/forms",
-      //   icon: FileText,
-      //   feature: "settings",
-      // },
+      }
     ],
   },
 ]

@@ -5,9 +5,10 @@ import { DrizzleModule } from 'src/drizzle/drizzle.module';
 import { MaintenanceModule } from 'src/maintenance/maintenance.module';
 import { TenantService } from 'src/tenant/tenant.service';
 import { RatesModule } from 'src/rates/rates.module';
+import { AddonModule } from 'src/addon/addon.module';
 
 @Module({
-  imports: [DrizzleModule, forwardRef(() => MaintenanceModule), RatesModule],
+  imports: [DrizzleModule, forwardRef(() => MaintenanceModule), RatesModule, AddonModule],
   providers: [BookingService, TenantService],
   controllers: [BookingController],
   exports: [BookingService]

@@ -29,6 +29,7 @@ import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
 import { APP_GUARD } from '@nestjs/core';
 import { OwnerModule } from './owner/owner.module';
 import { CustomersModule } from './customers/customers.module';
+import { AddonModule } from './addon/addon.module';
 var cors = require('cors');
 
 const allowAllCorsEndpoints = [
@@ -70,7 +71,8 @@ const allowAllCorsEndpoints = [
     InvoicesModule,
     PaymentsModule,
     OwnerModule,
-    CustomersModule
+    CustomersModule,
+    AddonModule
   ],
   controllers: [AppController],
   providers: [
