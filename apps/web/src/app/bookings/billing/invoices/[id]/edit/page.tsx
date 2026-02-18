@@ -11,6 +11,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { authClient } from '@/lib/api/publicClient';
 import { toast } from 'sonner';
 import { INVOICES_QUERY_KEY } from '@/lib/api/queryKeys';
+import { formatDateForInput, parseDateInputAsUTC } from '@/lib/utils/date';
 import { ArrowLeft, Save, Plus, Trash2 } from 'lucide-react';
 import { useForm, useFieldArray } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -240,8 +241,8 @@ export default function EditInvoicePage() {
                     <FormControl>
                       <Input
                         type="date"
-                        value={field.value instanceof Date ? field.value.toISOString().split('T')[0] : ''}
-                        onChange={(e) => field.onChange(new Date(e.target.value))}
+                        value={field.value instanceof Date ? formatDateForInput(field.value) : ''}
+                        onChange={(e) => field.onChange(parseDateInputAsUTC(e.target.value))}
                       />
                     </FormControl>
                     <FormMessage />
@@ -258,8 +259,8 @@ export default function EditInvoicePage() {
                     <FormControl>
                       <Input
                         type="date"
-                        value={field.value instanceof Date ? field.value.toISOString().split('T')[0] : ''}
-                        onChange={(e) => field.onChange(new Date(e.target.value))}
+                        value={field.value instanceof Date ? formatDateForInput(field.value) : ''}
+                        onChange={(e) => field.onChange(parseDateInputAsUTC(e.target.value))}
                       />
                     </FormControl>
                     <FormMessage />

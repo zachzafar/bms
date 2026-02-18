@@ -11,36 +11,6 @@ import { Cron } from '@nestjs/schedule';
 import { generateCustomerReminderEmail, generateStatusUpdateEmailForCustomer, generateStatusUpdateEmailForTenant, generateTenantReminderEmail } from './booking.utils';
 import { RatesService } from 'src/rates/rates.service';
 
-// --- Date helpers ---
-
-// Converts input to a UTC Date object.
-// For Date objects (from Zod coercion), extracts local components as the intended UTC values.
-// This prevents timezone offset from shifting dates (e.g. local midnight becoming 4 AM UTC).
-function toUTCDateTime(input: string | Date): Date {
-  if (typeof input === 'string') {
-    if (input.endsWith('Z')) {
-      return new Date(input);
-    }
-    const [datePart, timePart] = input.split('T');
-    const [year, month, day] = datePart.split('-').map(Number);
-    const [hours, minutes, seconds] = timePart
-      ? timePart.replace('Z', '').split(':').map(Number)
-      : [0, 0, 0];
-    return new Date(Date.UTC(year, month - 1, day, hours, minutes, seconds || 0));
-  }
-
-  // Date objects: use local components (which reflect the original user intent)
-  // and construct a UTC date from them
-  return new Date(Date.UTC(
-    input.getFullYear(),
-    input.getMonth(),
-    input.getDate(),
-    input.getHours(),
-    input.getMinutes(),
-    input.getSeconds()
-  ));
-}
-
 
 @Injectable()
 export class BookingService {
@@ -56,8 +26,8 @@ export class BookingService {
     newCustomer?: { name: string; email: string; phone?: string; tenantId: string },
     formResponses?: Array<{ formFieldId: number; value: string }>
   ): Promise<string | void> {
-    const utcStart = toUTCDateTime(booking.startDate);
-    const utcEnd = toUTCDateTime(booking.endDate);
+    const utcStart = new Date(booking.startDate);
+    const utcEnd = new Date(booking.endDate);
 
     if (!customerIds.length && !newCustomer) {
       throw new ConflictException('No customers selected or provided');
@@ -89,7 +59,7 @@ export class BookingService {
       });
 
       // Calculate price
-      const { totalPrice, rate } = await this.calculatePrice(
+      const { totalPrice, rateSegments } = await this.calculatePrice(
         booking.assetId,
         utcStart,
         utcEnd,
@@ -115,7 +85,7 @@ export class BookingService {
         await this.saveFormResponses(tx, id, formResponses);
       }
 
-      await this.createBookingInvoice(tx, asset, id, customerId, utcStart, utcEnd, totalPrice, rate?.pricePerUnit, rate?.rateTypeMinutes, rate?.rateTypeName);
+      await this.createBookingInvoice(tx, asset, id, customerId, utcStart, utcEnd, totalPrice, rateSegments);
 
       return id;
     });
@@ -178,40 +148,44 @@ export class BookingService {
     return customerId;
   }
 
-  // Helper: Calculate booking price
+  // Helper: Calculate booking price using split rates
   private async calculatePrice(
     assetId: string,
     startDate: Date,
     endDate: Date,
     providedPrice?: string | number | null,
     booksByAssetType: boolean = false
-  ): Promise<{ totalPrice: number; rate: any }> {
+  ): Promise<{ totalPrice: number; rateSegments: Array<{ rate: any; units: number; segmentStart: Date; segmentEnd: Date; segmentPrice: number }> }> {
     if (providedPrice && parseFloat(providedPrice.toString()) > 0) {
-      return { totalPrice: parseFloat(providedPrice.toString()), rate: null };
+      return { totalPrice: parseFloat(providedPrice.toString()), rateSegments: [] };
     }
 
-    const effectiveRate = await this.ratesService.getEffectiveRateForAsset(
+    const segments = await this.ratesService.getEffectiveRatesForBooking(
       assetId,
       startDate,
       endDate,
       booksByAssetType
     );
 
-    if (!effectiveRate) {
+    if (segments.length === 0) {
       const rateType = booksByAssetType ? 'asset type' : 'asset';
       throw new ConflictException(
         `No active rate found for this ${rateType} during the selected booking period. Please contact the administrator to set up rates.`
       );
     }
 
-    if (!effectiveRate.pricePerUnit) {
-      return { totalPrice: 0, rate: effectiveRate };
-    }
+    let totalPrice = 0;
+    const rateSegments = segments.map(seg => {
+      const pricePerUnit = seg.rate.pricePerUnit ? parseFloat(seg.rate.pricePerUnit.toString()) : 0;
+      const unitMinutes = seg.rate.rateTypeMinutes || 1440;
+      const segmentMinutes = (seg.segmentEnd.getTime() - seg.segmentStart.getTime()) / (1000 * 60);
+      const units = Math.ceil(segmentMinutes / unitMinutes);
+      const segmentPrice = units * pricePerUnit;
+      totalPrice += segmentPrice;
+      return { ...seg, units, segmentPrice };
+    });
 
-    const durationUnits = this.calculateDurationUnits(startDate, endDate, effectiveRate.rateTypeMinutes);
-    const pricePerUnit = parseFloat(effectiveRate.pricePerUnit.toString());
-
-    return { totalPrice: durationUnits * pricePerUnit, rate: effectiveRate };
+    return { totalPrice, rateSegments };
   }
 
   // Helper: Calculate duration in minutes
@@ -290,7 +264,7 @@ export class BookingService {
     );
   }
 
-  // Helper: Create invoice for booking
+  // Helper: Create invoice for booking (supports split-rate segments)
   private async createBookingInvoice(
     tx: any,
     asset: { id: string; name: string; tenantId: string },
@@ -299,12 +273,8 @@ export class BookingService {
     startDate: Date,
     endDate: Date,
     totalPrice: number,
-    ratePerUnit?: string | null,
-    rateTypeMinutes?: number | null,
-    rateTypeName?: string | null
+    rateSegments: Array<{ rate: any; units: number; segmentStart: Date; segmentEnd: Date; segmentPrice: number }>
   ) {
-    const durationUnits = this.calculateDurationUnits(startDate, endDate, rateTypeMinutes);
-    const unitLabel = rateTypeName || 'unit';
     const invoiceNumber = `INV-${Date.now()}-${bookingId.slice(0, 8).toUpperCase()}`;
 
     const [{ id: invoiceId }] = await tx.insert(schema.Invoice).values({
@@ -321,15 +291,33 @@ export class BookingService {
       bookingId,
     }).$returningId();
 
-    const pricePerUnit = ratePerUnit ? parseFloat(ratePerUnit.toString()) : totalPrice / durationUnits;
+    if (rateSegments.length > 0) {
+      for (const seg of rateSegments) {
+        const unitLabel = seg.rate.rateTypeName || 'unit';
+        const pricePerUnit = seg.rate.pricePerUnit ? parseFloat(seg.rate.pricePerUnit.toString()) : 0;
+        const segStart = seg.segmentStart.toLocaleDateString();
+        const segEnd = seg.segmentEnd.toLocaleDateString();
 
-    await tx.insert(schema.InvoiceItem).values({
-      invoiceId,
-      description: `${asset.name} - ${durationUnits} ${unitLabel}${durationUnits > 1 ? 's' : ''} (${startDate.toLocaleDateString()} - ${endDate.toLocaleDateString()})`,
-      quantity: durationUnits,
-      unitPrice: pricePerUnit.toFixed(2),
-      totalPrice: totalPrice.toFixed(2),
-    });
+        await tx.insert(schema.InvoiceItem).values({
+          invoiceId,
+          description: `${asset.name} - ${seg.units} ${unitLabel}${seg.units > 1 ? 's' : ''} @ $${pricePerUnit}/${unitLabel} (${segStart} - ${segEnd})`,
+          quantity: seg.units,
+          unitPrice: pricePerUnit.toFixed(2),
+          totalPrice: seg.segmentPrice.toFixed(2),
+        });
+      }
+    } else {
+      // Fallback: single line item (e.g. when price was provided manually)
+      const durationUnits = this.calculateDurationUnits(startDate, endDate);
+      const pricePerUnit = durationUnits > 0 ? totalPrice / durationUnits : totalPrice;
+      await tx.insert(schema.InvoiceItem).values({
+        invoiceId,
+        description: `${asset.name} (${startDate.toLocaleDateString()} - ${endDate.toLocaleDateString()})`,
+        quantity: durationUnits || 1,
+        unitPrice: pricePerUnit.toFixed(2),
+        totalPrice: totalPrice.toFixed(2),
+      });
+    }
   }
 
   @OnEvent('create-booking')
@@ -783,20 +771,20 @@ export class BookingService {
         const bookingStartDate = new Date(startDate);
         const bookingEndDate = new Date(endDate);
 
-        const effectiveRate = await this.ratesService.getEffectiveRateForAsset(
-          updateData.assetId,
-          bookingStartDate,
-          bookingEndDate,
-          tenant?.booksByAssetType ?? false
-        );
-
-        if (effectiveRate && effectiveRate.pricePerUnit) {
-          const durationUnits = this.calculateDurationUnits(bookingStartDate, bookingEndDate, effectiveRate.rateTypeMinutes);
-          const pricePerUnit = parseFloat(effectiveRate.pricePerUnit.toString());
-          totalPrice = durationUnits * pricePerUnit;
-        } else if (updateData.totalPrice) {
+        try {
+          const { totalPrice: calculatedPrice } = await this.calculatePrice(
+            updateData.assetId,
+            bookingStartDate,
+            bookingEndDate,
+            null,
+            tenant?.booksByAssetType ?? false
+          );
+          totalPrice = calculatedPrice;
+        } catch {
           // Fall back to the provided price if no rate is configured
-          totalPrice = parseFloat(updateData.totalPrice.toString());
+          if (updateData.totalPrice) {
+            totalPrice = parseFloat(updateData.totalPrice.toString());
+          }
         }
 
         // Update booking dates, price, and asset

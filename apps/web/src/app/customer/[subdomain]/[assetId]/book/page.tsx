@@ -127,33 +127,60 @@ export default function CustomerBookingPage() {
   // Watch selected dates
   const selectedDates = form.watch('dateRange');
 
-  // Fetch rates for asset
-  const { data: ratesResponse, isLoading: isRateLoading } = client.rates.getPublicRate.useQuery({
-    queryKey: ['public-rate', subdomain, Number(assetId)],
-    queryData: { params: { subdomain, id: Number(assetId) } },
+  // Fetch all rates for asset
+  const { data: ratesResponse, isLoading: isRateLoading } = client.rates.getPublicRates.useQuery({
+    queryKey: ['public-rates', subdomain, assetId],
+    queryData: { params: { subdomain }, query: { assetId, pageSize: 100 } },
     enabled: !!subdomain && !!assetId,
   });
 
-  // Get the rates array from response
-  const rate =
-    ratesResponse?.status === 200 &&
-      Array.isArray((ratesResponse.body as any).data)
-      ? (ratesResponse.body as any).data[0]?.rate ?? null
-      : null;
+  const allRates = ratesResponse?.status === 200 ? ratesResponse.body.data.map(d => d.rate) : [];
 
-  // Find correct rate for selected start date
+  // Compute split-rate pricing based on selected dates
+  const { rateSegments, totalPrice, numberOfNights } = useMemo(() => {
+    if (!selectedDates?.from || !selectedDates?.to || allRates.length === 0) {
+      return { rateSegments: [] as Array<{ rateName: string; pricePerUnit: number; days: number; subtotal: number }>, totalPrice: 0, numberOfNights: 0 };
+    }
 
-  const numberOfNights =
-    selectedDates?.from && selectedDates?.to
-      ? Math.ceil(
-        (selectedDates.to.getTime() - selectedDates.from.getTime()) /
-        (1000 * 60 * 60 * 24)
-      )
-      : 0;
+    const nights = Math.ceil((selectedDates.to.getTime() - selectedDates.from.getTime()) / (1000 * 60 * 60 * 24));
+    const segments: Array<{ rateName: string; pricePerUnit: number; days: number; subtotal: number }> = [];
+    const current = new Date(selectedDates.from);
+    let currentRate: any = null;
+    let segDays = 0;
 
-  const pricePerUnit = rate ? Number(rate.pricePerUnit) : 0;
+    while (current < selectedDates.to) {
+      const dayRate = allRates
+        .filter(r => {
+          if (!r.startDate || !r.endDate) return false;
+          const rs = new Date(r.startDate); rs.setHours(0, 0, 0, 0);
+          const re = new Date(r.endDate); re.setHours(0, 0, 0, 0);
+          const cd = new Date(current); cd.setHours(0, 0, 0, 0);
+          return cd >= rs && cd <= re;
+        })
+        .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())[0] || null;
 
-  const totalPrice = pricePerUnit * numberOfNights;
+      if (currentRate && dayRate && currentRate.id === dayRate.id) {
+        segDays++;
+      } else {
+        if (currentRate && segDays > 0) {
+          const ppu = Number(currentRate.pricePerUnit) || 0;
+          segments.push({ rateName: currentRate.name, pricePerUnit: ppu, days: segDays, subtotal: ppu * segDays });
+        }
+        currentRate = dayRate;
+        segDays = dayRate ? 1 : 0;
+      }
+
+      current.setDate(current.getDate() + 1);
+    }
+
+    if (currentRate && segDays > 0) {
+      const ppu = Number(currentRate.pricePerUnit) || 0;
+      segments.push({ rateName: currentRate.name, pricePerUnit: ppu, days: segDays, subtotal: ppu * segDays });
+    }
+
+    const total = segments.reduce((sum, s) => sum + s.subtotal, 0);
+    return { rateSegments: segments, totalPrice: total, numberOfNights: nights };
+  }, [selectedDates?.from, selectedDates?.to, allRates]);
 
 
   const onSubmit = (data: CustomerBookingFormData) => {
@@ -272,19 +299,20 @@ export default function CustomerBookingPage() {
                   <div className="mt-2 p-4 bg-green-50 border border-green-200 rounded">
                     {isRateLoading ? (
                       <p className="text-muted-foreground">Checking rate...</p>
-                    ) : rate ? (
+                    ) : rateSegments.length > 0 ? (
                       <>
-                        <p className="text-green-800 font-medium">
-                          Rate: ${pricePerUnit} per night
-                        </p>
-                        <p className="text-green-900 font-semibold">
-                          Total for {numberOfNights} night{numberOfNights !== 1 ? 's' : ''}: $
-                          {totalPrice}
+                        {rateSegments.map((seg, i) => (
+                          <p key={i} className="text-green-800 font-medium">
+                            {seg.days} night{seg.days !== 1 ? 's' : ''} at ${seg.pricePerUnit}/night = ${seg.subtotal}
+                          </p>
+                        ))}
+                        <p className="text-green-900 font-semibold mt-1">
+                          Total for {numberOfNights} night{numberOfNights !== 1 ? 's' : ''}: ${totalPrice}
                         </p>
                       </>
                     ) : (
                       <p className="text-red-600 font-medium">
-                        No rate available
+                        No rate available for the selected dates
                       </p>
                     )}
                   </div>

@@ -9,8 +9,8 @@ import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Button } from '@/components/ui/button';
 import { CalendarIcon } from 'lucide-react';
-import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
+import { formatDisplayDate } from '@/lib/utils/date';
 import { Slider } from '@/components/ui/slider';
 
 type FormFieldType = 'number' | 'text' | 'textarea' | 'date' | 'time' | 'date_range' | 'range' | 'boolean';
@@ -74,7 +74,7 @@ export function DynamicFormField<T extends FieldValues>({
                 )}
               >
                 <CalendarIcon className="mr-2 h-4 w-4" />
-                {field.value ? format(new Date(field.value), 'PPP') : <span>Pick a date</span>}
+                {field.value ? formatDisplayDate(field.value) : <span>Pick a date</span>}
               </Button>
             </PopoverTrigger>
             <PopoverContent className="w-auto p-0" align="start">
@@ -110,7 +110,7 @@ export function DynamicFormField<T extends FieldValues>({
                     )}
                   >
                     <CalendarIcon className="mr-2 h-4 w-4" />
-                    {field.value?.start ? format(new Date(field.value.start), 'PPP') : <span>Start date</span>}
+                    {field.value?.start ? formatDisplayDate(field.value.start) : <span>Start date</span>}
                   </Button>
                 </PopoverTrigger>
                 <PopoverContent className="w-auto p-0" align="start">
@@ -133,7 +133,7 @@ export function DynamicFormField<T extends FieldValues>({
                     )}
                   >
                     <CalendarIcon className="mr-2 h-4 w-4" />
-                    {field.value?.end ? format(new Date(field.value.end), 'PPP') : <span>End date</span>}
+                    {field.value?.end ? formatDisplayDate(field.value.end) : <span>End date</span>}
                   </Button>
                 </PopoverTrigger>
                 <PopoverContent className="w-auto p-0" align="start">

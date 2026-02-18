@@ -280,98 +280,143 @@ export class RatesService {
     });
   }
 
+  private readonly rateColumns = {
+    id: schema.Rate.id,
+    name: schema.Rate.name,
+    pricePerUnit: schema.Rate.pricePerUnit,
+    startDate: schema.Rate.startDate,
+    endDate: schema.Rate.endDate,
+    minDuration: schema.Rate.minDuration,
+    maxDuration: schema.Rate.maxDuration,
+    priority: schema.Rate.priority,
+    isActive: schema.Rate.isActive,
+    createdAt: schema.Rate.createdAt,
+    rateTypeId: schema.Rate.rateTypeId,
+    rateTypeMinutes: schema.RateType.minutes,
+    rateTypeName: schema.RateType.name,
+  };
+
+  private async fetchActiveRates(assetId: string, booksByAssetType: boolean) {
+    const asset = await this.db.query.Asset.findFirst({
+      where: (a, { eq }) => eq(a.id, assetId),
+    });
+
+    if (booksByAssetType) {
+      if (!asset?.assetTypeId) return [];
+      return this.db
+        .select(this.rateColumns)
+        .from(schema.Rate)
+        .leftJoin(schema.RateType, eq(schema.Rate.rateTypeId, schema.RateType.id))
+        .where(and(eq(schema.Rate.assetTypeId, asset.assetTypeId), eq(schema.Rate.isActive, true)));
+    }
+
+    return this.db
+      .select(this.rateColumns)
+      .from(schema.AssetHasRates)
+      .innerJoin(schema.Rate, eq(schema.AssetHasRates.rateId, schema.Rate.id))
+      .leftJoin(schema.RateType, eq(schema.Rate.rateTypeId, schema.RateType.id))
+      .where(and(eq(schema.AssetHasRates.assetId, assetId), eq(schema.Rate.isActive, true)));
+  }
+
   async getEffectiveRateForAsset(
     assetId: string,
     bookingStartDate: Date,
     bookingEndDate: Date,
     booksByAssetType: boolean = false
   ) {
-    const asset = await this.db.query.Asset.findFirst({
-      where: (a, { eq }) => eq(a.id, assetId),
-    });
-
+    const allRates = await this.fetchActiveRates(assetId, booksByAssetType);
     const bookingMinutes = Math.ceil(
       (bookingEndDate.getTime() - bookingStartDate.getTime()) / (1000 * 60)
     );
 
-    const filterApplicableRates = (rates: any[]) => {
-      return rates
-        .filter(rate => {
-          // 1. Check date range covers the booking
-          if (!rate.startDate || !rate.endDate) return false;
-          const rateStart = new Date(rate.startDate);
-          const rateEnd = new Date(rate.endDate);
-          if (rateStart > bookingStartDate || rateEnd < bookingEndDate) return false;
-          this.logger.log(' passed date range doesnt cover booking check ')
-          // 2. Check min/max duration (in units of the rate type)
-          const unitMinutes = rate.rateTypeMinutes || 1440;
-          const bookedUnits = Math.ceil(bookingMinutes / unitMinutes);
-          this.logger.log(`booked units ${bookedUnits} min ${rate.minDuration} max ${rate.maxDuration} `)
-          if (rate.minDuration != null && bookedUnits < (rate.minDuration/unitMinutes)) return false;
-          if (rate.maxDuration != null && bookedUnits > (rate.maxDuration/unitMinutes)) return false;
-          this.logger.log(' passed min max checks')
-          return true;
-        })
-        // Sort by latest createdAt first
-        .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-    };
+    const applicable = allRates
+      .filter(rate => {
+        if (!rate.startDate || !rate.endDate) return false;
+        const rateStart = new Date(rate.startDate);
+        const rateEnd = new Date(rate.endDate);
+        if (rateStart > bookingStartDate || rateEnd < bookingEndDate) return false;
 
-    if (booksByAssetType) {
-      if (!asset?.assetTypeId) return null;
+        const unitMinutes = rate.rateTypeMinutes || 1440;
+        const bookedUnits = Math.ceil(bookingMinutes / unitMinutes);
+        const minUnits = rate.minDuration != null ? rate.minDuration / unitMinutes : 0;
+        const maxUnits = rate.maxDuration != null ? rate.maxDuration / unitMinutes : Infinity;
+        if (bookedUnits < minUnits || bookedUnits > maxUnits) return false;
+        return true;
+      })
+      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
 
-      const assetTypeRates = await this.db
-        .select({
-          id: schema.Rate.id,
-          name: schema.Rate.name,
-          pricePerUnit: schema.Rate.pricePerUnit,
-          startDate: schema.Rate.startDate,
-          endDate: schema.Rate.endDate,
-          minDuration: schema.Rate.minDuration,
-          maxDuration: schema.Rate.maxDuration,
-          priority: schema.Rate.priority,
-          isActive: schema.Rate.isActive,
-          createdAt: schema.Rate.createdAt,
-          rateTypeId: schema.Rate.rateTypeId,
-          rateTypeMinutes: schema.RateType.minutes,
-          rateTypeName: schema.RateType.name,
-        })
-        .from(schema.Rate)
-        .leftJoin(schema.RateType, eq(schema.Rate.rateTypeId, schema.RateType.id))
-        .where(and(
-          eq(schema.Rate.assetTypeId, asset.assetTypeId),
-          eq(schema.Rate.isActive, true)
-        ));
+    if (applicable.length === 0) return null;
+    const source = booksByAssetType ? 'assetType' as const : 'asset' as const;
+    return { ...applicable[0], source };
+  }
 
-      const applicable = filterApplicableRates(assetTypeRates);
-      return applicable.length > 0 ? { ...applicable[0], source: 'assetType' as const } : null;
-    } else {
-      const assetRates = await this.db
-        .select({
-          rateId: schema.AssetHasRates.rateId,
-          pricePerUnit: schema.Rate.pricePerUnit,
-          startDate: schema.Rate.startDate,
-          endDate: schema.Rate.endDate,
-          minDuration: schema.Rate.minDuration,
-          maxDuration: schema.Rate.maxDuration,
-          priority: schema.Rate.priority,
-          name: schema.Rate.name,
-          isActive: schema.Rate.isActive,
-          createdAt: schema.Rate.createdAt,
-          rateTypeId: schema.Rate.rateTypeId,
-          rateTypeMinutes: schema.RateType.minutes,
-          rateTypeName: schema.RateType.name,
-        })
-        .from(schema.AssetHasRates)
-        .innerJoin(schema.Rate, eq(schema.AssetHasRates.rateId, schema.Rate.id))
-        .leftJoin(schema.RateType, eq(schema.Rate.rateTypeId, schema.RateType.id))
-        .where(and(
-          eq(schema.AssetHasRates.assetId, assetId),
-          eq(schema.Rate.isActive, true)
-        ));
-      this.logger.log(JSON.stringify(assetRates))
-      const applicable = filterApplicableRates(assetRates);
-      return applicable.length > 0 ? { ...applicable[0], source: 'asset' as const } : null;
+  /**
+   * Get effective rates for a booking that may span multiple rate periods.
+   * Returns an array of rate segments with actual start/end timestamps.
+   * Works with any rate type (hourly, daily, etc.) including same-day bookings.
+   */
+  async getEffectiveRatesForBooking(
+    assetId: string,
+    bookingStartDate: Date,
+    bookingEndDate: Date,
+    booksByAssetType: boolean = false
+  ): Promise<Array<{ rate: any; segmentStart: Date; segmentEnd: Date }>> {
+    const allRates = await this.fetchActiveRates(assetId, booksByAssetType);
+    if (allRates.length === 0) return [];
+
+    const source = booksByAssetType ? 'assetType' as const : 'asset' as const;
+
+    // Build sorted list of rate boundaries that fall within the booking range
+    // Each rate covers [rateStart, rateEnd]. We split the booking at rate boundaries.
+    const applicableRates = allRates
+      .map(rate => {
+        if (!rate.startDate || !rate.endDate) return null;
+        const rateStart = new Date(rate.startDate);
+        const rateEnd = new Date(rate.endDate);
+        // Add 1 day to rateEnd since rate end date is inclusive
+        rateEnd.setUTCDate(rateEnd.getUTCDate() + 1);
+        rateEnd.setUTCHours(0, 0, 0, 0);
+        rateStart.setUTCHours(0, 0, 0, 0);
+        return { ...rate, rateStart, rateEnd };
+      })
+      .filter(Boolean) as Array<any>;
+
+    const segments: Array<{ rate: any; segmentStart: Date; segmentEnd: Date }> = [];
+    const currentDate = new Date(bookingStartDate);
+    currentDate.setUTCHours(0, 0, 0, 0);
+    const endDate = new Date(bookingEndDate);
+    endDate.setUTCHours(0, 0, 0, 0);
+
+    // Handle same-day bookings: ensure we process at least one day
+    const effectiveEnd = endDate <= currentDate ? new Date(currentDate.getTime() + 86400000) : endDate;
+
+    let cursor = new Date(currentDate);
+
+    while (cursor < effectiveEnd) {
+      // Find rate covering this day (most recently created wins ties)
+      const dayRate = applicableRates
+        .filter(r => cursor >= r.rateStart && cursor < r.rateEnd)
+        .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())[0] || null;
+
+      if (!dayRate) {
+        throw new ConflictException(
+          `No rate covers ${cursor.toISOString().split('T')[0]}. Please ensure rates cover the entire booking period.`
+        );
+      }
+
+      // Segment runs from cursor until the earlier of: rate end or booking end
+      const segEnd = new Date(Math.min(dayRate.rateEnd.getTime(), effectiveEnd.getTime()));
+
+      segments.push({
+        rate: { ...dayRate, source },
+        segmentStart: new Date(cursor),
+        segmentEnd: segEnd,
+      });
+
+      cursor = segEnd;
     }
+
+    return segments;
   }
 
   async getRatesForAssetType(tenantId: string, assetTypeId: number, page: number = 1, pageSize: number = 10) {

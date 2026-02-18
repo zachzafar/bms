@@ -14,6 +14,7 @@ import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { authClient } from '@/lib/api/publicClient';
 import { toast } from 'sonner';
+import { formatDateForInput, parseDateInputAsUTC } from '@/lib/utils/date';
 
 const EditPaymentSchema = z.object({
   paymentMethod: z.string().min(1, 'Payment method is required'),
@@ -173,8 +174,8 @@ export default function EditPaymentPage() {
                       <FormControl>
                         <Input
                           type="date"
-                          value={field.value ? new Date(field.value).toISOString().slice(0, 10) : ''}
-                          onChange={(e) => field.onChange(new Date(e.target.value).toISOString())}
+                          value={field.value ? formatDateForInput(field.value) : ''}
+                          onChange={(e) => field.onChange(parseDateInputAsUTC(e.target.value).toISOString())}
                         />
                       </FormControl>
                       <FormMessage />

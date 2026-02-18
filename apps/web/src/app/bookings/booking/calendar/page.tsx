@@ -20,7 +20,7 @@ import { BOOKINGS_QUERY_KEY } from "@/lib/api/queryKeys";
 import { toast } from "sonner";
 import { StorageService } from "@/lib/api/storage";
 import { queryClient } from "@/providers/tanstack";
-import { parseAsLocalDate, addDays } from "@/lib/utils/date";
+import { parseAsLocalDate, addDays, formatDisplayDate } from "@/lib/utils/date";
 
 const localizer = momentLocalizer(moment);
 const BLOCKED_DATES_KEY = ["blockedDates"];
@@ -278,7 +278,7 @@ export default function BookingCalendar() {
                 <div>
                   <p className="font-medium">{b.title}</p>
                   <p className="text-sm text-muted-foreground">
-                    {b.startDate.toDateString()} – {b.endDate.toDateString()}
+                    {formatDisplayDate(b.startDate)} – {formatDisplayDate(b.endDate)}
                   </p>
                 </div>
                 <Button

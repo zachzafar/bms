@@ -9,6 +9,7 @@ import { Label } from '@/components/ui/label';
 import { authClient } from '@/lib/api/publicClient';
 import { toast } from 'sonner';
 import { INVOICES_QUERY_KEY } from '@/lib/api/queryKeys';
+import { formatDateForInput } from '@/lib/utils/date';
 
 export default function ViewInvoicePage() {
   const router = useRouter();
@@ -64,11 +65,11 @@ export default function ViewInvoicePage() {
           </div>
           <div className="space-y-2">
             <Label>Issue Date</Label>
-            <Input value={new Date(invoice.issueDate).toISOString().slice(0, 10)} readOnly />
+            <Input value={formatDateForInput(invoice.issueDate)} readOnly />
           </div>
           <div className="space-y-2">
             <Label>Due Date</Label>
-            <Input value={new Date(invoice.dueDate).toISOString().slice(0, 10)} readOnly />
+            <Input value={formatDateForInput(invoice.dueDate)} readOnly />
           </div>
           <div className="space-y-2">
             <Label>Subtotal</Label>
