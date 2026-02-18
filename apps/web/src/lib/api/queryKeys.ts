@@ -27,6 +27,7 @@ export const TASKS_QUERY_KEY = ['tasks'];
 export const DOCUMENTS_QUERY_KEY = ['documents'];
 export const USERS_QUERY_KEY = ['users'];
 export const ASSETS_QUERY_KEY = ['assets'];
+export const ADDONS_QUERY_KEY = ['addons'];
 
 // Extended query keys for specific contexts
 export const CONTACT_INQUIRIES_QUERY_KEY = ['contact-inquiries'];

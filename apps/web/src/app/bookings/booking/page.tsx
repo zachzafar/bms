@@ -8,7 +8,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow, } from '
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { SearchIcon } from 'lucide-react';
 import { authClient } from '@/lib/api/publicClient';
-import { BOOKINGS_QUERY_KEY, RATES_QUERY_KEY } from '@/lib/api/queryKeys';
+import { BOOKINGS_QUERY_KEY, RATES_QUERY_KEY, ADDONS_QUERY_KEY } from '@/lib/api/queryKeys';
 import { ExtendedSelectBooking } from '@repo/api-contract'
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -28,7 +28,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { MoreHorizontal, CheckCircle, Clock, XCircle, Eye, Trash2, Copy, Check } from 'lucide-react';
+import { MoreHorizontal, CheckCircle, Clock, XCircle, Eye, Trash2, Copy, Check, Plus, Minus } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import CopyableId from '@/components/custom/CopyableId';
 import { DateRangePicker, BlockedDateRange } from '@/components/ui/date-range-picker';
@@ -160,6 +160,26 @@ export default function Component() {
   });
   const assetList = assets?.body.data || [];
 
+  // Add-ons
+  const { data: addonsData } = authClient.addons.getAddons.useQuery({
+    queryKey: ADDONS_QUERY_KEY,
+    queryData: { query: { page: 1, pageSize: 100 } },
+  });
+  const addonsList = (addonsData?.body?.data ?? []).filter((a: any) => a.isActive);
+  const [selectedAddons, setSelectedAddons] = useState<Record<number, number>>({});
+
+  const updateAddonQty = (addonId: number, delta: number) => {
+    setSelectedAddons(prev => {
+      const current = prev[addonId] || 0;
+      const next = Math.max(0, current + delta);
+      if (next === 0) {
+        const { [addonId]: _, ...rest } = prev;
+        return rest;
+      }
+      return { ...prev, [addonId]: next };
+    });
+  };
+
   const { data: customerResponse } = authClient.customers.getCustomers.useQuery({ queryKey: ['customers'] });
   const customerList = customerResponse?.body.data ?? [];
   const [customers, setCustomers] = useState<string[]>([]);
@@ -246,6 +266,10 @@ export default function Component() {
 
 
   const onSubmit = (values: BookingFormValues) => {
+    const addonSelections = Object.entries(selectedAddons)
+      .filter(([, qty]) => qty > 0)
+      .map(([id, qty]) => ({ addonItemId: Number(id), quantity: qty }));
+
     createBooking(
       {
         body: {
@@ -255,6 +279,7 @@ export default function Component() {
             endDate: values.endDate,
           },
           customers: customers.map((customerId) => parseInt(customerId)),
+          addons: addonSelections.length > 0 ? addonSelections : undefined,
         },
       },
       {
@@ -264,6 +289,7 @@ export default function Component() {
           setIsCreateDialogOpen(false);
           form.reset();
           setCustomers([]);
+          setSelectedAddons({});
 
           // Generate invoice after booking creation
           const bookingId = response.body.bookingId; // <- now comes from backend
@@ -367,6 +393,7 @@ export default function Component() {
                 setDateRange(undefined);
                 setAssetSearch('');
                 setAssetTypeFilter(undefined);
+                setSelectedAddons({});
               }}
             >
               Create Booking
@@ -539,6 +566,49 @@ export default function Component() {
                     </MultiSelectorContent>
                   </MultiSelector>
                 </div>
+
+                {/* Add-ons */}
+                {addonsList.length > 0 && (
+                  <div className="space-y-3">
+                    <label className="text-sm font-medium leading-none">Add-Ons</label>
+                    <div className="space-y-2">
+                      {addonsList.map((addon: any) => (
+                        <div key={addon.id} className="flex items-center justify-between p-3 border rounded-lg">
+                          <div>
+                            <p className="font-medium text-sm">{addon.name}</p>
+                            <p className="text-xs text-muted-foreground">
+                              ${Number(addon.price).toFixed(2)} {addon.billingType === 'per_unit' ? '/ unit' : '(flat)'}
+                            </p>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="icon"
+                              className="h-7 w-7"
+                              onClick={() => updateAddonQty(addon.id, -1)}
+                              disabled={!selectedAddons[addon.id]}
+                            >
+                              <Minus className="h-3 w-3" />
+                            </Button>
+                            <span className="w-6 text-center text-sm font-medium">
+                              {selectedAddons[addon.id] || 0}
+                            </span>
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="icon"
+                              className="h-7 w-7"
+                              onClick={() => updateAddonQty(addon.id, 1)}
+                            >
+                              <Plus className="h-3 w-3" />
+                            </Button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
 
                 <Button
                   type="submit"

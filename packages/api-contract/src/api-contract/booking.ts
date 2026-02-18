@@ -8,6 +8,21 @@ import { pagination } from './utils';
 
 const c = initContract();
 
+export const BookingAddonSelectionSchema = z.object({
+  addonItemId: z.number(),
+  quantity: z.number().min(1),
+});
+
+export const BookingAddonResponseSchema = z.object({
+  id: z.number(),
+  addonItemId: z.number(),
+  name: z.string(),
+  quantity: z.number(),
+  unitPrice: z.string(),
+  billingType: z.string(),
+  totalPrice: z.string(),
+});
+
 export const BookingFormResponseSchema = z.object({
     id: z.number(),
     formFieldId: z.number(),
@@ -23,6 +38,7 @@ export const ExtendedSelectBookingSchema = SelectBookingSchema.omit({ startDate:
     startDate: z.coerce.date(),
     endDate: z.coerce.date(),
     formResponses: z.array(BookingFormResponseSchema).optional(),
+    addons: z.array(BookingAddonResponseSchema).optional(),
 })
 
 export type ExtendedSelectBooking = z.infer<typeof ExtendedSelectBookingSchema>
@@ -41,6 +57,7 @@ export const bookingContract = c.router({
         body: z.object({
             booking: InsertBookingSchema,
             customers: z.array(z.coerce.number()),
+            addons: z.array(BookingAddonSelectionSchema).optional(),
         }),
 
         summary: 'Create a new booking'
@@ -114,7 +131,8 @@ export const bookingContract = c.router({
             tagId: z.coerce.number(),
             startDate: z.coerce.date(),
             endDate: z.coerce.date(),
-            customerIds: z.array(z.coerce.number())
+            customerIds: z.array(z.coerce.number()),
+            addons: z.array(BookingAddonSelectionSchema).optional(),
         })
     },
     checkTagAvailability: {
@@ -160,7 +178,8 @@ export const bookingContract = c.router({
       formResponses: z.array(z.object({
         formFieldId: z.number(),
         value: z.string()
-      })).optional()
+      })).optional(),
+      addons: z.array(BookingAddonSelectionSchema).optional(),
     }),
     responses: {
       201: z.object({ message: z.string()})
@@ -186,7 +205,8 @@ export const bookingContract = c.router({
       formResponses: z.array(z.object({
         formFieldId: z.number(),
         value: z.string()
-      })).optional()
+      })).optional(),
+      addons: z.array(BookingAddonSelectionSchema).optional(),
     }),
     responses: {
       201: z.object({

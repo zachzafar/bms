@@ -10,6 +10,7 @@ import { randomBytes } from 'crypto';
 import { Cron } from '@nestjs/schedule';
 import { generateCustomerReminderEmail, generateStatusUpdateEmailForCustomer, generateStatusUpdateEmailForTenant, generateTenantReminderEmail } from './booking.utils';
 import { RatesService } from 'src/rates/rates.service';
+import { AddonService } from 'src/addon/addon.service';
 
 
 @Injectable()
@@ -18,13 +19,15 @@ export class BookingService {
     @Inject(DrizzleAsyncProvider) private db: MySql2Database<typeof schema>,
     private readonly eventEmitter: EventEmitter2,
     private readonly ratesService: RatesService,
+    private readonly addonService: AddonService,
   ) { }
 
   async createBooking(
     booking: schema.InsertBooking,
     customerIds: number[],
     newCustomer?: { name: string; email: string; phone?: string; tenantId: string },
-    formResponses?: Array<{ formFieldId: number; value: string }>
+    formResponses?: Array<{ formFieldId: number; value: string }>,
+    addons?: Array<{ addonItemId: number; quantity: number }>
   ): Promise<string | void> {
     const utcStart = new Date(booking.startDate);
     const utcEnd = new Date(booking.endDate);
@@ -59,13 +62,58 @@ export class BookingService {
       });
 
       // Calculate price
-      const { totalPrice, rateSegments } = await this.calculatePrice(
+      const { totalPrice: rateTotal, rateSegments } = await this.calculatePrice(
         booking.assetId,
         utcStart,
         utcEnd,
         booking.totalPrice,
         tenant?.booksByAssetType ?? false
       );
+
+      // Process add-ons
+      let addonsTotal = 0;
+      const processedAddons: Array<{
+        addonItemId: number;
+        name: string;
+        quantity: number;
+        unitPrice: number;
+        billingType: string;
+        totalPrice: number;
+      }> = [];
+
+      if (addons?.length) {
+        const addonItemIds = addons.map(a => a.addonItemId);
+        const addonItems = await this.addonService.getAddonItemsByIds(addonItemIds, asset.tenantId);
+
+        // Calculate total booking units from rate segments for per_unit add-ons
+        const totalBookingUnits = rateSegments.reduce((sum, seg) => sum + seg.units, 0) || 1;
+
+        for (const selection of addons) {
+          const addonItem = addonItems.find(a => a.id === selection.addonItemId);
+          if (!addonItem) continue;
+
+          const unitPrice = parseFloat(addonItem.price);
+          let addonTotal: number;
+
+          if (addonItem.billingType === 'per_unit') {
+            addonTotal = unitPrice * selection.quantity * totalBookingUnits;
+          } else {
+            addonTotal = unitPrice * selection.quantity;
+          }
+
+          addonsTotal += addonTotal;
+          processedAddons.push({
+            addonItemId: addonItem.id,
+            name: addonItem.name,
+            quantity: selection.quantity,
+            unitPrice,
+            billingType: addonItem.billingType,
+            totalPrice: addonTotal,
+          });
+        }
+      }
+
+      const totalPrice = rateTotal + addonsTotal;
 
       // Create booking
       const [{ id }] = await tx.insert(schema.Booking).values({
@@ -77,6 +125,20 @@ export class BookingService {
         totalPrice: totalPrice.toString(),
       }).$returningId();
 
+      // Insert booking add-on rows
+      if (processedAddons.length > 0) {
+        await tx.insert(schema.BookingAddon).values(
+          processedAddons.map(a => ({
+            bookingId: id,
+            addonItemId: a.addonItemId,
+            quantity: a.quantity,
+            unitPrice: a.unitPrice.toFixed(2),
+            billingType: a.billingType as 'per_unit' | 'flat',
+            totalPrice: a.totalPrice.toFixed(2),
+          }))
+        );
+      }
+
       // Create related records
       await this.createBlockedDateForBooking(tx, asset.tenantId, booking.assetId, utcStart, utcEnd, id);
       await this.createBookingUpdateToken(tx, id, customerId, booking.startDate);
@@ -85,7 +147,7 @@ export class BookingService {
         await this.saveFormResponses(tx, id, formResponses);
       }
 
-      await this.createBookingInvoice(tx, asset, id, customerId, utcStart, utcEnd, totalPrice, rateSegments);
+      await this.createBookingInvoice(tx, asset, id, customerId, utcStart, utcEnd, totalPrice, rateSegments, processedAddons);
 
       return id;
     });
@@ -273,7 +335,8 @@ export class BookingService {
     startDate: Date,
     endDate: Date,
     totalPrice: number,
-    rateSegments: Array<{ rate: any; units: number; segmentStart: Date; segmentEnd: Date; segmentPrice: number }>
+    rateSegments: Array<{ rate: any; units: number; segmentStart: Date; segmentEnd: Date; segmentPrice: number }>,
+    processedAddons: Array<{ addonItemId: number; name: string; quantity: number; unitPrice: number; billingType: string; totalPrice: number }> = []
   ) {
     const invoiceNumber = `INV-${Date.now()}-${bookingId.slice(0, 8).toUpperCase()}`;
 
@@ -308,14 +371,27 @@ export class BookingService {
       }
     } else {
       // Fallback: single line item (e.g. when price was provided manually)
+      const ratePortion = totalPrice - processedAddons.reduce((sum, a) => sum + a.totalPrice, 0);
       const durationUnits = this.calculateDurationUnits(startDate, endDate);
-      const pricePerUnit = durationUnits > 0 ? totalPrice / durationUnits : totalPrice;
+      const pricePerUnit = durationUnits > 0 ? ratePortion / durationUnits : ratePortion;
       await tx.insert(schema.InvoiceItem).values({
         invoiceId,
         description: `${asset.name} (${startDate.toLocaleDateString()} - ${endDate.toLocaleDateString()})`,
         quantity: durationUnits || 1,
         unitPrice: pricePerUnit.toFixed(2),
-        totalPrice: totalPrice.toFixed(2),
+        totalPrice: ratePortion.toFixed(2),
+      });
+    }
+
+    // Add-on invoice items
+    for (const addon of processedAddons) {
+      const billingLabel = addon.billingType === 'per_unit' ? 'per unit' : 'flat';
+      await tx.insert(schema.InvoiceItem).values({
+        invoiceId,
+        description: `Add-on: ${addon.name} (x${addon.quantity}, ${billingLabel})`,
+        quantity: addon.quantity,
+        unitPrice: addon.unitPrice.toFixed(2),
+        totalPrice: addon.totalPrice.toFixed(2),
       });
     }
   }
@@ -595,6 +671,22 @@ export class BookingService {
       .where(eq(schema.BookingFormFieldValue.bookingId, bookingId))
       .execute();
 
+    // Fetch add-ons for this booking
+    const bookingAddons = await this.db
+      .select({
+        id: schema.BookingAddon.id,
+        addonItemId: schema.BookingAddon.addonItemId,
+        name: schema.AddonItem.name,
+        quantity: schema.BookingAddon.quantity,
+        unitPrice: schema.BookingAddon.unitPrice,
+        billingType: schema.BookingAddon.billingType,
+        totalPrice: schema.BookingAddon.totalPrice,
+      })
+      .from(schema.BookingAddon)
+      .innerJoin(schema.AddonItem, eq(schema.BookingAddon.addonItemId, schema.AddonItem.id))
+      .where(eq(schema.BookingAddon.bookingId, bookingId))
+      .execute();
+
     return {
       ...booking.booking,
       startDate: booking.booking.startDate,
@@ -603,6 +695,7 @@ export class BookingService {
       asset: booking.assets,
       assetType: booking.asset_type,
       formResponses: formFieldValues,
+      addons: bookingAddons,
     };
   }
 
@@ -1364,10 +1457,11 @@ export class BookingService {
       endDate: Date;
       customer: { name: string; email: string; phone?: string };
       formResponses?: Array<{ formFieldId: number; value: string }>;
+      addons?: Array<{ addonItemId: number; quantity: number }>;
     },
     tenantId: string
   ): Promise<{ message: string; assetName: string }> {
-    const { assetTypeId, startDate, endDate, customer, formResponses } = data;
+    const { assetTypeId, startDate, endDate, customer, formResponses, addons } = data;
 
     // Find available asset of this type
     const availableAsset = await this.findAvailableAssetOfType(
@@ -1390,10 +1484,9 @@ export class BookingService {
       },
       [], // No existing customer IDs
       { ...customer, tenantId }, // New customer info
-      formResponses
+      formResponses,
+      addons
     );
-
-    // Update booking to mark it was booked by asset type
 
     return {
       message: 'Booking created successfully',
