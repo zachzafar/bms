@@ -19,7 +19,7 @@ import { Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { StorageService } from '@/lib/api/storage';
 import { SelectAsset } from '@repo/api-contract';
-import { parseAsLocalDate, addDays } from '@/lib/utils/date';
+import { parseAsLocalDate, addDays, formatDisplayDate } from '@/lib/utils/date';
 
 const localizer = momentLocalizer(moment);
 
@@ -312,7 +312,7 @@ export default function AssetAvailabilityCalendar({ asset }: { asset: SelectAsse
                     <div>
                       <p className="font-medium">{b.title}</p>
                       <p className="text-sm text-muted-foreground">
-                        {start.toDateString()} – {end.toDateString()}
+                        {formatDisplayDate(start)} – {formatDisplayDate(end)}
                       </p>
                     </div>
                     <Button

@@ -4,30 +4,6 @@ import * as schema from '@repo/api-contract';
 import { DrizzleAsyncProvider } from 'src/drizzle/drizzle.provider';
 import { and, eq, gte, inArray, isNull, lte, or, sql } from 'drizzle-orm';
 
-// Helper function to convert to UTC DateTime
-function toUTCDateTime(input: string | Date): Date {
-  if (typeof input === 'string') {
-    if (input.endsWith('Z')) {
-      return new Date(input);
-    }
-    const [datePart, timePart] = input.split('T');
-    const [year, month, day] = datePart.split('-').map(Number);
-    const [hours, minutes, seconds] = timePart
-      ? timePart.replace('Z', '').split(':').map(Number)
-      : [0, 0, 0];
-    return new Date(Date.UTC(year, month - 1, day, hours, minutes, seconds || 0));
-  }
-
-  // Date objects: use local components (which reflect the original user intent)
-  return new Date(Date.UTC(
-    input.getFullYear(),
-    input.getMonth(),
-    input.getDate(),
-    input.getHours(),
-    input.getMinutes(),
-    input.getSeconds()
-  ));
-}
 
 @Injectable()
 export class BlockedDatesService {
@@ -73,8 +49,8 @@ export class BlockedDatesService {
   async createBlockedDate(data: schema.InsertBlockedDate) {
     const { startDate, endDate, tenantId, assetId, reason, title } = data;
 
-    const utcStart = toUTCDateTime(startDate);
-    const utcEnd = toUTCDateTime(endDate);
+    const utcStart = new Date(startDate);
+    const utcEnd = new Date(endDate);
 
     // Only check for overlapping conflicts on asset-specific blocks
     const assetCondition = assetId

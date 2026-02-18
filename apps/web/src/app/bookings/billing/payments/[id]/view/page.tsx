@@ -10,6 +10,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Badge } from '@/components/ui/badge';
 import { authClient } from '@/lib/api/publicClient';
 import { toast } from 'sonner';
+import { formatDateForInput } from '@/lib/utils/date';
 
 export default function ViewPaymentPage() {
   const router = useRouter();
@@ -114,7 +115,7 @@ export default function ViewPaymentPage() {
           </div>
           <div className="space-y-2">
             <Label>Payment Date</Label>
-            <Input value={new Date(payment.paymentDate ?? payment.createdAt).toISOString().slice(0, 10)} readOnly />
+            <Input value={formatDateForInput(payment.paymentDate ?? payment.createdAt)} readOnly />
           </div>
           <div className="space-y-2 md:col-span-2">
             <Label>Reference</Label>

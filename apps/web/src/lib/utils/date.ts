@@ -1,13 +1,12 @@
 /**
  * Date utilities for consistent date handling across the app.
  *
- * The backend stores dates in UTC. These utilities ensure dates are displayed
- * consistently without timezone-induced day shifts.
+ * The backend stores dates in UTC. These utilities display dates
+ * in the user's local timezone automatically.
  */
 
 /**
- * Formats a date for display, treating it as a UTC date.
- * This prevents timezone-induced day shifts.
+ * Formats a date for display in the user's local timezone.
  *
  * @param date - Date string or Date object from the API
  * @param options - Intl.DateTimeFormat options (defaults to short date format)
@@ -23,16 +22,11 @@ export function formatDisplayDate(
 ): string {
   const dateObj = typeof date === 'string' ? new Date(date) : date;
 
-  // Use UTC methods to avoid timezone shifts
-  return new Intl.DateTimeFormat('en-US', {
-    ...options,
-    timeZone: 'UTC'
-  }).format(dateObj);
+  return new Intl.DateTimeFormat('en-US', options).format(dateObj);
 }
 
 /**
- * Formats a date as YYYY-MM-DD for form inputs.
- * This extracts the UTC date without timezone conversion.
+ * Formats a date as YYYY-MM-DD for form inputs, using local timezone.
  *
  * @param date - Date string or Date object from the API
  * @returns Date string in YYYY-MM-DD format
@@ -40,10 +34,9 @@ export function formatDisplayDate(
 export function formatDateForInput(date: string | Date): string {
   const dateObj = typeof date === 'string' ? new Date(date) : date;
 
-  // Use UTC methods to get the correct date parts
-  const year = dateObj.getUTCFullYear();
-  const month = String(dateObj.getUTCMonth() + 1).padStart(2, '0');
-  const day = String(dateObj.getUTCDate()).padStart(2, '0');
+  const year = dateObj.getFullYear();
+  const month = String(dateObj.getMonth() + 1).padStart(2, '0');
+  const day = String(dateObj.getDate()).padStart(2, '0');
 
   return `${year}-${month}-${day}`;
 }

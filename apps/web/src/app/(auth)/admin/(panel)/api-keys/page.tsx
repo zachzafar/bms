@@ -8,8 +8,8 @@ import { Label } from "@/components/ui/label";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { toast } from "sonner"
 import { AlertCircle, Copy, Plus, Trash2 } from "lucide-react";
-import { format } from "date-fns";
 import { authClient } from '@/lib/api/publicClient';
+import { formatDisplayDate } from '@/lib/utils/date';
 import { usePagination } from '@/hooks/usePagination';
 import { DataTablePagination } from '@/components/ui/data-table-pagination';
 
@@ -174,7 +174,7 @@ export default function ApiKeysPage() {
                 {apiKeys.map((key) => (
                   <TableRow key={key.id}>
                     <TableCell className="font-medium">{key.name}</TableCell>
-                    <TableCell>{format(new Date(key.createdAt), 'MMM d, yyyy')}</TableCell>
+                    <TableCell>{formatDisplayDate(key.createdAt)}</TableCell>
                     <TableCell>
                       {key.key}
                     </TableCell>

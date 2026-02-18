@@ -8,7 +8,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { formatDisplayDate } from '@/lib/utils/date';
+import { formatDisplayDate, formatDateForInput } from '@/lib/utils/date';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import {
@@ -100,7 +100,7 @@ export default function AssetBookings({ asset }: { asset: SelectAsset }) {
                       <FormControl>
                         <Input
                           {...field}
-                          value={field.value ? new Date(field.value).toISOString().split('T')[0] : ''}
+                          value={field.value ? formatDateForInput(field.value) : ''}
                           type="date"
                         />
                       </FormControl>
@@ -117,7 +117,7 @@ export default function AssetBookings({ asset }: { asset: SelectAsset }) {
                       <FormControl>
                         <Input
                           {...field}
-                          value={field.value ? new Date(field.value).toISOString().split('T')[0] : ''}
+                          value={field.value ? formatDateForInput(field.value) : ''}
                           type="date"
                         />
                       </FormControl>
