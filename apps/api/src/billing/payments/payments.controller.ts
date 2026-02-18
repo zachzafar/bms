@@ -1,5 +1,6 @@
 import { Controller, Headers, Res } from '@nestjs/common';
 import { TsRestHandler, tsRestHandler } from '@ts-rest/nest';
+import { contract as c } from "@repo/api-contract";
 import { billingContract } from '@repo/api-contract';
 import * as schema from '@repo/api-contract';
 import { TenantService } from 'src/tenant/tenant.service';
@@ -154,4 +155,62 @@ export class PaymentsController {
       return { status: 200 as const, body: pdfBuffer };
     });
   }
+
+  // ==================== CUSTOMER TYPES ====================
+
+    @TsRestHandler(c.billing.createPaymentMethod)
+    @Roles(PermissionScope.PAYMENTS_WRITE)
+    async createPaymentMethod(@Headers() headers: any) {
+        return tsRestHandler(c.billing.createPaymentMethod, async ({ body }) => {
+            const tenantId = headers['x-tenant-id'];
+            const id = await this.payments.createPaymentMethod(tenantId, body);
+            return { status: 200, body: { id } };
+        });
+    }
+
+    @TsRestHandler(c.billing.getPaymentMethods)
+    @Roles(PermissionScope.PAYMENTS_READ)
+    async getPaymentMethods(@Headers() headers: any) {
+        return tsRestHandler(c.billing.getPaymentMethods, async ({ query }) => {
+            const tenantId = headers['x-tenant-id'];
+            const page = query.page ? Number(query.page) : 1;
+            const pageSize = query.pageSize ? Number(query.pageSize) : 10;
+
+            const paymentMethods = await this.payments.getPaymentMethods(tenantId, page, pageSize);
+            return { status: 200, body: paymentMethods };
+        });
+    }
+
+    @TsRestHandler(c.billing.getPaymentMethod)
+    @Roles(PermissionScope.PAYMENTS_READ)
+    async getPaymentMethod(@Headers() headers: any) {
+        return tsRestHandler(c.billing.getPaymentMethod, async ({ params }) => {
+            const tenantId = headers['x-tenant-id'];
+            const paymentMethod = await this.payments.getPaymentMethodById(tenantId, params.id);
+            if (!paymentMethod) {
+                return { status: 404, body: { message: 'Payment method not found' } };
+            }
+            return { status: 200, body: paymentMethod };
+        });
+    }
+
+    @TsRestHandler(c.billing.updatePaymentMethod)
+    @Roles(PermissionScope.PAYMENTS_WRITE)
+    async updatePaymentMethod(@Headers() headers: any) {
+        return tsRestHandler(c.billing.updatePaymentMethod, async ({ params, body }) => {
+            const tenantId = headers['x-tenant-id'];
+            await this.payments.updatePaymentMethod(tenantId, params.id, body);
+            return { status: 200, body: { message: 'Payment method updated successfully' } };
+        });
+    }
+
+    @TsRestHandler(c.billing.deletePaymentMethod)
+    @Roles(PermissionScope.PAYMENTS_DELETE)
+    async deletePaymentMethod(@Headers() headers: any) {
+        return tsRestHandler(c.billing.deletePaymentMethod, async ({ params }) => {
+            const tenantId = headers['x-tenant-id'];
+            await this.payments.deletePaymentMethod(tenantId, params.id);
+            return { status: 200, body: { message: 'Payment method deleted successfully' } };
+        });
+    }
 }

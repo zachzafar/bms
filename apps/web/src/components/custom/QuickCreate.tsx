@@ -264,3 +264,66 @@ export function QuickCreateCustomerType({ onCreated }: { onCreated?: () => void 
     </>
   );
 }
+
+// --- Payment Method Quick Create ---
+
+function PaymentMethodForm({ onSuccess }: { onSuccess: () => void }) {
+  const [name, setName] = useState('');
+  const queryClient = authClient.useQueryClient();
+
+  const { mutate, isPending } = authClient.billing.createPaymentMethod.useMutation({
+    onSuccess: () => {
+      toast.success('Payment method created');
+      queryClient.invalidateQueries({ queryKey: ['paymentMethods'] });
+      setName('');
+      onSuccess();
+    },
+    onError: () => toast.error('Failed to create payment method'),
+  });
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (!name.trim()) return;
+    mutate({ body: { name: name.trim() } });
+  };
+
+  return (
+    <form onSubmit={handleSubmit} className="space-y-4">
+      <div className="space-y-2">
+        <Label htmlFor="customer-type-name">Name</Label>
+        <Input
+          id="customer-type-name"
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          placeholder="e.g. Card, Cash, Bank Transfer"
+          autoFocus
+        />
+      </div>
+      <Button type="submit" className="w-full" disabled={isPending || !name.trim()}>
+        {isPending ? 'Creating...' : 'Create Payment Method'}
+      </Button>
+    </form>
+  );
+}
+
+export function QuickCreatePaymentMethod({ onCreated }: { onCreated?: () => void }) {
+  const [open, setOpen] = useState(false);
+
+  return (
+    <>
+      <QuickCreateLink label="Create Payment Method" onClick={() => setOpen(true)} />
+      <Dialog open={open} onOpenChange={setOpen}>
+        <DialogContent className="sm:max-w-[400px]">
+          <DialogHeader>
+            <DialogTitle>Quick Create Payment Method</DialogTitle>
+            <DialogDescription>Add a new payment method.</DialogDescription>
+          </DialogHeader>
+          {open && (
+            <PaymentMethodForm onSuccess={() => { setOpen(false); onCreated?.(); }} />
+          )}
+        </DialogContent>
+      </Dialog>
+    </>
+  );
+}

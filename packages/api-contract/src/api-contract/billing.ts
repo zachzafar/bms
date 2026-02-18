@@ -1,6 +1,6 @@
 import { initContract } from "@ts-rest/core";
 import { z } from "zod";
-import { SelectInvoiceSchema, InsertInvoiceSchema, UpdateInvoiceSchema, SelectPaymentSchema, InsertPaymentSchema } from "../database-schema";
+import { SelectInvoiceSchema, InsertInvoiceSchema, UpdateInvoiceSchema, SelectPaymentSchema, InsertPaymentSchema, InsertPaymentMethodSchema, SelectPaymentMethodSchema } from "../database-schema";
 import { pagination } from "./utils";
 
 const c = initContract();
@@ -219,6 +219,73 @@ export const billingContract = c.router({
       }),
     },
   },
+
+  createPaymentMethod: {
+        method: "POST",
+        path: "/payment-methods",
+        body: InsertPaymentMethodSchema.omit({ tenantId: true, id: true, createdAt: true, updatedAt: true, deletedAt: true }),
+        responses: {
+            200: z.object({
+                id: z.number(),
+            }),
+        },
+        summary: "Create a new payment method"
+    },
+    getPaymentMethods: {
+        method: "GET",
+        path: "/payment-methods",
+        responses: {
+            200: z.object({
+                data: z.array(SelectPaymentMethodSchema),
+                pagination
+            }),
+        },
+        query: z.object({
+            page: z.coerce.number().optional(),
+            pageSize: z.coerce.number().optional(),
+        }),
+        summary: "Get all payment methods"
+    },
+    getPaymentMethod: {
+        method: "GET",
+        path: "/payment-methods/:id",
+        responses: {
+            200: SelectPaymentMethodSchema,
+            404: z.object({ message: z.string() }),
+        },
+        pathParams: z.object({
+            id: z.coerce.number(),
+        }),
+        summary: "Get a payment method by ID"
+    },
+    updatePaymentMethod: {
+        method: "PUT",
+        path: "/payment-methods/:id",
+        body: InsertPaymentMethodSchema.omit({ tenantId: true, id: true, createdAt: true, updatedAt: true, deletedAt: true }).partial(),
+        responses: {
+            200: z.object({
+                message: z.string(),
+            }),
+        },
+        pathParams: z.object({
+            id: z.coerce.number(),
+        }),
+        summary: "Update a payment method"
+    },
+    deletePaymentMethod: {
+        method: "DELETE",
+        path: "/payment-methods/:id",
+        responses: {
+            200: z.object({
+                message: z.string(),
+            }),
+        },
+        body: z.object({}).optional(),
+        pathParams: z.object({
+            id: z.coerce.number(),
+        }),
+        summary: "Delete a payment method"
+    },
 
   // Generate invoice from booking
   generateInvoiceFromBooking: {
