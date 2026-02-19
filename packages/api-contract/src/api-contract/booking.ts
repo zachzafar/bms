@@ -31,6 +31,17 @@ export const BookingFormResponseSchema = z.object({
     fieldType: z.string(),
 });
 
+export const BookingTaxFeeResponseSchema = z.object({
+    id: z.number(),
+    taxFeeId: z.number(),
+    name: z.string(),
+    type: z.string(),
+    calculationType: z.string(),
+    rate: z.string(),
+    calculationBasis: z.string(),
+    calculatedAmount: z.string(),
+});
+
 export const ExtendedSelectBookingSchema = SelectBookingSchema.omit({ startDate: true, endDate: true }).extend({
     customer: SelectCustomerSchema.nullable().optional(),
     asset: SelectAssetSchema,
@@ -39,6 +50,7 @@ export const ExtendedSelectBookingSchema = SelectBookingSchema.omit({ startDate:
     endDate: z.coerce.date(),
     formResponses: z.array(BookingFormResponseSchema).optional(),
     addons: z.array(BookingAddonResponseSchema).optional(),
+    taxesFees: z.array(BookingTaxFeeResponseSchema).optional(),
 })
 
 export type ExtendedSelectBooking = z.infer<typeof ExtendedSelectBookingSchema>

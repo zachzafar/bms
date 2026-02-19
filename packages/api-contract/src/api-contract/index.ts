@@ -17,6 +17,7 @@ import { systemAdminContract } from './system-admin';
 import { reportsContract } from './reports';
 import { blockedDatesContract } from './blocked-dates';
 import { addonsContract } from './addons';
+import { taxesFeesContract } from './taxes-fees';
 
 const c = initContract();
 
@@ -40,6 +41,7 @@ export const contract = c.router({
   systemAdmin: systemAdminContract,
   reports: reportsContract,
   addons: addonsContract,
+  taxesFees: taxesFeesContract,
 });
 
 export * from './auth';
@@ -60,3 +62,4 @@ export * from './billing';
 export * from './system-admin';
 export * from './reports';
 export * from './addons';
+export * from './taxes-fees';

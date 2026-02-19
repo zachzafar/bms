@@ -30,6 +30,7 @@ import { APP_GUARD } from '@nestjs/core';
 import { OwnerModule } from './owner/owner.module';
 import { CustomersModule } from './customers/customers.module';
 import { AddonModule } from './addon/addon.module';
+import { TaxFeeModule } from './tax-fee/tax-fee.module';
 var cors = require('cors');
 
 const allowAllCorsEndpoints = [
@@ -72,7 +73,8 @@ const allowAllCorsEndpoints = [
     PaymentsModule,
     OwnerModule,
     CustomersModule,
-    AddonModule
+    AddonModule,
+    TaxFeeModule
   ],
   controllers: [AppController],
   providers: [
