@@ -69,18 +69,7 @@ export type InsertAssetType = z.infer<typeof InsertAssetTypeSchema>;
 export type SelectAssetType = z.infer<typeof SelectAssetTypeSchema>;
 export type UpdateAssetType = z.infer<typeof UpdateAssetTypeSchema>;
 
-export const AssetTypeRelations = relations(AssetType, ({ one, many }) => ({
-    assetTypeHasProperties: many(AssetTypeHasProperties),
-    bookingForms: many(AssetTypeHasBookingForms),
-    tags: many(AssetTypeHasTags),
-    tenant: one(Tenant,{
-        fields: [AssetType.tenantId],
-        references: [Tenant.id]
-    })
-}));
-
-
-// AssetProperty Model
+// AssetProperty Model (declared before AssetTypePropertyValues so relations resolve correctly)
 export const assetProperty = mysqlTable("asset_properties", {
     id: bigint("id", { mode: "number", unsigned: true }).autoincrement().primaryKey(),
     name: varchar("name", { length: 255 }).notNull(),
@@ -90,7 +79,6 @@ export const assetProperty = mysqlTable("asset_properties", {
     updatedAt: timestamp('updatedAt'),
     deletedAt: timestamp('deleted_at'),
 }, (table) => ({
-    // Change the unique index to include both name and tenantId
     nameUniqueIdx: uniqueIndex("name_unique").on(table.name, table.tenantId),
     deletedAtIdx: index("asset_property_deleted_at_idx").on(table.deletedAt),
 }));
@@ -103,6 +91,31 @@ export type InsertAssetProperty = z.infer<typeof InsertAssetPropertySchema>;
 export type SelectAssetProperty = z.infer<typeof SelectAssetPropertySchema>;
 export type UpdateAssetProperty = z.infer<typeof UpdateAssetPropertySchema>;
 
+// AssetTypePropertyValues — type-level default property values (declared before AssetTypeRelations)
+export const AssetTypePropertyValues = mysqlTable("at_property_values", {
+    id: bigint("id", { mode: "number", unsigned: true }).autoincrement().primaryKey(),
+    assetTypeId: bigint("asset_type_id", { mode: 'number', unsigned: true}).notNull().references(() => AssetType.id, { onDelete: 'cascade' }),
+    assetPropertyId: bigint("asset_property_id", { mode: 'number', unsigned: true}).notNull().references(() => assetProperty.id, { onDelete: 'cascade' }),
+    value: text("value").notNull(),
+}, (table) => ({
+    assetTypePropertyValueUniqueIdx: uniqueIndex("at_property_value_unique").on(table.assetTypeId, table.assetPropertyId),
+}));
+
+export const SelectAssetTypePropertyValuesSchema = createSelectSchema(AssetTypePropertyValues);
+export type SelectAssetTypePropertyValues = z.infer<typeof SelectAssetTypePropertyValuesSchema>;
+
+export const AssetTypeRelations = relations(AssetType, ({ one, many }) => ({
+    assetTypeHasProperties: many(AssetTypeHasProperties),
+    bookingForms: many(AssetTypeHasBookingForms),
+    tags: many(AssetTypeHasTags),
+    propertyValues: many(AssetTypePropertyValues),
+    tenant: one(Tenant,{
+        fields: [AssetType.tenantId],
+        references: [Tenant.id]
+    })
+}));
+
+
 export const AssetPropertyRelations = relations(assetProperty, ({ one }) => ({
     assetTypeHasProperties: one(AssetTypeHasProperties),
     tenant: one(Tenant,{
@@ -110,7 +123,6 @@ export const AssetPropertyRelations = relations(assetProperty, ({ one }) => ({
         references: [Tenant.id]
     }),
 }));
-
 
 
 // AssetTypeHasProperties Model
@@ -295,4 +307,14 @@ export const AssetTypeHasTagsRelations = relations(AssetTypeHasTags, ({ one }) =
 }));
 
 
+export const AssetTypePropertyValuesRelations = relations(AssetTypePropertyValues, ({ one }) => ({
+    assetType: one(AssetType, {
+        fields: [AssetTypePropertyValues.assetTypeId],
+        references: [AssetType.id],
+    }),
+    assetProperty: one(assetProperty, {
+        fields: [AssetTypePropertyValues.assetPropertyId],
+        references: [assetProperty.id],
+    }),
+}));
 

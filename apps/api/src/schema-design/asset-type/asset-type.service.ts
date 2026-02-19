@@ -277,6 +277,9 @@ export class AssetTypeService {
                 eq(at.tenantId, tenantId),
                 isNull(at.deletedAt)
             ),
+            with: {
+                propertyValues: { with: { assetProperty: true } },
+            },
         });
 
         if (!assetType) {
@@ -297,7 +300,48 @@ export class AssetTypeService {
             name: assetType.name,
             image: imageUrl,
             description: assetType.description || '',
+            propertyValues: (assetType.propertyValues ?? []).map(pv => ({
+                id: pv.id,
+                assetTypeId: pv.assetTypeId,
+                assetPropertyId: pv.assetPropertyId,
+                value: pv.value,
+                property: {
+                    name: pv.assetProperty.name,
+                    propertyType: pv.assetProperty.propertyType,
+                },
+            })),
         };
+    }
+
+    async getAssetTypePropertyValues(assetTypeId: number) {
+        const rows = await this.db.query.AssetTypePropertyValues.findMany({
+            where: (pv, { eq }) => eq(pv.assetTypeId, assetTypeId),
+            with: { assetProperty: true },
+        });
+        return rows.map(pv => ({
+            id: pv.id,
+            assetTypeId: pv.assetTypeId,
+            assetPropertyId: pv.assetPropertyId,
+            value: pv.value,
+            property: {
+                name: pv.assetProperty.name,
+                propertyType: pv.assetProperty.propertyType,
+            },
+        }));
+    }
+
+    async setAssetTypePropertyValues(assetTypeId: number, values: { propertyId: number; value: string }[]) {
+        await this.db.delete(schema.AssetTypePropertyValues)
+            .where(eq(schema.AssetTypePropertyValues.assetTypeId, assetTypeId));
+        if (values.length > 0) {
+            await this.db.insert(schema.AssetTypePropertyValues).values(
+                values.map(v => ({
+                    assetTypeId,
+                    assetPropertyId: v.propertyId,
+                    value: v.value,
+                }))
+            );
+        }
     }
 
     async uploadsetTypeImage(tenantId: string, assetTypeId: number, imageBuffer: Buffer): Promise<string> {
