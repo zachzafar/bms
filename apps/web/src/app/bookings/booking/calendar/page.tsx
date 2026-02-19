@@ -21,6 +21,7 @@ import { toast } from "sonner";
 import { StorageService } from "@/lib/api/storage";
 import { queryClient } from "@/providers/tanstack";
 import { parseAsLocalDate, addDays, formatDisplayDate } from "@/lib/utils/date";
+import { useRouter } from "next/navigation";
 
 const localizer = momentLocalizer(moment);
 const BLOCKED_DATES_KEY = ["blockedDates"];
@@ -34,7 +35,7 @@ const isDateInRange = (date: Date, start: Date, end: Date) => {
 };
 
 type BookingItem = {
-  id: number;
+  id: string;
   startDate: Date;
   endDate: Date;
   customerName: string;
@@ -55,6 +56,7 @@ export default function BookingCalendar() {
   const [selectedRange, setSelectedRange] = useState<{ start: Date; end: Date } | null>(null);
   const [currentDate, setCurrentDate] = useState(new Date());
   const [currentView, setCurrentView] = useState<View>("month");
+  const router = useRouter();
 
   const { data: bookingsData } = authClient.booking.getBookings.useQuery({
     queryKey: BOOKINGS_QUERY_KEY,
@@ -86,7 +88,7 @@ export default function BookingCalendar() {
   const bookings: BookingItem[] = useMemo(() => {
     if (!bookingsData?.body?.data) return [];
     return bookingsData.body.data.map((b: any) => ({
-      id: Number(b.id),
+      id: b.id,
       startDate: parseAsLocalDate(b.startDate),
       endDate: parseAsLocalDate(b.endDate),
       customerName: b.customer?.name || "Unknown",
@@ -115,7 +117,7 @@ export default function BookingCalendar() {
       start: b.startDate,
       end: addDays(b.endDate, 1),
       allDay: true,
-      resource: { type: "booking", status: b.status },
+      resource: { type: "booking", status: b.status, bookingId: b.id },
     }));
   }, [bookings]);
 
@@ -179,6 +181,13 @@ export default function BookingCalendar() {
             onSelectSlot={(slotInfo: SlotInfo) =>
               setSelectedRange({ start: slotInfo.start, end: slotInfo.end })
             }
+            onSelectEvent={(event) => {
+              if (event.resource?.type === 'booking') {
+                console.log(event)
+                // navigate to booking detail, open a modal, etc.
+                router.push(`/bookings/booking/${event.resource.bookingId}`)
+              }
+            }}
 
             /* 🔹 full grey tile */
             dayPropGetter={(date) => {
