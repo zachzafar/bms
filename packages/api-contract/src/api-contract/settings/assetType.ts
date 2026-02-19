@@ -4,6 +4,17 @@ import { z } from "zod";
 import { Asset, InsertAssetPropertySchema, InsertAssetTypeSchema, SelectAssetPropertySchema, SelectAssetTypeSchema, UpdateAssetTypeSchema, SelectBookingFormSchema, SelectTagSchema } from "../../database-schema";
 import { pagination } from "../utils";
 
+export const AssetTypePropertyValueSchema = z.object({
+    id: z.number(),
+    assetTypeId: z.number(),
+    assetPropertyId: z.number(),
+    value: z.string(),
+    property: z.object({
+        name: z.string(),
+        propertyType: z.enum(['number', 'string', 'textbox', 'list']),
+    }),
+});
+
 const c = initContract();
 
 export const AssetTypeWithPropertiesSchema = z.object({
@@ -169,7 +180,32 @@ export const assetTypeContract = c.router({
                     name: z.string(),
                     image: z.string(),
                     description: z.string(),
+                    propertyValues: z.array(AssetTypePropertyValueSchema).optional(),
             })
         }
+    },
+    getAssetTypePropertyValues: {
+        method: 'GET',
+        path: '/asset-type/:id/property-values',
+        pathParams: z.object({ id: z.coerce.number() }),
+        responses: {
+            200: z.array(AssetTypePropertyValueSchema),
+        },
+        summary: 'Get property values for an asset type',
+    },
+    setAssetTypePropertyValues: {
+        method: 'POST',
+        path: '/asset-type/:id/property-values',
+        pathParams: z.object({ id: z.coerce.number() }),
+        body: z.object({
+            values: z.array(z.object({
+                propertyId: z.number(),
+                value: z.string(),
+            })),
+        }),
+        responses: {
+            200: z.null(),
+        },
+        summary: 'Set (upsert) property values for an asset type',
     },
 })

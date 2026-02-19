@@ -61,6 +61,14 @@ export default function BookingDetailsPage() {
     }
   });
 
+  // Fetch invoice for this booking (contains rate segment line items)
+  const { data: invoiceData } = authClient.billing.getInvoices.useQuery({
+    queryKey: ['booking-invoice', bookingId],
+    queryData: { query: { bookingId } },
+  });
+  const invoice = invoiceData?.body?.data?.[0];
+  const invoiceItems = invoice?.items ?? [];
+
   // Asset search and filter state
   const [assetSearch, setAssetSearch] = useState('');
   const [assetTypeFilter, setAssetTypeFilter] = useState<number | undefined>(undefined);
@@ -306,6 +314,55 @@ export default function BookingDetailsPage() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Cost Breakdown */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <DollarSign className="h-5 w-5" />
+            Cost Breakdown
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-1 text-sm">
+            {invoiceItems.length > 0 ? (
+              <>
+                {invoiceItems.map((item) => (
+                  <div key={item.id} className="flex justify-between py-1.5">
+                    <span className="text-muted-foreground">{item.description}</span>
+                    <span className="font-medium">${Number(item.totalPrice).toFixed(2)}</span>
+                  </div>
+                ))}
+              </>
+            ) : (
+              <div className="flex justify-between py-1.5">
+                <span className="text-muted-foreground">Rates</span>
+                <span className="font-medium">${Number(booking.totalPrice ?? 0).toFixed(2)}</span>
+              </div>
+            )}
+
+            {/* Subtotal (if taxes present) */}
+            {invoice && Number(invoice.taxAmount) > 0 && (
+              <div className="flex justify-between py-1.5 text-muted-foreground border-t mt-1 pt-2">
+                <span>Subtotal</span>
+                <span>${Number(invoice.subtotal).toFixed(2)}</span>
+              </div>
+            )}
+            {invoice && Number(invoice.taxAmount) > 0 && (
+              <div className="flex justify-between py-1.5 text-muted-foreground">
+                <span>Taxes & Fees</span>
+                <span>${Number(invoice.taxAmount).toFixed(2)}</span>
+              </div>
+            )}
+
+            {/* Grand Total */}
+            <div className="border-t mt-3 pt-3 flex justify-between font-semibold text-base">
+              <span>Total</span>
+              <span>${Number(booking.totalPrice ?? 0).toFixed(2)}</span>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Form Responses */}
       {booking.formResponses && booking.formResponses.length > 0 && (

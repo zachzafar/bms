@@ -7,6 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Input } from '@/components/ui/input';
 import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from '@/components/ui/table';
 import { Pencil, Trash2, Upload, ImageIcon } from 'lucide-react';
+import AssetTypeDefaultSpecsDialog from './AssetTypeDefaultSpecsDialog';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Form, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
@@ -431,6 +432,7 @@ export default function AssetTypes() {
                         >
                           <Upload className="h-4 w-4" />
                         </Button>
+                        <AssetTypeDefaultSpecsDialog assetTypeId={type.id} assetTypeName={type.name} />
                         <Button
                           variant="ghost"
                           size="sm"

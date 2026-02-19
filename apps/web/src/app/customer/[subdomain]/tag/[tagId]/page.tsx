@@ -99,6 +99,24 @@ export default function TagBookingPage() {
           </CardHeader>
 
           <CardContent className="space-y-6">
+            {/* Asset type specifications */}
+            {assetType.propertyValues && assetType.propertyValues.length > 0 && (
+              <div>
+                <h3 className="font-semibold mb-3">Specifications</h3>
+                <dl className="space-y-0">
+                  {assetType.propertyValues.map((pv) => (
+                    <div
+                      key={pv.id}
+                      className="flex justify-between py-2 border-b border-border"
+                    >
+                      <dt className="font-medium text-foreground">{pv.property.name}:</dt>
+                      <dd className="text-muted-foreground">{pv.value}</dd>
+                    </div>
+                  ))}
+                </dl>
+              </div>
+            )}
+
             <div className="bg-muted/50 rounded-lg p-4">
               <h3 className="font-semibold mb-2">How it works</h3>
               <p className="text-muted-foreground">

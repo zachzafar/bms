@@ -24,6 +24,18 @@ export default function CustomerAssetDetailPage() {
     },
   });
 
+  const assetTypeId = response?.status === 200 ? response.body.assetTypeId : null;
+
+  const { data: assetTypeResponse } = client.settings.assetType.customerGetAssetType.useQuery({
+    queryKey: ['customer-asset-type', subdomain, assetTypeId],
+    queryData: { params: { subdomain, id: assetTypeId as number } },
+    enabled: !!assetTypeId,
+  });
+
+  const typePropertyValues = assetTypeResponse?.status === 200
+    ? (assetTypeResponse.body.propertyValues ?? [])
+    : [];
+
   const asset = response?.status === 200 ? response.body : null;
   const [selectedImageIndex, setSelectedImageIndex] = useState(0);
 
@@ -157,11 +169,22 @@ export default function CustomerAssetDetailPage() {
 
                 <Separator className="my-6" />
 
-                {/* Properties */}
-                {asset.properties.length > 0 && (
+                {/* Properties — type-level defaults + per-asset overrides merged */}
+                {(asset.properties.length > 0 || typePropertyValues.length > 0) && (
                   <div className="mb-8">
                     <h2 className="text-lg font-semibold text-foreground mb-3">Specifications</h2>
                     <dl className="space-y-2">
+                      {/* Type-level default specs (shown for all assets of this type) */}
+                      {typePropertyValues.map((pv) => (
+                        <div
+                          key={`type-${pv.id}`}
+                          className="flex justify-between py-2 border-b border-border"
+                        >
+                          <dt className="font-medium text-foreground">{pv.property.name}:</dt>
+                          <dd className="text-foreground">{pv.value}</dd>
+                        </div>
+                      ))}
+                      {/* Per-asset specs (specific to this unit) */}
                       {asset.properties.map((prop) => (
                         <div
                           key={prop.id}

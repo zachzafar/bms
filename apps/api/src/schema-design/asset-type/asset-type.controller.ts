@@ -143,7 +143,7 @@ export class AssetTypeController {
             if (!tenant) {
                 return {
                     status: 200,
-                    body: { id: 0, name: '', image: '', description: '' }
+                    body: { id: 0, name: '', image: '', description: '', propertyValues: [] }
                 };
             }
 
@@ -151,11 +151,31 @@ export class AssetTypeController {
             if (!assetType) {
                 return {
                     status: 200,
-                    body: { id: 0, name: '', image: '', description: '' }
+                    body: { id: 0, name: '', image: '', description: '', propertyValues: [] }
                 };
             }
 
             return { status: 200, body: assetType };
+        });
+    }
+
+    @TsRestHandler(contract.settings.assetType.getAssetTypePropertyValues)
+    async getAssetTypePropertyValues(@Headers() headers: any): Promise<ReturnType<typeof tsRestHandler>> {
+        return tsRestHandler(contract.settings.assetType.getAssetTypePropertyValues, async ({ params }) => {
+            const tenantId = headers['x-tenant-id'];
+            await this.TenantService.validateTenantAccess(tenantId, schema.AssetType, params.id);
+            const values = await this.assetTypeService.getAssetTypePropertyValues(params.id);
+            return { status: 200, body: values };
+        });
+    }
+
+    @TsRestHandler(contract.settings.assetType.setAssetTypePropertyValues)
+    async setAssetTypePropertyValues(@Headers() headers: any): Promise<ReturnType<typeof tsRestHandler>> {
+        return tsRestHandler(contract.settings.assetType.setAssetTypePropertyValues, async ({ params, body }) => {
+            const tenantId = headers['x-tenant-id'];
+            await this.TenantService.validateTenantAccess(tenantId, schema.AssetType, params.id);
+            await this.assetTypeService.setAssetTypePropertyValues(params.id, body.values);
+            return { status: 200, body: null };
         });
     }
 
