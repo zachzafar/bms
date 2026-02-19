@@ -11,6 +11,7 @@ import { Cron } from '@nestjs/schedule';
 import { generateCustomerReminderEmail, generateStatusUpdateEmailForCustomer, generateStatusUpdateEmailForTenant, generateTenantReminderEmail } from './booking.utils';
 import { RatesService } from 'src/rates/rates.service';
 import { AddonService } from 'src/addon/addon.service';
+import { TaxFeeService } from 'src/tax-fee/tax-fee.service';
 
 
 @Injectable()
@@ -20,6 +21,7 @@ export class BookingService {
     private readonly eventEmitter: EventEmitter2,
     private readonly ratesService: RatesService,
     private readonly addonService: AddonService,
+    private readonly taxFeeService: TaxFeeService,
   ) { }
 
   async createBooking(
@@ -113,7 +115,16 @@ export class BookingService {
         }
       }
 
-      const totalPrice = rateTotal + addonsTotal;
+      const subtotal = rateTotal + addonsTotal;
+
+      // Process taxes and fees
+      const totalBookingUnits = rateSegments.reduce((sum, seg) => sum + seg.units, 0) || 1;
+      const activeTaxFees = await this.taxFeeService.getActiveForTenant(asset.tenantId);
+      const { items: taxFeeItems, totalTaxAmount } = this.taxFeeService.calculateTaxesAndFees(
+        subtotal, totalBookingUnits, activeTaxFees as any
+      );
+
+      const totalPrice = subtotal + totalTaxAmount;
 
       // Create booking
       const [{ id }] = await tx.insert(schema.Booking).values({
@@ -139,6 +150,22 @@ export class BookingService {
         );
       }
 
+      // Insert booking tax/fee snapshot rows
+      if (taxFeeItems.length > 0) {
+        await tx.insert(schema.BookingTaxFee).values(
+          taxFeeItems.map(tf => ({
+            bookingId: id,
+            taxFeeId: tf.taxFeeId,
+            name: tf.name,
+            type: tf.type as 'tax' | 'fee',
+            calculationType: tf.calculationType as 'percentage' | 'fixed_per_unit' | 'fixed_flat',
+            rate: parseFloat(tf.rate).toFixed(4),
+            calculationBasis: tf.calculationBasis as 'net' | 'gross',
+            calculatedAmount: tf.calculatedAmount.toFixed(2),
+          }))
+        );
+      }
+
       // Create related records
       await this.createBlockedDateForBooking(tx, asset.tenantId, booking.assetId, utcStart, utcEnd, id);
       await this.createBookingUpdateToken(tx, id, customerId, booking.startDate);
@@ -147,7 +174,7 @@ export class BookingService {
         await this.saveFormResponses(tx, id, formResponses);
       }
 
-      await this.createBookingInvoice(tx, asset, id, customerId, utcStart, utcEnd, totalPrice, rateSegments, processedAddons);
+      await this.createBookingInvoice(tx, asset, id, customerId, utcStart, utcEnd, subtotal, totalTaxAmount, totalPrice, rateSegments, processedAddons, taxFeeItems);
 
       return id;
     });
@@ -326,7 +353,7 @@ export class BookingService {
     );
   }
 
-  // Helper: Create invoice for booking (supports split-rate segments)
+  // Helper: Create invoice for booking (supports split-rate segments, add-ons, and taxes/fees)
   private async createBookingInvoice(
     tx: any,
     asset: { id: string; name: string; tenantId: string },
@@ -334,9 +361,12 @@ export class BookingService {
     customerId: number,
     startDate: Date,
     endDate: Date,
-    totalPrice: number,
+    subtotal: number,
+    taxAmount: number,
+    totalAmount: number,
     rateSegments: Array<{ rate: any; units: number; segmentStart: Date; segmentEnd: Date; segmentPrice: number }>,
-    processedAddons: Array<{ addonItemId: number; name: string; quantity: number; unitPrice: number; billingType: string; totalPrice: number }> = []
+    processedAddons: Array<{ addonItemId: number; name: string; quantity: number; unitPrice: number; billingType: string; totalPrice: number }> = [],
+    processedTaxFees: Array<{ taxFeeId: number; name: string; type: string; calculationType: string; rate: string; calculationBasis: string; calculatedAmount: number }> = []
   ) {
     const invoiceNumber = `INV-${Date.now()}-${bookingId.slice(0, 8).toUpperCase()}`;
 
@@ -346,9 +376,9 @@ export class BookingService {
       status: 'pending',
       issueDate: new Date(),
       dueDate: startDate,
-      subtotal: totalPrice.toFixed(2),
-      taxAmount: '0.00',
-      totalAmount: totalPrice.toFixed(2),
+      subtotal: subtotal.toFixed(2),
+      taxAmount: taxAmount.toFixed(2),
+      totalAmount: totalAmount.toFixed(2),
       notes: `Invoice for booking ${bookingId}`,
       customerId,
       bookingId,
@@ -371,7 +401,7 @@ export class BookingService {
       }
     } else {
       // Fallback: single line item (e.g. when price was provided manually)
-      const ratePortion = totalPrice - processedAddons.reduce((sum, a) => sum + a.totalPrice, 0);
+      const ratePortion = subtotal - processedAddons.reduce((sum, a) => sum + a.totalPrice, 0);
       const durationUnits = this.calculateDurationUnits(startDate, endDate);
       const pricePerUnit = durationUnits > 0 ? ratePortion / durationUnits : ratePortion;
       await tx.insert(schema.InvoiceItem).values({
@@ -392,6 +422,23 @@ export class BookingService {
         quantity: addon.quantity,
         unitPrice: addon.unitPrice.toFixed(2),
         totalPrice: addon.totalPrice.toFixed(2),
+      });
+    }
+
+    // Tax/fee invoice items
+    for (const tf of processedTaxFees) {
+      let description = tf.name;
+      if (tf.calculationType === 'percentage') {
+        description = `${tf.name} (${parseFloat(tf.rate)}%)`;
+      } else if (tf.calculationType === 'fixed_per_unit') {
+        description = `${tf.name} ($${parseFloat(tf.rate)}/unit)`;
+      }
+      await tx.insert(schema.InvoiceItem).values({
+        invoiceId,
+        description,
+        quantity: 1,
+        unitPrice: tf.calculatedAmount.toFixed(2),
+        totalPrice: tf.calculatedAmount.toFixed(2),
       });
     }
   }
@@ -687,6 +734,22 @@ export class BookingService {
       .where(eq(schema.BookingAddon.bookingId, bookingId))
       .execute();
 
+    // Fetch taxes/fees for this booking
+    const bookingTaxFees = await this.db
+      .select({
+        id: schema.BookingTaxFee.id,
+        taxFeeId: schema.BookingTaxFee.taxFeeId,
+        name: schema.BookingTaxFee.name,
+        type: schema.BookingTaxFee.type,
+        calculationType: schema.BookingTaxFee.calculationType,
+        rate: schema.BookingTaxFee.rate,
+        calculationBasis: schema.BookingTaxFee.calculationBasis,
+        calculatedAmount: schema.BookingTaxFee.calculatedAmount,
+      })
+      .from(schema.BookingTaxFee)
+      .where(eq(schema.BookingTaxFee.bookingId, bookingId))
+      .execute();
+
     return {
       ...booking.booking,
       startDate: booking.booking.startDate,
@@ -696,6 +759,7 @@ export class BookingService {
       assetType: booking.asset_type,
       formResponses: formFieldValues,
       addons: bookingAddons,
+      taxesFees: bookingTaxFees,
     };
   }
 

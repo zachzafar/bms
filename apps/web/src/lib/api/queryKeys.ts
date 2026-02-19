@@ -28,6 +28,7 @@ export const DOCUMENTS_QUERY_KEY = ['documents'];
 export const USERS_QUERY_KEY = ['users'];
 export const ASSETS_QUERY_KEY = ['assets'];
 export const ADDONS_QUERY_KEY = ['addons'];
+export const TAXES_FEES_QUERY_KEY = ['taxesFees'];
 
 // Extended query keys for specific contexts
 export const CONTACT_INQUIRIES_QUERY_KEY = ['contact-inquiries'];

@@ -35,6 +35,7 @@ import {
   ChevronDown,
   Timer,
   Package,
+  Receipt,
 } from "lucide-react"
 
 import { FEATURE_PERMISSIONS } from "@/lib/feature-permissions"
@@ -83,6 +84,12 @@ const items: SidebarItem[] = [
         title: "Add-Ons",
         url: "/bookings/booking/addons",
         icon: Package,
+        feature: "settings",
+      },
+      {
+        title: "Taxes & Fees",
+        url: "/bookings/booking/taxes-fees",
+        icon: Receipt,
         feature: "settings",
       },
       {
@@ -168,6 +175,12 @@ const items: SidebarItem[] = [
         url: "/bookings/billing/payments",
         icon: CreditCard,
         feature: "invoices",
+      },
+      {
+        title: "Config",
+        url: "/bookings/billing/config",
+        icon: Settings,
+        feature: "settings",
       },
     ],
   },

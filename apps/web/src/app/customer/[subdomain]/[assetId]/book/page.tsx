@@ -86,6 +86,14 @@ export default function CustomerBookingPage() {
   const availableAddons = addonsResponse?.status === 200 ? addonsResponse.body : [];
   const [selectedAddons, setSelectedAddons] = useState<Record<number, number>>({});
 
+  // Taxes & Fees
+  const { data: taxFeesResponse } = client.taxesFees.getPublicTaxFees.useQuery({
+    queryKey: ['public-tax-fees', subdomain],
+    queryData: { params: { subdomain } },
+    enabled: !!subdomain,
+  });
+  const availableTaxFees = taxFeesResponse?.status === 200 ? taxFeesResponse.body : [];
+
   const updateAddonQty = (addonId: number, delta: number) => {
     setSelectedAddons(prev => {
       const current = prev[addonId] || 0;
@@ -346,14 +354,57 @@ export default function CustomerBookingPage() {
                             </p>
                           );
                         })}
-                        <p className="text-green-900 font-semibold mt-1">
-                          Total: ${(totalPrice + Object.entries(selectedAddons).reduce((sum, [id, qty]) => {
+                        {(() => {
+                          const addonsTotal = Object.entries(selectedAddons).reduce((sum, [id, qty]) => {
                             const addon = availableAddons.find((a: any) => a.id === Number(id));
                             if (!addon) return sum;
                             const price = Number(addon.price);
                             return sum + (addon.billingType === 'per_unit' ? price * qty * numberOfNights : price * qty);
-                          }, 0)).toFixed(2)}
-                        </p>
+                          }, 0);
+                          const subtotal = totalPrice + addonsTotal;
+                          const sorted = [...availableTaxFees].sort((a: any, b: any) => a.sortOrder - b.sortOrder);
+                          const netItems = sorted.filter((tf: any) => tf.calculationBasis === 'net');
+                          const grossItems = sorted.filter((tf: any) => tf.calculationBasis === 'gross');
+                          const computeTf = (tf: any, base: number) => {
+                            const rate = Number(tf.rate);
+                            let amount = 0;
+                            if (tf.calculationType === 'percentage') amount = base * (rate / 100);
+                            else if (tf.calculationType === 'fixed_per_unit') {
+                              const units = tf.maxUnits ? Math.min(numberOfNights, tf.maxUnits) : numberOfNights;
+                              amount = rate * units;
+                            } else amount = rate;
+                            if (tf.minAmount) amount = Math.max(amount, Number(tf.minAmount));
+                            if (tf.maxAmount) amount = Math.min(amount, Number(tf.maxAmount));
+                            return Math.round(amount * 100) / 100;
+                          };
+                          let netTaxTotal = 0;
+                          const taxLines: Array<{ name: string; amount: number; rate: string; calcType: string }> = [];
+                          for (const tf of netItems) {
+                            const amt = computeTf(tf, subtotal);
+                            netTaxTotal += amt;
+                            taxLines.push({ name: tf.name, amount: amt, rate: tf.rate, calcType: tf.calculationType });
+                          }
+                          const grossBase = subtotal + netTaxTotal;
+                          let grossTaxTotal = 0;
+                          for (const tf of grossItems) {
+                            const amt = computeTf(tf, grossBase);
+                            grossTaxTotal += amt;
+                            taxLines.push({ name: tf.name, amount: amt, rate: tf.rate, calcType: tf.calculationType });
+                          }
+                          const grandTotal = subtotal + netTaxTotal + grossTaxTotal;
+                          return (
+                            <>
+                              {taxLines.map((line, i) => (
+                                <p key={`tax-${i}`} className="text-green-800 font-medium">
+                                  {line.name}{line.calcType === 'percentage' ? ` (${Number(line.rate)}%)` : ''}: ${line.amount.toFixed(2)}
+                                </p>
+                              ))}
+                              <p className="text-green-900 font-semibold mt-1">
+                                Total: ${grandTotal.toFixed(2)}
+                              </p>
+                            </>
+                          );
+                        })()}
                       </>
                     ) : (
                       <p className="text-red-600 font-medium">
