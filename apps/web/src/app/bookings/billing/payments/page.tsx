@@ -15,7 +15,7 @@ import { Label } from '@/components/ui/label';
 import { formatDisplayDate } from '@/lib/utils/date';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Textarea } from '@/components/ui/textarea';
-import { Form,FormField, FormItem, FormLabel, FormControl, FormMessage } from '@/components/ui/form';
+import { Form, FormField, FormItem, FormLabel, FormControl, FormMessage } from '@/components/ui/form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
@@ -82,12 +82,20 @@ export default function PaymentsPage() {
   // Fetch payments and customers
   const { data: paymentsData, refetch: refetchPayments } = authClient.billing.getPayments.useQuery({
     queryKey: ['payments', page, pageSize],
-    queryData: {query:queryParams},
+    queryData: { query: queryParams },
   });
 
   const { data: customersData } = authClient.customers.getCustomers.useQuery({
     queryKey: ['customers'],
   });
+
+  const { data: paymentMethodsData } = authClient.billing.getPaymentMethods.useQuery({
+    queryKey: ['paymentMethods'],
+  });
+
+  const paymentMethods =
+    paymentMethodsData?.status === 200 ? paymentMethodsData.body.data : [];
+
 
   // Fetch invoices for unpaid listing in modal
   const { data: invoicesData } = authClient.billing.getInvoices.useQuery({
@@ -125,18 +133,6 @@ export default function PaymentsPage() {
   const getCustomerName = (customerId: string) => {
     const customer = customers.find((c) => String(c.id) === customerId);
     return customer ? customer.name || customer.email : 'Unknown Customer';
-  };
-
-  const getMethodLabel = (method: string) => {
-    const methodLabels: Record<string, string> = {
-      credit_card: 'Credit Card',
-      bank_transfer: 'Bank Transfer',
-      cash: 'Cash',
-      check: 'Check',
-      paypal: 'PayPal',
-      other: 'Other',
-    };
-    return methodLabels[method] || method;
   };
 
   const getStatusColor = (status: string) => {
@@ -342,13 +338,15 @@ export default function PaymentsPage() {
                   <SelectValue placeholder="All methods" />
                 </SelectTrigger>
                 <SelectContent>
+                  {/* Always keep the "All Methods" option */}
                   <SelectItem value="all">All Methods</SelectItem>
-                  <SelectItem value="credit_card">Credit Card</SelectItem>
-                  <SelectItem value="bank_transfer">Bank Transfer</SelectItem>
-                  <SelectItem value="cash">Cash</SelectItem>
-                  <SelectItem value="check">Check</SelectItem>
-                  <SelectItem value="paypal">PayPal</SelectItem>
-                  <SelectItem value="other">Other</SelectItem>
+
+                  {/* Dynamically render the fetched payment methods */}
+                  {paymentMethods.map((method) => (
+                    <SelectItem key={method.id} value={method.name}>
+                      {method.name}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>
@@ -382,43 +380,59 @@ export default function PaymentsPage() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filteredPayments.map((payment) => (
-                  <TableRow key={payment.id}>
-                    <TableCell className="font-medium">#{payment.id}</TableCell>
-                    <TableCell>{getCustomerName(String(payment.customerId))}</TableCell>
-                    <TableCell className="font-medium">${parseFloat(payment.amount).toFixed(2)}</TableCell>
-                    <TableCell>
-                      <Badge variant="outline">{getMethodLabel(payment.paymentMethod)}</Badge>
-                    </TableCell>
-                    <TableCell>{payment.reference || '-'}</TableCell>
-                    <TableCell>
-                      <Badge className={getStatusColor(payment.status)}>{payment.status}</Badge>
-                    </TableCell>
-                    <TableCell>{formatDisplayDate(payment.createdAt)}</TableCell>
-                    <TableCell>
-                      <div className="flex items-center gap-2">
-                        <Button variant="outline" size="sm" onClick={() => router.push(`/bookings/billing/payments/${payment.id}/view`)}>
-                          <Eye className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => handleDownloadReceiptPdf(payment.id)}
-                        >
-                          <Download className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          variant="destructive"
-                          size="sm"
-                          onClick={() => handleDeletePayment(payment.id)}
-                          disabled={deletingPayment}
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ))}
+                {filteredPayments.map((payment) => {
+                  const methodName =
+                    paymentMethods.find((m) => String(m.id) === String(payment.paymentMethod))
+                      ?.name || payment.paymentMethod;
+
+                  return (
+                    <TableRow key={payment.id}>
+                      <TableCell className="font-medium">#{payment.id}</TableCell>
+                      <TableCell>{getCustomerName(String(payment.customerId))}</TableCell>
+                      <TableCell className="font-medium">
+                        ${parseFloat(payment.amount).toFixed(2)}
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant="outline">{methodName}</Badge>
+                      </TableCell>
+                      <TableCell>{payment.reference || '-'}</TableCell>
+                      <TableCell>
+                        <Badge className={getStatusColor(payment.status)}>
+                          {payment.status}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>{formatDisplayDate(payment.createdAt)}</TableCell>
+                      <TableCell>
+                        <div className="flex items-center gap-2">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() =>
+                              router.push(`/bookings/billing/payments/${payment.id}/view`)
+                            }
+                          >
+                            <Eye className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleDownloadReceiptPdf(payment.id)}
+                          >
+                            <Download className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="destructive"
+                            size="sm"
+                            onClick={() => handleDeletePayment(payment.id)}
+                            disabled={deletingPayment}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
               </TableBody>
             </Table>
           )}
@@ -553,12 +567,11 @@ export default function PaymentsPage() {
                               <SelectValue placeholder="Select method" />
                             </SelectTrigger>
                             <SelectContent>
-                              <SelectItem value="credit_card">Credit Card</SelectItem>
-                              <SelectItem value="bank_transfer">Bank Transfer</SelectItem>
-                              <SelectItem value="cash">Cash</SelectItem>
-                              <SelectItem value="check">Check</SelectItem>
-                              <SelectItem value="paypal">PayPal</SelectItem>
-                              <SelectItem value="other">Other</SelectItem>
+                              {paymentMethods.map((method) => (
+                                <SelectItem key={method.id} value={String(method.id)}>
+                                  {method.name}
+                                </SelectItem>
+                              ))}
                             </SelectContent>
                           </Select>
                         </FormControl>
@@ -566,6 +579,7 @@ export default function PaymentsPage() {
                       </FormItem>
                     )}
                   />
+
 
                   <FormField
                     control={form.control}

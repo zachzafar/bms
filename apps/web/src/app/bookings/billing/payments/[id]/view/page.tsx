@@ -29,6 +29,17 @@ export default function ViewPaymentPage() {
     queryKey: ['customers'],
   });
 
+  const { data: paymentMethodsData } = authClient.billing.getPaymentMethods.useQuery({
+    queryKey: ['paymentMethods'],
+  });
+
+  const paymentMethods = paymentMethodsData?.body?.data ?? [];
+
+  // Helper to get method name from ID
+  const getMethodLabel = (methodId: string | number) => {
+    return paymentMethods.find((m) => String(m.id) === String(methodId))?.name ?? String(methodId);
+  };
+
   const customers = customersData?.body.data ?? [];
 
   const customerName = useMemo(() => {
@@ -46,18 +57,6 @@ export default function ViewPaymentPage() {
 
   if (loading || paymentLoading) return <div className="container mx-auto py-10 text-center">Loading payment...</div>;
   if (!payment) return <div className="container mx-auto py-10 text-center text-red-500">Payment not found.</div>;
-
-  const getMethodLabel = (method: string) => {
-    const methodLabels: Record<string, string> = {
-      credit_card: 'Credit Card',
-      bank_transfer: 'Bank Transfer',
-      cash: 'Cash',
-      check: 'Check',
-      paypal: 'PayPal',
-      other: 'Other',
-    };
-    return methodLabels[method] || method;
-  };
 
   const getStatusColor = (status: string) => {
     switch ((status ?? '').toLowerCase()) {
