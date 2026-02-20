@@ -40,6 +40,8 @@ import { Calendar } from "@/components/ui/calendar";
 import { toast } from "sonner";
 import { Form, FormField, FormItem, FormLabel, FormControl, FormMessage } from "@/components/ui/form";
 import { ASSET_TYPE_QUERY_KEY, ASSETS_QUERY_KEY, RATES_QUERY_KEY, RATE_TYPES_QUERY_KEY } from "@/lib/api/queryKeys";
+import { usePagination } from "@/hooks/usePagination";
+import { DataTablePagination } from "@/components/ui/data-table-pagination";
 import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { CalendarIcon } from "lucide-react";
@@ -77,7 +79,11 @@ const defaultFormValues: Partial<RateFormValues> = {
 };
 
 export default function RatesPage() {
-  const { data: rateData, refetch } = authClient.rates.getRates.useQuery({ queryKey: RATES_QUERY_KEY });
+  const { page, pageSize, queryParams, goToPage, changePageSize } = usePagination(1, 10);
+  const { data: rateData, refetch } = authClient.rates.getRates.useQuery({
+    queryKey: [...RATES_QUERY_KEY, page, pageSize],
+    queryData: { query: queryParams },
+  });
   const { mutate: createRate } = authClient.rates.createRate.useMutation();
   const { mutate: updateRate } = authClient.rates.updateRate.useMutation();
   const { mutate: deleteRate } = authClient.rates.deleteRate.useMutation();
@@ -96,7 +102,10 @@ export default function RatesPage() {
   const { data: rateTypesResponse } = authClient.rates.getRateTypes.useQuery({
     queryKey: RATE_TYPES_QUERY_KEY,
   });
-  const rates = rateData?.body.data ?? [];
+  const rates = rateData?.status === 200 ? rateData.body.data : [];
+  console.log(rates)
+  const paginationMeta = rateData?.status === 200 ? rateData.body.pagination : undefined;
+  console.log(paginationMeta)
   const assets = assetsResponse?.body.data ?? [];
   const assetTypes = assetTypesResponse?.body.data ?? [];
   const rateTypes = rateTypesResponse?.body.data ?? [];
@@ -641,6 +650,14 @@ export default function RatesPage() {
           </TableBody>
         </Table>
       </div>
+
+      {paginationMeta && (
+        <DataTablePagination
+          pagination={paginationMeta}
+          onPageChange={goToPage}
+          onPageSizeChange={changePageSize}
+        />
+      )}
     </div>
   );
 }
