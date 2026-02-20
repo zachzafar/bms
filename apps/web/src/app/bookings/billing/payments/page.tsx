@@ -113,8 +113,8 @@ export default function PaymentsPage() {
       const matchesCustomer = selectedCustomerId ? String(inv.customerId) === selectedCustomerId : false;
       const eligibleByType =
         entryType === 'refund'
-          ? (inv.status === 'Paid' || inv.status === 'Partial')
-          : inv.status !== 'Paid';
+          ? (inv.status === 'paid' || inv.status === 'partial')
+          : (inv.status === 'approved' || inv.status === 'partial');
       return matchesCustomer && eligibleByType;
     }
   );
@@ -152,7 +152,7 @@ export default function PaymentsPage() {
     return filteredPayments.reduce((sum, payment) => sum + parseFloat(payment.amount), 0);
   };
 
-  const unpaidInvoicesCount = invoices.filter((inv) => inv.status !== 'Paid').length;
+  const unpaidInvoicesCount = invoices.filter((inv) => !['paid', 'void'].includes(inv.status)).length;
 
   const { mutate: createPayment, isPending: creatingPayment } = authClient.billing.createPayment.useMutation({
     onSuccess: () => {

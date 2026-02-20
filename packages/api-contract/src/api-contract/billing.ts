@@ -5,7 +5,17 @@ import { pagination } from "./utils";
 
 const c = initContract();
 
-// Extended schema for invoice with items
+// Credit note schema (used inline in invoice responses)
+const CreditNoteSchema = z.object({
+  id: z.number(),
+  creditNoteNumber: z.string(),
+  amount: z.string(),
+  reason: z.string().nullable(),
+  status: z.string(),
+  createdAt: z.date(),
+});
+
+// Extended schema for invoice with items and credit notes
 const ExtendedInvoiceSchema = SelectInvoiceSchema.extend({
   id: z.number(),
   customerId: z.number().nullable(),
@@ -17,6 +27,7 @@ const ExtendedInvoiceSchema = SelectInvoiceSchema.extend({
     totalPrice: z.string(),
     invoiceId: z.number(),
   })),
+  creditNotes: z.array(CreditNoteSchema).optional(),
 });
 
 // Extended schema for payment with invoices
@@ -360,26 +371,68 @@ export const billingContract = c.router({
     },
   },
 
-  // Refund all payments for an invoice
-  refundInvoice: {
+  // Approve a draft invoice (locks it for payment)
+  approveInvoice: {
     method: "POST",
-    path: "/invoice/:id/refund",
-    summary: "Refund all payments applied to an invoice",
+    path: "/invoice/:id/approve",
+    summary: "Approve a draft invoice, locking it from further edits",
     pathParams: z.object({
       id: z.coerce.number(),
     }),
     body: z.object({}),
     responses: {
-      200: z.object({
-        message: z.string(),
-        refundedPayments: z.number(),
-      }),
-      400: z.object({
-        message: z.string(),
-      }),
-      404: z.object({
-        message: z.string(),
-      }),
+      200: z.object({ message: z.string() }),
+      400: z.object({ message: z.string() }),
+      404: z.object({ message: z.string() }),
+    },
+  },
+
+  // Create a credit note against an invoice
+  createCreditNote: {
+    method: "POST",
+    path: "/invoice/:id/credit-note",
+    summary: "Issue a credit note against an approved invoice",
+    pathParams: z.object({
+      id: z.coerce.number(),
+    }),
+    body: z.object({
+      amount: z.string(),
+      reason: z.string().optional(),
+    }),
+    responses: {
+      201: z.object({ message: z.string(), creditNoteId: z.number() }),
+      400: z.object({ message: z.string() }),
+      404: z.object({ message: z.string() }),
+    },
+  },
+
+  // Get credit notes for an invoice
+  getCreditNotes: {
+    method: "GET",
+    path: "/invoice/:id/credit-notes",
+    summary: "Get all credit notes for an invoice",
+    pathParams: z.object({
+      id: z.coerce.number(),
+    }),
+    responses: {
+      200: z.array(CreditNoteSchema),
+      404: z.object({ message: z.string() }),
+    },
+  },
+
+  // Delete a draft credit note
+  deleteCreditNote: {
+    method: "DELETE",
+    path: "/credit-note/:id",
+    summary: "Delete a draft credit note",
+    pathParams: z.object({
+      id: z.coerce.number(),
+    }),
+    body: z.object({}),
+    responses: {
+      200: z.object({ message: z.string() }),
+      400: z.object({ message: z.string() }),
+      404: z.object({ message: z.string() }),
     },
   },
 });

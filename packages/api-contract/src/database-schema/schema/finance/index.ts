@@ -1,5 +1,5 @@
 import { relations, sql } from "drizzle-orm";
-import { bigint, datetime, decimal, index, int, mysqlTable, serial, text, timestamp, uniqueIndex, varchar } from "drizzle-orm/mysql-core";
+import { bigint, datetime, decimal, index, int, mysqlEnum, mysqlTable, serial, text, timestamp, uniqueIndex, varchar } from "drizzle-orm/mysql-core";
 import { Tenant } from "../tenant";
 import { Customer } from "../users";
 import { createInsertSchema, createSelectSchema } from "drizzle-zod";
@@ -13,7 +13,7 @@ export const Invoice = mysqlTable("invoice", {
   id: bigint("id", { mode: "number", unsigned: true }).autoincrement().primaryKey(),
   tenantId: varchar("tenant_id", { length: 255 }).notNull().references(() => Tenant.id),
   invoiceNumber: varchar("invoice_number", { length: 255 }).notNull(),
-  status: varchar("status", { length: 255 }).notNull(),
+  status: mysqlEnum("status", ['draft', 'approved', 'partial', 'paid', 'void']).notNull().default('draft'),
   issueDate: datetime("issue_date").notNull(),
   dueDate: datetime("due_date").notNull(),
   subtotal: decimal("subtotal", { precision: 10, scale: 2 }).notNull(),
@@ -57,6 +57,7 @@ export const InvoiceRelations = relations(Invoice, ({ one, many }) => ({
   }),
   items: many(InvoiceItem),
   payments: many(PaymentInvoice),
+  creditNotes: many(CreditNote),
 }));
 
 
@@ -195,6 +196,40 @@ export const PaymentRelations = relations(Payment, ({ one }) => ({
     references: [Customer.id],
   }),
 }))
+
+// CreditNote Model
+export const CreditNote = mysqlTable("credit_note", {
+  id: bigint("id", { mode: "number", unsigned: true }).autoincrement().primaryKey(),
+  tenantId: varchar("tenant_id", { length: 255 }).notNull().references(() => Tenant.id),
+  invoiceId: bigint("invoice_id", { mode: "number", unsigned: true }).notNull().references(() => Invoice.id, { onDelete: 'cascade' }),
+  creditNoteNumber: varchar("credit_note_number", { length: 255 }).notNull(),
+  amount: decimal("amount", { precision: 10, scale: 2 }).notNull(),
+  reason: text("reason"),
+  status: mysqlEnum("cn_status", ['draft', 'issued']).notNull().default('issued'),
+  createdAt: timestamp('createdAt').notNull().defaultNow(),
+  updatedAt: timestamp('updated_at', { mode: 'date' }).$onUpdate(() => new Date()),
+}, (table) => ({
+  invoiceIdx: index("credit_note_invoice_idx").on(table.invoiceId),
+  tenantIdx: index("credit_note_tenant_idx").on(table.tenantId),
+}));
+
+export const InsertCreditNoteSchema = createInsertSchema(CreditNote);
+export const SelectCreditNoteSchema = createSelectSchema(CreditNote);
+
+export type InsertCreditNote = z.infer<typeof InsertCreditNoteSchema>;
+export type SelectCreditNote = z.infer<typeof SelectCreditNoteSchema>;
+
+export const CreditNoteRelations = relations(CreditNote, ({ one }) => ({
+  invoice: one(Invoice, {
+    fields: [CreditNote.invoiceId],
+    references: [Invoice.id],
+  }),
+  tenant: one(Tenant, {
+    fields: [CreditNote.tenantId],
+    references: [Tenant.id],
+  }),
+}));
+
 
 // // Receipt Model
 // export const Receipt = mysqlTable("receipt", {

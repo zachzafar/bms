@@ -373,7 +373,7 @@ export class BookingService {
     const [{ id: invoiceId }] = await tx.insert(schema.Invoice).values({
       tenantId: asset.tenantId,
       invoiceNumber,
-      status: 'pending',
+      status: 'draft',
       issueDate: new Date(),
       dueDate: startDate,
       subtotal: subtotal.toFixed(2),
