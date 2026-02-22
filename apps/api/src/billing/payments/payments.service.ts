@@ -64,6 +64,19 @@ export class PaymentsService {
       throw new BadRequestException('One or more invoices not found');
     }
 
+    // Validate invoice statuses — cannot pay draft or void invoices
+    for (const inv of invoices) {
+      if (inv.status === 'draft') {
+        throw new BadRequestException(`Invoice ${inv.invoiceNumber} is a draft. Approve it before applying payment.`);
+      }
+      if (inv.status === 'void') {
+        throw new BadRequestException(`Invoice ${inv.invoiceNumber} has been voided and cannot receive payments.`);
+      }
+      if (inv.status === 'paid') {
+        throw new BadRequestException(`Invoice ${inv.invoiceNumber} is already fully paid.`);
+      }
+    }
+
     // Ensure all invoices belong to the same customer as the payment
     // Skip invoices with null customerId (customer was deleted)
     const invoicesWithCustomer = invoices.filter((i) => i.customerId !== null);
@@ -114,10 +127,27 @@ export class PaymentsService {
           appliedByInvoice.set(p.invoiceId, (appliedByInvoice.get(p.invoiceId) ?? 0) + toCents(String(p.amountApplied)));
         });
 
+        // Also factor in issued credit notes
+        const creditNotes = await tx.query.CreditNote.findMany({
+          where: (cn, { inArray, eq, and }) => and(
+            inArray(cn.invoiceId, invoiceIds),
+            eq(cn.status, 'issued')
+          ),
+        });
+        const creditedByInvoice = new Map<number, number>();
+        creditNotes.forEach((cn) => {
+          creditedByInvoice.set(cn.invoiceId, (creditedByInvoice.get(cn.invoiceId) ?? 0) + toCents(String(cn.amount)));
+        });
+
         for (const inv of invoices) {
           const total = toCents(String(inv.totalAmount));
           const applied = appliedByInvoice.get((inv.id)) ?? 0;
-          const status = applied >= total ? 'Paid' : applied > 0 ? 'Partial' : 'Unpaid';
+          const credited = creditedByInvoice.get((inv.id)) ?? 0;
+          const outstanding = total - applied - credited;
+          const status = outstanding <= 0 && applied > 0 ? 'paid'
+            : outstanding <= 0 ? 'void'
+            : applied > 0 || credited > 0 ? 'partial'
+            : 'approved';
           if (status !== inv.status) {
             await tx.update(schema.Invoice).set({ status }).where(eq(schema.Invoice.id, inv.id));
           }
@@ -189,7 +219,7 @@ export class PaymentsService {
         }))
       );
 
-      // 6) Recompute statuses from net applied
+      // 6) Recompute statuses from net applied + credit notes
       const pivots = await tx.query.PaymentInvoice.findMany({
         where: (pi, { inArray }) => inArray(pi.invoiceId, invoiceIds.map((id) => (id))),
       });
@@ -199,10 +229,26 @@ export class PaymentsService {
         appliedByInvoice.set(p.invoiceId, (appliedByInvoice.get(p.invoiceId) ?? 0) + toCents(String(p.amountApplied)));
       });
 
+      const creditNotes = await tx.query.CreditNote.findMany({
+        where: (cn, { inArray, eq, and }) => and(
+          inArray(cn.invoiceId, invoiceIds),
+          eq(cn.status, 'issued')
+        ),
+      });
+      const creditedByInvoice = new Map<number, number>();
+      creditNotes.forEach((cn) => {
+        creditedByInvoice.set(cn.invoiceId, (creditedByInvoice.get(cn.invoiceId) ?? 0) + toCents(String(cn.amount)));
+      });
+
       for (const inv of invoices) {
         const total = toCents(String(inv.totalAmount));
         const applied = appliedByInvoice.get((inv.id)) ?? 0;
-        const status = applied >= total ? 'Paid' : applied > 0 ? 'Partial' : 'Unpaid';
+        const credited = creditedByInvoice.get((inv.id)) ?? 0;
+        const outstanding = total - applied - credited;
+        const status = outstanding <= 0 && applied > 0 ? 'paid'
+          : outstanding <= 0 ? 'void'
+          : applied > 0 || credited > 0 ? 'partial'
+          : 'approved';
         if (status !== inv.status) {
           await tx.update(schema.Invoice).set({ status }).where(eq(schema.Invoice.id, inv.id));
         }
@@ -324,10 +370,27 @@ export class PaymentsService {
           appliedByInvoice.set(p.invoiceId, (appliedByInvoice.get(p.invoiceId) ?? 0) + this.toCents(String(p.amountApplied)));
         });
 
+        // Also factor in credit notes
+        const remainingCreditNotes = await tx.query.CreditNote.findMany({
+          where: (cn, { inArray, eq, and }) => and(
+            inArray(cn.invoiceId, affectedInvoiceIds),
+            eq(cn.status, 'issued')
+          ),
+        });
+        const creditedByInvoice = new Map<number, number>();
+        remainingCreditNotes.forEach((cn) => {
+          creditedByInvoice.set(cn.invoiceId, (creditedByInvoice.get(cn.invoiceId) ?? 0) + this.toCents(String(cn.amount)));
+        });
+
         for (const inv of invoices) {
           const total = this.toCents(String(inv.totalAmount));
           const applied = appliedByInvoice.get((inv.id)) ?? 0;
-          const status = applied >= total ? 'Paid' : applied > 0 ? 'Partial' : 'Unpaid';
+          const credited = creditedByInvoice.get((inv.id)) ?? 0;
+          const outstanding = total - applied - credited;
+          const status = outstanding <= 0 && applied > 0 ? 'paid'
+            : outstanding <= 0 ? 'void'
+            : applied > 0 || credited > 0 ? 'partial'
+            : 'approved';
           if (status !== inv.status) {
             await tx.update(schema.Invoice).set({ status }).where(eq(schema.Invoice.id, inv.id));
           }

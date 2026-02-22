@@ -246,15 +246,64 @@ export class InvoicesController {
     });
   }
 
-  @TsRestHandler(billingContract.refundInvoice)
+  @TsRestHandler(billingContract.approveInvoice)
   @Roles(PermissionScope.BILLING_WRITE)
-  async refundInvoice(@Headers() headers: any): Promise<ReturnType<typeof tsRestHandler>> {
-    return tsRestHandler(billingContract.refundInvoice, async ({ params }) => {
+  async approveInvoice(@Headers() headers: any): Promise<ReturnType<typeof tsRestHandler>> {
+    return tsRestHandler(billingContract.approveInvoice, async ({ params }) => {
       const tenantId = headers['x-tenant-id'];
       await this.tenantService.validateTenantAccess(tenantId, schema.Invoice, params.id);
 
       try {
-        const result = await this.invoices.refundInvoice(params.id);
+        const result = await this.invoices.approve(params.id);
+        return { status: 200, body: result };
+      } catch (error: any) {
+        if (error instanceof BadRequestException) {
+          return { status: 400, body: { message: error.message } };
+        }
+        throw error;
+      }
+    });
+  }
+
+  @TsRestHandler(billingContract.createCreditNote)
+  @Roles(PermissionScope.BILLING_WRITE)
+  async createCreditNote(@Headers() headers: any): Promise<ReturnType<typeof tsRestHandler>> {
+    return tsRestHandler(billingContract.createCreditNote, async ({ params, body }) => {
+      const tenantId = headers['x-tenant-id'];
+      await this.tenantService.validateTenantAccess(tenantId, schema.Invoice, params.id);
+
+      try {
+        const creditNoteId = await this.invoices.createCreditNote(params.id, tenantId, body.amount, body.reason);
+        return { status: 201, body: { message: 'Credit note issued', creditNoteId } };
+      } catch (error: any) {
+        if (error instanceof BadRequestException) {
+          return { status: 400, body: { message: error.message } };
+        }
+        throw error;
+      }
+    });
+  }
+
+  @TsRestHandler(billingContract.getCreditNotes)
+  @Roles(PermissionScope.BILLING_READ)
+  async getCreditNotes(@Headers() headers: any): Promise<ReturnType<typeof tsRestHandler>> {
+    return tsRestHandler(billingContract.getCreditNotes, async ({ params }) => {
+      const tenantId = headers['x-tenant-id'];
+      await this.tenantService.validateTenantAccess(tenantId, schema.Invoice, params.id);
+
+      const creditNotes = await this.invoices.getCreditNotes(params.id);
+      return { status: 200, body: creditNotes };
+    });
+  }
+
+  @TsRestHandler(billingContract.deleteCreditNote)
+  @Roles(PermissionScope.BILLING_WRITE)
+  async deleteCreditNote(@Headers() headers: any): Promise<ReturnType<typeof tsRestHandler>> {
+    return tsRestHandler(billingContract.deleteCreditNote, async ({ params }) => {
+      const tenantId = headers['x-tenant-id'];
+
+      try {
+        const result = await this.invoices.deleteCreditNote(params.id);
         return { status: 200, body: result };
       } catch (error: any) {
         if (error instanceof BadRequestException) {

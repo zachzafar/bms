@@ -8,12 +8,13 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Plus, Search, Eye, Edit, Download, Undo2 } from 'lucide-react';
+import { Plus, Search, Eye, Edit, Download, CheckCircle, FileX } from 'lucide-react';
 import { authClient, axiosClient } from '@/lib/api/publicClient';
 import { toast } from 'sonner';
 import { Label } from '@/components/ui/label';
 import { formatDisplayDate } from '@/lib/utils/date';
 import ApplyPaymentModal from '@/components/billing/ApplyPaymentModal';
+import CreditNoteModal from '@/components/billing/CreditNoteModal';
 import { usePagination } from '@/hooks/usePagination';
 import { DataTablePagination } from '@/components/ui/data-table-pagination';
 
@@ -23,7 +24,7 @@ interface Invoice {
   invoiceNumber: string;
   customerId: number | null;
   status: string;
-  issueDate: Date
+  issueDate: Date;
   dueDate: string;
   subtotal: string;
   taxAmount: string;
@@ -46,6 +47,7 @@ export default function InvoicesPage() {
   const [customerFilter, setCustomerFilter] = useState<string>('all');
 
   const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
+  const [isCreditNoteModalOpen, setIsCreditNoteModalOpen] = useState(false);
   const [selectedInvoice, setSelectedInvoice] = useState<Invoice | null>(null);
 
   const openPaymentModal = (invoice: Invoice) => {
@@ -53,54 +55,50 @@ export default function InvoicesPage() {
     setIsPaymentModalOpen(true);
   };
 
-  // Fetch invoices and customers
+  const openCreditNoteModal = (invoice: Invoice) => {
+    setSelectedInvoice(invoice);
+    setIsCreditNoteModalOpen(true);
+  };
+
   const { data: invoicesData, refetch: refetchInvoices } = authClient.billing.getInvoices.useQuery({
     queryKey: ['invoices', page, pageSize],
-    queryData: {query: queryParams},
+    queryData: { query: queryParams },
   });
 
   const { data: customersData } = authClient.customers.getCustomers.useQuery({
     queryKey: ['customers'],
   });
 
-  // Mutation hooks
   const { mutate: deleteInvoice } = authClient.billing.deleteInvoice.useMutation({
     onSuccess: () => {
       toast.success('Invoice deleted successfully');
       refetchInvoices();
     },
     onError: (error: any) => {
-      const message = error?.body?.message || 'Failed to delete invoice';
-      toast.error(message);
-      console.error('Delete invoice error:', error);
+      toast.error(error?.body?.message || 'Failed to delete invoice');
     },
   });
 
-  const { mutate: refundInvoice, isPending: isRefunding } = authClient.billing.refundInvoice.useMutation({
+  const { mutate: approveInvoice, isPending: isApproving } = authClient.billing.approveInvoice.useMutation({
     onSuccess: () => {
-      toast.success('Invoice refunded successfully');
+      toast.success('Invoice approved');
       refetchInvoices();
     },
     onError: (error: any) => {
-      const message = error?.body?.message || 'Failed to refund invoice';
-      toast.error(message);
-      console.error('Refund invoice error:', error);
+      toast.error(error?.body?.message || 'Failed to approve invoice');
     },
   });
-
 
   const invoices = invoicesData?.status === 200 ? invoicesData.body.data : [];
   const paginationMeta = invoicesData?.status === 200 ? invoicesData.body.pagination : undefined;
   const customers = customersData?.body?.data || [];
 
-  // Filter invoices safely
   const filteredInvoices = invoices.filter((invoice) => {
     const matchesSearch =
       invoice.invoiceNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
       (invoice.notes?.toLowerCase().includes(searchTerm.toLowerCase()) ?? false);
     const matchesStatus = statusFilter === 'all' || invoice.status === statusFilter;
     const matchesCustomer = customerFilter === 'all' || String(invoice.customerId) === customerFilter;
-
     return matchesSearch && matchesStatus && matchesCustomer;
   });
 
@@ -111,16 +109,12 @@ export default function InvoicesPage() {
 
   const getStatusColor = (status: string) => {
     switch (status.toLowerCase()) {
-      case 'paid':
-        return 'bg-primary/10 text-primary';
-      case 'unpaid':
-        return 'bg-destructive/10 text-destructive';
-      case 'partial':
-        return 'bg-secondary/10 text-secondary-foreground';
-      case 'overdue':
-        return 'bg-orange-100 text-orange-800';
-      default:
-        return 'bg-muted text-gray-800';
+      case 'paid':     return 'bg-primary/10 text-primary';
+      case 'approved': return 'bg-blue-100 text-blue-800';
+      case 'partial':  return 'bg-secondary/10 text-secondary-foreground';
+      case 'void':     return 'bg-gray-100 text-gray-500';
+      case 'draft':
+      default:         return 'bg-muted text-muted-foreground';
     }
   };
 
@@ -128,23 +122,19 @@ export default function InvoicesPage() {
     if (!dueDate) return false;
     const due = new Date(dueDate);
     if (isNaN(due.getTime())) return false;
-    return due < new Date() && status?.toLowerCase() !== 'paid';
-  };
-
-  const hasPaymentsApplied = (status: string) => {
-    const s = status.toLowerCase();
-    return s === 'paid' || s === 'partial';
+    const unpaidStatuses = ['approved', 'partial', 'draft'];
+    return due < new Date() && unpaidStatuses.includes(status?.toLowerCase() ?? '');
   };
 
   const handleDeleteInvoice = (invoiceId: number) => {
-    if (confirm('Are you sure you want to delete this invoice? This action cannot be undone.')) {
+    if (confirm('Are you sure you want to delete this draft invoice? This action cannot be undone.')) {
       deleteInvoice({ params: { id: invoiceId } });
     }
   };
 
-  const handleRefundInvoice = (invoiceId: number) => {
-    if (confirm('Are you sure you want to refund all payments for this invoice? This will delete the associated payments and reset the invoice status to Unpaid.')) {
-      refundInvoice({ params: { id: invoiceId }, body: {} });
+  const handleApproveInvoice = (invoiceId: number, invoiceNumber: string) => {
+    if (confirm(`Approve invoice ${invoiceNumber}? It will be locked and can no longer be edited.`)) {
+      approveInvoice({ params: { id: invoiceId }, body: {} });
     }
   };
 
@@ -154,8 +144,6 @@ export default function InvoicesPage() {
       const response = await axiosClient.get(`/invoice/${invoice.id}/pdf`, {
         responseType: 'blob',
       });
-
-      // Create blob URL and trigger download
       const blob = new Blob([response.data], { type: 'application/pdf' });
       const url = window.URL.createObjectURL(blob);
       const link = document.createElement('a');
@@ -165,23 +153,19 @@ export default function InvoicesPage() {
       link.click();
       document.body.removeChild(link);
       window.URL.revokeObjectURL(url);
-
       toast.success('PDF downloaded successfully');
-    } catch (error) {
-      console.error('Download PDF error:', error);
+    } catch {
       toast.error('Failed to download PDF');
     }
   };
 
   const getTotalOutstanding = () => {
     return filteredInvoices
-      .filter((inv) => inv.status.toLowerCase() !== 'paid')
+      .filter((inv) => !['paid', 'void'].includes(inv.status.toLowerCase()))
       .reduce((sum, inv) => sum + parseFloat(inv.totalAmount), 0);
   };
 
-  const getOverdueInvoices = () => {
-    return filteredInvoices.filter((inv) => isOverdue(inv.dueDate, inv.status));
-  };
+  const getOverdueInvoices = () => filteredInvoices.filter((inv) => isOverdue(inv.dueDate, inv.status));
 
   return (
     <div className="container mx-auto py-10">
@@ -203,7 +187,6 @@ export default function InvoicesPage() {
             <div className="text-2xl font-bold">{filteredInvoices.length}</div>
           </CardContent>
         </Card>
-
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Outstanding Amount</CardTitle>
@@ -212,7 +195,6 @@ export default function InvoicesPage() {
             <div className="text-2xl font-bold">${getTotalOutstanding().toFixed(2)}</div>
           </CardContent>
         </Card>
-
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Overdue Invoices</CardTitle>
@@ -221,7 +203,6 @@ export default function InvoicesPage() {
             <div className="text-2xl font-bold">{getOverdueInvoices().length}</div>
           </CardContent>
         </Card>
-
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Paid Invoices</CardTitle>
@@ -253,7 +234,6 @@ export default function InvoicesPage() {
                 />
               </div>
             </div>
-
             <div className="space-y-2">
               <Label>Status</Label>
               <Select value={statusFilter} onValueChange={setStatusFilter}>
@@ -262,14 +242,14 @@ export default function InvoicesPage() {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">All Statuses</SelectItem>
-                  <SelectItem value="Unpaid">Unpaid</SelectItem>
-                  <SelectItem value="Paid">Paid</SelectItem>
-                  <SelectItem value="Partial">Partial</SelectItem>
-                  <SelectItem value="Overdue">Overdue</SelectItem>
+                  <SelectItem value="draft">Draft</SelectItem>
+                  <SelectItem value="approved">Approved</SelectItem>
+                  <SelectItem value="partial">Partial</SelectItem>
+                  <SelectItem value="paid">Paid</SelectItem>
+                  <SelectItem value="void">Void</SelectItem>
                 </SelectContent>
               </Select>
             </div>
-
             <div className="space-y-2">
               <Label>Customer</Label>
               <Select value={customerFilter} onValueChange={setCustomerFilter}>
@@ -324,9 +304,7 @@ export default function InvoicesPage() {
                     <TableCell>
                       <Badge className={getStatusColor(invoice.status)}>{invoice.status}</Badge>
                       {isOverdue(invoice.dueDate, invoice.status) && (
-                        <Badge variant="destructive" className="ml-2">
-                          Overdue
-                        </Badge>
+                        <Badge variant="destructive" className="ml-2">Overdue</Badge>
                       )}
                     </TableCell>
                     <TableCell>{formatDisplayDate(invoice.issueDate)}</TableCell>
@@ -337,58 +315,85 @@ export default function InvoicesPage() {
                     </TableCell>
                     <TableCell className="font-medium">${parseFloat(invoice.totalAmount).toFixed(2)}</TableCell>
                     <TableCell>
-                      <div className="flex space-x-2">
+                      <div className="flex items-center gap-1 flex-wrap">
+                        {/* View — always */}
                         <Button
                           variant="outline"
                           size="sm"
                           onClick={() => router.push(`/bookings/billing/invoices/${invoice.id}/view`)}
+                          title="View invoice"
                         >
                           <Eye className="h-4 w-4" />
                         </Button>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => router.push(`/bookings/billing/invoices/${invoice.id}/edit`)}
-                          disabled={hasPaymentsApplied(invoice.status)}
-                          title={hasPaymentsApplied(invoice.status) ? 'Cannot edit invoice with payments applied' : 'Edit invoice'}
-                        >
-                          <Edit className="h-4 w-4" />
-                        </Button>
+
+                        {/* Edit — draft only */}
+                        {invoice.status === 'draft' && (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => router.push(`/bookings/billing/invoices/${invoice.id}/edit`)}
+                            title="Edit invoice"
+                          >
+                            <Edit className="h-4 w-4" />
+                          </Button>
+                        )}
+
+                        {/* Approve — draft only */}
+                        {invoice.status === 'draft' && (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleApproveInvoice(invoice.id, invoice.invoiceNumber)}
+                            disabled={isApproving}
+                            title="Approve invoice"
+                          >
+                            <CheckCircle className="h-4 w-4" />
+                          </Button>
+                        )}
+
+                        {/* PDF — always */}
                         <Button
                           variant="outline"
                           size="sm"
                           onClick={() => handleDownloadPdf(invoice)}
+                          title="Download PDF"
                         >
                           <Download className="h-4 w-4" />
                         </Button>
-                        {hasPaymentsApplied(invoice.status) ? (
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => handleRefundInvoice(invoice.id)}
-                            disabled={isRefunding}
-                            title="Refund all payments for this invoice"
-                          >
-                            <Undo2 className="h-4 w-4 mr-1" />
-                            Refund
-                          </Button>
-                        ) : (
+
+                        {/* Delete — draft only */}
+                        {invoice.status === 'draft' && (
                           <Button
                             variant="outline"
                             size="sm"
                             onClick={() => handleDeleteInvoice(invoice.id)}
+                            title="Delete draft invoice"
                           >
                             Delete
                           </Button>
                         )}
-                        {/* Apply Payment - only show for unpaid/partial invoices */}
-                        {invoice.status.toLowerCase() !== 'paid' && (
+
+                        {/* Apply Payment — approved or partial */}
+                        {['approved', 'partial'].includes(invoice.status) && (
                           <Button
                             variant="default"
                             size="sm"
                             onClick={() => openPaymentModal(invoice)}
                           >
                             Apply Payment
+                          </Button>
+                        )}
+
+                        {/* Credit Note — approved, partial, or paid */}
+                        {['approved', 'partial', 'paid'].includes(invoice.status) && (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => openCreditNoteModal(invoice)}
+                            title="Issue credit note"
+                          >
+                            <FileX className="h-4 w-4 mr-1" />
+                            Credit Note
                           </Button>
                         )}
                       </div>
@@ -420,6 +425,18 @@ export default function InvoicesPage() {
           onPageSizeChange={changePageSize}
         />
       )}
+
+      {/* Credit Note Modal — outside table */}
+      <CreditNoteModal
+        open={isCreditNoteModalOpen}
+        onOpenChange={setIsCreditNoteModalOpen}
+        invoice={selectedInvoice && selectedInvoice.customerId !== null ? {
+          id: selectedInvoice.id,
+          invoiceNumber: selectedInvoice.invoiceNumber,
+          totalAmount: selectedInvoice.totalAmount,
+        } : null}
+        onApplied={() => refetchInvoices()}
+      />
     </div>
   );
 }

@@ -5,7 +5,7 @@ import { eq, and, count, countDistinct, desc, isNull, sql, like, notInArray } fr
 import { hash } from 'argon2';
 import { randomBytes } from 'crypto';
 import { UsersService } from 'src/users/users.service';
-import { promises as fs} from "fs";
+import { promises as fs } from "fs";
 import * as schema from '@repo/api-contract';
 
 @Injectable()
@@ -15,7 +15,7 @@ export class SystemAdminService {
   constructor(
     @Inject(DrizzleAsyncProvider) private db: MySql2Database<typeof schema>,
     private readonly userService: UsersService,
-  ) {}
+  ) { }
 
   // System Admin User Management
   async createSystemAdmin(name: string, email: string, password: string) {
@@ -150,10 +150,33 @@ export class SystemAdminService {
 
         // Add basic permissions to admin role
         const basicPermissions = [
-          'users:read', 'users:write', 'users:delete',
-          'roles:read', 'roles:write', 'roles:delete',
-          'tenant:admin', 'assets:read', 'assets:write'
+          'assets:read', 'assets:write', 'assets:delete', 'assets:properties:manage', 'assets:config:read',
+          'assets:config:write', 'assets:config:update', 'assets:config:delete', 'users:read', 'users:write',
+          'users:delete', 'users:roles:manage', 'customers:read', 'customers:write', 'customers:delete',
+          'owners:read', 'owners:write', 'owners:delete', 'bookings:read', 'bookings:write',
+          'bookings:delete', 'bookings:cancel', 'bookings:by-tag:create', 'maintenance:read', 'maintenance:write',
+          'maintenance:delete', 'maintenance:files:manage', 'teams:read', 'teams:write', 'teams:delete',
+          'teams:users:manage', 'teams:assets:manage', 'tenants:read', 'tenants:write', 'tenants:delete',
+          'keys:read', 'keys:write', 'keys:delete', 'analytics:read', 'analytics:write',
+          'analytics:assets:read', 'analytics:bookings:read', 'analytics:customers:read', 'analytics:financial:read', 'slots:read',
+          'slots:write', 'slots:delete', 'rates:read', 'rates:write', 'rates:delete',
+          'billing:read', 'billing:write', 'billing:delete', 'invoices:read', 'invoices:write',
+          'invoices:delete', 'payments:read', 'payments:write', 'payments:delete', 'crm:read',
+          'crm:write', 'crm:delete', 'contacts:read', 'contacts:write', 'contacts:delete',
+          'inquiries:read', 'inquiries:write', 'inquiries:delete', 'inquiries:assign', 'communications:read',
+          'communications:write', 'communications:delete', 'feedback:read', 'feedback:write', 'feedback:delete',
+          'tasks:read', 'tasks:write', 'tasks:delete', 'tasks:assign', 'documents:read',
+          'documents:write', 'documents:delete', 'brochures:read', 'brochures:write', 'brochures:delete',
+          'tags:read', 'tags:write', 'tags:delete', 'object-storage:read', 'object-storage:write',
+          'object-storage:delete', 'email:read', 'email:write', 'email:send', 'schema-design:read',
+          'schema-design:write', 'schema-design:delete', 'system:admin', 'system:config:read', 'system:config:write',
+          'reports:read', 'reports:generate', 'settings:read', 'settings:write'
         ];
+        // const basicPermissions = [
+        //   'users:read', 'users:write', 'users:delete',
+        //   'roles:read', 'roles:write', 'roles:delete',
+        //   'tenant:admin', 'assets:read', 'assets:write'
+        // ];
 
         await tx.insert(schema.RoleHasPermissions).values(
           basicPermissions.map(permission => ({
@@ -758,14 +781,14 @@ export class SystemAdminService {
       const [activeTenants] = await this.db
         .select({ count: countDistinct(schema.TenantHasUsers.tenantId) })
         .from(schema.TenantHasUsers);
-        
-        this.logger.log("System stats: ", {
-          totalTenants,
-          totalUsers,
-          totalSystemAdmins,
-          activeTenants,
-          totalApiKeys,
-        });
+
+      this.logger.log("System stats: ", {
+        totalTenants,
+        totalUsers,
+        totalSystemAdmins,
+        activeTenants,
+        totalApiKeys,
+      });
       return {
         totalTenants: totalTenants.count,
         totalUsers: totalUsers.count,

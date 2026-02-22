@@ -145,7 +145,7 @@ export default function TenantsPage() {
               <thead>
                 <tr className="border-b border-border">
                   <th className="text-left p-3 text-card-foreground font-medium">Name</th>
-                  <th className="text-left p-3 text-card-foreground font-medium">Subdomain</th>
+                  <th className="text-left p-3 text-card-foreground font-medium">Slug</th>
                   <th className="text-left p-3 text-card-foreground font-medium">Status</th>
                   <th className="text-left p-3 text-card-foreground font-medium">Users</th>
                   <th className="text-left p-3 text-card-foreground font-medium">Roles</th>
