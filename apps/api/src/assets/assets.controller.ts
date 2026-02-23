@@ -290,6 +290,37 @@ export class AssetsController {
         });
     }
 
-    
+    @TsRestHandler(contract.assets.setAssetLocation)
+    @Roles(PermissionScope.ASSETS_WRITE)
+    async setAssetLocation(@Headers() headers: any): Promise<ReturnType<typeof tsRestHandler>> {
+        return tsRestHandler(contract.assets.setAssetLocation, async ({ params, body }) => {
+            const tenantId = headers['x-tenant-id'];
+            await this.tenantService.validateTenantAccess(tenantId, schema.Asset, params.assetId);
+            const id = await this.assetService.setAssetLocation(params.assetId, body);
+            return { status: 200, body: { id } };
+        });
+    }
+
+    @TsRestHandler(contract.assets.getAssetLocation)
+    @Roles(PermissionScope.ASSETS_READ)
+    async getAssetLocation(@Headers() headers: any): Promise<ReturnType<typeof tsRestHandler>> {
+        return tsRestHandler(contract.assets.getAssetLocation, async ({ params }) => {
+            const tenantId = headers['x-tenant-id'];
+            await this.tenantService.validateTenantAccess(tenantId, schema.Asset, params.assetId);
+            const location = await this.assetService.getAssetLocation(params.assetId);
+            return { status: 200, body: location ?? null };
+        });
+    }
+
+    @TsRestHandler(contract.assets.deleteAssetLocation)
+    @Roles(PermissionScope.ASSETS_WRITE)
+    async deleteAssetLocation(@Headers() headers: any): Promise<ReturnType<typeof tsRestHandler>> {
+        return tsRestHandler(contract.assets.deleteAssetLocation, async ({ params }) => {
+            const tenantId = headers['x-tenant-id'];
+            await this.tenantService.validateTenantAccess(tenantId, schema.Asset, params.assetId);
+            await this.assetService.deleteAssetLocation(params.assetId);
+            return { status: 200, body: { success: true } };
+        });
+    }
 
 }
