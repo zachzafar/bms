@@ -7,6 +7,7 @@ import {
   SelectAssetImagesSchema,
   SelectAssetPropertySchema,
   SelectAssetSchema,
+  SelectAssetLocationSchema,
   SelectTagSchema, // import tag schema
 } from '../database-schema';
 import { pagination } from './utils';
@@ -336,5 +337,44 @@ export const assetsContract = c.router({
       id: z.string()
     }),
     summary: 'Get a specific asset if owner owns it (read-only)'
-  }
+  },
+
+  setAssetLocation: {
+    method: 'PUT',
+    path: '/asset/:assetId/location',
+    pathParams: z.object({ assetId: z.string() }),
+    body: z.object({
+      address: z.string().nullable().optional(),
+      lat: z.number().nullable().optional(),
+      lng: z.number().nullable().optional(),
+    }),
+    responses: {
+      200: z.object({ id: z.number() }),
+      404: z.object({ message: z.string() }),
+    },
+    summary: 'Set or update asset location',
+  },
+
+  getAssetLocation: {
+    method: 'GET',
+    path: '/asset/:assetId/location',
+    pathParams: z.object({ assetId: z.string() }),
+    responses: {
+      200: SelectAssetLocationSchema.nullable(),
+      404: z.object({ message: z.string() }),
+    },
+    summary: 'Get asset location',
+  },
+
+  deleteAssetLocation: {
+    method: 'DELETE',
+    path: '/asset/:assetId/location',
+    pathParams: z.object({ assetId: z.string() }),
+    body: c.noBody(),
+    responses: {
+      200: z.object({ success: z.boolean() }),
+      404: z.object({ message: z.string() }),
+    },
+    summary: 'Remove asset location',
+  },
 })

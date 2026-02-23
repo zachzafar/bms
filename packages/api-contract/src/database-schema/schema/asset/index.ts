@@ -1,5 +1,5 @@
 import { relations } from "drizzle-orm";
-import { mysqlTable, serial, varchar, text, timestamp, index, uniqueIndex, boolean, bigint, mysqlEnum } from "drizzle-orm/mysql-core";
+import { mysqlTable, serial, varchar, text, timestamp, index, uniqueIndex, boolean, bigint, mysqlEnum, decimal } from "drizzle-orm/mysql-core";
 import { AssetType,assetProperty, BookingForm, Tags } from "../settings";
 import { Tenant, TenantTeamHasAssets } from "../tenant";
 import { User, OwnerHasAssets } from "../users";
@@ -54,6 +54,10 @@ export const AssetRelations = relations(Asset, ({ one, many }) => ({
   properties: many(AssetHasProperties),
   tenantTeamToAsset: many(TenantTeamHasAssets),
   rates: many(AssetHasRates),
+  location: one(AssetLocation, {
+    fields: [Asset.id],
+    references: [AssetLocation.assetId],
+  }),
 }));
 
 
@@ -139,6 +143,29 @@ export const AssetHasRatesRelations = relations(AssetHasRates, ({ one }) => ({
     fields: [AssetHasRates.rateId],
     references: [Rate.id],
   }),
+}));
+
+export const AssetLocation = mysqlTable("asset_location", {
+    id: bigint("id", { mode: "number", unsigned: true }).autoincrement().primaryKey(),
+    assetId: varchar("asset_id", { length: 36 }).notNull().references(() => Asset.id, { onDelete: 'cascade' }),
+    address: varchar("address", { length: 500 }),
+    lat: decimal("lat", { precision: 10, scale: 7 }),
+    lng: decimal("lng", { precision: 10, scale: 7 }),
+    createdAt: timestamp('created_at').notNull().defaultNow(),
+    updatedAt: timestamp('updated_at').$onUpdate(() => new Date()),
+}, (table) => ({
+    assetLocationUniqueIdx: uniqueIndex("asset_location_unique").on(table.assetId),
+}));
+
+export const SelectAssetLocationSchema = createSelectSchema(AssetLocation);
+export const InsertAssetLocationSchema = createInsertSchema(AssetLocation);
+export type SelectAssetLocation = z.infer<typeof SelectAssetLocationSchema>;
+
+export const AssetLocationRelations = relations(AssetLocation, ({ one }) => ({
+    asset: one(Asset, {
+        fields: [AssetLocation.assetId],
+        references: [Asset.id],
+    }),
 }));
 
 

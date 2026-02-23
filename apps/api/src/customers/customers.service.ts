@@ -133,16 +133,21 @@ export class CustomersService {
         tenantId: string,
         data: { name: string; description?: string | null }
     ): Promise<number> {
-        const existingType = await this.db.query.CustomerType.findFirst({
-            where: (ct, { eq, and, isNull }) => and(
+        const existing = await this.db.query.CustomerType.findFirst({
+            where: (ct, { eq, and }) => and(
                 eq(ct.tenantId, tenantId),
-                eq(ct.name, data.name),
-                isNull(ct.deletedAt)
+                eq(ct.name, data.name)
             )
         });
 
-        if (existingType) {
-            throw new BadRequestException('Customer type with this name already exists');
+        if (existing) {
+            if (!existing.deletedAt) {
+                throw new BadRequestException('Customer type with this name already exists');
+            }
+            await this.db.update(schema.CustomerType)
+                .set({ deletedAt: null, description: data.description ?? existing.description })
+                .where(eq(schema.CustomerType.id, existing.id));
+            return existing.id;
         }
 
         const [{ id }] = await this.db.insert(schema.CustomerType).values({

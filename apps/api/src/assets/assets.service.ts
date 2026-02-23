@@ -557,6 +557,49 @@ export class AssetsService {
     };
   }
 
+  // -----------------------------
+  // Location Methods
+  // -----------------------------
+
+  async setAssetLocation(
+    assetId: string,
+    data: { address?: string | null; lat?: number | null; lng?: number | null }
+  ): Promise<number> {
+    const existing = await this.db.query.AssetLocation.findFirst({
+      where: (l, { eq }) => eq(l.assetId, assetId),
+    });
+
+    if (existing) {
+      await this.db.update(schema.AssetLocation)
+        .set({
+          address: data.address ?? null,
+          lat: data.lat != null ? String(data.lat) : null,
+          lng: data.lng != null ? String(data.lng) : null,
+        })
+        .where(eq(schema.AssetLocation.id, existing.id));
+      return existing.id;
+    }
+
+    const [{ id }] = await this.db.insert(schema.AssetLocation).values({
+      assetId,
+      address: data.address ?? null,
+      lat: data.lat != null ? String(data.lat) : null,
+      lng: data.lng != null ? String(data.lng) : null,
+    }).$returningId();
+    return id;
+  }
+
+  async getAssetLocation(assetId: string): Promise<schema.SelectAssetLocation | undefined> {
+    return this.db.query.AssetLocation.findFirst({
+      where: (l, { eq }) => eq(l.assetId, assetId),
+    });
+  }
+
+  async deleteAssetLocation(assetId: string): Promise<void> {
+    await this.db.delete(schema.AssetLocation)
+      .where(eq(schema.AssetLocation.assetId, assetId));
+  }
+
   async getOwnerAsset(ownerId: number, assetId: string) {
     // Verify owner owns the asset by checking OwnerHasAssets junction table
     const ownerAssetLink = await this.db.query.OwnerHasAssets.findFirst({
