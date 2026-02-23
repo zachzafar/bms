@@ -67,6 +67,7 @@ jobs:
             tar -xzf deploy.tar.gz && \
             rm deploy.tar.gz && \
             pnpm install && \
+            DATABASE_URL='${{ secrets.DATABASE_URL }}' pnpm db:migrate && \
             pm2 delete all || true && \
             pm2 start ecosystem.config.js
           "

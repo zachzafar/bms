@@ -8,7 +8,10 @@
     "dev:web": "cd apps/web && PORT=3000 NEXT_PUBLIC_API_URL=http://localhost:3001 pnpm dev",
     "dev:all": "concurrently \"pnpm dev:api\" \"pnpm dev:web\"",
     "lint": "turbo lint",
-    "format": "prettier --write \"**/*.{ts,tsx,md}\""
+    "format": "prettier --write \"**/*.{ts,tsx,md}\"",
+    "db:generate": "cd apps/api && pnpm db:generate",
+    "db:migrate": "cd apps/api && pnpm db:migrate",
+    "db:push": "cd apps/api && pnpm db:push"
   },
   "devDependencies": {
     "@types/react-big-calendar": "^1.16.3",
