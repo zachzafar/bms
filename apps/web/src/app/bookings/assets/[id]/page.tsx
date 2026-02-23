@@ -9,6 +9,7 @@ import Loading from '@/components/custom/Loading';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import BasicInfo from './BasicInfo';
 import Images from './Images';
+import Location from './Location';
 import AssetBookings from '@/components/custom/AssetBookings';
 import { StorageService } from '@/lib/api/storage';
 
@@ -46,6 +47,7 @@ return (
               <TabsTrigger value="availabilities">Availabilities</TabsTrigger>
               <TabsTrigger value="bookings">Bookings</TabsTrigger>
               <TabsTrigger value="images">Images</TabsTrigger>
+              <TabsTrigger value="location">Location</TabsTrigger>
             </TabsList>
             <TabsContent value='basic-information'>
               <BasicInfo asset={asset} refetch={refetch}/>
@@ -61,6 +63,9 @@ return (
             </TabsContent>
             <TabsContent value="images">
                <Images asset={asset}/>
+            </TabsContent>
+            <TabsContent value="location">
+               <Location asset={asset}/>
             </TabsContent>
           </Tabs>
     </>
