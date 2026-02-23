@@ -407,16 +407,21 @@ export class PaymentsService {
         tenantId: string,
         data: { name: string; description?: string | null }
     ): Promise<number> {
-        const existingType = await this.db.query.PaymentMethod.findFirst({
-            where: (ct, { eq, and, isNull }) => and(
+        const existing = await this.db.query.PaymentMethod.findFirst({
+            where: (ct, { eq, and }) => and(
                 eq(ct.tenantId, tenantId),
-                eq(ct.name, data.name),
-                isNull(ct.deletedAt)
+                eq(ct.name, data.name)
             )
         });
 
-        if (existingType) {
-            throw new BadRequestException('Payment method with this name already exists');
+        if (existing) {
+            if (!existing.deletedAt) {
+                throw new BadRequestException('Payment method with this name already exists');
+            }
+            await this.db.update(schema.PaymentMethod)
+                .set({ deletedAt: null, description: data.description ?? existing.description })
+                .where(eq(schema.PaymentMethod.id, existing.id));
+            return existing.id;
         }
 
         const [{ id }] = await this.db.insert(schema.PaymentMethod).values({
