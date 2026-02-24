@@ -1,4 +1,4 @@
-import { ConflictException, Inject, Injectable, NotFoundException } from '@nestjs/common';
+import { ConflictException, Inject, Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { MySql2Database } from 'drizzle-orm/mysql2';
 import * as schema from '@repo/api-contract';
 import { DrizzleAsyncProvider } from 'src/drizzle/drizzle.provider';
@@ -16,6 +16,8 @@ import { TaxFeeService } from 'src/tax-fee/tax-fee.service';
 
 @Injectable()
 export class BookingService {
+  private readonly logger = new Logger(BookingService.name);
+
   constructor(
     @Inject(DrizzleAsyncProvider) private db: MySql2Database<typeof schema>,
     private readonly eventEmitter: EventEmitter2,
@@ -1425,7 +1427,10 @@ export class BookingService {
   // -----------------------------
 
   /**
-   * Find an available asset of a given asset type for the specified date range
+   * Find an available asset of a given asset type for the specified date range.
+   * Checks both BlockedDate entries and existing Bookings for conflicts.
+   * Throws NotFoundException if asset type has no assets for this tenant.
+   * Returns null if all assets are occupied for the requested range.
    */
   private async findAvailableAssetOfType(
     assetTypeId: number,
@@ -1433,6 +1438,8 @@ export class BookingService {
     endDate: Date,
     tenantId: string
   ): Promise<{ id: string; name: string } | null> {
+    this.logger.log(`[findAvailableAssetOfType] assetTypeId=${assetTypeId} tenantId=${tenantId} startDate=${startDate.toISOString()} endDate=${endDate.toISOString()}`);
+
     // Get all assets of this type
     const assets = await this.db
       .select({ id: schema.Asset.id, name: schema.Asset.name })
@@ -1446,7 +1453,13 @@ export class BookingService {
         )
       );
 
-    // Check each asset for availability
+    this.logger.log(`[findAvailableAssetOfType] found ${assets.length} asset(s) of type ${assetTypeId}: ${JSON.stringify(assets.map(a => ({ id: a.id, name: a.name })))}`);
+
+    if (assets.length === 0) {
+      throw new NotFoundException(`No assets found for asset type ${assetTypeId}`);
+    }
+
+    // Check each asset for blocked dates (bookings are also reflected here via createBlockedDateForBooking)
     for (const asset of assets) {
       const blockedDates = await this.db.query.BlockedDate.findMany({
         where: (bd, { and, eq, gte, lte, or }) =>
@@ -1460,11 +1473,15 @@ export class BookingService {
           ),
       });
 
+      this.logger.log(`[findAvailableAssetOfType] asset "${asset.name}" (${asset.id}): blockedDates=${blockedDates.length}`);
+
       if (blockedDates.length === 0) {
+        this.logger.log(`[findAvailableAssetOfType] selected asset "${asset.name}" (${asset.id})`);
         return asset;
       }
     }
 
+    this.logger.warn(`[findAvailableAssetOfType] all ${assets.length} asset(s) are occupied for the requested range`);
     return null;
   }
 
@@ -1527,6 +1544,8 @@ export class BookingService {
   ): Promise<{ message: string; assetName: string }> {
     const { assetTypeId, startDate, endDate, customer, formResponses, addons } = data;
 
+    this.logger.log(`[customerCreateBookingByAssetType] tenantId=${tenantId} assetTypeId=${assetTypeId} startDate=${startDate} endDate=${endDate} customer=${customer.email}`);
+
     // Find available asset of this type
     const availableAsset = await this.findAvailableAssetOfType(
       assetTypeId,
@@ -1536,8 +1555,11 @@ export class BookingService {
     );
 
     if (!availableAsset) {
-      throw new ConflictException('No available assets of this type for the selected dates');
+      this.logger.warn(`[customerCreateBookingByAssetType] no available asset found`);
+      throw new ConflictException('No available assets for the selected dates');
     }
+
+    this.logger.log(`[customerCreateBookingByAssetType] creating booking for asset "${availableAsset.name}" (${availableAsset.id})`);
 
     // Create booking with the found asset
     const bookingId = await this.createBooking(
@@ -1551,6 +1573,8 @@ export class BookingService {
       formResponses,
       addons
     );
+
+    this.logger.log(`[customerCreateBookingByAssetType] booking created successfully bookingId=${bookingId}`);
 
     return {
       message: 'Booking created successfully',
