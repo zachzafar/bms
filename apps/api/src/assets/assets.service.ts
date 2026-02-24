@@ -422,6 +422,7 @@ export class AssetsService {
 
         return {
           id: res.assets.id,
+          slug: res.assets.slug ?? null,
           name: res.assets.name,
           description: res.assets.description || undefined,
           images: assetImages.map((img) => img.filePath),
@@ -440,13 +441,17 @@ export class AssetsService {
     };
   }
 
-  async getAssetDetailsBySubdomain(subdomain: string, assetId: string) {
-    // First verify the asset belongs to this subdomain's tenant
+  async getAssetDetailsBySubdomain(subdomain: string, slug: string) {
+    // Look up by slug first, fall back to id for backward compatibility
     const result = await this.db
       .select()
       .from(schema.Asset)
       .innerJoin(schema.Tenant, eq(schema.Asset.tenantId, schema.Tenant.id))
-      .where(and(eq(schema.Tenant.subdomain, subdomain), eq(schema.Asset.id, assetId), isNull(schema.Asset.deletedAt)))
+      .where(and(
+        eq(schema.Tenant.subdomain, subdomain),
+        isNull(schema.Asset.deletedAt),
+        sql`(${schema.Asset.slug} = ${slug} OR ${schema.Asset.id} = ${slug})`
+      ))
       .execute()
       .then((rows) => rows[0]);
 
@@ -458,8 +463,8 @@ export class AssetsService {
 
     // Fetch related data
     const [ assetImages, propertyValues] = await Promise.all([
-      this.getAssetImages(assetId),
-      this.getPropertyValues(assetId),
+      this.getAssetImages(asset.id),
+      this.getPropertyValues(asset.id),
     ]);
 
     return {
@@ -598,6 +603,22 @@ export class AssetsService {
   async deleteAssetLocation(assetId: string): Promise<void> {
     await this.db.delete(schema.AssetLocation)
       .where(eq(schema.AssetLocation.assetId, assetId));
+  }
+
+  async checkAssetSlug(tenantId: string, slug: string, excludeId?: string): Promise<boolean> {
+    const conditions = [
+      eq(schema.Asset.tenantId, tenantId),
+      eq(schema.Asset.slug, slug),
+      isNull(schema.Asset.deletedAt),
+    ];
+    if (excludeId) {
+      conditions.push(ne(schema.Asset.id, excludeId));
+    }
+    const existing = await this.db.query.Asset.findFirst({
+      where: (_, { and }) => and(...conditions as any),
+      columns: { id: true },
+    });
+    return existing === undefined;
   }
 
   async getOwnerAsset(ownerId: number, assetId: string) {

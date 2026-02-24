@@ -78,6 +78,7 @@ export class AssetTypeService {
             description,
             tenantId,
             name,
+            slug,
             createdAt,
             updatedAt,
             assetTypeHasProperties,
@@ -91,6 +92,7 @@ export class AssetTypeService {
             tenantId,
             id,
             name,
+            slug,
             image,
             createdAt,
             updatedAt,
@@ -205,6 +207,22 @@ export class AssetTypeService {
                     }))
                 );
         }
+    }
+
+    async checkAssetTypeSlug(tenantId: string, slug: string, excludeId?: number): Promise<boolean> {
+        const conditions: any[] = [
+            eq(schema.AssetType.tenantId, tenantId),
+            eq(schema.AssetType.slug, slug),
+            isNull(schema.AssetType.deletedAt),
+        ];
+        if (excludeId !== undefined) {
+            conditions.push(sql`${schema.AssetType.id} != ${excludeId}`);
+        }
+        const existing = await this.db.query.AssetType.findFirst({
+            where: (_, { and }) => and(...conditions),
+            columns: { id: true },
+        });
+        return existing === undefined;
     }
 
     async getTagsForAssetType(assetTypeId: number) {

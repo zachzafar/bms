@@ -20,6 +20,7 @@ import {
 
 type Asset = {
   id: string;
+  slug?: string | null;
   name: string;
   description?: string;
   images: string[];
@@ -321,7 +322,7 @@ export default function CustomerPage() {
               {assets.map((asset) => (
                 <Link
                   key={asset.id}
-                  href={`/customer/${subdomain}/${asset.id}`}
+                  href={`/customer/${subdomain}/${asset.slug ?? asset.id}`}
                   className="group"
                 >
                   <Card className="h-full hover:shadow-xl transition-shadow duration-300">

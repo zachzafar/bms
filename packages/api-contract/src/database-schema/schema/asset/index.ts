@@ -13,6 +13,7 @@ import { Rate } from "../rates";
 export const Asset = mysqlTable("assets", {
     id: varchar("id", { length: 36 }).primaryKey().$default(() => uuid()),
     name: varchar("name", { length: 255 }).notNull(),
+    slug: varchar("slug", { length: 255 }),
     description: text("description"),
     available: boolean("available").default(true).notNull(),
     requiresApproval: boolean("requires_approval").default(false).notNull(),
@@ -26,6 +27,7 @@ export const Asset = mysqlTable("assets", {
     assetTypeIdx: index("asset_type_idx").on(table.assetTypeId),
     userIdx: index("owner_idx").on(table.userId),
     deletedAtIdx: index("deleted_at_idx").on(table.deletedAt),
+    slugTenantUniqueIdx: uniqueIndex("asset_slug_tenant_unique").on(table.slug, table.tenantId),
 }));
 
 export const SelectAssetSchema = createSelectSchema(Asset)

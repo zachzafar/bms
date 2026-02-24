@@ -238,6 +238,7 @@ export const assetsContract = c.router({
       200: z.object({
         data: z.array(z.object({
           id: z.string(),
+          slug: z.string().nullable().optional(),
           name: z.string(),
           description: z.string().optional(),
           images: z.array(z.string()),
@@ -255,14 +256,15 @@ export const assetsContract = c.router({
   },
   getAssetDetailsBySubdomain: {
     method: 'GET',
-    path: '/assets-by-sub/:subdomain/:assetId',
+    path: '/assets-by-sub/:subdomain/:slug',
     pathParams: z.object({
       subdomain: z.string(),
-      assetId: z.string()
+      slug: z.string()
     }),
     responses: {
       200: z.object({
         id: z.string(),
+        slug: z.string().nullable().optional(),
         name: z.string(),
         description: z.string().nullable(),
         tenantId: z.string(),
@@ -376,5 +378,18 @@ export const assetsContract = c.router({
       404: z.object({ message: z.string() }),
     },
     summary: 'Remove asset location',
+  },
+
+  checkAssetSlug: {
+    method: 'GET',
+    path: '/asset/check-slug',
+    query: z.object({
+      slug: z.string(),
+      excludeId: z.string().optional(),
+    }),
+    responses: {
+      200: z.object({ available: z.boolean() }),
+    },
+    summary: 'Check if an asset slug is available',
   },
 })

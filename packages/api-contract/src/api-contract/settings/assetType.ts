@@ -208,4 +208,17 @@ export const assetTypeContract = c.router({
         },
         summary: 'Set (upsert) property values for an asset type',
     },
+
+    checkAssetTypeSlug: {
+        method: 'GET',
+        path: '/asset-type/check-slug',
+        query: z.object({
+            slug: z.string(),
+            excludeId: z.coerce.number().optional(),
+        }),
+        responses: {
+            200: z.object({ available: z.boolean() }),
+        },
+        summary: 'Check if an asset type slug is available',
+    },
 })

@@ -20,7 +20,7 @@ export default function CustomerAssetDetailPage() {
   const { data: response, isLoading, error } = client.assets.getAssetDetailsBySubdomain.useQuery({
     queryKey: ['asset-details', subdomain, assetId],
     queryData: {
-      params: { subdomain, assetId },
+      params: { subdomain, slug: assetId },
     },
   });
 

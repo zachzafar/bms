@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from '@/components/ui/table';
-import { Pencil, Trash2, Upload, ImageIcon } from 'lucide-react';
+import { Pencil, Trash2, Upload, ImageIcon, CheckCircle2, XCircle, Loader2 } from 'lucide-react';
 import AssetTypeDefaultSpecsDialog from './AssetTypeDefaultSpecsDialog';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -27,6 +27,7 @@ import Image from 'next/image';
 
 const AssetTypeWithPropertiesSchema = z.object({
   name: z.string(),
+  slug: z.string().optional(),
   properties: z.array(z.number()),
   forms: z.array(z.number()),
   tags: z.array(z.number())
@@ -41,6 +42,7 @@ export default function AssetTypes() {
   const [selectedForms, setSelectedForms] = useState<string[]>([]);
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const [isUploading, setIsUploading] = useState(false);
+  const [debouncedSlug, setDebouncedSlug] = useState('');
   const queryClient = authClient.useQueryClient();
 
   const { data: tags, isLoading } = authClient.settings.tags.getTags.useQuery({
@@ -65,6 +67,12 @@ export default function AssetTypes() {
     queryData: {
       params: { id: editingAssetTypeId as number}
     }
+  });
+
+  const { data: slugCheck, isLoading: isCheckingSlugRaw } = authClient.settings.assetType.checkAssetTypeSlug.useQuery({
+    queryKey: ['asset-type-slug-check', debouncedSlug, editingAssetTypeId],
+    queryData: { query: { slug: debouncedSlug, excludeId: editingAssetTypeId } },
+    enabled: !!debouncedSlug,
   });
 
   const { mutate: addAssetTypeMutation } = authClient.settings.assetType.createAssetType.useMutation({
@@ -110,6 +118,7 @@ export default function AssetTypes() {
     resolver: zodResolver(AssetTypeWithPropertiesSchema),
     defaultValues: {
       name: '',
+      slug: '',
       properties: [],
       forms: [],
       tags: [],
@@ -118,10 +127,21 @@ export default function AssetTypes() {
 
   const { handleSubmit, reset } = form;
 
+  const slugValue = form.watch('slug') ?? '';
+
+  useEffect(() => {
+    const timer = setTimeout(() => setDebouncedSlug(slugValue), 500);
+    return () => clearTimeout(timer);
+  }, [slugValue]);
+
+  const isCheckingSlug = slugValue !== debouncedSlug || (!!debouncedSlug && isCheckingSlugRaw);
+  const slugTaken = !!debouncedSlug && !isCheckingSlug && slugCheck?.status === 200 && !slugCheck.body.available;
+
   useEffect(() => {
     if (editingAssetType?.status === 200) {
       reset({
         name: editingAssetType.body.assetType.name,
+        slug: editingAssetType.body.assetType.slug ?? '',
         properties: editingAssetType.body.properties.map(item => item.id),
         forms: editingAssetType.body.forms?.map(item => item.id) || [],
         tags: editingAssetType.body.tags?.map(item => item.id) || []
@@ -188,7 +208,7 @@ export default function AssetTypes() {
       updateAssetTypeMutation({
         params: { id: editingAssetType.body.assetType.id },
         body: {
-          assetType: { name: data.name },
+          assetType: { name: data.name, slug: data.slug || undefined },
           properties: nonNullPropertyIds as number[],
           forms: nonNullFormIds as number[],
           tagIds: nonNullTagIds as number[]
@@ -197,7 +217,7 @@ export default function AssetTypes() {
     } else {
       addAssetTypeMutation({
         body: {
-          assetType: { name: data.name, tenantId: tenant?.id as string },
+          assetType: { name: data.name, slug: data.slug || undefined, tenantId: tenant?.id as string },
           properties: nonNullPropertyIds as number[],
           forms: nonNullFormIds as number[],
           tagIds: nonNullTagIds as number[]
@@ -260,6 +280,47 @@ export default function AssetTypes() {
                   <FormItem>
                     <FormLabel>Asset Type Name</FormLabel>
                     <Input id="asset-type-name" placeholder="Enter asset type name" {...field} />
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="slug"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>URL Slug</FormLabel>
+                    <div className="relative">
+                      <Input
+                        id="asset-type-slug"
+                        placeholder="e.g. beach-villa"
+                        {...field}
+                        onChange={(e) =>
+                          field.onChange(
+                            e.target.value.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '')
+                          )
+                        }
+                        className={slugTaken ? 'border-destructive pr-9' : slugValue && !isCheckingSlug ? 'pr-9' : ''}
+                      />
+                      {slugValue && (
+                        <span className="absolute right-3 top-1/2 -translate-y-1/2">
+                          {isCheckingSlug ? (
+                            <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+                          ) : slugTaken ? (
+                            <XCircle className="h-4 w-4 text-destructive" />
+                          ) : (
+                            <CheckCircle2 className="h-4 w-4 text-green-500" />
+                          )}
+                        </span>
+                      )}
+                    </div>
+                    {slugTaken ? (
+                      <p className="text-xs text-destructive">This slug is already in use.</p>
+                    ) : (
+                      <p className="text-xs text-muted-foreground">
+                        Used in public URLs. Only lowercase letters, numbers, and hyphens.
+                      </p>
+                    )}
                     <FormMessage />
                   </FormItem>
                 )}
@@ -364,7 +425,7 @@ export default function AssetTypes() {
                 )}
               />
               <div className="flex space-x-2">
-                <Button type="submit">
+                <Button type="submit" disabled={isCheckingSlug || slugTaken}>
                   {editingAssetType ? 'Update Asset Type' : 'Add Asset Type'}
                 </Button>
                 {editingAssetType && (
@@ -388,6 +449,7 @@ export default function AssetTypes() {
               <TableRow>
                 <TableHead className="w-[80px]">Image</TableHead>
                 <TableHead>Name</TableHead>
+                <TableHead>Slug</TableHead>
                 <TableHead className="w-[150px]">Actions</TableHead>
               </TableRow>
             </TableHeader>
@@ -412,6 +474,7 @@ export default function AssetTypes() {
                       )}
                     </TableCell>
                     <TableCell className="font-medium">{type.name}</TableCell>
+                    <TableCell className="text-muted-foreground text-sm">{type.slug ?? '—'}</TableCell>
                     <TableCell>
                       <div className="flex items-center gap-1">
                         <Button

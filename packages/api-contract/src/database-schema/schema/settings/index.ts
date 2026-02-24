@@ -51,6 +51,7 @@ export const TagsRelations = relations(Tags, ({ many, one }) => ({
 export const AssetType = mysqlTable("asset_type", {
     id: bigint("id", { mode: "number", unsigned: true }).autoincrement().primaryKey().notNull(),
     name: varchar("name", { length: 255 }).notNull(),
+    slug: varchar("slug", { length: 255 }),
     description: text("description"),
     image: varchar("image", { length: 255 }),
     createdAt: timestamp('createdAt').notNull().defaultNow(),
@@ -59,6 +60,7 @@ export const AssetType = mysqlTable("asset_type", {
     tenantId: varchar("tenant_id", { length: 255 }).notNull().references(() => Tenant.id),
 }, (table) => ({
     deletedAtIdx: index("asset_type_deleted_at_idx").on(table.deletedAt),
+    slugTenantUniqueIdx: uniqueIndex("asset_type_slug_tenant_unique").on(table.slug, table.tenantId),
 }));
 
 export const InsertAssetTypeSchema = createInsertSchema(AssetType);

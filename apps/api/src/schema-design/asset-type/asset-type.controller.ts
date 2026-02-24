@@ -179,4 +179,13 @@ export class AssetTypeController {
         });
     }
 
+    @TsRestHandler(contract.settings.assetType.checkAssetTypeSlug)
+    async checkAssetTypeSlug(@Headers() headers: any): Promise<ReturnType<typeof tsRestHandler>> {
+        return tsRestHandler(contract.settings.assetType.checkAssetTypeSlug, async ({ query }) => {
+            const tenantId = headers['x-tenant-id'];
+            const available = await this.assetTypeService.checkAssetTypeSlug(tenantId, query.slug, query.excludeId);
+            return { status: 200, body: { available } };
+        });
+    }
+
 }
