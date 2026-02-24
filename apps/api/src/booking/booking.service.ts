@@ -12,6 +12,7 @@ import { generateCustomerReminderEmail, generateStatusUpdateEmailForCustomer, ge
 import { RatesService } from 'src/rates/rates.service';
 import { AddonService } from 'src/addon/addon.service';
 import { TaxFeeService } from 'src/tax-fee/tax-fee.service';
+import { TenantService } from 'src/tenant/tenant.service';
 
 
 @Injectable()
@@ -24,6 +25,7 @@ export class BookingService {
     private readonly ratesService: RatesService,
     private readonly addonService: AddonService,
     private readonly taxFeeService: TaxFeeService,
+    private readonly tenantService: TenantService,
   ) { }
 
   async createBooking(
@@ -1529,6 +1531,19 @@ export class BookingService {
   }
 
   /**
+   * Resolves a tenant ID from either a UUID or a subdomain slug.
+   * Tries UUID lookup first; if no tenant found, falls back to subdomain lookup.
+   */
+  private async resolveTenantId(idOrSubdomain: string): Promise<string> {
+    const byId = await this.tenantService.getTenantById(idOrSubdomain);
+    if (byId) {
+      return byId.id;
+    }
+    const bySubdomain = await this.tenantService.getTenantBySubdomain(idOrSubdomain);
+    return bySubdomain.id;
+  }
+
+  /**
    * Customer creates booking by asset type (public endpoint)
    */
   async customerCreateBookingByAssetType(
@@ -1540,10 +1555,12 @@ export class BookingService {
       formResponses?: Array<{ formFieldId: number; value: string }>;
       addons?: Array<{ addonItemId: number; quantity: number }>;
     },
-    tenantId: string
+    tenantIdOrSubdomain: string
   ): Promise<{ message: string; assetName: string }> {
     const { assetTypeId, startDate, endDate, customer, formResponses, addons } = data;
 
+    const tenantId = await this.resolveTenantId(tenantIdOrSubdomain);
+    this.logger.log(`[customerCreateBookingByAssetType] resolved tenantIdOrSubdomain="${tenantIdOrSubdomain}" → tenantId=${tenantId}`);
     this.logger.log(`[customerCreateBookingByAssetType] tenantId=${tenantId} assetTypeId=${assetTypeId} startDate=${startDate} endDate=${endDate} customer=${customer.email}`);
 
     // Find available asset of this type
