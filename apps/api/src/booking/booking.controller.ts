@@ -1,4 +1,4 @@
-import { ConflictException, Controller, Headers, Logger } from '@nestjs/common';
+import { ConflictException, Controller, Headers, Logger, NotFoundException } from '@nestjs/common';
 import { contract } from '@repo/api-contract';
 import { tsRestHandler, TsRestHandler } from '@ts-rest/nest';
 import { BookingService } from './booking.service';
@@ -139,14 +139,22 @@ export class BookingController {
             const { tenantId } = params;
             const { assetTypeId, startDate, endDate, customer, formResponses, addons } = body;
 
+            this.logger.log(`[customerCreateBookingByAssetType] request received tenantId=${tenantId} assetTypeId=${assetTypeId} startDate=${startDate} endDate=${endDate}`);
+
             try {
                 const result = await this.bookingService.customerCreateBookingByAssetType(
                     { assetTypeId, startDate, endDate, customer, formResponses, addons },
                     tenantId
                 );
+                this.logger.log(`[customerCreateBookingByAssetType] success: ${JSON.stringify(result)}`);
                 return { status: 201, body: result };
             } catch (error: any) {
-                return { status: 404, body: { message: error.message || 'No available assets found' } };
+                this.logger.error(`[customerCreateBookingByAssetType] error: ${error.message}`, error.stack);
+                if (error instanceof NotFoundException) {
+                    return { status: 404, body: { message: error.message } };
+                }
+                // ConflictException = assets exist but none available for the dates
+                return { status: 404, body: { message: error.message || 'No available assets for the selected dates' } };
             }
         });
     }
