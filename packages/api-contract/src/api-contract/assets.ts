@@ -275,7 +275,8 @@ export const assetsContract = c.router({
         properties: z.array(SelectAssetHasPropertiesSchema.omit({ assetPropertyId: true }).extend({
           assetPropertyId: z.number(),
           assetProperty: SelectAssetPropertySchema
-        }))
+        })),
+        location: SelectAssetLocationSchema.nullable(),
       }),
       404: z.undefined()
     },

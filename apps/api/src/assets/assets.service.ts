@@ -462,15 +462,17 @@ export class AssetsService {
     const asset = result.assets;
 
     // Fetch related data
-    const [ assetImages, propertyValues] = await Promise.all([
+    const [assetImages, propertyValues, location] = await Promise.all([
       this.getAssetImages(asset.id),
       this.getPropertyValues(asset.id),
+      this.getAssetLocation(asset.id),
     ]);
 
     return {
       ...asset,
       images: assetImages,
       properties: propertyValues,
+      location: location ?? null,
     };
   }
 
