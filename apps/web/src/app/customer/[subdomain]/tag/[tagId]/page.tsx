@@ -12,15 +12,13 @@ export default function TagBookingPage() {
   const params = useParams();
   const router = useRouter();
   const subdomain = params.subdomain as string;
-  const tagId = parseInt(params.tagId as string);
+  const tagSlug = params.tagId as string;
 
   // Fetch tag details
-
-
     const { data: assetTypesResponse, isLoading, error: tagsError, refetch: refetchTags } = client.settings.assetType.customerGetAssetType.useQuery({
-      queryKey: ['assetTypes-by-subdomain', subdomain],
+      queryKey: ['assetTypes-by-subdomain', subdomain, tagSlug],
       queryData: {
-        params: { subdomain, id:tagId },
+        params: { subdomain, id: tagSlug },
       },
     });
 
@@ -128,7 +126,7 @@ export default function TagBookingPage() {
             <Button
               size="lg"
               className="w-full"
-              onClick={() => router.push(`/customer/${subdomain}/tag/${tagId}/book`)}
+              onClick={() => router.push(`/customer/${subdomain}/tag/${tagSlug}/book`)}
             >
               <Calendar className="h-5 w-5 mr-2" />
               Book Now

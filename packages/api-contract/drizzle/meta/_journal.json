@@ -15,6 +15,13 @@
       "when": 1771862042184,
       "tag": "0001_known_purifiers",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "5",
+      "when": 1771893765941,
+      "tag": "0002_shallow_molten_man",
+      "breakpoints": true
     }
   ]
 }

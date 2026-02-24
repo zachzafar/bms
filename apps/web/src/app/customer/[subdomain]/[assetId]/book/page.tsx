@@ -44,7 +44,7 @@ export default function CustomerBookingPage() {
   // Asset details
   const { data: response, isLoading, error: queryError } = client.assets.getAssetDetailsBySubdomain.useQuery({
     queryKey: ['asset-details', subdomain, assetId],
-    queryData: { params: { subdomain, assetId } },
+    queryData: { params: { subdomain, slug: assetId } },
   });
 
   const asset = response?.status === 200 ? {

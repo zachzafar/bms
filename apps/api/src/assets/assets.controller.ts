@@ -35,6 +35,16 @@ export class AssetsController {
         });
     }
 
+    @TsRestHandler(contract.assets.checkAssetSlug)
+    @Roles(PermissionScope.ASSETS_READ)
+    async checkAssetSlug(@Headers() headers: any): Promise<ReturnType<typeof tsRestHandler>> {
+        return tsRestHandler(contract.assets.checkAssetSlug, async ({ query }) => {
+            const tenantId = headers['x-tenant-id'];
+            const available = await this.assetService.checkAssetSlug(tenantId, query.slug, query.excludeId);
+            return { status: 200, body: { available } };
+        });
+    }
+
     @TsRestHandler(contract.assets.getAsset)
     @Roles(PermissionScope.ASSETS_READ)
     async getAssetById(@Headers() headers: any): Promise<ReturnType<typeof tsRestHandler>> {
@@ -269,8 +279,8 @@ export class AssetsController {
     @TsRestHandler(contract.assets.getAssetDetailsBySubdomain)
     async getAssetDetailsBySubdomain(): Promise<ReturnType<typeof tsRestHandler>> {
         return tsRestHandler(contract.assets.getAssetDetailsBySubdomain, async ({ params }) => {
-            const { subdomain, assetId } = params;
-            const asset = await this.assetService.getAssetDetailsBySubdomain(subdomain, assetId);
+            const { subdomain, slug } = params;
+            const asset = await this.assetService.getAssetDetailsBySubdomain(subdomain, slug);
 
             if (!asset) {
                 return { status: 404, body: undefined };
