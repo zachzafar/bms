@@ -266,6 +266,7 @@ export class AssetTypeService {
                 }
                 return {
                     id: assetType.id,
+                    slug: assetType.slug ?? null,
                     name: assetType.name,
                     image: imageUrl,
                     description: assetType.description || '',
@@ -288,12 +289,16 @@ export class AssetTypeService {
         };
     }
 
-    async getAssetTypeForCustomer(tenantId: string, id: number) {
+    async getAssetTypeForCustomer(tenantId: string, idOrSlug: string) {
+        const numericId = Number(idOrSlug);
         const assetType = await this.db.query.AssetType.findFirst({
-            where: (at, { eq, and, isNull }) => and(
-                eq(at.id, id),
+            where: (at, { eq, and, isNull, or }) => and(
                 eq(at.tenantId, tenantId),
-                isNull(at.deletedAt)
+                isNull(at.deletedAt),
+                or(
+                    eq(at.slug, idOrSlug),
+                    ...(!isNaN(numericId) ? [eq(at.id, numericId)] : [])
+                )
             ),
             with: {
                 propertyValues: { with: { assetProperty: true } },

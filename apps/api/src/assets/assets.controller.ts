@@ -35,6 +35,16 @@ export class AssetsController {
         });
     }
 
+    @TsRestHandler(contract.assets.checkAssetSlug)
+    @Roles(PermissionScope.ASSETS_READ)
+    async checkAssetSlug(@Headers() headers: any): Promise<ReturnType<typeof tsRestHandler>> {
+        return tsRestHandler(contract.assets.checkAssetSlug, async ({ query }) => {
+            const tenantId = headers['x-tenant-id'];
+            const available = await this.assetService.checkAssetSlug(tenantId, query.slug, query.excludeId);
+            return { status: 200, body: { available } };
+        });
+    }
+
     @TsRestHandler(contract.assets.getAsset)
     @Roles(PermissionScope.ASSETS_READ)
     async getAssetById(@Headers() headers: any): Promise<ReturnType<typeof tsRestHandler>> {
@@ -320,16 +330,6 @@ export class AssetsController {
             await this.tenantService.validateTenantAccess(tenantId, schema.Asset, params.assetId);
             await this.assetService.deleteAssetLocation(params.assetId);
             return { status: 200, body: { success: true } };
-        });
-    }
-
-    @TsRestHandler(contract.assets.checkAssetSlug)
-    @Roles(PermissionScope.ASSETS_READ)
-    async checkAssetSlug(@Headers() headers: any): Promise<ReturnType<typeof tsRestHandler>> {
-        return tsRestHandler(contract.assets.checkAssetSlug, async ({ query }) => {
-            const tenantId = headers['x-tenant-id'];
-            const available = await this.assetService.checkAssetSlug(tenantId, query.slug, query.excludeId);
-            return { status: 200, body: { available } };
         });
     }
 

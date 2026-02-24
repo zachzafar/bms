@@ -34,6 +34,15 @@ export class AssetTypeController {
         });
     }
 
+    @TsRestHandler(contract.settings.assetType.checkAssetTypeSlug)
+    async checkAssetTypeSlug(@Headers() headers: any): Promise<ReturnType<typeof tsRestHandler>> {
+        return tsRestHandler(contract.settings.assetType.checkAssetTypeSlug, async ({ query }) => {
+            const tenantId = headers['x-tenant-id'];
+            const available = await this.assetTypeService.checkAssetTypeSlug(tenantId, query.slug, query.excludeId);
+            return { status: 200, body: { available } };
+        });
+    }
+
     @TsRestHandler(contract.settings.assetType.getAssetType)
     async getAssetType(@Headers() headers: any): Promise<ReturnType<typeof tsRestHandler>> {
         return tsRestHandler(contract.settings.assetType.getAssetType, async ({ params }) => {
@@ -147,7 +156,7 @@ export class AssetTypeController {
                 };
             }
 
-            const assetType = await this.assetTypeService.getAssetTypeForCustomer(tenant.id, params.id);
+            const assetType = await this.assetTypeService.getAssetTypeForCustomer(tenant.id, String(params.id));
             if (!assetType) {
                 return {
                     status: 200,
@@ -176,15 +185,6 @@ export class AssetTypeController {
             await this.TenantService.validateTenantAccess(tenantId, schema.AssetType, params.id);
             await this.assetTypeService.setAssetTypePropertyValues(params.id, body.values);
             return { status: 200, body: null };
-        });
-    }
-
-    @TsRestHandler(contract.settings.assetType.checkAssetTypeSlug)
-    async checkAssetTypeSlug(@Headers() headers: any): Promise<ReturnType<typeof tsRestHandler>> {
-        return tsRestHandler(contract.settings.assetType.checkAssetTypeSlug, async ({ query }) => {
-            const tenantId = headers['x-tenant-id'];
-            const available = await this.assetTypeService.checkAssetTypeSlug(tenantId, query.slug, query.excludeId);
-            return { status: 200, body: { available } };
         });
     }
 

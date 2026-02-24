@@ -159,6 +159,7 @@ export const assetTypeContract = c.router({
             200: z.object({
                 data: z.array(z.object({
                     id: z.number(),
+                    slug: z.string().nullable().optional(),
                     name: z.string(),
                     image: z.string(),
                     description: z.string(),
@@ -172,7 +173,7 @@ export const assetTypeContract = c.router({
         path: '/customer/:subdomain/assetType/:id',
         pathParams:z.object({
             subdomain: z.string(),
-            id: z.coerce.number()
+            id: z.string()
         }),
         responses: {
             200: z.object({

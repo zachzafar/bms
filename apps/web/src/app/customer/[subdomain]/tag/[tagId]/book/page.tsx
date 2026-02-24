@@ -39,7 +39,7 @@ export default function TagBookingPage() {
   const params = useParams();
   const router = useRouter();
   const subdomain = params.subdomain as string;
-  const assetTypeId = parseInt(params.tagId as string);
+  const tagSlug = params.tagId as string;
 
   // Fetch tenant to get tenantId
   const { data: tenantResponse, isLoading: isTenantLoading } = client.tenants.getTenantBySubdomain.useQuery({
@@ -52,13 +52,15 @@ export default function TagBookingPage() {
   const tenantId = tenantResponse?.status === 200 ? tenantResponse.body.id : null;
 
   const { data: assetTypesResponse, isLoading: AssetTypeLoading } = client.settings.assetType.customerGetAssetType.useQuery({
-    queryKey: ['assetTypes-by-subdomain', subdomain, assetTypeId],
+    queryKey: ['assetTypes-by-subdomain', subdomain, tagSlug],
     queryData: {
-      params: { subdomain, id: assetTypeId },
+      params: { subdomain, id: tagSlug },
     },
   });
 
   const assetType = assetTypesResponse?.status === 200 ? assetTypesResponse.body : null;
+  // Numeric id resolved from the response — used for all sub-queries that require a number
+  const assetTypeId = assetType?.id ?? 0;
 
   // Fetch forms for this asset type
   const { data: formsResponse, isLoading: isLoadingForms } = client.settings.form.getFormsForAssetTypePublic.useQuery({
@@ -400,7 +402,7 @@ export default function TagBookingPage() {
       <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Back Button */}
         <Link
-          href={`/customer/${subdomain}/tag/${assetTypeId}`}
+          href={`/customer/${subdomain}/tag/${tagSlug}`}
           className="inline-flex items-center text-primary hover:text-primary mb-6"
         >
           <ArrowLeft className="w-5 h-5 mr-2" />
@@ -725,7 +727,7 @@ export default function TagBookingPage() {
                     variant="outline"
                     asChild
                   >
-                    <Link href={`/customer/${subdomain}/tag/${assetTypeId}`}>
+                    <Link href={`/customer/${subdomain}/tag/${tagSlug}`}>
                       Cancel
                     </Link>
                   </Button>

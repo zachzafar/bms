@@ -199,7 +199,7 @@ export default function CustomerPage() {
                 {assetTypes.map((tag) => (
                   <Link
                     key={tag.id}
-                    href={`/customer/${subdomain}/tag/${tag.id}`}
+                    href={`/customer/${subdomain}/tag/${tag.slug ?? tag.id}`}
                     className="group"
                   >
                     <Card className="h-full hover:shadow-xl transition-shadow duration-300">
