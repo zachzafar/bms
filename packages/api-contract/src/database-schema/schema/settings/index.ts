@@ -75,7 +75,7 @@ export type UpdateAssetType = z.infer<typeof UpdateAssetTypeSchema>;
 export const assetProperty = mysqlTable("asset_properties", {
     id: bigint("id", { mode: "number", unsigned: true }).autoincrement().primaryKey(),
     name: varchar("name", { length: 255 }).notNull(),
-    propertyType: mysqlEnum(['number','string','textbox','list']).notNull(),
+    propertyType: mysqlEnum(['number','string','textbox','list','select','multi_select']).notNull(),
     tenantId: varchar("tenant_id", { length: 255 }).notNull().references(() => Tenant.id),
     createdAt: timestamp('createdAt').notNull().defaultNow(),
     updatedAt: timestamp('updatedAt'),
@@ -92,6 +92,21 @@ export const UpdateAssetPropertySchema = InsertAssetPropertySchema.partial();
 export type InsertAssetProperty = z.infer<typeof InsertAssetPropertySchema>;
 export type SelectAssetProperty = z.infer<typeof SelectAssetPropertySchema>;
 export type UpdateAssetProperty = z.infer<typeof UpdateAssetPropertySchema>;
+
+// AssetPropertyOption — preconfigured options for select / multi_select properties
+export const AssetPropertyOption = mysqlTable("asset_property_options", {
+    id: bigint("id", { mode: "number", unsigned: true }).autoincrement().primaryKey(),
+    assetPropertyId: bigint("asset_property_id", { mode: 'number', unsigned: true }).notNull().references(() => assetProperty.id, { onDelete: 'cascade' }),
+    label: varchar("label", { length: 255 }).notNull(),
+    displayOrder: bigint("display_order", { mode: 'number', unsigned: true }).default(0).notNull(),
+}, (table) => ({
+    assetPropertyOptionIdx: index("asset_property_option_idx").on(table.assetPropertyId),
+}));
+
+export const InsertAssetPropertyOptionSchema = createInsertSchema(AssetPropertyOption);
+export const SelectAssetPropertyOptionSchema = createSelectSchema(AssetPropertyOption);
+export type InsertAssetPropertyOption = z.infer<typeof InsertAssetPropertyOptionSchema>;
+export type SelectAssetPropertyOption = z.infer<typeof SelectAssetPropertyOptionSchema>;
 
 // AssetTypePropertyValues — type-level default property values (declared before AssetTypeRelations)
 export const AssetTypePropertyValues = mysqlTable("at_property_values", {
@@ -118,11 +133,19 @@ export const AssetTypeRelations = relations(AssetType, ({ one, many }) => ({
 }));
 
 
-export const AssetPropertyRelations = relations(assetProperty, ({ one }) => ({
+export const AssetPropertyRelations = relations(assetProperty, ({ one, many }) => ({
     assetTypeHasProperties: one(AssetTypeHasProperties),
     tenant: one(Tenant,{
         fields: [assetProperty.tenantId],
         references: [Tenant.id]
+    }),
+    options: many(AssetPropertyOption),
+}));
+
+export const AssetPropertyOptionRelations = relations(AssetPropertyOption, ({ one }) => ({
+    assetProperty: one(assetProperty, {
+        fields: [AssetPropertyOption.assetPropertyId],
+        references: [assetProperty.id],
     }),
 }));
 

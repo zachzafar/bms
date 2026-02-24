@@ -22,6 +22,13 @@
       "when": 1771893765941,
       "tag": "0002_shallow_molten_man",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "5",
+      "when": 1771962269221,
+      "tag": "0003_red_maximus",
+      "breakpoints": true
     }
   ]
 }

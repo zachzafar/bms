@@ -1,8 +1,12 @@
 import { initContract } from "@ts-rest/core";
 
 import { z } from "zod";
-import { InsertAssetPropertySchema, SelectAssetPropertySchema, UpdateAssetPropertySchema } from "../../database-schema";
+import { InsertAssetPropertySchema, SelectAssetPropertyOptionSchema, SelectAssetPropertySchema, UpdateAssetPropertySchema } from "../../database-schema";
 import { pagination } from "../utils";
+
+const PropertyWithOptionsSchema = SelectAssetPropertySchema.extend({
+    options: z.array(SelectAssetPropertyOptionSchema),
+});
 
 const c = initContract();
 
@@ -23,7 +27,7 @@ export const propertiesContract = c.router({
         method: 'GET',
         path: '/properties/:id',
         responses: {
-            200: SelectAssetPropertySchema,
+            200: PropertyWithOptionsSchema,
             404: z.object({
                 message: z.string()
             })
@@ -73,7 +77,7 @@ export const propertiesContract = c.router({
         path: '/properties',
         responses: {
             200: z.object({
-                data: z.array(SelectAssetPropertySchema),
+                data: z.array(PropertyWithOptionsSchema),
                 pagination
             })
         },
@@ -82,6 +86,31 @@ export const propertiesContract = c.router({
             pageSize: z.coerce.number().optional(),
         }),
         summary: 'Get all asset properties'
+    },
+
+    getPropertyOptions: {
+        method: 'GET',
+        path: '/properties/:id/options',
+        pathParams: z.object({ id: z.coerce.number() }),
+        responses: {
+            200: z.array(SelectAssetPropertyOptionSchema),
+            404: z.object({ message: z.string() }),
+        },
+        summary: 'Get preconfigured options for a select/multi_select property',
+    },
+
+    setPropertyOptions: {
+        method: 'PUT',
+        path: '/properties/:id/options',
+        pathParams: z.object({ id: z.coerce.number() }),
+        body: z.object({
+            options: z.array(z.string().min(1)),
+        }),
+        responses: {
+            200: z.array(SelectAssetPropertyOptionSchema),
+            404: z.object({ message: z.string() }),
+        },
+        summary: 'Replace all options for a select/multi_select property',
     },
 
 })

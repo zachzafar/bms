@@ -1,9 +1,12 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import {
   Dialog,
@@ -46,6 +49,18 @@ export default function AssetTypeDefaultSpecsDialog({ assetTypeId, assetTypeName
   });
 
   const { mutate: saveValues, isPending } = authClient.settings.assetType.setAssetTypePropertyValues.useMutation();
+
+  const { data: allPropertiesData } = authClient.settings.properties.getProperties.useQuery({
+    queryKey: ['properties'],
+  });
+
+  const optionsMap = useMemo(() => {
+    if (allPropertiesData?.status !== 200) return {} as Record<number, { id: number; label: string }[]>;
+    return allPropertiesData.body.data.reduce((acc, p) => {
+      acc[p.id] = p.options ?? [];
+      return acc;
+    }, {} as Record<number, { id: number; label: string }[]>);
+  }, [allPropertiesData]);
 
   const properties = assetTypeData?.status === 200 ? assetTypeData.body.properties : [];
   const existing = existingData?.status === 200 ? existingData.body : [];
@@ -111,6 +126,7 @@ export default function AssetTypeDefaultSpecsDialog({ assetTypeId, assetTypeName
           <div className="space-y-4 py-2">
             {properties.map(property => {
               const currentValue = values.find(v => v.propertyId === property.id)?.value ?? '';
+              const options = optionsMap[property.id] ?? [];
               return (
                 <div key={property.id} className="space-y-1">
                   <label className="text-sm font-medium">{property.name}</label>
@@ -127,6 +143,42 @@ export default function AssetTypeDefaultSpecsDialog({ assetTypeId, assetTypeName
                       onValueChange={val => handleChange(property.id, val)}
                       placeholder={`Enter ${property.name}`}
                     />
+                  ) : property.propertyType === 'select' ? (
+                    <Select
+                      value={currentValue}
+                      onValueChange={val => handleChange(property.id, val)}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder={`Select ${property.name}`} />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {options.map(o => (
+                          <SelectItem key={o.id} value={o.label}>{o.label}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  ) : property.propertyType === 'multi_select' ? (
+                    <div className="flex flex-col gap-2">
+                      {options.map(o => {
+                        const selected = currentValue ? currentValue.split(',').includes(o.label) : false;
+                        return (
+                          <div key={o.id} className="flex items-center gap-2">
+                            <Checkbox
+                              id={`ds-${property.id}-${o.id}`}
+                              checked={selected}
+                              onCheckedChange={checked => {
+                                const prev = currentValue ? currentValue.split(',').filter(Boolean) : [];
+                                handleChange(
+                                  property.id,
+                                  checked ? [...prev, o.label] : prev.filter(v => v !== o.label)
+                                );
+                              }}
+                            />
+                            <Label htmlFor={`ds-${property.id}-${o.id}`}>{o.label}</Label>
+                          </div>
+                        );
+                      })}
+                    </div>
                   ) : (
                     <Input
                       type={property.propertyType === 'number' ? 'number' : 'text'}

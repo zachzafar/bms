@@ -78,5 +78,20 @@ export class PropertyController {
       });
     }
 
+    @TsRestHandler(c.settings.properties.getPropertyOptions)
+    async getPropertyOptions(): Promise<ReturnType<typeof tsRestHandler>> {
+      return tsRestHandler(c.settings.properties.getPropertyOptions, async ({ params }) => {
+        const options = await this.PropertyService.getPropertyOptions(params.id);
+        return { status: 200, body: options };
+      });
+    }
+
+    @TsRestHandler(c.settings.properties.setPropertyOptions)
+    async setPropertyOptions(): Promise<ReturnType<typeof tsRestHandler>> {
+      return tsRestHandler(c.settings.properties.setPropertyOptions, async ({ params, body }) => {
+        const options = await this.PropertyService.setPropertyOptions(params.id, body.options);
+        return { status: 200, body: options };
+      });
+    }
 
 }

@@ -1,4 +1,4 @@
-import { Inject, Injectable } from '@nestjs/common';
+import { Inject, Injectable, NotFoundException } from '@nestjs/common';
 import { DrizzleAsyncProvider } from 'src/drizzle/drizzle.provider';
 import { MySql2Database } from 'drizzle-orm/mysql2';
 import * as schema from '@repo/api-contract';
@@ -13,12 +13,15 @@ export class PropertyService {
 
     async createProperty(data: schema.InsertAssetProperty) {
         const newPropertyId = await this.db.insert(schema.assetProperty).values(data).$returningId().execute();
-        
+
         return newPropertyId[0].id
     }
 
     async getProperty(id: number) {
-        return this.db.query.assetProperty.findFirst({ where: (property, { eq, and, isNull }) => and(eq(property.id, id), isNull(property.deletedAt)) });
+        return this.db.query.assetProperty.findFirst({
+            where: (property, { eq, and, isNull }) => and(eq(property.id, id), isNull(property.deletedAt)),
+            with: { options: { orderBy: (o, { asc }) => [asc(o.displayOrder)] } },
+        });
     }
 
     async getProperties(tenantId: string, page: number = 1, pageSize: number = 10) {
@@ -33,6 +36,7 @@ export class PropertyService {
 
         const results = await this.db.query.assetProperty.findMany({
             where: (property, { eq, and, isNull }) => and(eq(property.tenantId, tenantId),isNull(property.deletedAt)),
+            with: { options: { orderBy: (o, { asc }) => [asc(o.displayOrder)] } },
             limit: pageSize,
             offset: offset,
         });
@@ -50,6 +54,30 @@ export class PropertyService {
             data: results,
             pagination: paginationData,
         };
+    }
+
+    async getPropertyOptions(id: number) {
+        return this.db.query.AssetPropertyOption.findMany({
+            where: (o, { eq }) => eq(o.assetPropertyId, id),
+            orderBy: (o, { asc }) => [asc(o.displayOrder)],
+        });
+    }
+
+    async setPropertyOptions(id: number, labels: string[]) {
+        await this.db.delete(schema.AssetPropertyOption)
+            .where(eq(schema.AssetPropertyOption.assetPropertyId, id));
+
+        if (labels.length > 0) {
+            await this.db.insert(schema.AssetPropertyOption).values(
+                labels.map((label, index) => ({
+                    assetPropertyId: id,
+                    label,
+                    displayOrder: index,
+                }))
+            );
+        }
+
+        return this.getPropertyOptions(id);
     }
 
     async updateProperty(id: number, data: schema.UpdateAssetProperty) {
