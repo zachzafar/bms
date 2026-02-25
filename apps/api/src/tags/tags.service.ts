@@ -2,7 +2,7 @@ import { Inject, Injectable, InternalServerErrorException, Logger, NotFoundExcep
 import { MySql2Database } from 'drizzle-orm/mysql2';
 import { DrizzleAsyncProvider } from 'src/drizzle/drizzle.provider';
 import * as schema from '@repo/api-contract';
-import { and, eq, isNull, sql } from 'drizzle-orm';
+import { and, eq, isNull, ne, sql } from 'drizzle-orm';
 import type { InsertTag } from '@repo/api-contract';
 import { ObjectStorageService } from 'src/object-storage/object-storage.service';
 
@@ -165,6 +165,32 @@ export class TagsService {
     return imagePath;
   }
 
+  async getTagsBySlug(slugs: string[], tenantId: string): Promise<{ id: number; slug: string }[]> {
+    if (slugs.length === 0) return [];
+    const results = await this.db
+      .select({ id: schema.Tags.id, slug: schema.Tags.slug })
+      .from(schema.Tags)
+      .where(
+        and(
+          eq(schema.Tags.tenantId, tenantId),
+          isNull(schema.Tags.deletedAt),
+        )
+      )
+      .execute();
+    return results.filter((t) => t.slug && slugs.includes(t.slug)) as { id: number; slug: string }[];
+  }
+
+  async checkTagSlug(slug: string, excludeId?: number): Promise<boolean> {
+    const conditions = [eq(schema.Tags.slug, slug), isNull(schema.Tags.deletedAt)];
+    if (excludeId) {
+      conditions.push(ne(schema.Tags.id, excludeId));
+    }
+    const existing = await this.db.query.Tags.findFirst({
+      where: (_, { and }) => and(...conditions as any),
+    });
+    return !existing;
+  }
+
   async getTagsBySubdomain(subdomain: string, page: number = 1, pageSize: number = 10) {
     // First, find the tenant by subdomain
     const tenant = await this.db.query.Tenant.findFirst({
@@ -188,6 +214,7 @@ export class TagsService {
       .select({
         id: schema.Tags.id,
         name: schema.Tags.name,
+        slug: schema.Tags.slug,
         description: schema.Tags.description,
         tagImage: schema.Tags.tagImage,
       })

@@ -109,6 +109,14 @@ async createTag(@Headers() headers: any): Promise<ReturnType<typeof tsRestHandle
     });
   }
 
+  @TsRestHandler(contract.settings.tags.checkTagSlug)
+  async checkTagSlug(@Headers() headers: any): Promise<ReturnType<typeof tsRestHandler>> {
+    return tsRestHandler(contract.settings.tags.checkTagSlug, async ({ query }) => {
+      const available = await this.tagsService.checkTagSlug(query.slug, query.excludeId);
+      return { status: 200, body: { available } };
+    });
+  }
+
   @Public()
   @TsRestHandler(contract.settings.tags.getTagsBySubdomain)
   async getTagsBySubdomain(): Promise<ReturnType<typeof tsRestHandler>> {
