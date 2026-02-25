@@ -16,7 +16,7 @@ export class PropertyController {
         const tenantId = headers['x-tenant-id']
         this.logger.log(`Creating a new property for tenant:${tenantId}`);
         const propertyId = await this.PropertyService.createProperty({...body ,tenantId});
-        return { status: 200, body: propertyId };
+        return { status: 201, body: { id: propertyId } };
       }); 
     }
   
