@@ -11,7 +11,7 @@ export const AssetTypePropertyValueSchema = z.object({
     value: z.string(),
     property: z.object({
         name: z.string(),
-        propertyType: z.enum(['number', 'string', 'textbox', 'list']),
+        propertyType: z.enum(['number', 'string', 'textbox', 'list','select','multi_select']),
     }),
 });
 
