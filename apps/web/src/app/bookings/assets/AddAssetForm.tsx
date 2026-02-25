@@ -28,7 +28,6 @@ import { PlusCircle } from 'lucide-react';
 const ModifiedInsertAssetSchema = z.object({
   name: z.string().min(1, 'Asset name is required'),
   assetTypeId: z.coerce.number().min((1), 'Asset type is required'),
-  tagId: z.number().optional(),
   forms: z.array(z.number()).optional(),
 });
 
@@ -38,10 +37,12 @@ function AddAssetForm() {
   const tenant = StorageService.getTenant();
   const router = useRouter();
   const [selectedForms, setSelectedForms] = useState<string[]>([]);
+  const [selectedTags, setSelectedTags] = useState<string[]>([]);
 
   const { mutate, isPending } = authClient.assets.createAsset.useMutation();
   const { data: assetTypes } = authClient.settings.assetType.getAssetTypes.useQuery({ queryKey: ASSET_TYPE_QUERY_KEY });
   const { data: bookingForms } = authClient.settings.form.getForms.useQuery({ queryKey: ['bookingForms'] });
+  const { data: tagsData } = authClient.settings.tags.getTags.useQuery({ queryKey: ASSET_TAGS_QUERY_KEY });
 
   const form = useForm<ModifiedInsertAsset>({
     resolver: zodResolver(ModifiedInsertAssetSchema),
@@ -61,6 +62,11 @@ function AddAssetForm() {
 
     const nonNullFormIds = formIds.filter(formId => formId !== null);
 
+    const tagIds = selectedTags.map(tagName => {
+      const tag = tagsData?.status === 200 && tagsData.body.data.find(t => t.name === tagName);
+      return tag ? tag.id : null;
+    }).filter(id => id !== null) as number[];
+
     mutate({
       body: {
         asset: {
@@ -69,7 +75,8 @@ function AddAssetForm() {
           assetTypeId: Number(data.assetTypeId),
         },
         tenant: tenant.id,
-        formIds: nonNullFormIds as number[]
+        formIds: nonNullFormIds as number[],
+        tagIds,
       }
     }, {
       onSuccess: (response) => {
@@ -77,6 +84,7 @@ function AddAssetForm() {
         router.push(`assets/${response.body.id}`);
         form.reset();
         setSelectedForms([]);
+        setSelectedTags([]);
       },
       onError: (error) => {
         console.error('Error adding asset:', error);
@@ -157,14 +165,29 @@ function AddAssetForm() {
                 </MultiSelectorContent>
               </MultiSelector>
               <FormDescription>Select booking forms for this asset</FormDescription>
-              {/* <Link href="/bookings/settings/forms" className="flex items-center gap-1 text-xs text-primary hover:underline mt-1">
-                <PlusCircle className="h-3 w-3" />
-                Create Booking Form
-              </Link> */}
               <FormMessage />
             </FormItem>
           )}
         />
+
+        <div className="space-y-2">
+          <label className="text-sm font-medium">Tags</label>
+          <MultiSelector values={selectedTags} onValuesChange={setSelectedTags}>
+            <MultiSelectorTrigger>
+              <MultiSelectorInput placeholder="Select tags..." />
+            </MultiSelectorTrigger>
+            <MultiSelectorContent>
+              <MultiSelectorList>
+                {tagsData?.status === 200 && tagsData.body.data.map((tag) => (
+                  <MultiSelectorItem key={tag.id} value={tag.name}>
+                    {tag.name}
+                  </MultiSelectorItem>
+                ))}
+              </MultiSelectorList>
+            </MultiSelectorContent>
+          </MultiSelector>
+        </div>
+
         <Button type="submit" disabled={isPending || tenant == null}>
           {isPending ? 'Adding Asset...' : 'Add Asset'}
         </Button>

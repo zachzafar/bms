@@ -66,7 +66,7 @@ Returns all assets with images and properties for authenticated tenant context (
 
 ### GET `/assets-by-sub/:subdomain`
 
-Returns a paginated list of assets for a specific tenant identified by subdomain. Used on the customer listing page.
+Returns a paginated list of assets for a specific tenant identified by subdomain. Supports filtering by asset type, tags, and property values. Used on the customer listing page.
 
 **Path Params**
 | Param | Type | Description |
@@ -74,10 +74,29 @@ Returns a paginated list of assets for a specific tenant identified by subdomain
 | `subdomain` | `string` | Tenant's subdomain |
 
 **Query Params**
-| Param | Type | Required |
-|-------|------|----------|
-| `page` | `number` | No |
-| `pageSize` | `number` | No |
+| Param | Type | Required | Description |
+|-------|------|----------|-------------|
+| `page` | `number` | No | Page number (default: 1) |
+| `pageSize` | `number` | No | Items per page (default: 10) |
+| `assetTypeId` | `number` | No | Filter by a single asset type ID |
+| `tagIds` | `string` | No | Comma-separated tag IDs to filter by (OR logic) e.g. `"1,2,3"` |
+| `propertyFilters` | `string` | No | Comma-separated `name:value` property filters (AND logic). Supports numeric operators — see below. |
+
+**Property Filter Operators**
+
+The `propertyFilters` param supports optional numeric comparison operators in the value:
+
+| Syntax | Operator | Example |
+|--------|----------|---------|
+| `name:value` | equal (default) | `beds:3` |
+| `name:>value` | greater than | `beds:>2` |
+| `name:>=value` | greater than or equal | `beds:>=3` |
+| `name:<value` | less than | `price:<500` |
+| `name:<=value` | less than or equal | `price:<=500` |
+
+Multiple filters are combined with AND logic. Non-numeric values always use exact string match regardless of operator.
+
+**Example:** `?propertyFilters=beds:>=2,bathrooms:>1,price:<=500&tagIds=3,7&assetTypeId=2`
 
 **Response 200**
 ```json
@@ -91,13 +110,22 @@ Returns a paginated list of assets for a specific tenant identified by subdomain
       "images": ["string (URL)"],
       "properties": [
         { "id": 1, "name": "string", "value": "string" }
-      ]
+      ],
+      "location": {
+        "id": 1,
+        "assetId": "string",
+        "address": "string | null",
+        "lat": "string | null",
+        "lng": "string | null"
+      }
     }
   ]
 }
 ```
 
 > **Note:** Use `slug` for asset detail links if present, falling back to `id`. Links should go to `/assets-by-sub/:subdomain/:slug`.
+>
+> **Note:** `location` is `null` when no location has been set for the asset. `lat` and `lng` are decimal strings — parse to float when rendering on a map.
 
 ---
 
@@ -282,7 +310,7 @@ Creates a booking by asset type. The server auto-assigns the best available asse
 **Path Params**
 | Param | Type | Description |
 |-------|------|-------------|
-| `tenantId` | `string` | Tenant ID (UUID) |
+| `tenantId` | `string` | Tenant UUID **or** subdomain slug — the server resolves either |
 
 **Request Body**
 ```json

@@ -29,6 +29,13 @@
       "when": 1771962269221,
       "tag": "0003_red_maximus",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "5",
+      "when": 1772030653265,
+      "tag": "0004_thick_maggott",
+      "breakpoints": true
     }
   ]
 }
