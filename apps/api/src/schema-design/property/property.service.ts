@@ -1,4 +1,4 @@
-import { Inject, Injectable, NotFoundException } from '@nestjs/common';
+import { ConflictException, Inject, Injectable } from '@nestjs/common';
 import { DrizzleAsyncProvider } from 'src/drizzle/drizzle.provider';
 import { MySql2Database } from 'drizzle-orm/mysql2';
 import * as schema from '@repo/api-contract';
@@ -12,9 +12,23 @@ export class PropertyService {
 
 
     async createProperty(data: schema.InsertAssetProperty) {
-        const newPropertyId = await this.db.insert(schema.assetProperty).values(data).$returningId().execute();
+        const existing = await this.db.query.assetProperty.findFirst({
+            where: (p, { and, eq }) => and(eq(p.name, data.name), eq(p.tenantId, data.tenantId)),
+        });
 
-        return newPropertyId[0].id
+        if (existing) {
+            if (existing.deletedAt !== null) {
+                await this.db
+                    .update(schema.assetProperty)
+                    .set({ deletedAt: null })
+                    .where(eq(schema.assetProperty.id, existing.id));
+                return existing.id;
+            }
+            throw new ConflictException(`A property with the name "${data.name}" already exists`);
+        }
+
+        const newPropertyId = await this.db.insert(schema.assetProperty).values(data).$returningId().execute();
+        return newPropertyId[0].id;
     }
 
     async getProperty(id: number) {
@@ -87,8 +101,7 @@ export class PropertyService {
 
     async deleteProperty(id: number) {
         await this.db
-            .update(schema.assetProperty)
-            .set({ deletedAt: new Date() })
+            .delete(schema.assetProperty)
             .where(eq(schema.assetProperty.id, id));
     }
 }
