@@ -165,6 +165,21 @@ export class TagsService {
     return imagePath;
   }
 
+  async getTagsBySlug(slugs: string[], tenantId: string): Promise<{ id: number; slug: string }[]> {
+    if (slugs.length === 0) return [];
+    const results = await this.db
+      .select({ id: schema.Tags.id, slug: schema.Tags.slug })
+      .from(schema.Tags)
+      .where(
+        and(
+          eq(schema.Tags.tenantId, tenantId),
+          isNull(schema.Tags.deletedAt),
+        )
+      )
+      .execute();
+    return results.filter((t) => t.slug && slugs.includes(t.slug)) as { id: number; slug: string }[];
+  }
+
   async checkTagSlug(slug: string, excludeId?: number): Promise<boolean> {
     const conditions = [eq(schema.Tags.slug, slug), isNull(schema.Tags.deletedAt)];
     if (excludeId) {

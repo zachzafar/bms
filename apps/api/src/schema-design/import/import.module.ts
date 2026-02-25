@@ -8,10 +8,12 @@ import { AssetsService } from 'src/assets/assets.service';
 import { TenantService } from 'src/tenant/tenant.service';
 import { DrizzleModule } from 'src/drizzle/drizzle.module';
 import { ObjectStorageModule } from 'src/object-storage/object-storage.module';
+import { TagsModule } from 'src/tags/tags.module';
+import { TagsService } from 'src/tags/tags.service';
 
 @Module({
-  providers: [ImportService,AssetsService,TenantService], 
+  providers: [ImportService, AssetsService, TenantService, TagsService],
   controllers: [ImportController],
-  imports: [TenantModule,AssetTypeModule,AssetsModule,DrizzleModule,ObjectStorageModule],
+  imports: [TenantModule, AssetTypeModule, AssetsModule, DrizzleModule, ObjectStorageModule, TagsModule],
 })
 export class ImportModule {}
