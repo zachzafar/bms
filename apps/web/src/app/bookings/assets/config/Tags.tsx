@@ -27,22 +27,14 @@ import {
 } from '@/components/ui/dialog';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { SubmitHandler, useForm } from 'react-hook-form';
-import { Plus, Trash2, Pencil, Upload, ImageIcon } from 'lucide-react';
+import { Plus, Trash2, Pencil, Upload, ImageIcon, CheckCircle2, XCircle, Loader2 } from 'lucide-react';
 import { authClient, axiosClient } from '@/lib/api/publicClient';
 import { toast } from 'sonner';
 import { InsertTagSchema, SelectTag } from '@repo/api-contract';
 import { Textarea } from '@/components/ui/textarea';
 import { useQueryClient } from '@tanstack/react-query';
-import {
-  MultiSelector,
-  MultiSelectorTrigger,
-  MultiSelectorInput,
-  MultiSelectorContent,
-  MultiSelectorList,
-  MultiSelectorItem,
-} from '@/components/extension/multi-select';
 import { z } from 'zod';
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import Image from 'next/image';
 
 
@@ -53,6 +45,10 @@ export default function Tags() {
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Slug state for edit dialog
+  const [editSlug, setEditSlug] = useState('');
+  const [debouncedEditSlug, setDebouncedEditSlug] = useState('');
 
   const queryClient = useQueryClient();
 
@@ -84,10 +80,6 @@ export default function Tags() {
     queryKey: ['tags']
   });
 
-  const { data: bookingForms } = authClient.settings.form.getForms.useQuery({
-    queryKey: ['bookingForms']
-  });
-
   const { mutate: deleteTag } = authClient.settings.tags.deleteTag.useMutation({
     onSuccess: () => {
       toast.success('Tag deleted successfully');
@@ -106,14 +98,23 @@ export default function Tags() {
     resolver: zodResolver(InsertTagSchema),
   });
 
+  // Debounce slug in edit dialog
+  useEffect(() => {
+    const timer = setTimeout(() => setDebouncedEditSlug(editSlug), 500);
+    return () => clearTimeout(timer);
+  }, [editSlug]);
+
+  const { data: slugCheck, isLoading: isCheckingSlugRaw } = authClient.settings.tags.checkTagSlug.useQuery({
+    queryKey: ['tag-slug-check', debouncedEditSlug, editingTag?.id],
+    queryData: { query: { slug: debouncedEditSlug, excludeId: editingTag?.id } },
+    enabled: !!debouncedEditSlug,
+  });
+
+  const isCheckingSlug = editSlug !== debouncedEditSlug || (!!debouncedEditSlug && isCheckingSlugRaw);
+  const slugTaken = !!debouncedEditSlug && !isCheckingSlug && slugCheck?.status === 200 && !slugCheck.body.available;
+
   const processForm: SubmitHandler<InserTag> = (data) => {
-    
-
-    const body = {
-      ...data,
-    };
-
-    createTag({ body });
+    createTag({ body: { ...data } });
   };
 
   const processEditForm: SubmitHandler<InserTag> = (data) => {
@@ -123,6 +124,7 @@ export default function Tags() {
       params: { id: editingTag.id },
       body: {
         name: data.name,
+        slug: editSlug || undefined,
         description: data.description,
       }
     });
@@ -130,6 +132,9 @@ export default function Tags() {
 
   const handleEditClick = (tag: SelectTag) => {
     setEditingTag(tag);
+    const initialSlug = tag.slug ?? '';
+    setEditSlug(initialSlug);
+    setDebouncedEditSlug(initialSlug);
     editForm.reset({
       name: tag.name,
       description: tag.description ?? '',
@@ -189,6 +194,32 @@ export default function Tags() {
 
               <FormField
                 control={form.control}
+                name="slug"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>URL Slug</FormLabel>
+                    <FormControl>
+                      <Input
+                        {...field}
+                        value={field.value ?? ''}
+                        onChange={(e) =>
+                          field.onChange(
+                            e.target.value.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '')
+                          )
+                        }
+                        placeholder="e.g. beach-properties"
+                      />
+                    </FormControl>
+                    <p className="text-xs text-muted-foreground">
+                      Only lowercase letters, numbers, and hyphens.
+                    </p>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
                 name="description"
                 render={({ field }) => (
                   <FormItem>
@@ -220,6 +251,7 @@ export default function Tags() {
               <TableRow>
                 <TableHead className="w-[80px]">Image</TableHead>
                 <TableHead>Name</TableHead>
+                <TableHead>Slug</TableHead>
                 <TableHead>Description</TableHead>
                 <TableHead className="w-[150px]">Actions</TableHead>
               </TableRow>
@@ -245,6 +277,7 @@ export default function Tags() {
                       )}
                     </TableCell>
                     <TableCell className="font-medium">{tag.name}</TableCell>
+                    <TableCell className="text-muted-foreground text-sm font-mono">{tag.slug ?? '—'}</TableCell>
                     <TableCell>{tag.description}</TableCell>
                     <TableCell>
                       <div className="flex items-center gap-1">
@@ -295,7 +328,7 @@ export default function Tags() {
                 ))
               ) : (
                 <TableRow>
-                  <TableCell colSpan={4} className="text-center text-muted-foreground">
+                  <TableCell colSpan={5} className="text-center text-muted-foreground">
                     No tags found
                   </TableCell>
                 </TableRow>
@@ -361,6 +394,40 @@ export default function Tags() {
                 )}
               />
 
+              <div className="space-y-2">
+                <label className="text-sm font-medium">URL Slug</label>
+                <div className="relative">
+                  <Input
+                    value={editSlug}
+                    onChange={(e) =>
+                      setEditSlug(
+                        e.target.value.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '')
+                      )
+                    }
+                    placeholder="e.g. beach-properties"
+                    className={slugTaken ? 'border-destructive pr-9' : editSlug && !isCheckingSlug ? 'pr-9' : ''}
+                  />
+                  {editSlug && (
+                    <span className="absolute right-3 top-1/2 -translate-y-1/2">
+                      {isCheckingSlug ? (
+                        <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+                      ) : slugTaken ? (
+                        <XCircle className="h-4 w-4 text-destructive" />
+                      ) : (
+                        <CheckCircle2 className="h-4 w-4 text-green-500" />
+                      )}
+                    </span>
+                  )}
+                </div>
+                {slugTaken ? (
+                  <p className="text-xs text-destructive">This slug is already in use.</p>
+                ) : (
+                  <p className="text-xs text-muted-foreground">
+                    Only lowercase letters, numbers, and hyphens.
+                  </p>
+                )}
+              </div>
+
               <FormField
                 control={editForm.control}
                 name="description"
@@ -383,7 +450,7 @@ export default function Tags() {
                 >
                   Cancel
                 </Button>
-                <Button type="submit" disabled={isUpdating}>
+                <Button type="submit" disabled={isUpdating || isCheckingSlug || slugTaken}>
                   {isUpdating ? 'Saving...' : 'Save Changes'}
                 </Button>
               </div>

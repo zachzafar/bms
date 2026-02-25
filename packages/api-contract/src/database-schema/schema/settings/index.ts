@@ -13,6 +13,7 @@ export const Tags = mysqlTable(
   {
     id: bigint("id", { mode: "number", unsigned: true }).autoincrement().primaryKey(),
     name: varchar("name", { length: 255 }).notNull(),
+    slug: varchar("slug", { length: 255 }),
     description: text("description"),
     tagImage: varchar("tag_image", { length: 255 }),
     tenantId: varchar("tenant_id", { length: 255 }).references(() => Tenant.id),
@@ -22,6 +23,7 @@ export const Tags = mysqlTable(
   },
   (table) => ({
     nameUniqueIdx: uniqueIndex("name_unique").on(table.name, table.tenantId),
+    slugUniqueIdx: uniqueIndex("tag_slug_unique").on(table.slug, table.tenantId),
     deletedAtIdx: index("tags_deleted_at_idx").on(table.deletedAt),
   })
 );

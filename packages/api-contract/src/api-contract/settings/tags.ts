@@ -117,6 +117,7 @@ export const tagsContract = c.router({
                 data: z.array(z.object({
                     id: z.number(),
                     name: z.string(),
+                    slug: z.string().nullable(),
                     description: z.string().nullable(),
                     tagImage: z.string().nullable(),
                 })),
@@ -127,5 +128,17 @@ export const tagsContract = c.router({
             })
         },
         summary: 'Get tags by tenant subdomain (public)'
+    },
+    checkTagSlug: {
+        method: 'GET',
+        path: '/tags/check-slug',
+        query: z.object({
+            slug: z.string(),
+            excludeId: z.coerce.number().optional(),
+        }),
+        responses: {
+            200: z.object({ available: z.boolean() }),
+        },
+        summary: 'Check if a tag slug is available',
     },
 });
