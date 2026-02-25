@@ -16,13 +16,14 @@ import {
 } from '@/components/extension/multi-select';
 import { authClient } from '@/lib/api/publicClient';
 import { toast } from 'sonner';
-import { SelectAsset } from '@repo/api-contract';
+import { SelectAsset, SelectTag } from '@repo/api-contract';
 import { QuickCreateAssetType } from '@/components/custom/QuickCreate';
-import Link from 'next/link';
 import { CheckCircle2, XCircle, Loader2 } from 'lucide-react';
+import { ASSET_TAGS_QUERY_KEY } from '@/lib/api/queryKeys';
 
 type AssetWithForms = SelectAsset & {
   bookingForms: { id: number; name: string }[];
+  tags: SelectTag[];
 };
 
 function BasicInfo({ asset, refetch }: { asset: AssetWithForms; refetch: () => void }) {
@@ -33,6 +34,9 @@ function BasicInfo({ asset, refetch }: { asset: AssetWithForms; refetch: () => v
   const [selectedForms, setSelectedForms] = useState<string[]>(
     asset.bookingForms?.map((f) => f.name) ?? []
   );
+  const [selectedTags, setSelectedTags] = useState<string[]>(
+    asset.tags?.map((t) => t.name) ?? []
+  );
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Initial values for comparison
@@ -40,7 +44,8 @@ function BasicInfo({ asset, refetch }: { asset: AssetWithForms; refetch: () => v
     name: asset.name ?? '',
     slug: asset.slug ?? '',
     assetTypeId: asset.assetTypeId,
-    forms: asset.bookingForms?.map((f) => f.name) ?? []
+    forms: asset.bookingForms?.map((f) => f.name) ?? [],
+    tags: asset.tags?.map((t) => t.name) ?? [],
   });
 
   const { data: assetTypes } = authClient.settings.assetType.getAssetTypes.useQuery({
@@ -51,17 +56,20 @@ function BasicInfo({ asset, refetch }: { asset: AssetWithForms; refetch: () => v
     queryKey: ['bookingForms']
   });
 
+  const { data: tagsData } = authClient.settings.tags.getTags.useQuery({
+    queryKey: ASSET_TAGS_QUERY_KEY,
+  });
+
   const { mutate: updateAsset } = authClient.assets.updateAsset.useMutation({
     onSuccess: async () => {
       toast.success('Asset updated successfully');
       await refetch();
-      // Update initial values
-      const formNames = selectedForms;
       setInitialValues({
         name,
         slug,
         assetTypeId,
-        forms: formNames
+        forms: selectedForms,
+        tags: selectedTags,
       });
       setIsSubmitting(false);
     },
@@ -80,11 +88,15 @@ function BasicInfo({ asset, refetch }: { asset: AssetWithForms; refetch: () => v
     const formNames = asset.bookingForms?.map((f) => f.name) ?? [];
     setSelectedForms(formNames);
 
+    const tagNames = asset.tags?.map((t) => t.name) ?? [];
+    setSelectedTags(tagNames);
+
     setInitialValues({
       name: asset.name ?? '',
       slug: asset.slug ?? '',
       assetTypeId: asset.assetTypeId ?? undefined,
-      forms: formNames
+      forms: formNames,
+      tags: tagNames,
     });
   }, [asset]);
 
@@ -107,7 +119,8 @@ function BasicInfo({ asset, refetch }: { asset: AssetWithForms; refetch: () => v
       name !== initialValues.name ||
       slug !== initialValues.slug ||
       assetTypeId !== initialValues.assetTypeId ||
-      JSON.stringify(selectedForms) !== JSON.stringify(initialValues.forms)
+      JSON.stringify(selectedForms) !== JSON.stringify(initialValues.forms) ||
+      JSON.stringify(selectedTags) !== JSON.stringify(initialValues.tags)
     );
   };
 
@@ -122,13 +135,19 @@ function BasicInfo({ asset, refetch }: { asset: AssetWithForms; refetch: () => v
         return form ? form.id : null;
       }).filter(id => id !== null) as number[];
 
+      const tagIds = selectedTags.map(tagName => {
+        const tag = tagsData?.status === 200 && tagsData.body.data.find(t => t.name === tagName);
+        return tag ? tag.id : null;
+      }).filter(id => id !== null) as number[];
+
       updateAsset({
         params: { id: asset.id },
         body: {
           name,
           slug: slug || undefined,
           assetTypeId: assetTypeId ? Number(assetTypeId) : undefined,
-          formIds: formIds.length > 0 ? formIds : undefined
+          formIds: formIds.length > 0 ? formIds : undefined,
+          tagIds,
         },
       });
     }
@@ -215,7 +234,6 @@ function BasicInfo({ asset, refetch }: { asset: AssetWithForms; refetch: () => v
           <MultiSelector
             values={selectedForms}
             onValuesChange={setSelectedForms}
-            // disabled={isSubmitting}
           >
             <MultiSelectorTrigger>
               <MultiSelectorInput placeholder="Select Booking Forms..." />
@@ -224,20 +242,32 @@ function BasicInfo({ asset, refetch }: { asset: AssetWithForms; refetch: () => v
               <MultiSelectorList>
                 {bookingForms?.status === 200 &&
                   bookingForms.body.data.map((form) => (
-                    <MultiSelectorItem
-                      key={form.id}
-                      value={form.name}
-                    >
+                    <MultiSelectorItem key={form.id} value={form.name}>
                       {form.name}
                     </MultiSelectorItem>
                   ))}
               </MultiSelectorList>
             </MultiSelectorContent>
           </MultiSelector>
-          {/* <Link href="/bookings/settings/forms" className="flex items-center gap-1 text-xs text-primary hover:underline mt-1">
-            <PlusCircle className="h-3 w-3" />
-            Create Booking Form
-          </Link> */}
+        </div>
+
+        <div className="space-y-2">
+          <Label>Tags</Label>
+          <MultiSelector values={selectedTags} onValuesChange={setSelectedTags}>
+            <MultiSelectorTrigger>
+              <MultiSelectorInput placeholder="Select tags..." />
+            </MultiSelectorTrigger>
+            <MultiSelectorContent>
+              <MultiSelectorList>
+                {tagsData?.status === 200 &&
+                  tagsData.body.data.map((tag) => (
+                    <MultiSelectorItem key={tag.id} value={tag.name}>
+                      {tag.name}
+                    </MultiSelectorItem>
+                  ))}
+              </MultiSelectorList>
+            </MultiSelectorContent>
+          </MultiSelector>
         </div>
 
         {hasChanges() && (

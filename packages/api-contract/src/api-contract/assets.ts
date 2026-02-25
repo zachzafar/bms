@@ -34,6 +34,7 @@ export const assetsContract = c.router({
       tenant: z.string(),
       asset: InsertAssetSchema.omit({ tenantId: true }),
       formIds: z.array(z.number()).optional(),
+      tagIds: z.array(z.number()).optional(),
     }),
     summary: 'Create a new asset',
   },
@@ -63,7 +64,8 @@ export const assetsContract = c.router({
         bookingForms: z.array(z.object({
           id: z.number(),
           name: z.string(),
-        }))
+        })),
+        tags: z.array(SelectTagSchema),
       }),
       404: z.undefined(),
     },
@@ -83,6 +85,7 @@ export const assetsContract = c.router({
     }),
     body: InsertAssetSchema.partial().extend({
       formIds: z.array(z.number()).optional(),
+      tagIds: z.array(z.number()).optional(),
     }),
     summary: 'Update an asset by id',
   },
@@ -232,7 +235,16 @@ export const assetsContract = c.router({
     }),
     query: z.object({
       page: z.coerce.number().optional(),
-      pageSize: z.coerce.number().optional()
+      pageSize: z.coerce.number().optional(),
+      assetTypeId: z.coerce.number().optional(),
+      /** Comma-separated tag IDs, e.g. "1,2,3" */
+      tagIds: z.string().optional(),
+      /**
+       * Comma-separated property filters with optional numeric operators:
+       * exact="beds:3", gt="beds:>3", gte="beds:>=3", lt="beds:<5", lte="beds:<=5"
+       * Multiple filters use AND logic, e.g. "beds:>=2,bathrooms:>1,price:<=500"
+       */
+      propertyFilters: z.string().optional(),
     }),
     responses: {
       200: z.object({
@@ -247,6 +259,7 @@ export const assetsContract = c.router({
             name: z.string(),
             value: z.string()
           })),
+          location: SelectAssetLocationSchema.nullable(),
           pagination
         })),
 

@@ -1,6 +1,6 @@
 import { relations } from "drizzle-orm";
 import { mysqlTable, serial, varchar, text, timestamp, index, uniqueIndex, boolean, bigint, mysqlEnum, decimal } from "drizzle-orm/mysql-core";
-import { AssetType,assetProperty, BookingForm, Tags } from "../settings";
+import { AssetType, assetProperty, BookingForm, Tags } from "../settings";
 import { Tenant, TenantTeamHasAssets } from "../tenant";
 import { User, OwnerHasAssets } from "../users";
 import { createSelectSchema, createInsertSchema } from "drizzle-zod";
@@ -60,6 +60,7 @@ export const AssetRelations = relations(Asset, ({ one, many }) => ({
     fields: [Asset.id],
     references: [AssetLocation.assetId],
   }),
+  tags: many(AssetHasTags),
 }));
 
 
@@ -167,6 +168,25 @@ export const AssetLocationRelations = relations(AssetLocation, ({ one }) => ({
     asset: one(Asset, {
         fields: [AssetLocation.assetId],
         references: [Asset.id],
+    }),
+}));
+
+export const AssetHasTags = mysqlTable("asset_has_tags", {
+    id: bigint("id", { mode: "number", unsigned: true }).autoincrement().primaryKey(),
+    assetId: varchar("asset_id", { length: 36 }).notNull().references(() => Asset.id, { onDelete: 'cascade' }),
+    tagId: bigint("tag_id", { mode: "number", unsigned: true }).notNull().references(() => Tags.id, { onDelete: 'cascade' }),
+}, (table) => ({
+    assetTagUniqueIdx: uniqueIndex("asset_tag_unique").on(table.assetId, table.tagId),
+}));
+
+export const AssetHasTagsRelations = relations(AssetHasTags, ({ one }) => ({
+    asset: one(Asset, {
+        fields: [AssetHasTags.assetId],
+        references: [Asset.id],
+    }),
+    tag: one(Tags, {
+        fields: [AssetHasTags.tagId],
+        references: [Tags.id],
     }),
 }));
 

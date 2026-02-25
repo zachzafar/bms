@@ -57,7 +57,7 @@ export class AssetsController {
                 return { status: 404, body: undefined };
             }
 
-            const { bookingForms, ...assetData } = asset;
+            const { bookingForms, tags, ...assetData } = asset;
 
             return {
                 status: 200,
@@ -66,7 +66,8 @@ export class AssetsController {
                     bookingForms: bookingForms?.map((bf) => ({
                         id: bf.bookingForm.id,
                         name: bf.bookingForm.name,
-                    })) ?? []
+                    })) ?? [],
+                    tags: tags?.map((t) => t.tag) ?? [],
                 }
             };
         });
@@ -81,7 +82,8 @@ export class AssetsController {
 
             const id = await this.assetService.createAsset(
                 { ...body.asset, tenantId },
-                body.formIds // pass forms here
+                body.formIds,
+                body.tagIds,
             );
 
             this.logger.log(`Created asset with id: ${id}`);
@@ -268,8 +270,33 @@ export class AssetsController {
     async getAssetsBySubdomain(@Headers() headers: any): Promise<ReturnType<typeof tsRestHandler>> {
         return tsRestHandler(contract.assets.getAssetsBySubdomain, async ({ params, query }) => {
             const { subdomain } = params;
-            const { page = 1, pageSize = 10 } = query;
-            const assets = await this.assetService.getAssetsBySubdomain(subdomain, page, pageSize);
+            const { page = 1, pageSize = 10, assetTypeId, tagIds, propertyFilters } = query;
+
+            const parsedTagIds = tagIds
+                ? tagIds.split(',').map(Number).filter(n => !isNaN(n))
+                : undefined;
+
+            const parsedPropertyFilters = propertyFilters
+                ? propertyFilters.split(',').map(entry => {
+                    const colonIdx = entry.indexOf(':');
+                    if (colonIdx <= 0) return null;
+                    const name = entry.slice(0, colonIdx).trim();
+                    const raw = entry.slice(colonIdx + 1).trim();
+                    let operator: 'eq' | 'gt' | 'gte' | 'lt' | 'lte' = 'eq';
+                    let value = raw;
+                    if (raw.startsWith('>=')) { operator = 'gte'; value = raw.slice(2); }
+                    else if (raw.startsWith('>'))  { operator = 'gt';  value = raw.slice(1); }
+                    else if (raw.startsWith('<=')) { operator = 'lte'; value = raw.slice(2); }
+                    else if (raw.startsWith('<'))  { operator = 'lt';  value = raw.slice(1); }
+                    return { name, value: value.trim(), operator };
+                  }).filter(Boolean) as { name: string; value: string; operator: 'eq' | 'gt' | 'gte' | 'lt' | 'lte' }[]
+                : undefined;
+
+            const assets = await this.assetService.getAssetsBySubdomain(subdomain, page, pageSize, {
+                assetTypeId,
+                tagIds: parsedTagIds,
+                propertyFilters: parsedPropertyFilters,
+            });
 
             return { status: 200, body: assets };
         });

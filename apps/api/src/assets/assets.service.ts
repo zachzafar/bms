@@ -72,6 +72,11 @@ export class AssetsService {
            with: {
             bookingForm: true
            }
+        },
+        tags: {
+          with: {
+            tag: true,
+          }
         }
       }
     });
@@ -80,7 +85,7 @@ export class AssetsService {
     return asset
   }
 
-  async createAsset(data: InsertAsset, formIds?: number[]) {
+  async createAsset(data: InsertAsset, formIds?: number[], tagIds?: number[]) {
 
     try {
       const result = await this.db
@@ -99,6 +104,12 @@ export class AssetsService {
         }
       }
 
+      if (tagIds && tagIds.length > 0) {
+        await this.db.insert(schema.AssetHasTags).values(
+          tagIds.map(tagId => ({ assetId, tagId }))
+        );
+      }
+
       return assetId;
     } catch (e) {
       throw new InternalServerErrorException(
@@ -107,8 +118,8 @@ export class AssetsService {
     }
   }
 
-  async updateAsset(id: string, data: UpdateAsset & {  formIds?: number[] }) {
-    const { formIds, ...assetData } = data;
+  async updateAsset(id: string, data: UpdateAsset & { formIds?: number[]; tagIds?: number[] }) {
+    const { formIds, tagIds, ...assetData } = data;
     let assetTypeId = assetData.assetTypeId ? (assetData.assetTypeId) : undefined;
 
     await this.db
@@ -119,10 +130,7 @@ export class AssetsService {
 
     // Update forms if provided
     if (formIds !== undefined) {
-      // Delete existing forms
       await this.db.delete(schema.AssetHasBookingForms).where(eq(schema.AssetHasBookingForms.assetId, id));
-
-      // Insert new forms
       if (formIds.length > 0) {
         for (const formId of formIds) {
           await this.db.insert(schema.AssetHasBookingForms).values({
@@ -130,6 +138,16 @@ export class AssetsService {
             bookingFormId: formId,
           });
         }
+      }
+    }
+
+    // Update tags if provided
+    if (tagIds !== undefined) {
+      await this.db.delete(schema.AssetHasTags).where(eq(schema.AssetHasTags.assetId, id));
+      if (tagIds.length > 0) {
+        await this.db.insert(schema.AssetHasTags).values(
+          tagIds.map(tagId => ({ assetId: id, tagId }))
+        );
       }
     }
 
@@ -380,16 +398,68 @@ export class AssetsService {
   async getAssetsBySubdomain(
     subdomain: string,
     page: number = 1,
-    pageSize: number = 10
+    pageSize: number = 10,
+    filters: {
+      assetTypeId?: number;
+      tagIds?: number[];
+      propertyFilters?: { name: string; value: string; operator: 'eq' | 'gt' | 'gte' | 'lt' | 'lte' }[];
+    } = {}
   ) {
     const offset = (page - 1) * pageSize;
+
+    // Build base conditions
+    const conditions: any[] = [
+      eq(schema.Tenant.subdomain, subdomain),
+      isNull(schema.Asset.deletedAt),
+    ];
+
+    if (filters.assetTypeId) {
+      conditions.push(eq(schema.Asset.assetTypeId, filters.assetTypeId));
+    }
+
+    // Tag filter: asset must have at least one of the specified tags
+    if (filters.tagIds && filters.tagIds.length > 0) {
+      const tagSubquery = this.db
+        .selectDistinct({ assetId: schema.AssetHasTags.assetId })
+        .from(schema.AssetHasTags)
+        .where(inArray(schema.AssetHasTags.tagId, filters.tagIds));
+      conditions.push(inArray(schema.Asset.id, tagSubquery));
+    }
+
+    // Property filters: asset must satisfy each filter (AND logic)
+    if (filters.propertyFilters && filters.propertyFilters.length > 0) {
+      for (const { name, value, operator } of filters.propertyFilters) {
+        const numericValue = parseFloat(value);
+        const valueCondition = (operator === 'eq' || isNaN(numericValue))
+          ? eq(schema.AssetHasProperties.value, value)
+          : operator === 'gt'
+            ? sql`CAST(${schema.AssetHasProperties.value} AS DECIMAL) > ${numericValue}`
+            : operator === 'gte'
+              ? sql`CAST(${schema.AssetHasProperties.value} AS DECIMAL) >= ${numericValue}`
+              : operator === 'lt'
+                ? sql`CAST(${schema.AssetHasProperties.value} AS DECIMAL) < ${numericValue}`
+                : sql`CAST(${schema.AssetHasProperties.value} AS DECIMAL) <= ${numericValue}`;
+
+        const propSubquery = this.db
+          .selectDistinct({ assetId: schema.AssetHasProperties.assetId })
+          .from(schema.AssetHasProperties)
+          .innerJoin(schema.assetProperty, eq(schema.AssetHasProperties.assetPropertyId, schema.assetProperty.id))
+          .where(and(
+            eq(schema.assetProperty.name, name),
+            valueCondition,
+          ));
+        conditions.push(inArray(schema.Asset.id, propSubquery));
+      }
+    }
+
+    const whereClause = and(...conditions);
 
     // Get total count for pagination metadata
     const totalCountResult = await this.db
       .select({ count: sql<number>`COUNT(*)` })
       .from(schema.Asset)
       .innerJoin(schema.Tenant, eq(schema.Asset.tenantId, schema.Tenant.id))
-      .where(and(eq(schema.Tenant.subdomain, subdomain),isNull(schema.Asset.deletedAt)))
+      .where(whereClause)
       .execute();
 
     const totalCount = totalCountResult[0]?.count || 0;
@@ -399,7 +469,7 @@ export class AssetsService {
       .select()
       .from(schema.Asset)
       .innerJoin(schema.Tenant, eq(schema.Asset.tenantId, schema.Tenant.id))
-      .where(and(eq(schema.Tenant.subdomain, subdomain),isNull(schema.Asset.deletedAt)))
+      .where(whereClause)
       .limit(pageSize)
       .offset(offset)
       .execute();
@@ -414,11 +484,14 @@ export class AssetsService {
       hasPreviousPage: page > 1,
     };
 
-    // Fetch tags, properties, and images for each asset
+    // Fetch tags, properties, images, and location for each asset
     const assetsWithDetails = await Promise.all(
       results.map(async (res) => {
-        const propertyValues = await this.getPropertyValues(res.assets.id);
-        const assetImages = await this.getAssetImages(res.assets.id);
+        const [propertyValues, assetImages, location] = await Promise.all([
+          this.getPropertyValues(res.assets.id),
+          this.getAssetImages(res.assets.id),
+          this.getAssetLocation(res.assets.id),
+        ]);
 
         return {
           id: res.assets.id,
@@ -431,6 +504,7 @@ export class AssetsService {
             name: prop.assetProperty.name,
             value: prop.value,
           })),
+          location: location ?? null,
           pagination: paginationData,
         };
       })
