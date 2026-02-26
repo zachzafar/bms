@@ -270,10 +270,10 @@ export class AssetsController {
     async getAssetsBySubdomain(@Headers() headers: any): Promise<ReturnType<typeof tsRestHandler>> {
         return tsRestHandler(contract.assets.getAssetsBySubdomain, async ({ params, query }) => {
             const { subdomain } = params;
-            const { page = 1, pageSize = 10, assetTypeId, tagIds, propertyFilters } = query;
+            const { page = 1, pageSize = 10, assetTypeId, tagSlugs, propertyFilters } = query;
 
-            const parsedTagIds = tagIds
-                ? tagIds.split(',').map(Number).filter(n => !isNaN(n))
+            const parsedTagSlugs = tagSlugs
+                ? tagSlugs.split(',').map(s => s.trim()).filter(Boolean)
                 : undefined;
 
             const parsedPropertyFilters = propertyFilters
@@ -294,7 +294,7 @@ export class AssetsController {
 
             const assets = await this.assetService.getAssetsBySubdomain(subdomain, page, pageSize, {
                 assetTypeId,
-                tagIds: parsedTagIds,
+                tagSlugs: parsedTagSlugs,
                 propertyFilters: parsedPropertyFilters,
             });
 
