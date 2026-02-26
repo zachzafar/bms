@@ -401,7 +401,7 @@ export class AssetsService {
     pageSize: number = 10,
     filters: {
       assetTypeId?: number;
-      tagIds?: number[];
+      tagSlugs?: string[];
       propertyFilters?: { name: string; value: string; operator: 'eq' | 'gt' | 'gte' | 'lt' | 'lte' }[];
     } = {}
   ) {
@@ -417,12 +417,13 @@ export class AssetsService {
       conditions.push(eq(schema.Asset.assetTypeId, filters.assetTypeId));
     }
 
-    // Tag filter: asset must have at least one of the specified tags
-    if (filters.tagIds && filters.tagIds.length > 0) {
+    // Tag filter: asset must have at least one of the specified tag slugs
+    if (filters.tagSlugs && filters.tagSlugs.length > 0) {
       const tagSubquery = this.db
         .selectDistinct({ assetId: schema.AssetHasTags.assetId })
         .from(schema.AssetHasTags)
-        .where(inArray(schema.AssetHasTags.tagId, filters.tagIds));
+        .innerJoin(schema.Tags, eq(schema.AssetHasTags.tagId, schema.Tags.id))
+        .where(inArray(schema.Tags.slug, filters.tagSlugs));
       conditions.push(inArray(schema.Asset.id, tagSubquery));
     }
 
@@ -505,13 +506,13 @@ export class AssetsService {
             value: prop.value,
           })),
           location: location ?? null,
-          pagination: paginationData,
         };
       })
     );
 
     return {
       data: assetsWithDetails,
+      pagination: paginationData,
     };
   }
 

@@ -237,8 +237,8 @@ export const assetsContract = c.router({
       page: z.coerce.number().optional(),
       pageSize: z.coerce.number().optional(),
       assetTypeId: z.coerce.number().optional(),
-      /** Comma-separated tag IDs, e.g. "1,2,3" */
-      tagIds: z.string().optional(),
+      /** Comma-separated tag slugs, e.g. "villasales,beachfront" */
+      tagSlugs: z.string().optional(),
       /**
        * Comma-separated property filters with optional numeric operators:
        * exact="beds:3", gt="beds:>3", gte="beds:>=3", lt="beds:<5", lte="beds:<=5"
@@ -260,9 +260,8 @@ export const assetsContract = c.router({
             value: z.string()
           })),
           location: SelectAssetLocationSchema.nullable(),
-          pagination
         })),
-
+        pagination
       })
     },
     summary: 'Get assets by tenant subdomain (public)'
