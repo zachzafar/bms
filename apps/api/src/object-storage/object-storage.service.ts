@@ -27,19 +27,21 @@ export class ObjectStorageService {
         });
     }
 
-    async getObjectUrl(filePath:string): Promise<string> {
+    async getObjectUrl(filePath: string): Promise<string> {
+        if (filePath.includes('/image/')) {
+            return `${process.env.SPACES_CDN_URL}/${filePath}`;
+        }
         const command = new GetObjectCommand({
             Key: filePath,
             Bucket: 'bookos'
-        })
+        });
         try {
-            const signedUrl = await getSignedUrl(this.s3Client,command,{expiresIn: 3600})
+            const signedUrl = await getSignedUrl(this.s3Client, command, { expiresIn: 3600 });
             return signedUrl;
         } catch (e) {
-            this.logger.error(e)
-            throw new Error("Error occured while generating signed url")
+            this.logger.error(e);
+            throw new Error('Error occured while generating signed url');
         }
-
     }
 
     async getObjectBuffer(filePath: string): Promise<Buffer> {
@@ -70,7 +72,8 @@ export class ObjectStorageService {
         const command = new PutObjectCommand({
             Key: filename,
             Body: file,
-            Bucket: 'bookos'
+            Bucket: 'bookos',
+            ...(uploadType === 'image' && { ACL: 'public-read' })
         })
         try {
             this.logger.log(`Uploading file to S3: ${filename}`)
