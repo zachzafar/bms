@@ -20,6 +20,12 @@ const nextConfig = {
         port: '',
         pathname: '/**',
       },
+      {
+        protocol: 'https',
+        hostname: 'bookos.nyc3.cdn.digitaloceanspaces.com',
+        port: '',
+        pathname: '/**',
+      },
     ],
   },
 };
