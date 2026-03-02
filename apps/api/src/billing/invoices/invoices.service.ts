@@ -2,7 +2,7 @@ import { Inject, Injectable, BadRequestException, NotFoundException } from '@nes
 import { MySql2Database } from 'drizzle-orm/mysql2';
 import * as schema from '@repo/api-contract';
 import { DrizzleAsyncProvider } from 'src/drizzle/drizzle.provider';
-import { and, eq, isNull, lte, gte, sql } from 'drizzle-orm';
+import { and, eq, inArray, isNull, lte, gte, sql } from 'drizzle-orm';
 
 type CreateInvoiceInput = Omit<schema.InsertInvoice, 'id'>;
 type ItemInput = { description: string; quantity: number; unitPrice: string; totalPrice: string; };
@@ -491,6 +491,97 @@ export class InvoicesService {
     const d = `${now.getDate()}`.padStart(2, '0');
     const rand = Math.floor(Math.random() * 9000 + 1000);
     return `INV-${y}${m}${d}-${rand}`;
+  }
+
+  async listForOwner(ownerAssetIds: string[], tenantId: string, query: { status?: string }, page: number = 1, pageSize: number = 10) {
+    const offset = (page - 1) * pageSize;
+
+    if (!ownerAssetIds.length) {
+      return { data: [], pagination: { page, pageSize, totalCount: 0, totalPages: 0, hasNextPage: false, hasPreviousPage: false } };
+    }
+
+    // Get booking IDs for owner's assets
+    const bookings = await this.db.query.Booking.findMany({
+      where: (b, { inArray, isNull }) => inArray(b.assetId, ownerAssetIds),
+      columns: { id: true },
+    });
+    const bookingIds = bookings.map((b) => b.id);
+
+    if (!bookingIds.length) {
+      return { data: [], pagination: { page, pageSize, totalCount: 0, totalPages: 0, hasNextPage: false, hasPreviousPage: false } };
+    }
+
+    const conditions: any[] = [
+      and(
+        eq(schema.Invoice.tenantId, tenantId),
+        isNull(schema.Invoice.deletedAt),
+        inArray(schema.Invoice.bookingId, bookingIds),
+      ),
+    ];
+    if (query.status) conditions.push(eq(schema.Invoice.status, query.status as any));
+
+    const totalCountResult = await this.db
+      .select({ count: sql<number>`COUNT(*)` })
+      .from(schema.Invoice)
+      .where(and(...conditions))
+      .execute();
+    const totalCount = totalCountResult[0]?.count || 0;
+
+    const invoices = await this.db.query.Invoice.findMany({
+      where: (i, { eq, and, isNull, inArray }) =>
+        and(
+          eq(i.tenantId, tenantId),
+          isNull(i.deletedAt),
+          inArray(i.bookingId, bookingIds),
+          query.status ? eq(i.status, query.status as any) : undefined,
+        ),
+      orderBy: (i, { desc }) => [desc(i.createdAt)],
+      limit: pageSize,
+      offset,
+    });
+
+    const ids = invoices.map((i) => i.id);
+    const [items, creditNotes] = ids.length
+      ? await Promise.all([
+          this.db.query.InvoiceItem.findMany({ where: (it, { inArray }) => inArray(it.invoiceId, ids) }),
+          this.db.query.CreditNote.findMany({ where: (cn, { inArray }) => inArray(cn.invoiceId, ids) }),
+        ])
+      : [[], []];
+
+    const itemsMap = new Map<number, typeof items>();
+    items.forEach((it) => { itemsMap.set(it.invoiceId, [...(itemsMap.get(it.invoiceId) ?? []), it]); });
+
+    const creditNotesMap = new Map<number, typeof creditNotes>();
+    (creditNotes as any[]).forEach((cn) => { creditNotesMap.set(cn.invoiceId, [...(creditNotesMap.get(cn.invoiceId) ?? []), cn]); });
+
+    return {
+      data: invoices.map((inv) => ({
+        ...inv,
+        id: inv.id,
+        customerId: inv.customerId,
+        items: (itemsMap.get(inv.id) ?? []).map((it) => ({
+          ...it,
+          id: it.id,
+          invoiceId: it.invoiceId,
+          unitPrice: String(it.unitPrice),
+          totalPrice: String(it.totalPrice),
+        })),
+        creditNotes: (creditNotesMap.get(inv.id) ?? []).map((cn: any) => ({
+          id: cn.id,
+          creditNoteNumber: cn.creditNoteNumber,
+          amount: String(cn.amount),
+          reason: cn.reason,
+          status: cn.status,
+          createdAt: cn.createdAt,
+        })),
+      })),
+      pagination: {
+        page, pageSize, totalCount,
+        totalPages: Math.ceil(totalCount / pageSize),
+        hasNextPage: page * pageSize < totalCount,
+        hasPreviousPage: page > 1,
+      },
+    };
   }
 
   private async generateCreditNoteNumber() {

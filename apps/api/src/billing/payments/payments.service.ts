@@ -520,7 +520,65 @@ export class PaymentsService {
         }
     }
 
-    async deletePaymentMethod(tenantId: string, paymentMethodId: number): Promise<void> {
+  async listForOwner(ownerAssetIds: string[], tenantId: string, page: number = 1, pageSize: number = 10) {
+    const offset = (page - 1) * pageSize;
+
+    const empty = { data: [], pagination: { page, pageSize, totalCount: 0, totalPages: 0, hasNextPage: false, hasPreviousPage: false } };
+
+    if (!ownerAssetIds.length) return empty;
+
+    // Get booking IDs → invoice IDs → payment IDs
+    const bookings = await this.db.query.Booking.findMany({
+      where: (b, { inArray }) => inArray(b.assetId, ownerAssetIds),
+      columns: { id: true },
+    });
+    const bookingIds = bookings.map((b) => b.id);
+    if (!bookingIds.length) return empty;
+
+    const invoices = await this.db.query.Invoice.findMany({
+      where: (i, { inArray, isNull }) => and(inArray(i.bookingId, bookingIds), isNull(i.deletedAt)),
+      columns: { id: true },
+    });
+    const invoiceIds = invoices.map((i) => i.id);
+    if (!invoiceIds.length) return empty;
+
+    const pivots = await this.db.query.PaymentInvoice.findMany({
+      where: (pi, { inArray }) => inArray(pi.invoiceId, invoiceIds),
+      columns: { paymentId: true },
+    });
+    const paymentIds = [...new Set(pivots.map((p) => p.paymentId))];
+    if (!paymentIds.length) return empty;
+
+    const totalCountResult = await this.db
+      .select({ count: sql<number>`COUNT(*)` })
+      .from(schema.Payment)
+      .where(and(inArray(schema.Payment.id, paymentIds), isNull(schema.Payment.deletedAt)))
+      .execute();
+    const totalCount = totalCountResult[0]?.count || 0;
+
+    const payments = await this.db.query.Payment.findMany({
+      where: (p, { inArray, isNull }) => and(inArray(p.id, paymentIds), isNull(p.deletedAt)),
+      orderBy: (p, { desc }) => [desc(p.createdAt)],
+      limit: pageSize,
+      offset,
+    });
+
+    return {
+      data: payments.map((payment) => ({
+        ...payment,
+        id: payment.id,
+        customerId: payment.customerId,
+      })),
+      pagination: {
+        page, pageSize, totalCount,
+        totalPages: Math.ceil(totalCount / pageSize),
+        hasNextPage: page * pageSize < totalCount,
+        hasPreviousPage: page > 1,
+      },
+    };
+  }
+
+  async deletePaymentMethod(tenantId: string, paymentMethodId: number): Promise<void> {
         await this.db.update(schema.PaymentMethod)
             .set({ deletedAt: new Date() })
             .where(and(

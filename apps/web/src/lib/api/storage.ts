@@ -82,6 +82,7 @@ export class StorageService {
   private static readonly USER_KEY = "user";
   private static readonly TENANT_KEY = "tenant";
   private static readonly TENANT_LIST_KEY = "tenant_list";
+  private static readonly OWNER_USER_KEY = "owner_user";
 
   /* ----------------------- TOKEN ----------------------- */
 
@@ -162,6 +163,20 @@ export class StorageService {
     removeCookie(StorageService.TENANT_LIST_KEY);
   }
 
+  /* ----------------------- OWNER USER ----------------------- */
+
+  static setOwnerUser(owner: { id: number; name: string; email: string }, opts: CookieOptions = { maxAgeSeconds: 60 * 60 * 24 * 7 }) {
+    setCookie(StorageService.OWNER_USER_KEY, JSON.stringify(owner), opts);
+  }
+
+  static getOwnerUser(): { id: number; name: string; email: string } | null {
+    return safeParse<{ id: number; name: string; email: string }>(getCookie(StorageService.OWNER_USER_KEY));
+  }
+
+  static removeOwnerUser() {
+    removeCookie(StorageService.OWNER_USER_KEY);
+  }
+
   /* ----------------------- CLEAR ALL ----------------------- */
 
   /**
@@ -181,6 +196,7 @@ export class StorageService {
     StorageService.removeUser();
     StorageService.removeTenant();
     StorageService.removeTenantList();
+    StorageService.removeOwnerUser();
 
     return { success: true };
   }

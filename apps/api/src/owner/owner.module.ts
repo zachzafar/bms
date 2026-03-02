@@ -10,9 +10,12 @@ import { PermissionsGuard } from 'src/auth/guards/permissions/permissions.guard'
 import { DrizzleModule } from 'src/drizzle/drizzle.module';
 import { AuthModule } from 'src/auth/auth.module';
 import { KeysModule } from 'src/keys/keys.module';
+import { OwnerAuthModule } from 'src/owner-auth/owner-auth.module';
+import { InvoicesModule } from 'src/billing/invoices/invoices.module';
+import { PaymentsModule } from 'src/billing/payments/payments.module';
 
 @Module({
-  imports: [DrizzleModule, AuthModule, KeysModule, BookingModule, MaintenanceModule, AssetsModule],
+  imports: [DrizzleModule, AuthModule, OwnerAuthModule, KeysModule, BookingModule, MaintenanceModule, AssetsModule, InvoicesModule, PaymentsModule],
   controllers: [OwnerController, OwnerCrudController],
   providers: [OwnerService, OwnerGuard, PermissionsGuard],
   exports: [OwnerService],

@@ -1,4 +1,4 @@
-import { Inject, Injectable, Logger } from '@nestjs/common';
+import { Inject, Injectable, Logger, UnauthorizedException } from '@nestjs/common';
 import { ConfigType } from '@nestjs/config';
 import { PassportStrategy } from '@nestjs/passport';
 import { ExtractJwt, Strategy } from 'passport-jwt';
@@ -22,9 +22,14 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
     });
   }
 
-  async validate(payload: AuthJwtPayload) {
+  async validate(payload: AuthJwtPayload & { type?: string }) {
     this.logger.debug(`Validating JWT payload: ${JSON.stringify(payload)}`);
-    
+
+    // Reject owner tokens — they must only be used through the OwnerGuard
+    if (payload.type === 'owner') {
+      throw new UnauthorizedException('Owner tokens are not valid for this endpoint');
+    }
+
     // Return the JWT payload directly instead of calling the database
     // This preserves the tenants and roles data needed by the permissions guard
     // The payload structure is: { sub: userId, tenants: string[], roles: Record<string, Array> }

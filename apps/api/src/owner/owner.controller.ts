@@ -1,11 +1,15 @@
 import { Controller, Logger, Req, UseGuards } from '@nestjs/common';
 import { tsRestHandler, TsRestHandler } from '@ts-rest/nest';
-import { bookingContract, maintenanceContract, assetsContract } from '@repo/api-contract';
+import { bookingContract, maintenanceContract, assetsContract, billingContract } from '@repo/api-contract';
 import { OwnerGuard } from 'src/auth/guards/owner/owner.guard';
+import { Public } from 'src/auth/decorators/public.decorator';
 import { BookingService } from 'src/booking/booking.service';
 import { MaintenanceService } from 'src/maintenance/maintenance.service';
 import { AssetsService } from 'src/assets/assets.service';
+import { InvoicesService } from 'src/billing/invoices/invoices.service';
+import { PaymentsService } from 'src/billing/payments/payments.service';
 
+@Public()
 @Controller()
 @UseGuards(OwnerGuard)
 export class OwnerController {
@@ -15,6 +19,8 @@ export class OwnerController {
     private readonly bookingService: BookingService,
     private readonly maintenanceService: MaintenanceService,
     private readonly assetsService: AssetsService,
+    private readonly invoicesService: InvoicesService,
+    private readonly paymentsService: PaymentsService,
   ) {}
 
   // ==========================================
@@ -170,6 +176,49 @@ export class OwnerController {
         status: 200 as const,
         body: asset as any,
       };
+    });
+  }
+
+  // ==========================================
+  // Owner Invoice Endpoints
+  // ==========================================
+
+  @TsRestHandler(billingContract.getOwnerInvoices)
+  async getOwnerInvoices(@Req() request: any) {
+    return tsRestHandler(billingContract.getOwnerInvoices, async ({ query }) => {
+      const ownerAssets = request.ownerAssets || [];
+      const tenantId = request.user.tenantId;
+
+      const result = await this.invoicesService.listForOwner(
+        ownerAssets,
+        tenantId,
+        { status: query.status },
+        query.page || 1,
+        query.pageSize || 10,
+      );
+
+      return { status: 200 as const, body: result as any };
+    });
+  }
+
+  // ==========================================
+  // Owner Payment Endpoints
+  // ==========================================
+
+  @TsRestHandler(billingContract.getOwnerPayments)
+  async getOwnerPayments(@Req() request: any) {
+    return tsRestHandler(billingContract.getOwnerPayments, async ({ query }) => {
+      const ownerAssets = request.ownerAssets || [];
+      const tenantId = request.user.tenantId;
+
+      const result = await this.paymentsService.listForOwner(
+        ownerAssets,
+        tenantId,
+        query.page || 1,
+        query.pageSize || 10,
+      );
+
+      return { status: 200 as const, body: result as any };
     });
   }
 }

@@ -7,7 +7,6 @@ import { StorageService } from '@/lib/api/storage';
 import { client } from '@/lib/api/publicClient';
 import { useEffect, useState } from 'react';
 import { Building2, Calendar, Wrench, FileText, DollarSign, Home } from 'lucide-react';
-import { toast } from 'sonner';
 import OwnerLogout from '@/components/custom/OwnerLogout';
 import { ModeToggle } from '@/components/mode-toggle';
 
@@ -31,24 +30,15 @@ export default function OwnerDashboardLayout({ children }: { children: React.Rea
   const backgroundImage = tenantBranding?.backgroundImage;
 
   useEffect(() => {
-    // Check if user is authenticated
-    const token = StorageService.getToken();
-    const user = StorageService.getUser();
+    const ownerUser = StorageService.getOwnerUser();
     const tenant = StorageService.getTenant();
 
-    if (!token || !user) {
+    if (!ownerUser) {
       router.replace(`/owner/${subdomain}/login`);
       return;
     }
 
-    // Verify user is an owner
-    if (user.userType !== 'owner') {
-      toast.error('Access denied. Owner credentials required.');
-      router.replace(`/owner/${subdomain}/login`);
-      return;
-    }
-
-    setUserName(user.name);
+    setUserName(ownerUser.name);
     setTenantName(tenant?.name || subdomain);
   }, [subdomain, router]);
 

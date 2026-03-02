@@ -435,4 +435,38 @@ export const billingContract = c.router({
       404: z.object({ message: z.string() }),
     },
   },
+
+  // Owner portal — read-only billing views
+  getOwnerInvoices: {
+    method: 'GET',
+    path: '/owner/invoices',
+    summary: 'Get invoices for the authenticated owner\'s assets',
+    query: z.object({
+      status: z.string().optional(),
+      page: z.coerce.number().optional(),
+      pageSize: z.coerce.number().optional(),
+    }),
+    responses: {
+      200: z.object({
+        data: z.array(ExtendedInvoiceSchema),
+        pagination,
+      }),
+    },
+  },
+
+  getOwnerPayments: {
+    method: 'GET',
+    path: '/owner/payments',
+    summary: 'Get payments for the authenticated owner\'s assets',
+    query: z.object({
+      page: z.coerce.number().optional(),
+      pageSize: z.coerce.number().optional(),
+    }),
+    responses: {
+      200: z.object({
+        data: z.array(ExtendedPaymentListSchema),
+        pagination,
+      }),
+    },
+  },
 });

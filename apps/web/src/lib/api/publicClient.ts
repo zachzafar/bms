@@ -80,20 +80,32 @@ axiosInstance.interceptors.response.use(
       
       if (error?.response?.status === 401 && !config?.sent) {
         config.sent = true;
-        
+
+        // Owner session — don't attempt admin refresh; clear session and redirect to login
+        const ownerUser = StorageService.getOwnerUser();
+        if (ownerUser && typeof window !== 'undefined') {
+          StorageService.removeOwnerUser();
+          StorageService.removeToken();
+          // Derive subdomain from the current path: /owner/[subdomain]/...
+          const match = window.location.pathname.match(/^\/owner\/([^/]+)/);
+          const subdomain = match?.[1] ?? '';
+          window.location.href = `/owner/${subdomain}/login`;
+          return Promise.reject(error);
+        }
+
         const result = await memoizedRefreshToken();
 
         if (!result) {
           return Promise.reject(error);
         }
-        
+
         StorageService.setToken(result.accessToken)
           config.headers = new axios.AxiosHeaders({
             ...config.headers,
             Authorization: `Bearer ${result.accessToken}`,
           });
-        
-  
+
+
         return axios(config);
       }
       return Promise.reject(error);

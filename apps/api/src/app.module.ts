@@ -28,6 +28,7 @@ import { ScheduleModule } from '@nestjs/schedule';
 import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
 import { APP_GUARD } from '@nestjs/core';
 import { OwnerModule } from './owner/owner.module';
+import { OwnerAuthModule } from './owner-auth/owner-auth.module';
 import { CustomersModule } from './customers/customers.module';
 import { AddonModule } from './addon/addon.module';
 import { TaxFeeModule } from './tax-fee/tax-fee.module';
@@ -72,6 +73,7 @@ const allowAllCorsEndpoints = [
     InvoicesModule,
     PaymentsModule,
     OwnerModule,
+    OwnerAuthModule,
     CustomersModule,
     AddonModule,
     TaxFeeModule
