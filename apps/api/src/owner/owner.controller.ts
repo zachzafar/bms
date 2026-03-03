@@ -31,7 +31,7 @@ export class OwnerController {
   async getOwnerBookings(@Req() request: any) {
     return tsRestHandler(bookingContract.getOwnerBookings, async ({ query }) => {
       const ownerAssets = request.ownerAssets || [];
-      const ownerId = request.user.sub;
+      const ownerId = request.user.sub
 
       this.logger.log(`Owner ${ownerId} fetching bookings for ${ownerAssets.length} assets`);
 
@@ -54,7 +54,7 @@ export class OwnerController {
   async getOwnerBooking(@Req() request: any) {
     return tsRestHandler(bookingContract.getOwnerBooking, async ({ params }) => {
       const ownerAssets = request.ownerAssets || [];
-      const ownerId = request.user.sub;
+      const ownerId = request.user.sub
 
       try {
         const booking = await this.bookingService.getOwnerBooking(
@@ -85,7 +85,7 @@ export class OwnerController {
   async getOwnerMaintenances(@Req() request: any) {
     return tsRestHandler(maintenanceContract.getOwnerMaintenances, async ({ query }) => {
       const ownerAssets = request.ownerAssets || [];
-      const ownerId = request.user.sub;
+      const ownerId = request.user.sub
 
       this.logger.log(`Owner ${ownerId} fetching maintenance for ${ownerAssets.length} assets`);
 
@@ -107,7 +107,7 @@ export class OwnerController {
   async getOwnerMaintenance(@Req() request: any) {
     return tsRestHandler(maintenanceContract.getOwnerMaintenance, async ({ params }) => {
       const ownerAssets = request.ownerAssets || [];
-      const ownerId = request.user.sub;
+      const ownerId = request.user.sub
       console.log(`ownerid ${ownerId}`)
       try {
         const maintenance = await this.maintenanceService.getOwnerMaintenance(
@@ -137,7 +137,7 @@ export class OwnerController {
   @TsRestHandler(assetsContract.getOwnerAssets)
   async getOwnerAssets(@Req() request: any) {
     return tsRestHandler(assetsContract.getOwnerAssets, async ({ query }) => {
-      const ownerId = request.user.sub;
+      const ownerId = request.user.sub
 
       this.logger.log(`Owner ${ownerId} fetching assets`);
 
@@ -157,7 +157,7 @@ export class OwnerController {
   @TsRestHandler(assetsContract.getOwnerAsset)
   async getOwnerAsset(@Req() request: any) {
     return tsRestHandler(assetsContract.getOwnerAsset, async ({ params }) => {
-      const ownerId = request.user.sub;
+      const ownerId = request.user.sub
 
       const asset = await this.assetsService.getOwnerAsset(
         ownerId,
