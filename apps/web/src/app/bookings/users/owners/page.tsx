@@ -5,13 +5,15 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger, } from '@/components/ui/dialog';
-import { Search, PlusCircle, Eye, Pencil, Trash2 } from 'lucide-react';
+import { Search, PlusCircle, Eye, Pencil, Trash2, ExternalLink } from 'lucide-react';
 import { useForm, SubmitHandler } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { toast } from 'sonner';
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { authClient } from '@/lib/api/publicClient';
+import { StorageService } from '@/lib/api/storage';
 import { OWNERS_QUERY_KEY } from '@/lib/api/queryKeys';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
@@ -140,7 +142,21 @@ export default function Component() {
   return (
     <>
       <div className='container mx-auto py-10'>
-        <h1 className='text-3xl font-bold mb-8'>Owner Management</h1>
+        <div className='flex items-center justify-between mb-8'>
+          <h1 className='text-3xl font-bold'>Owner Management</h1>
+          {StorageService.getTenant()?.subdomain && (
+            <Link
+              href={`/owner/${StorageService.getTenant()!.subdomain}/login`}
+              target='_blank'
+              rel='noopener noreferrer'
+            >
+              <Button variant='outline'>
+                <ExternalLink className='mr-2 h-4 w-4' />
+                Owner Portal
+              </Button>
+            </Link>
+          )}
+        </div>
 
         <Card className='mb-8'>
           <CardHeader>

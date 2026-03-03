@@ -132,6 +132,7 @@ export const Owner = mysqlTable("owner_details", {
     tenantId: varchar("tenant_id", { length: 255 }).notNull().references(() => Tenant.id),
 }, (table) => ({
     deletedAtIdx: index("owner_deleted_at_idx").on(table.deletedAt),
+    tenantEmailIdx: uniqueIndex("owner_tenant_email_idx").on(table.tenantId, table.email),
 }));
 
 export const InsertOwnerSchema = createInsertSchema(Owner);

@@ -43,6 +43,13 @@
       "when": 1772041515120,
       "tag": "0005_blue_the_fallen",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "5",
+      "when": 1772493174497,
+      "tag": "0006_fantastic_stone_men",
+      "breakpoints": true
     }
   ]
 }

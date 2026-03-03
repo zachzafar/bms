@@ -27,30 +27,12 @@ export async function middleware(req: NextRequest) {
         return NextResponse.next();
       }
 
-      // For dashboard routes, check authentication
+      // For dashboard routes, check owner authentication
       if (rest.startsWith('dashboard')) {
-        const session = req.cookies.get("session")?.value;
+        const authToken = req.cookies.get("auth_token")?.value;
+        const ownerUser = req.cookies.get("owner_user")?.value;
 
-        if (!session) {
-          // Redirect to owner-specific login page
-          return NextResponse.redirect(new URL(`/owner/${subdomain}/login`, req.url));
-        }
-
-        // Check if user is an owner
-        const userCookie = req.cookies.get("user")?.value;
-        try {
-          if (userCookie) {
-            const user = JSON.parse(userCookie);
-            if (user.userType !== 'owner') {
-              // Not an owner, redirect to owner login
-              return NextResponse.redirect(new URL(`/owner/${subdomain}/login`, req.url));
-            }
-          } else {
-            // No user cookie, redirect to login
-            return NextResponse.redirect(new URL(`/owner/${subdomain}/login`, req.url));
-          }
-        } catch {
-          // Invalid user cookie, redirect to login
+        if (!authToken || !ownerUser) {
           return NextResponse.redirect(new URL(`/owner/${subdomain}/login`, req.url));
         }
       }
