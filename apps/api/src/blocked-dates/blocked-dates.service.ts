@@ -1,4 +1,4 @@
-import { ConflictException, Inject, Injectable, NotFoundException } from '@nestjs/common';
+import { ConflictException, Inject, Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { MySql2Database } from 'drizzle-orm/mysql2';
 import * as schema from '@repo/api-contract';
 import { DrizzleAsyncProvider } from 'src/drizzle/drizzle.provider';
@@ -10,6 +10,7 @@ export class BlockedDatesService {
   constructor(
     @Inject(DrizzleAsyncProvider) private db: MySql2Database<typeof schema>,
   ) {}
+  private readonly logger = new Logger(BlockedDatesService.name);
 
   async getBlockedDates(tenantId: string, assetId?: string) {
     const blocked = await this.db.query.BlockedDate.findMany({
@@ -51,6 +52,7 @@ export class BlockedDatesService {
 
     const utcStart = new Date(startDate);
     const utcEnd = new Date(endDate);
+    this.logger.log(`Creating blocked date for tenant ${tenantId} assetId=${assetId ?? 'global'} ${utcStart.toISOString()} to ${utcEnd.toISOString()}`);
 
     // Only check for overlapping conflicts on asset-specific blocks
     const assetCondition = assetId
@@ -89,6 +91,7 @@ export class BlockedDatesService {
   }
 
   async updateBlockedDate(id: number, data: schema.UpdateBlockedDate) {
+    this.logger.log(`Updating blocked date ${id}`);
     const existing = await this.db.query.BlockedDate.findFirst({
       where: (bd, { eq }) => eq(bd.id, id),
     });
@@ -112,6 +115,7 @@ export class BlockedDatesService {
   }
 
   async deleteBlockedDate(id: number) {
+    this.logger.log(`Deleting blocked date ${id}`);
     const existing = await this.db.query.BlockedDate.findFirst({
       where: (bd, { eq }) => eq(bd.id, id),
     });

@@ -90,15 +90,12 @@ const allowAllCorsEndpoints = [
 })
 export class AppModule {
   configure(consumer: MiddlewareConsumer) {
-    console.log('yes executed app confogure')
     consumer
        .apply(cors({
           origin: (requestOrigin: string, callback: (err: Error | null, origin?: boolean) => void) => {
-             console.log("Exec check");
              callback(null, true);
           }
        }))
-       
        .forRoutes('*'); // use .forRoutes('(.*)') if fastify
  }
 

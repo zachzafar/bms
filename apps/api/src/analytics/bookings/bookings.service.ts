@@ -57,8 +57,7 @@ export class BookingAnalyticsService {
               .where(and(...conditions))
               .groupBy(sql`MONTH(${schema.Booking.startDate})`)
               .orderBy(sql`MONTH(${schema.Booking.startDate})`);
-              
-            console.log(results)
+
             // Format the results as an array with all months (1-12)
             const monthlyData = Array(12).fill(0).map((_, index) => ({
                 month: index + 1,

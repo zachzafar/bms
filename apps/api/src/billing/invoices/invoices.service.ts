@@ -1,4 +1,4 @@
-import { Inject, Injectable, BadRequestException, NotFoundException } from '@nestjs/common';
+import { Inject, Injectable, BadRequestException, NotFoundException, Logger } from '@nestjs/common';
 import { MySql2Database } from 'drizzle-orm/mysql2';
 import * as schema from '@repo/api-contract';
 import { DrizzleAsyncProvider } from 'src/drizzle/drizzle.provider';
@@ -9,9 +9,11 @@ type ItemInput = { description: string; quantity: number; unitPrice: string; tot
 
 @Injectable()
 export class InvoicesService {
+  private readonly logger = new Logger(InvoicesService.name);
   constructor(@Inject(DrizzleAsyncProvider) private db: MySql2Database<typeof schema>) {}
 
   async create(invoice: CreateInvoiceInput, items: ItemInput[], tenantId: string) {
+    this.logger.log(`Creating invoice for tenant ${tenantId}`);
     if (!items?.length) throw new BadRequestException('Invoice must have at least one item');
 
     const [{ id }] = await this.db.transaction(async (tx) => {
@@ -36,6 +38,7 @@ export class InvoicesService {
       return inserted;
     });
 
+    this.logger.log(`Invoice created id=${id} for tenant ${tenantId}`);
     return id;
   }
 
@@ -168,6 +171,7 @@ export class InvoicesService {
       invoiceId?: number;
     }[]
   ) {
+    this.logger.log(`Updating invoice ${id}`);
     const invoice = await this.db.query.Invoice.findFirst({
       where: (i, { eq }) => eq(i.id, id),
     });
@@ -199,6 +203,7 @@ export class InvoicesService {
   }
 
   async delete(id: number) {
+    this.logger.log(`Deleting invoice ${id}`);
     const invoice = await this.db.query.Invoice.findFirst({
       where: (i, { eq }) => eq(i.id, id),
     });
@@ -221,6 +226,7 @@ export class InvoicesService {
   }
 
   async approve(id: number) {
+    this.logger.log(`Approving invoice ${id}`);
     const invoice = await this.db.query.Invoice.findFirst({
       where: (i, { eq }) => eq(i.id, id),
     });
@@ -237,10 +243,12 @@ export class InvoicesService {
       .where(eq(schema.Invoice.id, id))
       .execute();
 
+    this.logger.log(`Invoice ${invoice.invoiceNumber} approved`);
     return { message: `Invoice ${invoice.invoiceNumber} approved successfully` };
   }
 
   async createCreditNote(invoiceId: number, tenantId: string, amount: string, reason?: string) {
+    this.logger.log(`Creating credit note for invoice ${invoiceId} amount=${amount}`);
     const invoice = await this.db.query.Invoice.findFirst({
       where: (i, { eq }) => eq(i.id, invoiceId),
     });
@@ -386,6 +394,7 @@ export class InvoicesService {
   }
 
   async generateInvoiceFromBooking(tenantId: string, bookingId: string) {
+    this.logger.log(`Generating invoice from booking ${bookingId} for tenant ${tenantId}`);
     const booking = await this.db.query.Booking.findFirst({
       where: (b, { eq }) => eq(b.id, bookingId),
       with: { asset: true },
@@ -466,6 +475,7 @@ export class InvoicesService {
       return [insertedInvoice];
     });
 
+    this.logger.log(`Invoice ${id} generated from booking ${bookingId}`);
     return id;
   }
 

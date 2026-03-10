@@ -16,6 +16,7 @@ export class TagsService {
   ) {}
 
   async createTag(data: InsertTag) {
+  this.logger.log(`Creating tag "${data.name}" for tenant ${data.tenantId}`);
   try {
     const result = await this.db
       .insert(schema.Tags)
@@ -24,7 +25,7 @@ export class TagsService {
     
     return result[0]; // { id, name }
   } catch (error: any) {
-    console.error('Create tag error:', error);
+    this.logger.error(`Failed to create tag: ${error?.message}`);
     throw new InternalServerErrorException(error?.message || 'Failed to create tag');
   }
 }
@@ -103,6 +104,7 @@ export class TagsService {
   }
 
   async deleteTag(id: number) {
+    this.logger.log(`Deleting tag ${id}`);
     await this.db
       .delete(schema.Tags)
       .where(eq(schema.Tags.id, id));
@@ -111,6 +113,7 @@ export class TagsService {
   }
 
   async updateTag(id: number, data: Partial<InsertTag>) {
+    this.logger.log(`Updating tag ${id}`);
     const tag = await this.getTag(id);
     if (!tag) {
       throw new NotFoundException('Tag not found');
@@ -134,6 +137,7 @@ export class TagsService {
   }
 
   async uploadTagImage(tenantId: string, tagId: number, imageBuffer: Buffer): Promise<string> {
+    this.logger.log(`Uploading image for tag ${tagId} tenant ${tenantId}`);
     const tag = await this.getTag(tagId);
     if (!tag) {
       throw new NotFoundException('Tag not found');

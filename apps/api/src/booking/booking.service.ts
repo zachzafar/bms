@@ -35,6 +35,7 @@ export class BookingService {
     formResponses?: Array<{ formFieldId: number; value: string }>,
     addons?: Array<{ addonItemId: number; quantity: number }>
   ): Promise<string | void> {
+    this.logger.log(`Creating booking for asset ${booking.assetId} with ${customerIds.length} customer(s)`);
     const utcStart = new Date(booking.startDate);
     const utcEnd = new Date(booking.endDate);
 
@@ -679,8 +680,8 @@ export class BookingService {
           )
         );
       }
-    } catch (error) {
-      console.error('Error sending booking confirmation:', error);
+    } catch (error: any) {
+      this.logger.error(`Error sending booking confirmation: ${error?.message}`, error?.stack);
       // Don't throw - we don't want to fail the booking if email fails
     }
   }
@@ -886,6 +887,7 @@ export class BookingService {
 
 
   async updateBooking(updateData: schema.UpdateBooking) {
+    this.logger.log(`Updating booking ${updateData.id}`);
     const startDate = new Date(updateData.startDate);
     const endDate = new Date(updateData.endDate);
 
@@ -989,6 +991,7 @@ export class BookingService {
   }
 
   async updateBookingStatus(bookingId: string, status: 'Pending' | 'Confirmed' | 'Cancelled') {
+    this.logger.log(`Updating booking ${bookingId} status to ${status}`);
     const existingBooking = await this.getBooking(bookingId);
     if (!existingBooking) {
       throw new NotFoundException('Booking not found');
@@ -1158,8 +1161,8 @@ export class BookingService {
             );
           }
         }
-      } catch (error) {
-        console.error('Error sending booking status update emails:', error);
+      } catch (error: any) {
+        this.logger.error(`Error sending booking status update emails: ${error?.message}`, error?.stack);
         // Don't throw - we don't want to fail the status update if email fails
       }
     }
@@ -1168,6 +1171,7 @@ export class BookingService {
   }
 
   async deleteBooking(bookingId: string) {
+    this.logger.log(`Deleting booking ${bookingId}`);
     const existingBooking = await this.db.query.Booking.findFirst({
       where: (b, { eq, and, isNull }) => and(
         eq(b.id, bookingId),
@@ -1246,7 +1250,7 @@ export class BookingService {
         )
         .execute();
 
-      console.log(`Found ${upcomingBookings.length} bookings starting in 24 hours`);
+      this.logger.log(`Found ${upcomingBookings.length} bookings starting in 24 hours`);
 
       // Send emails for each booking
       for (const row of upcomingBookings) {
@@ -1324,16 +1328,16 @@ export class BookingService {
           )
         );
 
-        console.log(`Sent reminders for booking ${booking.id}`);
+        this.logger.log(`Sent reminders for booking ${booking.id}`);
       }
 
-      console.log('Booking reminder job completed successfully');
-    } catch (error) {
-      console.error('Error in booking reminder job:', error);
+      this.logger.log('Booking reminder job completed successfully');
+    } catch (error: any) {
+      this.logger.error(`Error in booking reminder job: ${error?.message}`, error?.stack);
     }
   }
 
- 
+
   // -----------------------------
   // Owner-specific Methods
   // -----------------------------

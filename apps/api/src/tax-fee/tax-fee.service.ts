@@ -13,6 +13,7 @@ export class TaxFeeService {
   ) {}
 
   async createTaxFee(data: InsertTaxFee, tenantId: string): Promise<number> {
+    this.logger.log(`Creating tax/fee "${data.name}" for tenant ${tenantId}`);
     const [result] = await this.db
       .insert(schema.TaxFee)
       .values({ ...data, tenantId })
@@ -61,6 +62,7 @@ export class TaxFeeService {
   }
 
   async updateTaxFee(id: number, data: UpdateTaxFee, tenantId: string) {
+    this.logger.log(`Updating tax/fee ${id} for tenant ${tenantId}`);
     await this.db
       .update(schema.TaxFee)
       .set(data)
@@ -68,6 +70,7 @@ export class TaxFeeService {
   }
 
   async deleteTaxFee(id: number, tenantId: string) {
+    this.logger.log(`Deleting tax/fee ${id} for tenant ${tenantId}`);
     await this.db
       .delete(schema.TaxFee)
       .where(and(eq(schema.TaxFee.id, id), eq(schema.TaxFee.tenantId, tenantId)));

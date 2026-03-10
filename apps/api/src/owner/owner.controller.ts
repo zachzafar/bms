@@ -108,7 +108,6 @@ export class OwnerController {
     return tsRestHandler(maintenanceContract.getOwnerMaintenance, async ({ params }) => {
       const ownerAssets = request.ownerAssets || [];
       const ownerId = request.user.sub
-      console.log(`ownerid ${ownerId}`)
       try {
         const maintenance = await this.maintenanceService.getOwnerMaintenance(
           ownerId,

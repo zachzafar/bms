@@ -1,4 +1,4 @@
-import { Inject, Injectable, BadRequestException } from '@nestjs/common';
+import { Inject, Injectable, BadRequestException, Logger } from '@nestjs/common';
 import { MySql2Database } from 'drizzle-orm/mysql2';
 import * as schema from '@repo/api-contract';
 import { DrizzleAsyncProvider } from 'src/drizzle/drizzle.provider';
@@ -12,6 +12,7 @@ type CreatePaymentInput = Omit<schema.InsertPayment, 'id'>;
 
 @Injectable()
 export class PaymentsService {
+  private readonly logger = new Logger(PaymentsService.name);
   constructor(@Inject(DrizzleAsyncProvider) private db: MySql2Database<typeof schema>) {}
 
   private iso(d: Date | null | undefined) {
@@ -28,6 +29,7 @@ export class PaymentsService {
   }
 
   async create(payment: CreatePaymentInput, tenantId: string, invoiceIds?: number[], amountsApplied?: string[]) {
+    this.logger.log(`Creating ${payment.type ?? 'payment'} of ${payment.amount} for tenant ${tenantId}`);
     // If no invoice linkage provided, just insert the payment
     const date = payment.paymentDate ? new Date(payment.paymentDate) : new Date();
     const isRefund = (payment.type ?? '').toLowerCase() === 'refund';
@@ -330,6 +332,7 @@ export class PaymentsService {
   }
 
   async delete(id: number) {
+    this.logger.log(`Deleting payment ${id}`);
     // Check if the payment exists first
     const payment = await this.db.query.Payment.findFirst({
       where: (p, { eq }) => eq(p.id, id),
@@ -407,6 +410,7 @@ export class PaymentsService {
         tenantId: string,
         data: { name: string; description?: string | null }
     ): Promise<number> {
+        this.logger.log(`Creating payment method "${data.name}" for tenant ${tenantId}`);
         const existing = await this.db.query.PaymentMethod.findFirst({
             where: (ct, { eq, and }) => and(
                 eq(ct.tenantId, tenantId),
@@ -579,6 +583,7 @@ export class PaymentsService {
   }
 
   async deletePaymentMethod(tenantId: string, paymentMethodId: number): Promise<void> {
+        this.logger.log(`Deleting payment method ${paymentMethodId} for tenant ${tenantId}`);
         await this.db.update(schema.PaymentMethod)
             .set({ deletedAt: new Date() })
             .where(and(

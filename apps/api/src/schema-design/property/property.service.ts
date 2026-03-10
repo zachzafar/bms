@@ -1,10 +1,12 @@
-import { ConflictException, Inject, Injectable } from '@nestjs/common';
+import { ConflictException, Inject, Injectable, Logger } from '@nestjs/common';
 import { DrizzleAsyncProvider } from 'src/drizzle/drizzle.provider';
 import { MySql2Database } from 'drizzle-orm/mysql2';
 import * as schema from '@repo/api-contract';
 import { and, eq, isNull, sql } from 'drizzle-orm';
 @Injectable()
 export class PropertyService {
+    private readonly logger = new Logger(PropertyService.name);
+
     constructor(
         @Inject(DrizzleAsyncProvider)
         private db: MySql2Database<typeof schema>
@@ -12,6 +14,7 @@ export class PropertyService {
 
 
     async createProperty(data: schema.InsertAssetProperty) {
+        this.logger.log(`Creating property "${data.name}" for tenant ${data.tenantId}`);
         const existing = await this.db.query.assetProperty.findFirst({
             where: (p, { and, eq }) => and(eq(p.name, data.name), eq(p.tenantId, data.tenantId)),
         });
@@ -78,6 +81,7 @@ export class PropertyService {
     }
 
     async setPropertyOptions(id: number, labels: string[]) {
+        this.logger.log(`Setting ${labels.length} option(s) for property ${id}`);
         await this.db.delete(schema.AssetPropertyOption)
             .where(eq(schema.AssetPropertyOption.assetPropertyId, id));
 
@@ -95,11 +99,13 @@ export class PropertyService {
     }
 
     async updateProperty(id: number, data: schema.UpdateAssetProperty) {
+        this.logger.log(`Updating property ${id}`);
         await this.db.update(schema.assetProperty).set(data).where(eq(schema.assetProperty.id, id)).execute()
         return this.getProperty(id);
     }
 
     async deleteProperty(id: number) {
+        this.logger.log(`Deleting property ${id}`);
         await this.db
             .delete(schema.assetProperty)
             .where(eq(schema.assetProperty.id, id));

@@ -13,6 +13,7 @@ export class AddonService {
   ) {}
 
   async createAddon(data: InsertAddonItem, tenantId: string): Promise<number> {
+    this.logger.log(`Creating addon "${data.name}" for tenant ${tenantId}`);
     const [result] = await this.db
       .insert(schema.AddonItem)
       .values({ ...data, tenantId })
@@ -60,6 +61,7 @@ export class AddonService {
   }
 
   async updateAddon(id: number, data: UpdateAddonItem, tenantId: string) {
+    this.logger.log(`Updating addon ${id} for tenant ${tenantId}`);
     await this.db
       .update(schema.AddonItem)
       .set(data)
@@ -67,6 +69,7 @@ export class AddonService {
   }
 
   async deleteAddon(id: number, tenantId: string) {
+    this.logger.log(`Deleting addon ${id} for tenant ${tenantId}`);
     await this.db
       .delete(schema.AddonItem)
       .where(and(eq(schema.AddonItem.id, id), eq(schema.AddonItem.tenantId, tenantId)));

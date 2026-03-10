@@ -14,6 +14,7 @@ export class CustomersService {
         tenantId: string,
         data: { name: string; email: string; phone?: string | null; address?: string | null; customerTypeId?: number | null }
     ): Promise<number> {
+        this.logger.log(`Creating customer "${data.name}" for tenant ${tenantId}`);
         const [{ id }] = await this.db.insert(schema.Customer).values({
             tenantId,
             name: data.name,
@@ -94,6 +95,7 @@ export class CustomersService {
         id: number,
         data: { name?: string; email?: string; phone?: string | null; address?: string | null; customerTypeId?: number | null }
     ): Promise<void> {
+        this.logger.log(`Updating customer ${id} for tenant ${tenantId}`);
         await this.db.update(schema.Customer)
             .set(data)
             .where(and(
@@ -103,6 +105,7 @@ export class CustomersService {
     }
 
     async deleteCustomer(tenantId: string, id: number): Promise<void> {
+        this.logger.log(`Deleting customer ${id} for tenant ${tenantId}`);
         await this.db.update(schema.Customer)
             .set({ deletedAt: new Date() })
             .where(and(
@@ -115,6 +118,7 @@ export class CustomersService {
         tenantId: string,
         data: { name: string; email: string; phone?: string }
     ): Promise<number> {
+        this.logger.log(`Finding or creating customer "${data.email}" for tenant ${tenantId}`);
         const existing = await this.db.query.Customer.findFirst({
             where: (c, { eq, and }) => and(
                 eq(c.tenantId, tenantId),
@@ -133,6 +137,7 @@ export class CustomersService {
         tenantId: string,
         data: { name: string; description?: string | null }
     ): Promise<number> {
+        this.logger.log(`Creating customer type "${data.name}" for tenant ${tenantId}`);
         const existing = await this.db.query.CustomerType.findFirst({
             where: (ct, { eq, and }) => and(
                 eq(ct.tenantId, tenantId),
@@ -247,6 +252,7 @@ export class CustomersService {
     }
 
     async deleteCustomerType(tenantId: string, customerTypeId: number): Promise<void> {
+        this.logger.log(`Deleting customer type ${customerTypeId} for tenant ${tenantId}`);
         await this.db.update(schema.CustomerType)
             .set({ deletedAt: new Date() })
             .where(and(

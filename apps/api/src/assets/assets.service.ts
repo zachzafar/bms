@@ -86,7 +86,7 @@ export class AssetsService {
   }
 
   async createAsset(data: InsertAsset, formIds?: number[], tagIds?: number[]) {
-
+    this.logger.log(`Creating asset "${data.name}" for tenant ${data.tenantId}`);
     try {
       const result = await this.db
         .insert(schema.Asset)
@@ -119,6 +119,7 @@ export class AssetsService {
   }
 
   async updateAsset(id: string, data: UpdateAsset & { formIds?: number[]; tagIds?: number[] }) {
+    this.logger.log(`Updating asset ${id}`);
     const { formIds, tagIds, ...assetData } = data;
     let assetTypeId = assetData.assetTypeId ? (assetData.assetTypeId) : undefined;
 
@@ -155,6 +156,7 @@ export class AssetsService {
   }
 
   async deleteAsset(id: string): Promise<{ success: boolean; message?: string }> {
+    this.logger.log(`Deleting asset ${id}`);
     // Check for bookings (not deleted)
     const bookings = await this.db
       .select({ count: sql<number>`COUNT(*)` })
@@ -201,7 +203,7 @@ export class AssetsService {
   }
 
   async uploadAssetImages(tenant: string, assetId: string, images: (Buffer | Readable)[]) {
-    this.logger.log("Attempting to use storage service")
+    this.logger.log(`Uploading ${images.length} image(s) for asset ${assetId} tenant ${tenant}`)
     const imageUrls = await Promise.all(images.map(async (image) => {
       const imageUrl = await this.objectStorageService.uploadObject(image, "image", tenant, assetId);
       return imageUrl;
@@ -348,7 +350,7 @@ export class AssetsService {
       .from(schema.Asset)
       .where(and(eq(schema.Asset.tenantId, tenantId),isNull(schema.Asset.deletedAt)));
 
-    console.log('Fetched Assets for Tenant:', allAssets);
+    this.logger.log(`Fetched ${allAssets.length} assets for tenant ${tenantId}`);
 
     const allAssetIds = allAssets.map((a) => a.id);
 
@@ -364,7 +366,7 @@ export class AssetsService {
         )
       );
 
-    console.log('Bookings Found:', bookings);
+    this.logger.log(`Found ${bookings.length} conflicting bookings for date range`);
 
     const bookedAssetIds = new Set(bookings.map((b) => b.assetId));
 
@@ -373,7 +375,7 @@ export class AssetsService {
       (asset) => !bookedAssetIds.has(asset.id)
     );
 
-    console.log('Filtered Available Assets:', availableAssets);
+    this.logger.log(`${availableAssets.length} assets available out of ${allAssets.length}`);
 
     // 5. Apply pagination
     const totalCount = availableAssets.length;
@@ -647,6 +649,7 @@ export class AssetsService {
     assetId: string,
     data: { address?: string | null; lat?: number | null; lng?: number | null }
   ): Promise<number> {
+    this.logger.log(`Setting location for asset ${assetId}`);
     const existing = await this.db.query.AssetLocation.findFirst({
       where: (l, { eq }) => eq(l.assetId, assetId),
     });

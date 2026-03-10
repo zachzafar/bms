@@ -12,6 +12,7 @@ export class UsersService {
     constructor(@Inject(DrizzleAsyncProvider) private db: MySql2Database<typeof schema>) { }
 
     async createUser(userData: InsertUser, tenantId: string, roles: number[]): Promise<string> {
+        this.logger.log(`Creating user "${userData.email}" for tenant ${tenantId}`);
         let tenantUser_id: number;
         let userId: string;
 
@@ -195,6 +196,7 @@ export class UsersService {
     }
 
     async update(id: string, tenantId: string, userData: UpdateUser, roles: number[]): Promise<void> {
+        this.logger.log(`Updating user ${id} for tenant ${tenantId}`);
         await this.db.transaction(async (tx) => {
             let hashedPassword: string | undefined;
             if (userData.password) {
@@ -234,6 +236,7 @@ export class UsersService {
     }
 
     async remove(id: string, tenantId: string): Promise<void> {
+        this.logger.log(`Removing user ${id} from tenant ${tenantId}`);
         await this.db.transaction(async (tx) => {
             const admins = await tx.select()
                 .from(schema.TenantHasUsers)

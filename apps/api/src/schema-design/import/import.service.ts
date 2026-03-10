@@ -63,6 +63,7 @@ export class ImportService {
     // Accepts tenantId and JSON file; image urls are downloaded and added to the tenant's assets;
     // property fields are mapped to fields that exist for the asset type.
     async BulkAssetUpload(tenantId: string, file: Express.Multer.File, assetTypeId: number) {
+        this.logger.log(`Starting bulk asset upload for tenant ${tenantId} assetTypeId=${assetTypeId}`);
         try {
             const dataStr = file.buffer
                 ? file.buffer.toString('utf-8')

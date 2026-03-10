@@ -18,6 +18,7 @@ export class MaintenanceService {
     ){ }
 
     async createMaintenance(body: InsertMaintenanceTask) {
+        this.logger.log(`Creating maintenance task for asset ${body.assetId}`);
         try{
            let result =  await this.db.insert(schema.MaintenanceTask).values(body).$returningId();
            return result[0].id;
@@ -109,6 +110,7 @@ export class MaintenanceService {
         };
     }
     async updateMaintenance(body: UpdateMaintenanceTask,maintenanceId: string) {
+        this.logger.log(`Updating maintenance task ${maintenanceId}`);
         const existingMaintenance = await this.getMaintenance(maintenanceId);
 
         if (!existingMaintenance) {
@@ -122,6 +124,7 @@ export class MaintenanceService {
     
     }
     async deleteMaintenance(id: string) {
+        this.logger.log(`Deleting maintenance task ${id}`);
         await this.db
             .update(schema.MaintenanceTask)
             .set({ deletedAt: new Date() })
@@ -135,6 +138,7 @@ export class MaintenanceService {
     }
 
     async uploadFiles(maintenance_id:string ,tenant:string,assetId:string,files: Buffer[]){
+        this.logger.log(`Uploading ${files.length} file(s) for maintenance ${maintenance_id}`);
         const fileUrls =  await Promise.all(files.map(async (file) => {
             return await this.objectStorageService.uploadObject(file,'file',tenant,assetId)
         }))

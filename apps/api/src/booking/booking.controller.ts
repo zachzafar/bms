@@ -55,7 +55,6 @@ export class BookingController {
             const pageSize = query.pageSize ? Number(query.pageSize) : 10;
 
             const bookings = await this.bookingService.getBookings(tenantId, query.assetId, page, pageSize);
-            console.log(`bookings ${JSON.stringify(bookings)}`)
             return { status: 200, body: bookings };
         });
     }

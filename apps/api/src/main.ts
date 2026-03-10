@@ -5,6 +5,7 @@ import { generateOpenApi } from '@ts-rest/open-api';
 import { contract } from '@repo/api-contract';
 import { Reflector } from '@nestjs/core';
 import { Logger } from '@nestjs/common';
+import { LoggingInterceptor } from './common/interceptors/logging.interceptor';
 import { TenantGuard } from './auth/guards/tenant/tenant.guard';
 import { TenantService } from './tenant/tenant.service';
 import { UniversalGuard } from './auth/guards/universal-guard/universal-guard.guard';
@@ -98,6 +99,7 @@ async function bootstrap() {
   const usersService = app.get(UsersService)
   
   app.useGlobalGuards(new UniversalGuard(reflector),new TenantGuard(reflector,tenantService,keysService,usersService));
+  app.useGlobalInterceptors(new LoggingInterceptor());
 
   await app.listen(process.env.PORT ?? 4000);
   logger.log(`Application is running on: ${await app.getUrl()}`);

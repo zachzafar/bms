@@ -17,6 +17,7 @@ export class RatesService {
   // ==============================
 
   async createRateType(tenantId: string, data: InsertRateType): Promise<number> {
+    this.logger.log(`Creating rate type for tenant ${tenantId}`);
     const [inserted] = await this.db
       .insert(schema.RateType)
       .values({ ...data, tenantId })
@@ -51,6 +52,7 @@ export class RatesService {
   }
 
   async updateRateType(tenantId: string, id: number, data: UpdateRateType) {
+    this.logger.log(`Updating rate type ${id} for tenant ${tenantId}`);
     const existing = await this.db.query.RateType.findFirst({
       where: (rt, { eq, and }) => and(eq(rt.id, id), eq(rt.tenantId, tenantId)),
     });
@@ -66,6 +68,7 @@ export class RatesService {
   }
 
   async deleteRateType(tenantId: string, id: number) {
+    this.logger.log(`Deleting rate type ${id} for tenant ${tenantId}`);
     const existing = await this.db.query.RateType.findFirst({
       where: (rt, { eq, and }) => and(eq(rt.id, id), eq(rt.tenantId, tenantId)),
     });
@@ -82,6 +85,7 @@ export class RatesService {
   // ==============================
 
   async createRate(tenantId: string, data: InsertRate, assetIds?: string[]): Promise<number> {
+    this.logger.log(`Creating rate for tenant ${tenantId}`);
     const newStartDate = new Date(data.startDate);
     const newEndDate = new Date(data.endDate);
     const newMinDuration = data.minDuration ?? 1;
@@ -200,6 +204,7 @@ export class RatesService {
   }
 
   async updateRate(tenantId: string, id: number, updateData: UpdateRate & { assetIds?: string[]; assetTypeIds?: number[]; }) {
+    this.logger.log(`Updating rate ${id} for tenant ${tenantId}`);
     const existing = await this.db.query.Rate.findFirst({
       where: (r, { eq, and }) => and(eq(r.id, id), eq(r.tenantId, tenantId)),
       with: { assets: true },
@@ -266,6 +271,7 @@ export class RatesService {
   }
 
   async deleteRate(tenantId: string, id: number) {
+    this.logger.log(`Deleting rate ${id} for tenant ${tenantId}`);
     const existing = await this.db.query.Rate.findFirst({
       where: (r, { eq, and }) => and(eq(r.id, id), eq(r.tenantId, tenantId)),
     });

@@ -119,7 +119,6 @@ export class AuthService {
     }
   
     let tenantHasUsers = await this.db.select().from(schema.TenantHasUsers).where(eq(schema.TenantHasUsers.userId, user_.id))
-    console.log(tenantHasUsers)
     let tenants = await this.db.query.Tenant.findMany({
       where: (tenant, { inArray }) => inArray(
         tenant.id,
@@ -150,7 +149,7 @@ export class AuthService {
     });
   
     const { password: _, ...user } = user_;
-    this.logger.log(`Tenants: ${tenants}`)
+    this.logger.log(`User ${user_.id} logged in with ${tenants.length} tenant(s)`);
     return {
       user,
       tenants,
@@ -350,31 +349,28 @@ export class AuthService {
   }
 
   async validateRefreshToken(userId: string, refreshToken: string) {
-    console.log("looking for refresh token")
+    this.logger.log(`Validating refresh token for user ${userId}`);
 
     const tokens = await this.db.select().from(schema.refreshTokens).where(eq(schema.refreshTokens.userId, userId)).orderBy(desc(schema.refreshTokens.createdAt)).limit(1).execute();
-    console.log("found token: ", tokens[0])
     if (tokens.length === 0) {
       throw new UnauthorizedException('Invalid refresh token');
     }
-    console.log("found token now verifying...")
+
     const refreshTokenMatched = await verify(tokens[0].refreshToken, refreshToken);
 
     if (!refreshTokenMatched) {
       await this.logout(userId);
       throw new UnauthorizedException('Invalid refresh token');
-
     }
-    console.log("refresh token matched")
+
     const { exp } = this.jwtService.decode(refreshToken) as { exp: number };
     const isExpired = Date.now() >= exp * 1000;
 
     if (isExpired) {
-      // Execute the desired function when the token is expired
       await this.logout(userId);
       throw new UnauthorizedException('Refresh Token Expired!');
     }
-    console.log("returning user")
+
     const currentUser = { id: userId };
     return currentUser;
   }

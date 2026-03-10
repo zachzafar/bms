@@ -340,9 +340,7 @@ export class SystemAdminController {
   @TsRestHandler(contract.systemAdmin.getAssetType)
   async getAssetType(): Promise<ReturnType<typeof tsRestHandler>> {
     return tsRestHandler(contract.systemAdmin.getAssetType, async ({ params }) => {
-      console.log(`Asset type id: ${params.id}`);
       const assetTypeData = await this.assetTypeService.getAssetType((params.id));
-      console.log(`Asset type: ${assetTypeData}`);
       if (!assetTypeData) {
         return {
           status: 404 as const,

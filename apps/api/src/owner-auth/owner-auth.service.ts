@@ -19,6 +19,7 @@ export class OwnerAuthService {
   ) {}
 
   async requestMagicLink(email: string, tenantId: string): Promise<boolean> {
+    this.logger.log(`Magic link requested for email=${email} tenant=${tenantId}`);
     try {
       const owner = await this.db.query.Owner.findFirst({
         where: (o, { eq, and, isNull }) =>
@@ -59,6 +60,7 @@ export class OwnerAuthService {
   }
 
   async verifyMagicLink(token: string): Promise<{ accessToken: string; owner: { id: number; name: string; email: string } }> {
+    this.logger.log(`Verifying magic link token`);
     const row = await this.db.query.OwnerMagicLink.findFirst({
       where: (ml, { eq }) => eq(ml.token, token),
     });
@@ -93,6 +95,7 @@ export class OwnerAuthService {
       { expiresIn: '1h' },
     );
 
+    this.logger.log(`Magic link verified for owner ${owner.id}`);
     return {
       accessToken,
       owner: { id: owner.id, name: owner.name, email: owner.email },

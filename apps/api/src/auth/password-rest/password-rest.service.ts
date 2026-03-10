@@ -18,6 +18,7 @@ export class PasswordRestService {
     ) {}
 
     async updatePassword(token: string, password: string): Promise<boolean> {
+        this.logger.log(`Updating password via reset token`);
         const row = await this.db.query.PasswordReset.findFirst({
             where: (reset, { eq }) => eq(reset.token, token),
         })
@@ -38,6 +39,7 @@ export class PasswordRestService {
     }
 
     async createPasswordResetToken(email: string): Promise<boolean> {
+        this.logger.log(`Password reset requested for email=${email}`);
         try {
             const user = await this.db.query.User.findFirst({
                 where: (user, { eq }) => eq(user.email, email),

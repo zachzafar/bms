@@ -1,4 +1,4 @@
-import { Inject, Injectable } from '@nestjs/common';
+import { Inject, Injectable, Logger } from '@nestjs/common';
 import { MySql2Database } from 'drizzle-orm/mysql2';
 import { DrizzleAsyncProvider } from 'src/drizzle/drizzle.provider';
 import * as schema from '@repo/api-contract';
@@ -7,6 +7,7 @@ import { and, eq, isNull, sql } from 'drizzle-orm';
 @Injectable()
 export class TeamsService {
     constructor(@Inject(DrizzleAsyncProvider) private db: MySql2Database<typeof schema>){}
+    private readonly logger = new Logger(TeamsService.name);
 
     async findAll(tenant: string, page: number = 1, pageSize: number = 10) {
         const offset = (page - 1) * pageSize;
@@ -58,14 +59,17 @@ export class TeamsService {
     }
 
     async create(team: schema.InsertTenanTeam) {
+        this.logger.log(`Creating team for tenant ${team.tenantId}`);
         return await this.db.insert(schema.TenantTeams).values(team).$returningId().execute()[0];
     }
 
     async update(id: number, team: Partial<schema.InsertTenanTeam>) {
+        this.logger.log(`Updating team ${id}`);
         return await this.db.update(schema.TenantTeams).set(team).where(eq(schema.TenantTeams.id,id));
     }
 
     async remove(id: number) {
+        this.logger.log(`Removing team ${id}`);
         return await this.db
             .update(schema.TenantTeams)
             .set({ deletedAt: new Date() })
@@ -73,10 +77,12 @@ export class TeamsService {
     }
 
     async addUserToTeam(userId: string, teamId: number) {
+        this.logger.log(`Adding user ${userId} to team ${teamId}`);
         return await this.db.insert(schema.TenantTeamHasUsers).values({userId, teamId: (teamId)});
     }
 
     async removeUserFromTeam(userId: string, teamId: number) {
+        this.logger.log(`Removing user ${userId} from team ${teamId}`);
         return await this.db.delete(schema.TenantTeamHasUsers).where(and(eq(schema.TenantTeamHasUsers.userId,userId),eq(schema.TenantTeamHasUsers.teamId,(teamId))))
     }
 }

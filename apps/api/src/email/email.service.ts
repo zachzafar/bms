@@ -12,12 +12,14 @@ export class EmailService {
 
     @OnEvent('send-email')
      async sendEmail(payload: EmailEvent) {
+        this.logger.log(`Sending email to ${payload.email} subject="${payload.subject}"`);
         const { data,error } = await this.resend.emails.send({
             from: 'info@updates.bookos.xyz',
             to: payload.email,
             subject: payload.subject,
             html: payload.content,
         })
+        this.logger.log(`Email sent to ${payload.email}`);
         if (error) {
             this.logger.error(error)
         }

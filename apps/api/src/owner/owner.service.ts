@@ -19,6 +19,7 @@ export class OwnerService {
             address?: string | null | undefined;
         }
     ): Promise<number> {
+        this.logger.log(`Creating owner "${data.name}" for tenant ${tenantId}`);
         let ownerId: number;
 
 
@@ -105,6 +106,7 @@ export class OwnerService {
         id: number,
         data: { name?: string; email?: string; password?: string; phone?: string | null; address?: string | null; roles?: number[] }
     ): Promise<void> {
+        this.logger.log(`Updating owner ${id} for tenant ${tenantId}`);
         await this.db.transaction(async (tx) => {
             const owner = await tx.query.Owner.findFirst({
                 where: (o, { eq, and }) => and(eq(o.id, id), eq(o.tenantId, tenantId))
@@ -128,6 +130,7 @@ export class OwnerService {
     }
 
     async deleteOwner(tenantId: string, id: number): Promise<void> {
+        this.logger.log(`Deleting owner ${id} for tenant ${tenantId}`);
         // Soft delete the owner
         await this.db.update(schema.Owner)
             .set({ deletedAt: new Date() })
@@ -135,6 +138,7 @@ export class OwnerService {
     }
 
     async assignAsset(ownerId: number, assetId: string): Promise<void> {
+        this.logger.log(`Assigning asset ${assetId} to owner ${ownerId}`);
         // Remove any existing assignment for this asset (reassign)
         await this.db.delete(schema.OwnerHasAssets)
             .where(eq(schema.OwnerHasAssets.assetId, assetId));
@@ -146,6 +150,7 @@ export class OwnerService {
     }
 
     async unassignAsset(ownerId: number, assetId: string): Promise<void> {
+        this.logger.log(`Unassigning asset ${assetId} from owner ${ownerId}`);
         await this.db.delete(schema.OwnerHasAssets)
             .where(and(
                 eq(schema.OwnerHasAssets.ownerId, ownerId),

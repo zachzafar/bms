@@ -254,12 +254,8 @@ export class AssetsController {
             throw new BadRequestException('Tenant ID is required');  
         }
 
-        console.log('Tenant ID from authentication context:', tenantId);  // For debugging
-
         return tsRestHandler(contract.assets.getAvailableAssets, async ({ query }) => {
             const availableAssets = await this.assetService.getAvailableAssets(query.startDate, query.endDate, tenantId);
-
-            console.log('Available Assets:', availableAssets);  // For debugging
 
             return { status: 200, body: availableAssets };
         });

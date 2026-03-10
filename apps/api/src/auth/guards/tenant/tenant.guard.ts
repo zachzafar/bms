@@ -1,4 +1,4 @@
-import { Injectable, CanActivate, ExecutionContext } from '@nestjs/common';
+import { Injectable, CanActivate, ExecutionContext, Logger } from '@nestjs/common';
 import { Observable } from 'rxjs';
 import { Reflector } from '@nestjs/core';
 import { IS_PUBLIC_KEY } from 'src/auth/decorators/public.decorator';
@@ -10,6 +10,8 @@ import { UsersService } from 'src/users/users.service';
 
 @Injectable()
 export class TenantGuard implements CanActivate {
+
+  private readonly logger = new Logger(TenantGuard.name);
 
   constructor(private reflector: Reflector,private tenantService: TenantService,private keyService: KeysService, private userService: UsersService) {}
 
@@ -25,9 +27,6 @@ export class TenantGuard implements CanActivate {
     const isPublic = this.reflector.getAllAndOverride<boolean>(IS_PUBLIC_KEY, [context.getHandler(), context.getClass()]);
     const skipTenantCheck = this.reflector.getAllAndOverride<boolean>(SKIP_TENANT_CHECK_KEY, [context.getHandler(), context.getClass()]);
     const isAdminRoute = this.reflector.getAllAndOverride<boolean>(IS_AMDIN_ROUTE, [context.getHandler(), context.getClass()]);
-    console.log('isAdminRoute', isAdminRoute);
-    console.log('isPublic', isPublic);
-    console.log('skipTenantCheck', skipTenantCheck);
     if (isPublic || skipTenantCheck || isAdminRoute) {
       return true;
     }

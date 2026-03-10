@@ -7,6 +7,7 @@ import { randomBytes } from 'crypto';
 
 @Injectable()
 export class KeysService {
+    private readonly logger = new Logger(KeysService.name);
 
     constructor(
         @Inject(DrizzleAsyncProvider) private db: MySql2Database<typeof schema>
@@ -14,6 +15,7 @@ export class KeysService {
 
     async createKey(tenantId: string, name: string = "API Key") {
         try {
+            this.logger.log(`Creating API key "${name}" for tenant ${tenantId}`);
             const apiKey = `ak_${randomBytes(32).toString('hex')}`
 
 
@@ -65,6 +67,7 @@ export class KeysService {
 
     async tenatHasKey(tenantId: string, key: string) {
         try {
+            this.logger.log(`Verifying API key for tenant ${tenantId}`);
             const keys = await this.db.query.APIKeys.findMany({ where: (keys, { eq }) => eq(keys.tenantId, tenantId) && eq(keys.key, key) })
             return keys.length > 0
         } catch (error) {
@@ -83,6 +86,7 @@ export class KeysService {
 
     async deleteKey(tenantId: string, keyId: string) {
         try {
+            this.logger.log(`Deleting API key ${keyId} for tenant ${tenantId}`);
             const existing = await this.db.query.APIKeys.findFirst({
                 where: and(eq(schema.APIKeys.id, keyId), eq(schema.APIKeys.tenantId, tenantId)),
             });

@@ -1,4 +1,4 @@
-import { Inject, Injectable, InternalServerErrorException, NotFoundException, ConflictException } from '@nestjs/common';
+import { Inject, Injectable, InternalServerErrorException, Logger, NotFoundException, ConflictException } from '@nestjs/common';
 import { MySql2Database } from 'drizzle-orm/mysql2';
 import { DrizzleAsyncProvider } from 'src/drizzle/drizzle.provider';
 import * as schema from '@repo/api-contract';
@@ -6,6 +6,8 @@ import { eq, sql, and, isNull } from 'drizzle-orm';
 
 @Injectable()
 export class FormsService {
+    private readonly logger = new Logger(FormsService.name);
+
     constructor(
         @Inject(DrizzleAsyncProvider) private db: MySql2Database<typeof schema>
     ) {}
@@ -43,6 +45,7 @@ export class FormsService {
     }
 
     async createForm(form: schema.InsertBookingForm, fields: Omit<schema.InsertBookingFormField,"formId">[]) {
+        this.logger.log(`Creating form "${form.name}" for tenant ${form.tenantId} with ${fields.length} field(s)`);
         let formId: number = 0;
         try {
             await this.db.transaction(async (tx) => {
@@ -71,6 +74,7 @@ export class FormsService {
     }
 
     async updateForm(id: number, formData: schema.UpdateBookingForm, fields?: Omit<schema.InsertBookingFormField,"formId">[]) {
+        this.logger.log(`Updating form ${id}${fields ? ` with ${fields.length} field(s)` : ''}`);
         try {
             await this.db.transaction(async (tx) => {
                 // Update form
@@ -100,6 +104,7 @@ export class FormsService {
     }
 
     async deleteForm(id: number) {
+        this.logger.log(`Soft-deleting form ${id}`);
         const form = await this.getForm(id);
         if (!form) {
             throw new NotFoundException(`Form with id ${id} not found`);
@@ -114,6 +119,7 @@ export class FormsService {
 
     // Asset assignment methods
     async assignFormToAsset(formId: number, assetId: string) {
+        this.logger.log(`Assigning form ${formId} to asset ${assetId}`);
         // Check if form exists
         await this.getForm(formId);
 
@@ -147,6 +153,7 @@ export class FormsService {
     }
 
     async unassignFormFromAsset(formId: number, assetId: string) {
+        this.logger.log(`Unassigning form ${formId} from asset ${assetId}`);
         const result = await this.db.delete(schema.AssetHasBookingForms)
             .where(
                 and(
@@ -163,6 +170,7 @@ export class FormsService {
 
     // AssetType assignment methods
     async assignFormToAssetType(formId: number, assetTypeId: number) {
+        this.logger.log(`Assigning form ${formId} to asset type ${assetTypeId}`);
         // Check if form exists
         await this.getForm(formId);
 
@@ -196,6 +204,7 @@ export class FormsService {
     }
 
     async unassignFormFromAssetType(formId: number, assetTypeId: number) {
+        this.logger.log(`Unassigning form ${formId} from asset type ${assetTypeId}`);
         const result = await this.db.delete(schema.AssetTypeHasBookingForms)
             .where(
                 and(

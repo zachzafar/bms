@@ -103,6 +103,7 @@ export class AssetTypeService {
     }
 
     async createAssetType(data: InsertAssetType, properties: number[], forms: number[], tagIds?: number[]) {
+        this.logger.log(`Creating asset type "${data.name}" for tenant ${data.tenantId} with ${properties.length} propert(ies), ${forms.length} form(s)`);
         try {
             const result = await this.db.transaction(async (tx) => {
                 const [{ id }] = await tx
@@ -156,11 +157,13 @@ export class AssetTypeService {
     }
 
     async updateAssetType(id: number, data: UpdateAssetType) {
+        this.logger.log(`Updating asset type ${id}`);
         await this.db.update(schema.AssetType).set(data).where(eq(schema.AssetType.id, id)).execute()
         return this.getAssetType(id);
     }
 
     async deleteAssetType(id: number) {
+        this.logger.log(`Soft-deleting asset type ${id}`);
         return this.db
             .update(schema.AssetType)
             .set({ deletedAt: new Date() })
@@ -168,6 +171,7 @@ export class AssetTypeService {
     }
 
     async updateAssetTypeProperties(id: number, properties: number[]) {
+        this.logger.log(`Updating properties for asset type ${id}: [${properties.join(', ')}]`);
         await this.db.delete(schema.AssetTypeHasProperties).where(eq(schema.AssetTypeHasProperties.assetTypeId, id)).execute()
         if (properties.length > 0) {
             await this.db
@@ -182,6 +186,7 @@ export class AssetTypeService {
     }
 
     async updateAssetTypeForms(id: number, forms: number[]) {
+        this.logger.log(`Updating forms for asset type ${id}: [${forms.join(', ')}]`);
         await this.db.delete(schema.AssetTypeHasBookingForms).where(eq(schema.AssetTypeHasBookingForms.assetTypeId, id)).execute()
         if (forms.length > 0) {
             await this.db
@@ -196,6 +201,7 @@ export class AssetTypeService {
     }
 
     async updateAssetTypeTags(id: number, tagIds: number[]) {
+        this.logger.log(`Updating tags for asset type ${id}: [${tagIds.join(', ')}]`);
         await this.db.delete(schema.AssetTypeHasTags).where(eq(schema.AssetTypeHasTags.assetTypeId, id)).execute()
         if (tagIds.length > 0) {
             await this.db
@@ -354,6 +360,7 @@ export class AssetTypeService {
     }
 
     async setAssetTypePropertyValues(assetTypeId: number, values: { propertyId: number; value: string }[]) {
+        this.logger.log(`Setting ${values.length} property value(s) for asset type ${assetTypeId}`);
         await this.db.delete(schema.AssetTypePropertyValues)
             .where(eq(schema.AssetTypePropertyValues.assetTypeId, assetTypeId));
         if (values.length > 0) {
@@ -368,6 +375,7 @@ export class AssetTypeService {
     }
 
     async uploadsetTypeImage(tenantId: string, assetTypeId: number, imageBuffer: Buffer): Promise<string> {
+        this.logger.log(`Uploading image for asset type ${assetTypeId} tenant ${tenantId}`);
         const assetType = await this.getAssetType(assetTypeId);
         if (!assetType) {
             throw new NotFoundException('Tag not found');
