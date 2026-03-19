@@ -8,7 +8,9 @@ import {
   SelectAssetPropertySchema,
   SelectAssetSchema,
   SelectAssetLocationSchema,
-  SelectTagSchema, // import tag schema
+  SelectTagSchema,
+  SelectRateSchema,
+  SelectRateTypeSchema,
 } from '../database-schema';
 import { pagination } from './utils';
 
@@ -245,6 +247,8 @@ export const assetsContract = c.router({
        * Multiple filters use AND logic, e.g. "beds:>=2,bathrooms:>1,price:<=500"
        */
       propertyFilters: z.string().optional(),
+      /** When true, includes rates attached to each asset */
+      returnRates: z.coerce.boolean().optional(),
     }),
     responses: {
       200: z.object({
@@ -260,6 +264,9 @@ export const assetsContract = c.router({
             value: z.string()
           })),
           location: SelectAssetLocationSchema.nullable(),
+          rates: z.array(SelectRateSchema.extend({
+            rateType: SelectRateTypeSchema.nullable(),
+          })).optional(),
         })),
         pagination
       })

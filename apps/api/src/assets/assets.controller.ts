@@ -266,7 +266,7 @@ export class AssetsController {
     async getAssetsBySubdomain(@Headers() headers: any): Promise<ReturnType<typeof tsRestHandler>> {
         return tsRestHandler(contract.assets.getAssetsBySubdomain, async ({ params, query }) => {
             const { subdomain } = params;
-            const { page = 1, pageSize = 10, assetTypeId, tagSlugs, propertyFilters } = query;
+            const { page = 1, pageSize = 10, assetTypeId, tagSlugs, propertyFilters, returnRates } = query;
 
             const parsedTagSlugs = tagSlugs
                 ? tagSlugs.split(',').map(s => s.trim()).filter(Boolean)
@@ -278,20 +278,23 @@ export class AssetsController {
                     if (colonIdx <= 0) return null;
                     const name = entry.slice(0, colonIdx).trim();
                     const raw = entry.slice(colonIdx + 1).trim();
-                    let operator: 'eq' | 'gt' | 'gte' | 'lt' | 'lte' = 'eq';
+                    let operator: 'eq' | 'gt' | 'gte' | 'lt' | 'lte' | 'contains' | 'like' = 'eq';
                     let value = raw;
                     if (raw.startsWith('>=')) { operator = 'gte'; value = raw.slice(2); }
                     else if (raw.startsWith('>'))  { operator = 'gt';  value = raw.slice(1); }
                     else if (raw.startsWith('<=')) { operator = 'lte'; value = raw.slice(2); }
                     else if (raw.startsWith('<'))  { operator = 'lt';  value = raw.slice(1); }
+                    else if (raw.startsWith('~'))  { operator = 'contains'; value = raw.slice(1); }
+                    else if (raw.startsWith('?'))  { operator = 'like';     value = raw.slice(1); }
                     return { name, value: value.trim(), operator };
-                  }).filter(Boolean) as { name: string; value: string; operator: 'eq' | 'gt' | 'gte' | 'lt' | 'lte' }[]
+                  }).filter(Boolean) as { name: string; value: string; operator: 'eq' | 'gt' | 'gte' | 'lt' | 'lte' | 'contains' | 'like' }[]
                 : undefined;
 
             const assets = await this.assetService.getAssetsBySubdomain(subdomain, page, pageSize, {
                 assetTypeId,
                 tagSlugs: parsedTagSlugs,
                 propertyFilters: parsedPropertyFilters,
+                returnRates: returnRates ?? false,
             });
 
             return { status: 200, body: assets };
