@@ -404,7 +404,8 @@ export class AssetsService {
     filters: {
       assetTypeId?: number;
       tagSlugs?: string[];
-      propertyFilters?: { name: string; value: string; operator: 'eq' | 'gt' | 'gte' | 'lt' | 'lte' }[];
+      propertyFilters?: { name: string; value: string; operator: 'eq' | 'gt' | 'gte' | 'lt' | 'lte' | 'contains' | 'like' }[];
+      returnRates?: boolean;
     } = {}
   ) {
     const offset = (page - 1) * pageSize;
@@ -433,15 +434,19 @@ export class AssetsService {
     if (filters.propertyFilters && filters.propertyFilters.length > 0) {
       for (const { name, value, operator } of filters.propertyFilters) {
         const numericValue = parseFloat(value);
-        const valueCondition = (operator === 'eq' || isNaN(numericValue))
+        const valueCondition = operator === 'contains'
+          ? sql`FIND_IN_SET(${value}, ${schema.AssetHasProperties.value}) > 0`
+          : operator === 'like'
+          ? sql`${schema.AssetHasProperties.value} LIKE ${`%${value}%`}`
+          : (operator === 'eq' || isNaN(numericValue))
           ? eq(schema.AssetHasProperties.value, value)
           : operator === 'gt'
-            ? sql`CAST(${schema.AssetHasProperties.value} AS DECIMAL) > ${numericValue}`
+            ? sql`CAST(REPLACE(${schema.AssetHasProperties.value}, ',', '') AS DECIMAL(20,2)) > ${numericValue}`
             : operator === 'gte'
-              ? sql`CAST(${schema.AssetHasProperties.value} AS DECIMAL) >= ${numericValue}`
+              ? sql`CAST(REPLACE(${schema.AssetHasProperties.value}, ',', '') AS DECIMAL(20,2)) >= ${numericValue}`
               : operator === 'lt'
-                ? sql`CAST(${schema.AssetHasProperties.value} AS DECIMAL) < ${numericValue}`
-                : sql`CAST(${schema.AssetHasProperties.value} AS DECIMAL) <= ${numericValue}`;
+                ? sql`CAST(REPLACE(${schema.AssetHasProperties.value}, ',', '') AS DECIMAL(20,2)) < ${numericValue}`
+                : sql`CAST(REPLACE(${schema.AssetHasProperties.value}, ',', '') AS DECIMAL(20,2)) <= ${numericValue}`;
 
         const propSubquery = this.db
           .selectDistinct({ assetId: schema.AssetHasProperties.assetId })
@@ -490,10 +495,11 @@ export class AssetsService {
     // Fetch tags, properties, images, and location for each asset
     const assetsWithDetails = await Promise.all(
       results.map(async (res) => {
-        const [propertyValues, assetImages, location] = await Promise.all([
+        const [propertyValues, assetImages, location, rates] = await Promise.all([
           this.getPropertyValues(res.assets.id),
           this.getAssetImages(res.assets.id),
           this.getAssetLocation(res.assets.id),
+          filters.returnRates ? this.getAssetRates(res.assets.id) : Promise.resolve(undefined),
         ]);
 
         return {
@@ -508,6 +514,7 @@ export class AssetsService {
             value: prop.value,
           })),
           location: location ?? null,
+          ...(rates !== undefined && { rates }),
         };
       })
     );
@@ -678,6 +685,14 @@ export class AssetsService {
     return this.db.query.AssetLocation.findFirst({
       where: (l, { eq }) => eq(l.assetId, assetId),
     });
+  }
+
+  async getAssetRates(assetId: string) {
+    const rows = await this.db.query.AssetHasRates.findMany({
+      where: (r, { eq }) => eq(r.assetId, assetId),
+      with: { rate: { with: { rateType: true } } },
+    });
+    return rows.map((r) => ({ ...r.rate, rateType: r.rate.rateType ?? null }));
   }
 
   async deleteAssetLocation(assetId: string): Promise<void> {
