@@ -249,6 +249,9 @@ export const assetsContract = c.router({
       propertyFilters: z.string().optional(),
       /** When true, includes rates attached to each asset */
       returnRates: z.coerce.boolean().optional(),
+      /** Filter returned rates by price range */
+      rateMinPrice: z.coerce.number().optional(),
+      rateMaxPrice: z.coerce.number().optional(),
     }),
     responses: {
       200: z.object({

@@ -266,7 +266,7 @@ export class AssetsController {
     async getAssetsBySubdomain(@Headers() headers: any): Promise<ReturnType<typeof tsRestHandler>> {
         return tsRestHandler(contract.assets.getAssetsBySubdomain, async ({ params, query }) => {
             const { subdomain } = params;
-            const { page = 1, pageSize = 10, assetTypeId, tagSlugs, propertyFilters, returnRates } = query;
+            const { page = 1, pageSize = 10, assetTypeId, tagSlugs, propertyFilters, returnRates, rateMinPrice, rateMaxPrice } = query;
 
             const parsedTagSlugs = tagSlugs
                 ? tagSlugs.split(',').map(s => s.trim()).filter(Boolean)
@@ -295,6 +295,8 @@ export class AssetsController {
                 tagSlugs: parsedTagSlugs,
                 propertyFilters: parsedPropertyFilters,
                 returnRates: returnRates ?? false,
+                rateMinPrice,
+                rateMaxPrice,
             });
 
             return { status: 200, body: assets };
