@@ -2,7 +2,7 @@ import { BadRequestException, Inject, Injectable, InternalServerErrorException, 
 import { MySql2Database } from 'drizzle-orm/mysql2';
 import { DrizzleAsyncProvider } from 'src/drizzle/drizzle.provider';
 import * as schema from '@repo/api-contract';
-import { and, eq, gte, inArray, isNull, lte, ne, sql } from 'drizzle-orm';
+import { SQL, and, eq, exists, gte, inArray, isNull, lte, ne, sql } from 'drizzle-orm';
 import type { InsertAsset, UpdateAsset } from '@repo/api-contract';
 import { ObjectStorageService } from 'src/object-storage/object-storage.service';
 import { Readable } from 'stream';
@@ -406,6 +406,8 @@ export class AssetsService {
       tagSlugs?: string[];
       propertyFilters?: { name: string; value: string; operator: 'eq' | 'gt' | 'gte' | 'lt' | 'lte' | 'contains' | 'like' }[];
       returnRates?: boolean;
+      rateMinPrice?: number;
+      rateMaxPrice?: number;
     } = {}
   ) {
     const offset = (page - 1) * pageSize;
@@ -460,6 +462,26 @@ export class AssetsService {
       }
     }
 
+    // Rates filter: only include assets that have at least one matching rate
+    if (filters.returnRates) {
+      const rateConditions: SQL[] = [
+        eq(schema.AssetHasRates.assetId, schema.Asset.id),
+        eq(schema.Rate.isActive, true),
+      ];
+      if (filters.rateMinPrice !== undefined) {
+        rateConditions.push(sql`CAST(${schema.Rate.pricePerUnit} AS DECIMAL(20,2)) >= ${filters.rateMinPrice}`);
+      }
+      if (filters.rateMaxPrice !== undefined) {
+        rateConditions.push(sql`CAST(${schema.Rate.pricePerUnit} AS DECIMAL(20,2)) <= ${filters.rateMaxPrice}`);
+      }
+      conditions.push(exists(
+        this.db.select({ one: sql`1` })
+          .from(schema.AssetHasRates)
+          .innerJoin(schema.Rate, eq(schema.AssetHasRates.rateId, schema.Rate.id))
+          .where(and(...rateConditions))
+      ));
+    }
+
     const whereClause = and(...conditions);
 
     // Get total count for pagination metadata
@@ -492,15 +514,45 @@ export class AssetsService {
       hasPreviousPage: page > 1,
     };
 
-    // Fetch tags, properties, images, and location for each asset
+    // Batch-fetch rates for all page results in one query
+    const ratesByAssetId = new Map<string, any[]>();
+    if (filters.returnRates && results.length > 0) {
+      const assetIds = results.map(r => r.assets.id);
+      const rateConditions: SQL[] = [
+        inArray(schema.AssetHasRates.assetId, assetIds),
+        eq(schema.Rate.isActive, true),
+      ];
+      if (filters.rateMinPrice !== undefined) {
+        rateConditions.push(sql`CAST(${schema.Rate.pricePerUnit} AS DECIMAL(20,2)) >= ${filters.rateMinPrice}`);
+      }
+      if (filters.rateMaxPrice !== undefined) {
+        rateConditions.push(sql`CAST(${schema.Rate.pricePerUnit} AS DECIMAL(20,2)) <= ${filters.rateMaxPrice}`);
+      }
+      const rateRows = await this.db
+        .select()
+        .from(schema.AssetHasRates)
+        .innerJoin(schema.Rate, eq(schema.AssetHasRates.rateId, schema.Rate.id))
+        .leftJoin(schema.RateType, eq(schema.Rate.rateTypeId, schema.RateType.id))
+        .where(and(...rateConditions))
+        .execute();
+
+      for (const row of rateRows) {
+        const list = ratesByAssetId.get(row.asset_has_rates.assetId) ?? [];
+        list.push({ ...row.rate, rateType: row.rate_type ?? null });
+        ratesByAssetId.set(row.asset_has_rates.assetId, list);
+      }
+    }
+
+    // Fetch properties, images, and location for each asset
     const assetsWithDetails = await Promise.all(
       results.map(async (res) => {
-        const [propertyValues, assetImages, location, rates] = await Promise.all([
+        const [propertyValues, assetImages, location] = await Promise.all([
           this.getPropertyValues(res.assets.id),
           this.getAssetImages(res.assets.id),
           this.getAssetLocation(res.assets.id),
-          filters.returnRates ? this.getAssetRates(res.assets.id) : Promise.resolve(undefined),
         ]);
+
+        const rates = filters.returnRates ? (ratesByAssetId.get(res.assets.id) ?? []) : undefined;
 
         return {
           id: res.assets.id,
@@ -687,12 +739,19 @@ export class AssetsService {
     });
   }
 
-  async getAssetRates(assetId: string) {
+  async getAssetRates(assetId: string, minPrice?: number, maxPrice?: number) {
     const rows = await this.db.query.AssetHasRates.findMany({
       where: (r, { eq }) => eq(r.assetId, assetId),
       with: { rate: { with: { rateType: true } } },
     });
-    return rows.map((r) => ({ ...r.rate, rateType: r.rate.rateType ?? null }));
+    return rows
+      .map((r) => ({ ...r.rate, rateType: r.rate.rateType ?? null }))
+      .filter((rate) => {
+        const price = parseFloat(rate.pricePerUnit ?? '0');
+        if (minPrice !== undefined && price < minPrice) return false;
+        if (maxPrice !== undefined && price > maxPrice) return false;
+        return true;
+      });
   }
 
   async deleteAssetLocation(assetId: string): Promise<void> {
