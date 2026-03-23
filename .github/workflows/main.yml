@@ -60,6 +60,33 @@ jobs:
       - name: Upload archive
         run: scp -o StrictHostKeyChecking=no deploy.tar.gz ${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }}:$REMOTE_DIR/
 
+      - name: Write .env file on server
+        run: |
+          ssh -o StrictHostKeyChecking=no ${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }} "cat > $REMOTE_DIR/.env << 'EOF'
+          NODE_ENV=production
+          DATABASE_HOST=${{ secrets.DATABASE_HOST }}
+          DATABASE_PORT=${{ secrets.DATABASE_PORT }}
+          DATABASE_USER=${{ secrets.DATABASE_USER }}
+          DATABASE_PASSWORD=${{ secrets.DATABASE_PASSWORD }}
+          DATABASE_NAME=${{ secrets.DATABASE_NAME }}
+          DATABASE_URL=${{ secrets.DATABASE_URL }}
+          CORS_ORIGIN=${{ secrets.CORS_ORIGIN }}
+          JWT_SECRET=${{ secrets.JWT_SECRET }}
+          JWT_EXPIRES_IN=${{ secrets.JWT_EXPIRES_IN }}
+          REFRESH_JWT_SECRET=${{ secrets.REFRESH_JWT_SECRET }}
+          REFRESH_JWT_EXPIRES_IN=${{ secrets.REFRESH_JWT_EXPIRES_IN }}
+          SESSION_SECRET_KEY=${{ secrets.SESSION_SECRET_KEY }}
+          FRONTEND_URL=${{ secrets.FRONTEND_URL }}
+          DOMAIN=${{ secrets.DOMAIN }}
+          SECURE=${{ secrets.SECURE }}
+          SPACES_ENDPOINT=${{ secrets.SPACES_ENDPOINT }}
+          SPACES_KEY=${{ secrets.SPACES_KEY }}
+          SPACES_SECRET=${{ secrets.SPACES_SECRET }}
+          SPACES_REGION=${{ secrets.SPACES_REGION }}
+          SPACES_CDN_URL=${{ secrets.SPACES_CDN_URL }}
+          RESEND=${{ secrets.RESEND }}
+          EOF"
+
       - name: Deploy remotely
         run: |
           ssh -o StrictHostKeyChecking=no ${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }} "
