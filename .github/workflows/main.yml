@@ -60,9 +60,9 @@ jobs:
       - name: Upload archive
         run: scp -o StrictHostKeyChecking=no deploy.tar.gz ${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }}:$REMOTE_DIR/
 
-      - name: Write .env file on server
+      - name: Write env files locally
         run: |
-          ssh -o StrictHostKeyChecking=no ${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }} "cat > $REMOTE_DIR/.env << 'EOF'
+          cat > api.env << EOF
           NODE_ENV=production
           DATABASE_HOST=${{ secrets.DATABASE_HOST }}
           DATABASE_PORT=${{ secrets.DATABASE_PORT }}
@@ -85,14 +85,27 @@ jobs:
           SPACES_REGION=${{ secrets.SPACES_REGION }}
           SPACES_CDN_URL=${{ secrets.SPACES_CDN_URL }}
           RESEND=${{ secrets.RESEND }}
-          EOF"
+          EOF
+          cat > web.env.local << EOF
+          SESSION_SECRET_KEY=${{ secrets.SESSION_SECRET_KEY }}
+          SECURE=${{ secrets.SECURE }}
+          EOF
+
+      - name: Extract archive on server
+        run: |
+          ssh -o StrictHostKeyChecking=no ${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }} "
+            cd $REMOTE_DIR && tar -xzf deploy.tar.gz && rm deploy.tar.gz
+          "
+
+      - name: Upload env files to server
+        run: |
+          scp -o StrictHostKeyChecking=no api.env ${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }}:$REMOTE_DIR/apps/api/.env
+          scp -o StrictHostKeyChecking=no web.env.local ${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }}:$REMOTE_DIR/apps/web/.env.local
 
       - name: Deploy remotely
         run: |
           ssh -o StrictHostKeyChecking=no ${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }} "
             cd $REMOTE_DIR && \
-            tar -xzf deploy.tar.gz && \
-            rm deploy.tar.gz && \
             pnpm install && \
             DATABASE_URL='${{ secrets.DATABASE_URL }}' pnpm db:migrate && \
             pm2 delete all || true && \
