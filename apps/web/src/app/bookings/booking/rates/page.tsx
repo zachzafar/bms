@@ -569,7 +569,7 @@ export default function RatesPage() {
                     <FormItem>
                       <FormLabel>{selectedRateType ? `Price Per ${unitLabel}` : "Price Per Unit"}</FormLabel>
                       <FormControl>
-                        <Input {...field} type="number" placeholder="0.00" />
+                        <Input {...field} type="number" step="0.01" placeholder="0.00" />
                       </FormControl>
                       <FormMessage />
                     </FormItem>

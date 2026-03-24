@@ -35,7 +35,7 @@ export const Rate = mysqlTable("rate", {
   endDate: date("end_date").notNull(),
   minDuration: int("min_duration"),
   maxDuration: int("max_duration"),
-  pricePerUnit: decimal("price_per_unit"),
+  pricePerUnit: decimal("price_per_unit", { precision: 10, scale: 2 }),
   priority: int("priority").default(100),
   isActive: boolean("is_active").default(true).notNull(),
   createdAt: timestamp("created_at").notNull().defaultNow(),

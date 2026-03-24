@@ -50,6 +50,13 @@
       "when": 1772493174497,
       "tag": "0006_fantastic_stone_men",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "5",
+      "when": 1774382490461,
+      "tag": "0007_rare_vulcan",
+      "breakpoints": true
     }
   ]
 }
