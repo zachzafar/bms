@@ -1,0 +1,1 @@
+ALTER TABLE `rate` MODIFY COLUMN `price_per_unit` decimal(10,2);
