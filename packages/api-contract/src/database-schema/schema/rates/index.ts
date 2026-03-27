@@ -1,5 +1,5 @@
 import { relations } from "drizzle-orm";
-import { mysqlTable, varchar, text, int, bigint, decimal, date, boolean, timestamp } from "drizzle-orm/mysql-core";
+import { mysqlTable, varchar, text, int, bigint, decimal, boolean, timestamp } from "drizzle-orm/mysql-core";
 import { createInsertSchema, createSelectSchema } from "drizzle-zod";
 import { z } from "zod";
 import { AssetType } from "../settings";
@@ -31,8 +31,10 @@ export const Rate = mysqlTable("rate", {
   assetTypeId: bigint("asset_type_id", { mode: "number", unsigned: true }).references(() => AssetType.id, { onDelete: 'cascade' }),
   rateTypeId: bigint("rate_type_id", { mode: "number", unsigned: true }).references(() => RateType.id, { onDelete: 'set null' }),
   description: text("description"),
-  startDate: date("start_date").notNull(),
-  endDate: date("end_date").notNull(),
+  startMonth: int("start_month").notNull(),
+  startDay: int("start_day").notNull(),
+  endMonth: int("end_month").notNull(),
+  endDay: int("end_day").notNull(),
   minDuration: int("min_duration"),
   maxDuration: int("max_duration"),
   pricePerUnit: decimal("price_per_unit", { precision: 10, scale: 2 }),
@@ -42,10 +44,12 @@ export const Rate = mysqlTable("rate", {
 });
 
 export const InsertRateSchema = createInsertSchema(Rate)
-  .omit({ startDate: true, endDate: true, minDuration: true, maxDuration: true, tenantId: true })
+  .omit({ minDuration: true, maxDuration: true, tenantId: true })
   .extend({
-    startDate: z.coerce.date(),
-    endDate: z.coerce.date(),
+    startMonth: z.coerce.number().min(1).max(12),
+    startDay: z.coerce.number().min(1).max(31),
+    endMonth: z.coerce.number().min(1).max(12),
+    endDay: z.coerce.number().min(1).max(31),
     minDuration: z.coerce.number(),
     maxDuration: z.coerce.number(),
     rateTypeId: z.coerce.number().optional(),

@@ -144,7 +144,7 @@ export const billingContract = c.router({
   pathParams: z.object({
     id: z.coerce.number(), // frontend will send the invoice ID as a string
   }),
-  body: z.object({}),
+  body: z.object({}).optional(),
   responses: {
     200: z.object({
       message: z.string(),

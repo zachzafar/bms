@@ -57,6 +57,13 @@
       "when": 1774382490461,
       "tag": "0007_rare_vulcan",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "5",
+      "when": 1774574461714,
+      "tag": "0008_magenta_the_hunter",
+      "breakpoints": true
     }
   ]
 }

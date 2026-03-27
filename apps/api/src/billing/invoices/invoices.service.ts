@@ -2,7 +2,7 @@ import { Inject, Injectable, BadRequestException, NotFoundException, Logger } fr
 import { MySql2Database } from 'drizzle-orm/mysql2';
 import * as schema from '@repo/api-contract';
 import { DrizzleAsyncProvider } from 'src/drizzle/drizzle.provider';
-import { and, eq, inArray, isNull, lte, gte, sql } from 'drizzle-orm';
+import { and, eq, inArray, isNull, sql } from 'drizzle-orm';
 
 type CreateInvoiceInput = Omit<schema.InsertInvoice, 'id'>;
 type ItemInput = { description: string; quantity: number; unitPrice: string; totalPrice: string; };
@@ -412,7 +412,7 @@ export class InvoicesService {
     const startDate = new Date(booking.startDate);
     const endDate = new Date(booking.endDate);
 
-    const matchingRates = await this.db
+    const allRates = await this.db
       .select({
         rate: schema.Rate,
         assetHasRate: schema.AssetHasRates,
@@ -425,10 +425,25 @@ export class InvoicesService {
       .where(
         and(
           eq(schema.AssetHasRates.assetId, booking.assetId),
-          lte(schema.Rate.startDate, startDate),
-          gte(schema.Rate.endDate, endDate)
+          eq(schema.Rate.isActive, true)
         )
       );
+
+    const startMonth = startDate.getUTCMonth() + 1;
+    const startDay = startDate.getUTCDate();
+    const endMonth = endDate.getUTCMonth() + 1;
+    const endDay = endDate.getUTCDate();
+
+    const matchingRates = allRates.filter(({ rate }) => {
+      if (!rate.startMonth || !rate.startDay || !rate.endMonth || !rate.endDay) return false;
+      const inRange = (month: number, day: number) => {
+        const cursor = month * 32 + day;
+        const start = rate.startMonth! * 32 + rate.startDay!;
+        const end = rate.endMonth! * 32 + rate.endDay!;
+        return end < start ? (cursor >= start || cursor <= end) : (cursor >= start && cursor <= end);
+      };
+      return inRange(startMonth, startDay) && inRange(endMonth, endDay);
+    });
 
     if (!matchingRates.length) throw new NotFoundException('No applicable rate found for booking dates');
 

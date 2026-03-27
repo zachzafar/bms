@@ -3,7 +3,6 @@
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { authClient } from "@/lib/api/publicClient";
-import { format } from "date-fns";
 
 import { z } from "zod";
 import { Button } from '@/components/ui/button';
@@ -31,12 +30,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
-import { Calendar } from "@/components/ui/calendar";
 import { toast } from "sonner";
 import { Form, FormField, FormItem, FormLabel, FormControl, FormMessage } from "@/components/ui/form";
 import { ASSET_TYPE_QUERY_KEY, ASSETS_QUERY_KEY, RATES_QUERY_KEY, RATE_TYPES_QUERY_KEY } from "@/lib/api/queryKeys";
@@ -44,17 +37,32 @@ import { usePagination } from "@/hooks/usePagination";
 import { DataTablePagination } from "@/components/ui/data-table-pagination";
 import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { CalendarIcon } from "lucide-react";
-import { cn } from "@/lib/utils";
 import { QuickCreateAssetType, QuickCreateRateType } from '@/components/custom/QuickCreate';
 
 type SelectionMode = "assets" | "assetType";
 
+const MONTHS = [
+  { value: 1, label: "January" },
+  { value: 2, label: "February" },
+  { value: 3, label: "March" },
+  { value: 4, label: "April" },
+  { value: 5, label: "May" },
+  { value: 6, label: "June" },
+  { value: 7, label: "July" },
+  { value: 8, label: "August" },
+  { value: 9, label: "September" },
+  { value: 10, label: "October" },
+  { value: 11, label: "November" },
+  { value: 12, label: "December" },
+];
+
 const rateSchema = z.object({
   name: z.string().min(1),
   description: z.string().optional(),
-  startDate: z.date(),
-  endDate: z.date(),
+  startMonth: z.coerce.number().min(1).max(12),
+  startDay: z.coerce.number().min(1).max(31),
+  endMonth: z.coerce.number().min(1).max(12),
+  endDay: z.coerce.number().min(1).max(31),
   minUnits: z.coerce.number(),
   maxUnits: z.coerce.number(),
   assetTypeId: z.coerce.number().optional(),
@@ -68,8 +76,10 @@ type RateFormValues = z.infer<typeof rateSchema>;
 const defaultFormValues: Partial<RateFormValues> = {
   name: '',
   description: '',
-  startDate: undefined,
-  endDate: undefined,
+  startMonth: undefined,
+  startDay: undefined,
+  endMonth: undefined,
+  endDay: undefined,
   minUnits: 0,
   maxUnits: 0,
   pricePerUnit: 0,
@@ -138,8 +148,8 @@ export default function RatesPage() {
       return;
     }
 
-    if (!values.startDate || !values.endDate) {
-      toast.error("Start date and end date are required");
+    if (!values.startMonth || !values.startDay || !values.endMonth || !values.endDay) {
+      toast.error("Start and end month/day are required");
       return;
     }
 
@@ -156,8 +166,10 @@ export default function RatesPage() {
     const basePayload = {
       name: values.name,
       description: values.description,
-      startDate: new Date(values.startDate),
-      endDate: new Date(values.endDate),
+      startMonth: values.startMonth,
+      startDay: values.startDay,
+      endMonth: values.endMonth,
+      endDay: values.endDay,
       minDuration: values.minUnits * unitMinutes,
       maxDuration: values.maxUnits * unitMinutes,
       pricePerUnit: values.pricePerUnit !== undefined ? String(values.pricePerUnit) : undefined,
@@ -214,15 +226,9 @@ export default function RatesPage() {
     }
   };
 
-  function toDateInputFormat(dateStr: string) {
-    return dateStr ? dateStr.slice(0, 10) : '';
-  }
-
-  // Parse date-only strings (e.g. "2026-02-10") as local midnight
-  // to avoid UTC interpretation shifting the date by -1 day
-  function parseLocalDate(dateStr: string): Date {
-    const [year, month, day] = dateStr.slice(0, 10).split('-').map(Number);
-    return new Date(year, month - 1, day);
+  function formatSeasonRange(startMonth: number, startDay: number, endMonth: number, endDay: number) {
+    const monthName = (m: number) => MONTHS.find(mo => mo.value === m)?.label.slice(0, 3) ?? m;
+    return `${monthName(startMonth)} ${startDay} → ${monthName(endMonth)} ${endDay}`;
   }
 
   const handleEdit = (rate: any, assetIds: string[], assetTypeIds: number[]) => {
@@ -237,8 +243,10 @@ export default function RatesPage() {
     form.reset({
       name: rate.name,
       description: rate.description ?? "",
-      startDate: parseLocalDate(rate.startDate),
-      endDate: parseLocalDate(rate.endDate),
+      startMonth: rate.startMonth ?? undefined,
+      startDay: rate.startDay ?? undefined,
+      endMonth: rate.endMonth ?? undefined,
+      endDay: rate.endDay ?? undefined,
       minUnits: rate.minDuration ? Math.round(rate.minDuration / editUnitMinutes) : undefined,
       maxUnits: rate.maxDuration ? Math.round(rate.maxDuration / editUnitMinutes) : undefined,
       pricePerUnit: rate.pricePerUnit ? Number(rate.pricePerUnit) : undefined,
@@ -424,86 +432,89 @@ export default function RatesPage() {
                   )}
                 />
 
-                <FormField
-                  control={form.control}
-                  name="startDate"
-                  render={({ field }) => (
-                    <FormItem className="flex flex-col">
-                      <FormLabel>Start Date</FormLabel>
-                      <Popover>
-                        <PopoverTrigger asChild>
+                <FormItem>
+                  <FormLabel>Start</FormLabel>
+                  <div className="flex gap-2">
+                    <FormField
+                      control={form.control}
+                      name="startMonth"
+                      render={({ field }) => (
+                        <FormItem className="flex-1">
+                          <Select
+                            value={field.value?.toString() ?? ""}
+                            onValueChange={(v) => field.onChange(Number(v))}
+                          >
+                            <FormControl>
+                              <SelectTrigger>
+                                <SelectValue placeholder="Month" />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              {MONTHS.map((m) => (
+                                <SelectItem key={m.value} value={m.value.toString()}>{m.label}</SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={form.control}
+                      name="startDay"
+                      render={({ field }) => (
+                        <FormItem className="w-20">
                           <FormControl>
-                            <Button
-                              variant="outline"
-                              className={cn(
-                                "w-full pl-3 text-left font-normal",
-                                !field.value && "text-muted-foreground"
-                              )}
-                            >
-                              {field.value ? (
-                                format(field.value, "PPP")
-                              ) : (
-                                <span>Pick a date</span>
-                              )}
-                              <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                            </Button>
+                            <Input {...field} type="number" min={1} max={31} placeholder="Day" />
                           </FormControl>
-                        </PopoverTrigger>
-                        <PopoverContent className="w-auto p-0" align="start">
-                          <Calendar
-                            mode="single"
-                            selected={field.value}
-                            onSelect={field.onChange}
-                            initialFocus
-                          />
-                        </PopoverContent>
-                      </Popover>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+                </FormItem>
 
-                <FormField
-                  control={form.control}
-                  name="endDate"
-                  render={({ field }) => (
-                    <FormItem className="flex flex-col">
-                      <FormLabel>End Date</FormLabel>
-                      <Popover>
-                        <PopoverTrigger asChild>
+                <FormItem>
+                  <FormLabel>End</FormLabel>
+                  <div className="flex gap-2">
+                    <FormField
+                      control={form.control}
+                      name="endMonth"
+                      render={({ field }) => (
+                        <FormItem className="flex-1">
+                          <Select
+                            value={field.value?.toString() ?? ""}
+                            onValueChange={(v) => field.onChange(Number(v))}
+                          >
+                            <FormControl>
+                              <SelectTrigger>
+                                <SelectValue placeholder="Month" />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              {MONTHS.map((m) => (
+                                <SelectItem key={m.value} value={m.value.toString()}>{m.label}</SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={form.control}
+                      name="endDay"
+                      render={({ field }) => (
+                        <FormItem className="w-20">
                           <FormControl>
-                            <Button
-                              variant="outline"
-                              className={cn(
-                                "w-full pl-3 text-left font-normal",
-                                !field.value && "text-muted-foreground"
-                              )}
-                            >
-                              {field.value ? (
-                                format(field.value, "PPP")
-                              ) : (
-                                <span>Pick a date</span>
-                              )}
-                              <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                            </Button>
+                            <Input {...field} type="number" min={1} max={31} placeholder="Day" />
                           </FormControl>
-                        </PopoverTrigger>
-                        <PopoverContent className="w-auto p-0" align="start">
-                          <Calendar
-                            mode="single"
-                            selected={field.value}
-                            onSelect={field.onChange}
-                            disabled={(date) =>
-                              form.getValues("startDate") ? date < form.getValues("startDate") : false
-                            }
-                            initialFocus
-                          />
-                        </PopoverContent>
-                      </Popover>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+                </FormItem>
 
                 <FormField
                   control={form.control}
@@ -591,8 +602,7 @@ export default function RatesPage() {
               <TableHead>Name</TableHead>
               <TableHead>Applies To</TableHead>
               <TableHead>Rate Type</TableHead>
-              <TableHead>Start Date</TableHead>
-              <TableHead>End Date</TableHead>
+              <TableHead>Season</TableHead>
               <TableHead>Price/Unit</TableHead>
               <TableHead>Actions</TableHead>
             </TableRow>
@@ -618,8 +628,7 @@ export default function RatesPage() {
                     <TableCell>{rate.name}</TableCell>
                     <TableCell>{appliesTo}</TableCell>
                     <TableCell>{rateTypeName}</TableCell>
-                    <TableCell>{toDateInputFormat(rate.startDate)}</TableCell>
-                    <TableCell>{toDateInputFormat(rate.endDate)}</TableCell>
+                    <TableCell>{formatSeasonRange(rate.startMonth, rate.startDay, rate.endMonth, rate.endDay)}</TableCell>
                     <TableCell>{rate.pricePerUnit}</TableCell>
                     <TableCell>
                       <div className="flex gap-2">
@@ -644,7 +653,7 @@ export default function RatesPage() {
               })
             ) : (
               <TableRow>
-                <TableCell colSpan={7}>No rates found.</TableCell>
+                <TableCell colSpan={6}>No rates found.</TableCell>
               </TableRow>
             )}
           </TableBody>
