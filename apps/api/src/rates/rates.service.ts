@@ -86,8 +86,6 @@ export class RatesService {
 
   async createRate(tenantId: string, data: InsertRate, assetIds?: string[]): Promise<number> {
     this.logger.log(`Creating rate for tenant ${tenantId}`);
-    const newStartDate = new Date(data.startDate);
-    const newEndDate = new Date(data.endDate);
     const newMinDuration = data.minDuration ?? 1;
     const newMaxDuration = data.maxDuration ?? 999999;
 
@@ -95,7 +93,7 @@ export class RatesService {
     const existingRates = await this.getOverlappingRates(tenantId, assetIds, data.assetTypeId);
 
     // Check for conflicts
-    this.validateNoOverlap(existingRates, newStartDate, newEndDate, newMinDuration, newMaxDuration);
+    this.validateNoOverlap(existingRates, data.startMonth, data.startDay, data.endMonth, data.endDay, newMinDuration, newMaxDuration);
 
     return await this.db.transaction(async (tx) => {
       const [inserted] = await tx
@@ -103,8 +101,6 @@ export class RatesService {
         .values({
           ...data,
           tenantId,
-          startDate: newStartDate,
-          endDate: newEndDate,
           assetTypeId: assetIds && assetIds.length > 0 ? null : data.assetTypeId,
         })
         .$returningId();
@@ -214,8 +210,10 @@ export class RatesService {
       throw new NotFoundException('Rate not found');
     }
 
-    const newStartDate = updateData.startDate ? new Date(updateData.startDate) : new Date(existing.startDate);
-    const newEndDate = updateData.endDate ? new Date(updateData.endDate) : new Date(existing.endDate);
+    const newStartMonth = updateData.startMonth ?? existing.startMonth;
+    const newStartDay = updateData.startDay ?? existing.startDay;
+    const newEndMonth = updateData.endMonth ?? existing.endMonth;
+    const newEndDay = updateData.endDay ?? existing.endDay;
     const newMinDuration = updateData.minDuration ?? existing.minDuration ?? 1;
     const newMaxDuration = updateData.maxDuration ?? existing.maxDuration ?? 999999;
     const hasAssetIds = updateData.assetIds && updateData.assetIds.length > 0;
@@ -232,13 +230,11 @@ export class RatesService {
 
     // Check for overlapping rates (excluding current)
     const existingRates = await this.getOverlappingRates(tenantId, assetIdsToCheck, assetTypeIdToCheck, id);
-    this.validateNoOverlap(existingRates, newStartDate, newEndDate, newMinDuration, newMaxDuration);
+    this.validateNoOverlap(existingRates, newStartMonth, newStartDay, newEndMonth, newEndDay, newMinDuration, newMaxDuration);
 
     await this.db.transaction(async (tx) => {
       const updatePayload: any = {
         ...updateData,
-        startDate: updateData.startDate ? new Date(updateData.startDate) : undefined,
-        endDate: updateData.endDate ? new Date(updateData.endDate) : undefined,
       };
 
       if (hasAssetIds) {
@@ -290,8 +286,10 @@ export class RatesService {
     id: schema.Rate.id,
     name: schema.Rate.name,
     pricePerUnit: schema.Rate.pricePerUnit,
-    startDate: schema.Rate.startDate,
-    endDate: schema.Rate.endDate,
+    startMonth: schema.Rate.startMonth,
+    startDay: schema.Rate.startDay,
+    endMonth: schema.Rate.endMonth,
+    endDay: schema.Rate.endDay,
     minDuration: schema.Rate.minDuration,
     maxDuration: schema.Rate.maxDuration,
     priority: schema.Rate.priority,
@@ -335,12 +333,16 @@ export class RatesService {
       (bookingEndDate.getTime() - bookingStartDate.getTime()) / (1000 * 60)
     );
 
+    const startMonth = bookingStartDate.getUTCMonth() + 1;
+    const startDay = bookingStartDate.getUTCDate();
+    const endMonth = bookingEndDate.getUTCMonth() + 1;
+    const endDay = bookingEndDate.getUTCDate();
+
     const applicable = allRates
       .filter(rate => {
-        if (!rate.startDate || !rate.endDate) return false;
-        const rateStart = new Date(rate.startDate);
-        const rateEnd = new Date(rate.endDate);
-        if (rateStart > bookingStartDate || rateEnd < bookingEndDate) return false;
+        if (!rate.startMonth || !rate.startDay || !rate.endMonth || !rate.endDay) return false;
+        if (!this.isDateInRateRange(startMonth, startDay, rate.startMonth, rate.startDay, rate.endMonth, rate.endDay)) return false;
+        if (!this.isDateInRateRange(endMonth, endDay, rate.startMonth, rate.startDay, rate.endMonth, rate.endDay)) return false;
 
         const unitMinutes = rate.rateTypeMinutes || 1440;
         const bookedUnits = Math.ceil(bookingMinutes / unitMinutes);
@@ -367,25 +369,16 @@ export class RatesService {
     bookingEndDate: Date,
     booksByAssetType: boolean = false
   ): Promise<Array<{ rate: any; segmentStart: Date; segmentEnd: Date }>> {
+    this.logger.debug(`getEffectiveRatesForBooking - assetId: ${assetId}, start: ${bookingStartDate.toISOString()}, end: ${bookingEndDate.toISOString()}, booksByAssetType: ${booksByAssetType}`);
+
     const allRates = await this.fetchActiveRates(assetId, booksByAssetType);
+    this.logger.debug(`getEffectiveRatesForBooking - fetched ${allRates.length} active rate(s): ${JSON.stringify(allRates.map(r => ({ id: r.id, name: r.name, pricePerUnit: r.pricePerUnit, startMonth: r.startMonth, startDay: r.startDay, endMonth: r.endMonth, endDay: r.endDay, rateTypeMinutes: r.rateTypeMinutes })))}`);
     if (allRates.length === 0) return [];
 
     const source = booksByAssetType ? 'assetType' as const : 'asset' as const;
 
-    // Build sorted list of rate boundaries that fall within the booking range
-    // Each rate covers [rateStart, rateEnd]. We split the booking at rate boundaries.
-    const applicableRates = allRates
-      .map(rate => {
-        if (!rate.startDate || !rate.endDate) return null;
-        const rateStart = new Date(rate.startDate);
-        const rateEnd = new Date(rate.endDate);
-        // Add 1 day to rateEnd since rate end date is inclusive
-        rateEnd.setUTCDate(rateEnd.getUTCDate() + 1);
-        rateEnd.setUTCHours(0, 0, 0, 0);
-        rateStart.setUTCHours(0, 0, 0, 0);
-        return { ...rate, rateStart, rateEnd };
-      })
-      .filter(Boolean) as Array<any>;
+    const validRates = allRates.filter(r => r.startMonth && r.startDay && r.endMonth && r.endDay);
+    this.logger.debug(`getEffectiveRatesForBooking - ${validRates.length} rate(s) with valid month/day ranges`);
 
     const segments: Array<{ rate: any; segmentStart: Date; segmentEnd: Date }> = [];
     const currentDate = new Date(bookingStartDate);
@@ -395,14 +388,20 @@ export class RatesService {
 
     // Handle same-day bookings: ensure we process at least one day
     const effectiveEnd = endDate <= currentDate ? new Date(currentDate.getTime() + 86400000) : endDate;
+    this.logger.debug(`getEffectiveRatesForBooking - cursor range: ${currentDate.toISOString()} → ${effectiveEnd.toISOString()}`);
 
     let cursor = new Date(currentDate);
 
     while (cursor < effectiveEnd) {
+      const cursorMonth = cursor.getUTCMonth() + 1;
+      const cursorDay = cursor.getUTCDate();
+
       // Find rate covering this day (most recently created wins ties)
-      const dayRate = applicableRates
-        .filter(r => cursor >= r.rateStart && cursor < r.rateEnd)
+      const dayRate = validRates
+        .filter(r => this.isDateInRateRange(cursorMonth, cursorDay, r.startMonth, r.startDay, r.endMonth, r.endDay))
         .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())[0] || null;
+
+      this.logger.debug(`getEffectiveRatesForBooking - cursor: ${cursor.toISOString()}, matched rate: ${dayRate ? `id=${dayRate.id} name=${dayRate.name} pricePerUnit=${dayRate.pricePerUnit}` : 'none'}`);
 
       if (!dayRate) {
         throw new ConflictException(
@@ -410,8 +409,9 @@ export class RatesService {
         );
       }
 
-      // Segment runs from cursor until the earlier of: rate end or booking end
-      const segEnd = new Date(Math.min(dayRate.rateEnd.getTime(), effectiveEnd.getTime()));
+      // Segment runs from cursor until the earlier of: rate season end or booking end
+      const rateSeasonEnd = this.resolveRateEndDate(cursor, dayRate.startMonth, dayRate.endMonth, dayRate.endDay);
+      const segEnd = new Date(Math.min(rateSeasonEnd.getTime(), effectiveEnd.getTime()));
 
       segments.push({
         rate: { ...dayRate, source },
@@ -422,6 +422,7 @@ export class RatesService {
       cursor = segEnd;
     }
 
+    this.logger.debug(`getEffectiveRatesForBooking - returning ${segments.length} segment(s)`);
     return segments;
   }
 
@@ -461,7 +462,17 @@ export class RatesService {
     assetTypeId?: number | null,
     excludeRateId?: number
   ) {
-    let rates: { id: number; startDate: Date | string; endDate: Date | string; minDuration: number | null; maxDuration: number | null }[] = [];
+    let rates: { id: number; startMonth: number; startDay: number; endMonth: number; endDay: number; minDuration: number | null; maxDuration: number | null }[] = [];
+
+    const rateMonthDayColumns = {
+      id: schema.Rate.id,
+      startMonth: schema.Rate.startMonth,
+      startDay: schema.Rate.startDay,
+      endMonth: schema.Rate.endMonth,
+      endDay: schema.Rate.endDay,
+      minDuration: schema.Rate.minDuration,
+      maxDuration: schema.Rate.maxDuration,
+    };
 
     if (assetIds && assetIds.length > 0) {
       const assetRateLinks = await this.db
@@ -477,13 +488,7 @@ export class RatesService {
 
         if (rateIds.length > 0) {
           rates = await this.db
-            .select({
-              id: schema.Rate.id,
-              startDate: schema.Rate.startDate,
-              endDate: schema.Rate.endDate,
-              minDuration: schema.Rate.minDuration,
-              maxDuration: schema.Rate.maxDuration,
-            })
+            .select(rateMonthDayColumns)
             .from(schema.Rate)
             .where(and(
               eq(schema.Rate.tenantId, tenantId),
@@ -504,13 +509,7 @@ export class RatesService {
       }
 
       rates = await this.db
-        .select({
-          id: schema.Rate.id,
-          startDate: schema.Rate.startDate,
-          endDate: schema.Rate.endDate,
-          minDuration: schema.Rate.minDuration,
-          maxDuration: schema.Rate.maxDuration,
-        })
+        .select(rateMonthDayColumns)
         .from(schema.Rate)
         .where(and(...conditions));
     }
@@ -518,26 +517,77 @@ export class RatesService {
     return rates;
   }
 
+  // Returns an integer proxy for a month/day position, handling year-crossing.
+  // For year-crossing ranges (e.g. Dec→Feb), the end DOY is offset by 1200 so
+  // it sorts after the start even though the month number is smaller.
+  private monthDayToProxy(month: number, day: number): number {
+    return month * 32 + day;
+  }
+
+  private isDateInRateRange(
+    month: number, day: number,
+    startMonth: number, startDay: number,
+    endMonth: number, endDay: number
+  ): boolean {
+    const cursor = this.monthDayToProxy(month, day);
+    const start = this.monthDayToProxy(startMonth, startDay);
+    const end = this.monthDayToProxy(endMonth, endDay);
+    const yearCrossing = end < start;
+    if (yearCrossing) {
+      return cursor >= start || cursor <= end;
+    }
+    return cursor >= start && cursor <= end;
+  }
+
+  // Resolve the actual calendar Date when a rate's season ends, relative to the cursor date.
+  private resolveRateEndDate(cursor: Date, startMonth: number, endMonth: number, endDay: number): Date {
+    const year = cursor.getUTCFullYear();
+    const yearCrossing = endMonth < startMonth;
+    const endYear = yearCrossing && cursor.getUTCMonth() + 1 >= startMonth ? year + 1 : year;
+    // Add 1 day since end is inclusive
+    const resolved = new Date(Date.UTC(endYear, endMonth - 1, endDay + 1));
+    return resolved;
+  }
+
   private validateNoOverlap(
-    existingRates: { startDate: Date | string; endDate: Date | string; minDuration: number | null; maxDuration: number | null }[],
-    newStartDate: Date,
-    newEndDate: Date,
+    existingRates: { startMonth: number; startDay: number; endMonth: number; endDay: number; minDuration: number | null; maxDuration: number | null }[],
+    newStartMonth: number,
+    newStartDay: number,
+    newEndMonth: number,
+    newEndDay: number,
     newMinDuration: number,
     newMaxDuration: number
   ) {
+    const newStart = this.monthDayToProxy(newStartMonth, newStartDay);
+    const newEnd = this.monthDayToProxy(newEndMonth, newEndDay);
+    const newYearCrossing = newEnd < newStart;
+
     for (const existing of existingRates) {
-      const existingStart = new Date(existing.startDate);
-      const existingEnd = new Date(existing.endDate);
+      const exStart = this.monthDayToProxy(existing.startMonth, existing.startDay);
+      const exEnd = this.monthDayToProxy(existing.endMonth, existing.endDay);
+      const exYearCrossing = exEnd < exStart;
       const existingMin = existing.minDuration ?? 1;
       const existingMax = existing.maxDuration ?? 999999;
 
-      const datesOverlap = existingStart <= newEndDate && existingEnd >= newStartDate;
-      if (datesOverlap) {
+      // Check if the two month/day ranges overlap on the calendar
+      let seasonOverlap: boolean;
+      if (!newYearCrossing && !exYearCrossing) {
+        seasonOverlap = newStart <= exEnd && newEnd >= exStart;
+      } else if (newYearCrossing && !exYearCrossing) {
+        seasonOverlap = exStart <= 1200 + newEnd || exEnd >= newStart;
+      } else if (!newYearCrossing && exYearCrossing) {
+        seasonOverlap = newStart <= 1200 + exEnd || newEnd >= exStart;
+      } else {
+        // Both year-crossing — they always overlap
+        seasonOverlap = true;
+      }
+
+      if (seasonOverlap) {
         const durationOverlap = existingMin <= newMaxDuration && existingMax >= newMinDuration;
         if (durationOverlap) {
           throw new ConflictException(
             `Cannot save rate: overlapping min/max duration (${newMinDuration}-${newMaxDuration} min) ` +
-            `with existing rate (${existingMin}-${existingMax} min) for overlapping date range.`
+            `with existing rate (${existingMin}-${existingMax} min) for overlapping seasonal range.`
           );
         }
       }

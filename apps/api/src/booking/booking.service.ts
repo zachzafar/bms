@@ -36,6 +36,7 @@ export class BookingService {
     addons?: Array<{ addonItemId: number; quantity: number }>
   ): Promise<string | void> {
     this.logger.log(`Creating booking for asset ${booking.assetId} with ${customerIds.length} customer(s)`);
+    this.logger.debug(`Booking input: ${JSON.stringify({ ...booking, customerIds })}`);
     const utcStart = new Date(booking.startDate);
     const utcEnd = new Date(booking.endDate);
 
@@ -48,6 +49,7 @@ export class BookingService {
     const bookingId = await this.db.transaction(async (tx) => {
       // Resolve customer
       const customerId = await this.resolveCustomer(tx, customerIds, newCustomer);
+      this.logger.debug(`Resolved customerId: ${customerId}`);
       const customer = await tx.query.Customer.findFirst({
         where: (c, { eq }) => eq(c.id, customerId),
       });
@@ -76,6 +78,7 @@ export class BookingService {
         booking.totalPrice,
         tenant?.booksByAssetType ?? false
       );
+      this.logger.debug(`Price calculation - rateTotal: ${rateTotal}, segments: ${JSON.stringify(rateSegments)}`);
 
       // Process add-ons
       let addonsTotal = 0;
@@ -118,9 +121,11 @@ export class BookingService {
             totalPrice: addonTotal,
           });
         }
+        this.logger.debug(`Addons - total: ${addonsTotal}, processed: ${JSON.stringify(processedAddons)}`);
       }
 
       const subtotal = rateTotal + addonsTotal;
+      this.logger.debug(`Subtotal: ${subtotal} (rateTotal: ${rateTotal} + addonsTotal: ${addonsTotal})`);
 
       // Process taxes and fees
       const totalBookingUnits = rateSegments.reduce((sum, seg) => sum + seg.units, 0) || 1;
@@ -128,8 +133,10 @@ export class BookingService {
       const { items: taxFeeItems, totalTaxAmount } = this.taxFeeService.calculateTaxesAndFees(
         subtotal, totalBookingUnits, activeTaxFees as any
       );
+      this.logger.debug(`Tax/fees - totalTaxAmount: ${totalTaxAmount}, items: ${JSON.stringify(taxFeeItems)}`);
 
       const totalPrice = subtotal + totalTaxAmount;
+      this.logger.debug(`Final totalPrice: ${totalPrice}`);
 
       // Create booking
       const [{ id }] = await tx.insert(schema.Booking).values({
@@ -140,6 +147,7 @@ export class BookingService {
         status: tenant?.enableAutomaticConfirmation ? 'Confirmed' : 'Pending',
         totalPrice: totalPrice.toString(),
       }).$returningId();
+      this.logger.log(`Booking record created with id: ${id}`);
 
       // Insert booking add-on rows
       if (processedAddons.length > 0) {
@@ -250,7 +258,10 @@ export class BookingService {
     providedPrice?: string | number | null,
     booksByAssetType: boolean = false
   ): Promise<{ totalPrice: number; rateSegments: Array<{ rate: any; units: number; segmentStart: Date; segmentEnd: Date; segmentPrice: number }> }> {
+    this.logger.debug(`calculatePrice - assetId: ${assetId}, start: ${startDate.toISOString()}, end: ${endDate.toISOString()}, providedPrice: ${providedPrice}, booksByAssetType: ${booksByAssetType}`);
+
     if (providedPrice && parseFloat(providedPrice.toString()) > 0) {
+      this.logger.debug(`calculatePrice - using providedPrice: ${providedPrice}`);
       return { totalPrice: parseFloat(providedPrice.toString()), rateSegments: [] };
     }
 
@@ -260,6 +271,7 @@ export class BookingService {
       endDate,
       booksByAssetType
     );
+    this.logger.debug(`calculatePrice - found ${segments.length} rate segment(s): ${JSON.stringify(segments)}`);
 
     if (segments.length === 0) {
       const rateType = booksByAssetType ? 'asset type' : 'asset';
@@ -276,9 +288,11 @@ export class BookingService {
       const units = Math.ceil(segmentMinutes / unitMinutes);
       const segmentPrice = units * pricePerUnit;
       totalPrice += segmentPrice;
+      this.logger.debug(`calculatePrice - segment: pricePerUnit=${pricePerUnit}, unitMinutes=${unitMinutes}, segmentMinutes=${segmentMinutes}, units=${units}, segmentPrice=${segmentPrice}`);
       return { ...seg, units, segmentPrice };
     });
 
+    this.logger.debug(`calculatePrice - totalPrice: ${totalPrice}`);
     return { totalPrice, rateSegments };
   }
 
