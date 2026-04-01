@@ -279,6 +279,48 @@ export const bookingContract = c.router({
     summary: 'Cancel booking using update token (customer-facing)'
   },
 
+  calculatePublicPriceQuote: {
+    method: 'GET',
+    path: '/customer-price-quote/:subdomain',
+    pathParams: z.object({ subdomain: z.string() }),
+    query: z.object({
+      assetTypeId: z.coerce.number(),
+      startDate: z.coerce.date(),
+      endDate: z.coerce.date(),
+      addons: z.string().optional(), // JSON-encoded Array<{addonItemId, quantity}>
+    }),
+    responses: {
+      200: z.object({
+        rateSegments: z.array(z.object({
+          rateName: z.string(),
+          pricePerUnit: z.number(),
+          units: z.number(),
+          subtotal: z.number(),
+        })),
+        rateTotal: z.number(),
+        addonLines: z.array(z.object({
+          name: z.string(),
+          quantity: z.number(),
+          unitPrice: z.number(),
+          billingType: z.string(),
+          total: z.number(),
+        })),
+        addonsTotal: z.number(),
+        taxLines: z.array(z.object({
+          name: z.string(),
+          type: z.string(),
+          calculationType: z.string(),
+          rate: z.string(),
+          amount: z.number(),
+        })),
+        taxTotal: z.number(),
+        grandTotal: z.number(),
+      }),
+      404: z.object({ message: z.string() }),
+    },
+    summary: 'Calculate a price quote for a public booking (no auth required)',
+  },
+
   // Owner-specific endpoints
   getOwnerBookings: {
     method: 'GET',
