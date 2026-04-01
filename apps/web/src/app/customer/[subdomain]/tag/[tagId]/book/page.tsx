@@ -243,13 +243,17 @@ export default function TagBookingPage() {
     let segDays = 0;
 
     while (current < selectedDates.to) {
+      const cursorMonth = current.getMonth() + 1;
+      const cursorDay = current.getDate();
+      const cursorProxy = cursorMonth * 32 + cursorDay;
       const dayRate = allRates
         .filter(r => {
-          if (!r.startDate || !r.endDate) return false;
-          const rs = new Date(r.startDate); rs.setHours(0, 0, 0, 0);
-          const re = new Date(r.endDate); re.setHours(0, 0, 0, 0);
-          const cd = new Date(current); cd.setHours(0, 0, 0, 0);
-          return cd >= rs && cd <= re;
+          if (!r.startMonth || !r.startDay || !r.endMonth || !r.endDay) return false;
+          const start = r.startMonth * 32 + r.startDay;
+          const end = r.endMonth * 32 + r.endDay;
+          return end < start
+            ? cursorProxy >= start || cursorProxy <= end
+            : cursorProxy >= start && cursorProxy <= end;
         })
         .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())[0] || null;
 
