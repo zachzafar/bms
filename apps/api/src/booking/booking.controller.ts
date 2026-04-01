@@ -184,6 +184,22 @@ export class BookingController {
     }
 
     @Public()
+    @TsRestHandler(contract.booking.calculatePublicPriceQuote)
+    async calculatePublicPriceQuote(): Promise<ReturnType<typeof tsRestHandler>> {
+        return tsRestHandler(contract.booking.calculatePublicPriceQuote, async ({ params, query }) => {
+            const { subdomain } = params;
+            const { assetTypeId, startDate, endDate, addons: addonsJson } = query;
+            const addons = addonsJson ? JSON.parse(addonsJson) : undefined;
+            try {
+                const quote = await this.bookingService.getPriceQuote(subdomain, assetTypeId, startDate, endDate, addons);
+                return { status: 200, body: quote };
+            } catch (error: any) {
+                return { status: 404, body: { message: error.message || 'Unable to calculate price quote' } };
+            }
+        });
+    }
+
+    @Public()
     @TsRestHandler(contract.booking.customerViewBooking)
     async customerViewBooking(): Promise<ReturnType<typeof tsRestHandler>> {
         return tsRestHandler(contract.booking.customerViewBooking, async ({ params }) => {
