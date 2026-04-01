@@ -432,8 +432,8 @@ export default function RatesPage() {
                   )}
                 />
 
-                <FormItem>
-                  <FormLabel>Start</FormLabel>
+                <div className="space-y-2">
+                  <Label>Start</Label>
                   <div className="flex gap-2">
                     <FormField
                       control={form.control}
@@ -472,10 +472,10 @@ export default function RatesPage() {
                       )}
                     />
                   </div>
-                </FormItem>
+                </div>
 
-                <FormItem>
-                  <FormLabel>End</FormLabel>
+                <div className="space-y-2">
+                  <Label>End</Label>
                   <div className="flex gap-2">
                     <FormField
                       control={form.control}
@@ -514,7 +514,7 @@ export default function RatesPage() {
                       )}
                     />
                   </div>
-                </FormItem>
+                </div>
 
                 <FormField
                   control={form.control}
